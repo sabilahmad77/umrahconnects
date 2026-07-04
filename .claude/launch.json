@@ -1,0 +1,26 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "API (NestJS)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@umrah-connects/api", "dev"],
+      "port": 4000,
+      "autoPort": false
+    },
+    {
+      "name": "Web (Next.js)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@umrah-connects/web", "dev"],
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "Prisma Studio",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@umrah-connects/api", "prisma", "studio", "--port", "5555"],
+      "port": 5555,
+      "autoPort": false
+    }
+  ]
+}

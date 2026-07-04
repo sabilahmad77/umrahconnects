@@ -1,0 +1,19 @@
+{
+  "name": "@umrah-connects/booking",
+  "version": "0.1.0",
+  "description": "Booking & Package Engine plugin for Umrah Connects",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/swagger": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

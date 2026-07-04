@@ -1,0 +1,664 @@
+{
+  "working": 73,
+  "total": 73,
+  "pct": 100.0,
+  "results": [
+    {
+      "area": "Auth",
+      "name": "Login",
+      "method": "POST",
+      "path": "/auth/login",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Auth",
+      "name": "Reject wrong password",
+      "method": "POST",
+      "path": "/auth/login",
+      "status": "WORKING",
+      "http": 400,
+      "note": ""
+    },
+    {
+      "area": "Auth",
+      "name": "Current user (/auth/me)",
+      "method": "GET",
+      "path": "/auth/me",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Auth",
+      "name": "RBAC permissions (39)",
+      "method": "GET",
+      "path": "/rbac/my-permissions",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Pilgrims list",
+      "method": "GET",
+      "path": "/pilgrims?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "CRM",
+      "name": "Pilgrims stats",
+      "method": "GET",
+      "path": "/pilgrims/stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Create pilgrim",
+      "method": "POST",
+      "path": "/pilgrims",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Update pilgrim",
+      "method": "PUT",
+      "path": "/pilgrims/:id",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Bookings list",
+      "method": "GET",
+      "path": "/bookings?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "CRM",
+      "name": "Bookings stats",
+      "method": "GET",
+      "path": "/bookings/stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Create booking",
+      "method": "POST",
+      "path": "/bookings",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Groups list",
+      "method": "GET",
+      "path": "/groups?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "CRM",
+      "name": "Create group",
+      "method": "POST",
+      "path": "/groups",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "CRM",
+      "name": "Packages list",
+      "method": "GET",
+      "path": "/packages?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "1 items"
+    },
+    {
+      "area": "Hotels",
+      "name": "Hotels list",
+      "method": "GET",
+      "path": "/hotels?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Hotels",
+      "name": "Hotels stats",
+      "method": "GET",
+      "path": "/hotels/stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Hotels",
+      "name": "Create hotel",
+      "method": "POST",
+      "path": "/hotels",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Transport",
+      "name": "Vehicles",
+      "method": "GET",
+      "path": "/transport/vehicles?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Transport",
+      "name": "Drivers",
+      "method": "GET",
+      "path": "/transport/drivers?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Transport",
+      "name": "Routes",
+      "method": "GET",
+      "path": "/transport/routes?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Transport",
+      "name": "Assignments",
+      "method": "GET",
+      "path": "/transport/assignments?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "4 items"
+    },
+    {
+      "area": "Transport",
+      "name": "Stats",
+      "method": "GET",
+      "path": "/transport/stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Transport",
+      "name": "Create vehicle",
+      "method": "POST",
+      "path": "/transport/vehicles",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Transport",
+      "name": "Create driver",
+      "method": "POST",
+      "path": "/transport/drivers",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Transport",
+      "name": "Create route",
+      "method": "POST",
+      "path": "/transport/routes",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Visa",
+      "name": "Applications",
+      "method": "GET",
+      "path": "/compliance/visas?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Visa",
+      "name": "Stats",
+      "method": "GET",
+      "path": "/compliance/visas/stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Visa",
+      "name": "Dashboard stats",
+      "method": "GET",
+      "path": "/compliance/visas/dashboard-stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Visa",
+      "name": "Documents",
+      "method": "GET",
+      "path": "/compliance/visas/documents",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Visa",
+      "name": "Create application",
+      "method": "POST",
+      "path": "/compliance/visas",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Finance",
+      "name": "Invoices",
+      "method": "GET",
+      "path": "/finance/invoices?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Finance",
+      "name": "Budget plans",
+      "method": "GET",
+      "path": "/finance/budget-plans?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Finance",
+      "name": "Dashboard stats",
+      "method": "GET",
+      "path": "/finance/dashboard-stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Finance",
+      "name": "Create invoice",
+      "method": "POST",
+      "path": "/finance/invoices",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Finance",
+      "name": "Create budget plan",
+      "method": "POST",
+      "path": "/finance/budget-plans",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Marketplace",
+      "name": "Listings",
+      "method": "GET",
+      "path": "/marketplace/listings?limit=10",
+      "status": "WORKING",
+      "http": 200,
+      "note": "6 items"
+    },
+    {
+      "area": "Marketplace",
+      "name": "Open requests",
+      "method": "GET",
+      "path": "/marketplace/requests/open?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "0 items"
+    },
+    {
+      "area": "Marketplace",
+      "name": "My requests",
+      "method": "GET",
+      "path": "/marketplace/requests/mine?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "0 items"
+    },
+    {
+      "area": "Marketplace",
+      "name": "My offers",
+      "method": "GET",
+      "path": "/marketplace/requests/offers/mine?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "0 items"
+    },
+    {
+      "area": "Marketplace",
+      "name": "Vendors",
+      "method": "GET",
+      "path": "/marketplace/vendors?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "1 items"
+    },
+    {
+      "area": "Marketplace",
+      "name": "Create request",
+      "method": "POST",
+      "path": "/marketplace/requests",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Feed",
+      "method": "GET",
+      "path": "/social/feed?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Social",
+      "name": "Create post",
+      "method": "POST",
+      "path": "/social/posts",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Like post",
+      "method": "POST",
+      "path": "/social/posts/6c027c11-fb82-4a85-a95a-c9cba75677e5/react",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Comment",
+      "method": "POST",
+      "path": "/social/posts/6c027c11-fb82-4a85-a95a-c9cba75677e5/comments",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Share",
+      "method": "POST",
+      "path": "/social/posts/6c027c11-fb82-4a85-a95a-c9cba75677e5/react",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Save post",
+      "method": "POST",
+      "path": "/social/posts/6c027c11-fb82-4a85-a95a-c9cba75677e5/save",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Discover people",
+      "method": "GET",
+      "path": "/social/discover/people",
+      "status": "WORKING",
+      "http": 200,
+      "note": "2 items"
+    },
+    {
+      "area": "Social",
+      "name": "Trending",
+      "method": "GET",
+      "path": "/social/discover/trending",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Conversations",
+      "method": "GET",
+      "path": "/social/conversations?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Social",
+      "name": "Saved posts",
+      "method": "GET",
+      "path": "/social/saved-posts",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Connections",
+      "name": "List",
+      "method": "GET",
+      "path": "/connections",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Connections",
+      "name": "Pending",
+      "method": "GET",
+      "path": "/connections/pending",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Notifications",
+      "name": "List",
+      "method": "GET",
+      "path": "/notifications?limit=10",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Notifications",
+      "name": "Mark all read",
+      "method": "POST",
+      "path": "/notifications/read-all",
+      "status": "WORKING",
+      "http": 201,
+      "note": ""
+    },
+    {
+      "area": "Reports",
+      "name": "Report: overview",
+      "method": "GET",
+      "path": "/reports/overview",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Reports",
+      "name": "Report: finance",
+      "method": "GET",
+      "path": "/reports/finance",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Reports",
+      "name": "Report: bookings",
+      "method": "GET",
+      "path": "/reports/bookings",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Reports",
+      "name": "Report: hotels",
+      "method": "GET",
+      "path": "/reports/hotels",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Reports",
+      "name": "Report: pilgrims",
+      "method": "GET",
+      "path": "/reports/pilgrims",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Reports",
+      "name": "Report: visa",
+      "method": "GET",
+      "path": "/reports/visa",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Admin",
+      "name": "Platform stats",
+      "method": "GET",
+      "path": "/admin/stats",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Admin",
+      "name": "Tenants",
+      "method": "GET",
+      "path": "/admin/tenants?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "4 items"
+    },
+    {
+      "area": "Admin",
+      "name": "Users",
+      "method": "GET",
+      "path": "/admin/users?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "4 items"
+    },
+    {
+      "area": "Admin",
+      "name": "KYC",
+      "method": "GET",
+      "path": "/admin/kyc?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "3 items"
+    },
+    {
+      "area": "Admin",
+      "name": "Roles",
+      "method": "GET",
+      "path": "/admin/roles",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Admin",
+      "name": "Permissions",
+      "method": "GET",
+      "path": "/admin/permissions",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Admin",
+      "name": "Listings moderation",
+      "method": "GET",
+      "path": "/admin/listings?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Admin",
+      "name": "All bookings",
+      "method": "GET",
+      "path": "/admin/bookings?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Admin",
+      "name": "Finance summary",
+      "method": "GET",
+      "path": "/admin/finance",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Admin",
+      "name": "Audit logs",
+      "method": "GET",
+      "path": "/admin/audit-logs?limit=5",
+      "status": "WORKING",
+      "http": 200,
+      "note": "5 items"
+    },
+    {
+      "area": "Admin",
+      "name": "Settings",
+      "method": "GET",
+      "path": "/admin/settings",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    },
+    {
+      "area": "Auth",
+      "name": "Logout",
+      "method": "POST",
+      "path": "/auth/logout",
+      "status": "WORKING",
+      "http": 200,
+      "note": ""
+    }
+  ]
+}

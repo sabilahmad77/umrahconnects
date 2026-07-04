@@ -1,0 +1,37 @@
+[
+  {
+    "kind": "console",
+    "page": "http://localhost:3000/hotels",
+    "msg": "Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as"
+  },
+  {
+    "kind": "console",
+    "page": "http://localhost:3000/hotels",
+    "msg": "The above error occurred in the <NotFoundErrorBoundary> component:\n\n    at HotelsList (webpack-internal:///(app-pages-browser)/./components/hotels/hotels-list.t"
+  },
+  {
+    "kind": "nav",
+    "page": "operator /transport",
+    "msg": "page.goto: net::ERR_ABORTED at http://localhost:3000/transport\nCall log:\n  - navigating to \"http://localhost:3000/transp"
+  },
+  {
+    "kind": "console",
+    "page": "http://localhost:3000/hotels",
+    "msg": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  },
+  {
+    "kind": "console",
+    "page": "http://localhost:3000/hotels",
+    "msg": "Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as"
+  },
+  {
+    "kind": "console",
+    "page": "http://localhost:3000/hotels",
+    "msg": "The above error occurred in the <NotFoundErrorBoundary> component:\n\n    at HotelsList (webpack-internal:///(app-pages-browser)/./components/hotels/hotels-list.t"
+  },
+  {
+    "kind": "nav",
+    "page": "hotel /hotel-bookings",
+    "msg": "page.goto: net::ERR_ABORTED at http://localhost:3000/hotel-bookings\nCall log:\n  - navigating to \"http://localhost:3000/h"
+  }
+]

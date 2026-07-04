@@ -1,0 +1,2133 @@
+// ============================================================
+// Umrah Connects — Prisma Schema
+// PostgreSQL 16 · Row-Level Security enabled per-table
+// All money: bigint minor units + currency code (no floats)
+// All timestamps: timestamptz stored UTC
+// All tenant-scoped tables: non-null tenant_id
+// ============================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  // native = local dev; debian target = Render/Docker (node:20 bookworm, openssl 3)
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["core", "marketplace", "social", "audit", "plugin_crm", "plugin_booking", "plugin_hotel", "plugin_visa", "plugin_transport", "plugin_finance", "plugin_group_ops", "plugin_portal", "plugin_reporting"]
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum TenantStatus {
+  PENDING_KYC
+  KYC_SUBMITTED
+  KYC_APPROVED
+  KYC_REJECTED
+  ACTIVE
+  SUSPENDED
+  CHURNED
+
+  @@schema("core")
+}
+
+enum TenantTier {
+  STARTER
+  GROWTH
+  SCALE
+  ENTERPRISE
+
+  @@schema("core")
+}
+
+enum TenantType {
+  OPERATOR            // Licensed Umrah/Hajj operator
+  MU_ASSASA           // Saudi-licensed ground operator
+  SUB_AGENT           // Sub-agent under an operator
+  VENDOR_HOTEL
+  VENDOR_TRANSPORT
+  VENDOR_CATERING
+  VENDOR_GUIDE
+  VENDOR_VISA
+
+  @@schema("core")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+  PENDING_VERIFICATION
+
+  @@schema("core")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+
+  @@schema("core")
+}
+
+enum PilgrimStatus {
+  LEAD
+  PROSPECT
+  BOOKED
+  DOCUMENTS_PENDING
+  VISA_PENDING
+  VISA_APPROVED
+  VISA_REJECTED
+  TRAVELING
+  IN_KINGDOM
+  RETURNED
+  CANCELLED
+
+  @@schema("plugin_crm")
+}
+
+enum BookingStatus {
+  DRAFT
+  CONFIRMED
+  PARTIALLY_PAID
+  FULLY_PAID
+  VISA_PROCESSING
+  TRAVELING
+  COMPLETED
+  CANCELLED
+  REFUNDED
+
+  @@schema("plugin_booking")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DISPUTED
+
+  @@schema("plugin_finance")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  VOID
+
+  @@schema("plugin_finance")
+}
+
+enum VisaStatus {
+  NOT_STARTED
+  DOCUMENTS_COLLECTING
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+
+  @@schema("plugin_visa")
+}
+
+enum RegulatorySystem {
+  NUSUK_MASAR
+  SISKOPATUH
+  NAHCON
+  DIYANET
+  TABUNG_HAJI
+  MOTAC
+  IBA_DGRP
+  MANUAL
+
+  @@schema("plugin_visa")
+}
+
+enum HotelContractType {
+  ALLOTMENT
+  ON_DEMAND
+  GUARANTEED
+
+  @@schema("plugin_hotel")
+}
+
+enum TransportType {
+  BUS_SMALL         // Hiace/Coaster
+  BUS_MEDIUM        // 30-seat
+  BUS_LARGE         // 50-seat
+  PRIVATE_CAR
+  VAN
+
+  @@schema("plugin_transport")
+}
+
+enum MovementType {
+  AIRPORT_PICKUP
+  AIRPORT_DROPOFF
+  MAKKAH_MADINAH
+  MADINAH_MAKKAH
+  ZIYARAT
+  MASHAER_MINA
+  MASHAER_ARAFAT
+  MASHAER_MUZDALIFAH
+  LOCAL
+
+  @@schema("plugin_transport")
+}
+
+enum VendorStatus {
+  PENDING_KYC
+  KYC_SUBMITTED
+  VERIFIED
+  SUSPENDED
+  DELISTED
+
+  @@schema("marketplace")
+}
+
+enum PostType {
+  UPDATE
+  OFFER
+  GUIDELINE
+  QUESTION
+  PARTNERSHIP
+  STORY
+  EVENT
+
+  @@schema("social")
+}
+
+enum PostVisibility {
+  PUBLIC
+  VERIFIED_ONLY
+  ROLE_SET
+  FOLLOWER_SET
+  CUSTOM_SET
+
+  @@schema("social")
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  HELD_FOR_REVIEW
+  REJECTED
+  SHADOW_BANNED
+
+  @@schema("social")
+}
+
+enum SocialAccountType {
+  OPERATOR
+  SUB_AGENT
+  VENDOR_HOTEL
+  VENDOR_TRANSPORT
+  VENDOR_CATERING
+  MUTAWIF
+  VISA_PROCESSOR
+  PILGRIM
+
+  @@schema("social")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  SOFT_DELETE
+  LOGIN
+  LOGOUT
+  PERMISSION_CHANGE
+  TENANT_CONFIG_CHANGE
+  PAYMENT_INITIATE
+  PAYMENT_COMPLETE
+  PAYMENT_FAIL
+  VISA_SUBMIT
+  VISA_STATUS_CHANGE
+  DOCUMENT_UPLOAD
+  DOCUMENT_DELETE
+  DATA_EXPORT
+  DATA_ACCESS
+
+  @@schema("audit")
+}
+
+// ============================================================
+// CORE SCHEMA — Tenant, User, RBAC
+// ============================================================
+
+model Tenant {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug             String       @unique @db.VarChar(100)
+  name             String       @db.VarChar(255)
+  nameAr           String?      @db.VarChar(255) @map("name_ar")
+  type             TenantType
+  status           TenantStatus @default(PENDING_KYC)
+  tier             TenantTier   @default(STARTER)
+
+  // Licensing
+  licenseNumber    String?      @db.VarChar(100) @map("license_number")
+  licenseCountry   String?      @db.Char(2)      @map("license_country")
+  licenseExpiry    DateTime?    @db.Date         @map("license_expiry")
+  regulatorySystem RegulatorySystem? @map("regulatory_system")
+
+  // Contact
+  email            String       @db.VarChar(255)
+  phone            String?      @db.VarChar(30)
+  website          String?      @db.VarChar(255)
+  country          String       @db.Char(2)
+  timezone         String       @default("Asia/Riyadh") @db.VarChar(50)
+  locale           String       @default("en") @db.VarChar(10)
+  currency         String       @default("SAR") @db.Char(3)
+
+  // Hierarchy
+  parentTenantId   String?      @db.Uuid @map("parent_tenant_id")
+  parentTenant     Tenant?      @relation("SubTenants", fields: [parentTenantId], references: [id])
+  subTenants       Tenant[]     @relation("SubTenants")
+
+  // Metadata
+  metadata         Json?        @db.JsonB
+  settings         Json         @default("{}") @db.JsonB
+  createdAt        DateTime     @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt        DateTime     @updatedAt @db.Timestamptz @map("updated_at")
+  deletedAt        DateTime?    @db.Timestamptz @map("deleted_at")
+
+  // Relations
+  users            User[]
+  roles            Role[]
+  kycRecords       TenantKyc[]
+  pluginInstalls   TenantPlugin[]
+
+  @@map("tenants")
+  @@schema("core")
+}
+
+model TenantKyc {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String    @db.Uuid @map("tenant_id")
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+
+  registrySource   RegulatorySystem @map("registry_source")
+  registryLookupAt DateTime? @db.Timestamptz @map("registry_lookup_at")
+  registryData     Json?     @db.JsonB @map("registry_data")
+  verifiedAt       DateTime? @db.Timestamptz @map("verified_at")
+  verifiedBy       String?   @db.Uuid @map("verified_by")
+  rejectionReason  String?   @map("rejection_reason")
+  documents        Json      @default("[]") @db.JsonB
+
+  createdAt        DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt        DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@map("tenant_kyc")
+  @@schema("core")
+}
+
+model User {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String     @db.Uuid @map("tenant_id")
+  tenant           Tenant     @relation(fields: [tenantId], references: [id])
+
+  email            String?    @db.VarChar(255)
+  phone            String?    @db.VarChar(30)
+  passwordHash     String?    @map("password_hash")
+  status           UserStatus @default(PENDING_VERIFICATION)
+
+  // Profile
+  firstName        String     @db.VarChar(100) @map("first_name")
+  lastName         String     @db.VarChar(100) @map("last_name")
+  firstNameAr      String?    @db.VarChar(100) @map("first_name_ar")
+  lastNameAr       String?    @db.VarChar(100) @map("last_name_ar")
+  avatarUrl        String?    @map("avatar_url")
+  locale           String     @default("en") @db.VarChar(10)
+  timezone         String     @default("Asia/Riyadh") @db.VarChar(50)
+
+  // Auth
+  mfaEnabled       Boolean    @default(false) @map("mfa_enabled")
+  mfaSecret        String?    @map("mfa_secret")
+  emailVerifiedAt  DateTime?  @db.Timestamptz @map("email_verified_at")
+  phoneVerifiedAt  DateTime?  @db.Timestamptz @map("phone_verified_at")
+  lastLoginAt      DateTime?  @db.Timestamptz @map("last_login_at")
+  lastLoginIp      String?    @map("last_login_ip")
+  loginCount       Int        @default(0) @map("login_count")
+
+  createdAt        DateTime   @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt        DateTime   @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy        String?    @db.Uuid @map("created_by")
+  deletedAt        DateTime?  @db.Timestamptz @map("deleted_at")
+  rowVersion       Int        @default(1) @map("row_version")
+
+  // Relations
+  userRoles        UserRole[]
+  refreshTokens    RefreshToken[]
+  otpCodes         OtpCode[]
+  socialAccount    SocialAccount?
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+  @@schema("core")
+}
+
+model RefreshToken {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @db.Uuid @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @db.Timestamptz @map("expires_at")
+  revokedAt  DateTime? @db.Timestamptz @map("revoked_at")
+  createdAt  DateTime @default(now()) @db.Timestamptz @map("created_at")
+  userAgent  String?  @map("user_agent")
+  ipAddress  String?  @map("ip_address")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+  @@schema("core")
+}
+
+model OtpCode {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String?  @db.Uuid @map("user_id")
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone       String?
+  email       String?
+  codeHash    String   @map("code_hash")
+  purpose     String   @db.VarChar(50)  // phone_verify, login, password_reset
+  expiresAt   DateTime @db.Timestamptz @map("expires_at")
+  usedAt      DateTime? @db.Timestamptz @map("used_at")
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([phone])
+  @@index([email])
+  @@map("otp_codes")
+  @@schema("core")
+}
+
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String?  @db.Uuid @map("tenant_id")   // null = platform-wide role
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  name        String   @db.VarChar(100)
+  description String?
+  isSystem    Boolean  @default(false) @map("is_system")   // platform-defined, not deletable
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@unique([tenantId, name])
+  @@map("roles")
+  @@schema("core")
+}
+
+model Permission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Format: plugin:resource:action  e.g. crm:pilgrim:read
+  namespace   String   @db.VarChar(50)
+  resource    String   @db.VarChar(100)
+  action      String   @db.VarChar(50)
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@unique([namespace, resource, action])
+  @@map("permissions")
+  @@schema("core")
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid @map("role_id")
+  permissionId String     @db.Uuid @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  grantedAt    DateTime   @default(now()) @db.Timestamptz @map("granted_at")
+  grantedBy    String?    @db.Uuid @map("granted_by")
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+  @@schema("core")
+}
+
+model UserRole {
+  userId    String   @db.Uuid @map("user_id")
+  roleId    String   @db.Uuid @map("role_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  grantedAt DateTime @default(now()) @db.Timestamptz @map("granted_at")
+  grantedBy String?  @db.Uuid @map("granted_by")
+  expiresAt DateTime? @db.Timestamptz @map("expires_at")
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+  @@schema("core")
+}
+
+model TenantPlugin {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  pluginId    String   @db.VarChar(100) @map("plugin_id")
+  version     String   @db.VarChar(20)
+  enabled     Boolean  @default(true)
+  config      Json     @default("{}") @db.JsonB
+  installedAt DateTime @default(now()) @db.Timestamptz @map("installed_at")
+  installedBy String?  @db.Uuid @map("installed_by")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@unique([tenantId, pluginId])
+  @@map("tenant_plugins")
+  @@schema("core")
+}
+
+// ============================================================
+// PLUGIN: CRM — Pilgrims, Leads, Family Groups
+// ============================================================
+
+model Pilgrim {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String        @db.Uuid @map("tenant_id")
+  status           PilgrimStatus @default(LEAD)
+
+  // Personal
+  firstNameEn      String        @db.VarChar(100) @map("first_name_en")
+  lastNameEn       String        @db.VarChar(100) @map("last_name_en")
+  firstNameAr      String?       @db.VarChar(100) @map("first_name_ar")
+  lastNameAr       String?       @db.VarChar(100) @map("last_name_ar")
+  gender           Gender
+  dateOfBirth      DateTime      @db.Date @map("date_of_birth")
+  nationality      String        @db.Char(2)
+
+  // Contact
+  email            String?       @db.VarChar(255)
+  phone            String?       @db.VarChar(30)
+  whatsapp         String?       @db.VarChar(30)
+  address          String?
+  city             String?       @db.VarChar(100)
+  country          String        @db.Char(2)
+  preferredLanguage String       @default("ar") @db.VarChar(10) @map("preferred_language")
+
+  // Passport / ID
+  passportNumber   String?       @db.VarChar(30) @map("passport_number")  // encrypted
+  passportExpiry   DateTime?     @db.Date @map("passport_expiry")
+  passportCountry  String?       @db.Char(2) @map("passport_country")
+  nationalId       String?       @db.VarChar(30) @map("national_id")      // encrypted
+
+  // Medical / accessibility
+  hasDisability    Boolean       @default(false) @map("has_disability")
+  needsWheelchair  Boolean       @default(false) @map("needs_wheelchair")
+  medicalNotes     String?       @map("medical_notes")
+  vaccinated       Boolean       @default(false)
+  vaccinationRecords Json        @default("[]") @db.JsonB @map("vaccination_records")
+
+  // CRM
+  source           String?       @db.VarChar(100) // sub_agent_id, marketing_channel, referral
+  subAgentId       String?       @db.Uuid @map("sub_agent_id")
+  notes            String?
+  tags             String[]
+
+  // Stats
+  priorUmrahCount  Int           @default(0) @map("prior_umrah_count")
+  priorHajjCount   Int           @default(0) @map("prior_hajj_count")
+  lifetimeSpend    BigInt        @default(0) @map("lifetime_spend")  // minor units SAR
+  lifetimeCurrency String        @default("SAR") @db.Char(3) @map("lifetime_currency")
+
+  // Family
+  familyGroupId    String?       @db.Uuid @map("family_group_id")
+  familyGroup      FamilyGroup?  @relation(fields: [familyGroupId], references: [id])
+  mahramId         String?       @db.Uuid @map("mahram_id")    // for female pilgrims
+
+  createdAt        DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt        DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy        String?       @db.Uuid @map("created_by")
+  updatedBy        String?       @db.Uuid @map("updated_by")
+  deletedAt        DateTime?     @db.Timestamptz @map("deleted_at")
+  rowVersion       Int           @default(1) @map("row_version")
+
+  documents        PilgrimDocument[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, familyGroupId])
+  @@map("pilgrims")
+  @@schema("plugin_crm")
+}
+
+model FamilyGroup {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @db.Uuid @map("tenant_id")
+  name        String    @db.VarChar(200)
+  leadPilgrimId String? @db.Uuid @map("lead_pilgrim_id")
+  notes       String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  pilgrims    Pilgrim[]
+
+  @@index([tenantId])
+  @@map("family_groups")
+  @@schema("plugin_crm")
+}
+
+model PilgrimDocument {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @db.Uuid @map("tenant_id")
+  pilgrimId    String   @db.Uuid @map("pilgrim_id")
+  pilgrim      Pilgrim  @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+
+  type         String   @db.VarChar(50) // passport, visa, vaccination, mahram_cert, photo
+  fileName     String   @map("file_name")
+  fileUrl      String   @map("file_url")       // S3 key
+  mimeType     String   @map("mime_type")
+  fileSizeBytes Int     @map("file_size_bytes")
+  ocrData      Json?    @db.JsonB @map("ocr_data")
+  verified     Boolean  @default(false)
+  verifiedAt   DateTime? @db.Timestamptz @map("verified_at")
+  verifiedBy   String?  @db.Uuid @map("verified_by")
+  expiresAt    DateTime? @db.Date @map("expires_at")
+  version      Int      @default(1)
+
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+  createdBy    String?  @db.Uuid @map("created_by")
+
+  @@index([tenantId, pilgrimId])
+  @@map("pilgrim_documents")
+  @@schema("plugin_crm")
+}
+
+// ============================================================
+// PLUGIN: BOOKING — Packages, Bookings, Payments
+// ============================================================
+
+model Package {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @db.Uuid @map("tenant_id")
+  name            String   @db.VarChar(255)
+  nameAr          String?  @db.VarChar(255) @map("name_ar")
+  description     String?
+  descriptionAr   String?  @map("description_ar")
+  tier            String   @db.VarChar(50) @default("STANDARD") // ECONOMY/STANDARD/PREMIUM/VIP
+  tripType        String   @db.VarChar(20)  // UMRAH / HAJJ
+  durationDays    Int      @map("duration_days")
+
+  // Travel dates
+  departureDate   DateTime? @db.Date @map("departure_date")
+  returnDate      DateTime? @db.Date @map("return_date")
+
+  // Pricing (bigint minor units)
+  basePriceCents  BigInt   @map("base_price_cents")
+  currency        String   @db.Char(3) @default("SAR")
+  maxCapacity     Int      @map("max_capacity")
+  bookedCount     Int      @default(0) @map("booked_count")
+
+  // Composition (services included)
+  includes        Json     @default("{}") @db.JsonB  // visa, flight, hotel_makkah, hotel_madinah, transport, meals, guide
+  pricingRules    Json     @default("[]") @db.JsonB  // seasonal multipliers, early-bird discounts
+
+  isPublished     Boolean  @default(false) @map("is_published")
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy       String?  @db.Uuid @map("created_by")
+  deletedAt       DateTime? @db.Timestamptz @map("deleted_at")
+
+  bookings        Booking[]
+
+  @@index([tenantId])
+  @@map("packages")
+  @@schema("plugin_booking")
+}
+
+model Booking {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String        @db.Uuid @map("tenant_id")
+  bookingRef      String        @unique @map("booking_ref")  // UC-2026-00001
+  packageId       String?       @db.Uuid @map("package_id")
+  package         Package?      @relation(fields: [packageId], references: [id])
+  status          BookingStatus @default(DRAFT)
+
+  // Origination
+  subAgentId      String?       @db.Uuid @map("sub_agent_id")
+  subAgentCommissionRate Decimal? @db.Decimal(5,2) @map("sub_agent_commission_rate")
+
+  // Pricing snapshot (at time of booking)
+  totalAmountCents  BigInt      @map("total_amount_cents")
+  paidAmountCents   BigInt      @default(0) @map("paid_amount_cents")
+  currency          String      @db.Char(3) @default("SAR")
+  discountCents     BigInt      @default(0) @map("discount_cents")
+  taxCents          BigInt      @default(0) @map("tax_cents")
+
+  // Travel
+  groupId         String?       @db.Uuid @map("group_id")
+  departureDate   DateTime?     @db.Date @map("departure_date")
+  returnDate      DateTime?     @db.Date @map("return_date")
+  flightDetails   Json?         @db.JsonB @map("flight_details")
+
+  notes           String?
+  cancellationReason String?    @map("cancellation_reason")
+  cancelledAt     DateTime?     @db.Timestamptz @map("cancelled_at")
+
+  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy       String?       @db.Uuid @map("created_by")
+  updatedBy       String?       @db.Uuid @map("updated_by")
+  rowVersion      Int           @default(1) @map("row_version")
+
+  pilgrims        BookingPilgrim[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([bookingRef])
+  @@map("bookings")
+  @@schema("plugin_booking")
+}
+
+model BookingPilgrim {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid @map("tenant_id")
+  bookingId   String   @db.Uuid @map("booking_id")
+  booking     Booking  @relation(fields: [bookingId], references: [id])
+  pilgrimId   String   @db.Uuid @map("pilgrim_id")
+
+  // Per-pilgrim pricing override
+  priceCents  BigInt?  @map("price_cents")
+  currency    String?  @db.Char(3)
+  roomType    String?  @db.VarChar(50) @map("room_type")
+  bedType     String?  @db.VarChar(30) @map("bed_type")
+  seatNumber  String?  @db.VarChar(20) @map("seat_number")
+  mealPref    String?  @db.VarChar(50) @map("meal_pref")
+  specialReqs String?  @map("special_reqs")
+
+  addedAt     DateTime @default(now()) @db.Timestamptz @map("added_at")
+
+  @@unique([bookingId, pilgrimId])
+  @@index([tenantId])
+  @@map("booking_pilgrims")
+  @@schema("plugin_booking")
+}
+
+// ============================================================
+// PLUGIN: HOTEL INVENTORY
+// ============================================================
+
+model Hotel {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String?  @db.Uuid @map("tenant_id")  // null = marketplace-wide
+  vendorId         String?  @db.Uuid @map("vendor_id")
+
+  name             String   @db.VarChar(255)
+  nameAr           String?  @db.VarChar(255) @map("name_ar")
+  city             String   @db.VarChar(100)  // MAKKAH / MADINAH / JEDDAH
+  country          String   @db.Char(2) @default("SA")
+  area             String?  @db.VarChar(120)              // district / neighbourhood
+  address          String?
+  postalCode       String?  @db.VarChar(20) @map("postal_code")
+  starRating       Int?     @map("star_rating")
+  distanceToHaram  Int?     @map("distance_to_haram")  // meters
+  coordinates      Json?    @db.JsonB
+  amenities        String[]
+  images           String[]
+  description      String?
+  descriptionAr    String?  @map("description_ar")
+
+  // Contact + operations
+  contactPerson    String?  @db.VarChar(150) @map("contact_person")
+  phone            String?  @db.VarChar(40)
+  email            String?  @db.VarChar(255)
+  checkInTime      String?  @db.VarChar(10) @map("check_in_time")    // "15:00"
+  checkOutTime     String?  @db.VarChar(10) @map("check_out_time")   // "12:00"
+  cancellationPolicy String? @map("cancellation_policy")
+  totalRooms       Int      @default(0) @map("total_rooms")
+  status           String   @db.VarChar(20) @default("ACTIVE")  // ACTIVE / INACTIVE / MAINTENANCE
+  notes            String?
+  isVerified       Boolean  @default(false) @map("is_verified")
+
+  createdAt        DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt        DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  roomTypes        RoomType[]
+  allotments       Allotment[]
+  rooms            Room[]
+  hotelBookings    HotelBooking[]
+
+  @@index([tenantId])
+  @@index([city])
+  @@index([tenantId, status])
+  @@map("hotels")
+  @@schema("plugin_hotel")
+}
+
+model RoomType {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotelId       String   @db.Uuid @map("hotel_id")
+  hotel         Hotel    @relation(fields: [hotelId], references: [id])
+  name          String   @db.VarChar(100)
+  occupancy     Int      // 1=single, 2=double, 3=triple, 4=quad
+  bedConfig     String?  @db.VarChar(50) @map("bed_config")
+  description   String?
+  basePriceCents BigInt  @default(0) @map("base_price_cents")    // per room per night
+  pricePerPersonCents BigInt? @map("price_per_person_cents")
+  totalCount    Int      @default(0) @map("total_count")          // number of rooms of this type
+  status        String   @db.VarChar(20) @default("ACTIVE")
+  amenities     String[]
+  images        String[]
+
+  rooms         Room[]
+
+  @@index([hotelId])
+  @@map("room_types")
+  @@schema("plugin_hotel")
+}
+
+model Room {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid @map("tenant_id")
+  hotelId       String    @db.Uuid @map("hotel_id")
+  hotel         Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomTypeId    String?   @db.Uuid @map("room_type_id")
+  roomType      RoomType? @relation(fields: [roomTypeId], references: [id])
+  roomNumber    String    @db.VarChar(40) @map("room_number")
+  floor         String?   @db.VarChar(20)
+  capacity      Int       @default(2)
+  bedType       String?   @db.VarChar(40) @map("bed_type")
+  bedCount      Int       @default(1) @map("bed_count")
+  availableBeds Int       @default(0) @map("available_beds")
+  pricePerNightCents BigInt @default(0) @map("price_per_night_cents")
+  pricePerPersonCents BigInt? @map("price_per_person_cents")
+  seasonalPricing Json    @default("[]") @db.JsonB @map("seasonal_pricing")
+  images        String[]
+  facilities    String[]
+  description   String?
+  status        String    @db.VarChar(20) @default("AVAILABLE")  // AVAILABLE / OCCUPIED / MAINTENANCE / INACTIVE
+  notes         String?
+
+  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([hotelId])
+  @@index([hotelId, status])
+  @@map("rooms")
+  @@schema("plugin_hotel")
+}
+
+model HotelBooking {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @db.Uuid @map("tenant_id")
+  hotelId       String    @db.Uuid @map("hotel_id")
+  hotel         Hotel     @relation(fields: [hotelId], references: [id])
+  roomTypeId    String?   @db.Uuid @map("room_type_id")
+  roomId        String?   @db.Uuid @map("room_id")
+
+  // Guest — platform user OR external
+  customerUserId String?  @db.Uuid @map("customer_user_id")
+  guestName     String    @db.VarChar(200) @map("guest_name")
+  guestEmail    String?   @db.VarChar(255) @map("guest_email")
+  guestPhone    String?   @db.VarChar(40) @map("guest_phone")
+  guestNationality String? @db.Char(2) @map("guest_nationality")
+  source        String    @db.VarChar(20) @default("EXTERNAL")  // PLATFORM_USER / EXTERNAL / OPERATOR / MARKETPLACE
+
+  checkIn       DateTime  @db.Date @map("check_in")
+  checkOut      DateTime  @db.Date @map("check_out")
+  guests        Int       @default(1)
+  totalAmountCents BigInt @default(0) @map("total_amount_cents")
+  currency      String    @default("SAR") @db.VarChar(8)
+  status        String    @db.VarChar(20) @default("PENDING")  // PENDING / CONFIRMED / CHECKED_IN / CHECKED_OUT / COMPLETED / CANCELLED
+  paymentStatus String    @db.VarChar(20) @default("UNPAID") @map("payment_status")  // UNPAID / PARTIAL / PAID / REFUNDED
+  notes         String?
+
+  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([tenantId])
+  @@index([hotelId, status])
+  @@index([tenantId, checkIn])
+  @@map("hotel_bookings")
+  @@schema("plugin_hotel")
+}
+
+model Allotment {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String            @db.Uuid @map("tenant_id")
+  hotelId         String            @db.Uuid @map("hotel_id")
+  hotel           Hotel             @relation(fields: [hotelId], references: [id])
+  roomTypeId      String?           @db.Uuid @map("room_type_id")
+  contractType    HotelContractType @default(ALLOTMENT) @map("contract_type")
+
+  checkIn         DateTime          @db.Date @map("check_in")
+  checkOut        DateTime          @db.Date @map("check_out")
+  totalRooms      Int               @map("total_rooms")
+  bookedRooms     Int               @default(0) @map("booked_rooms")
+  overbookBuffer  Int               @default(0) @map("overbook_buffer")
+
+  // Pricing
+  rateCents       BigInt            @map("rate_cents")   // per room per night
+  currency        String            @db.Char(3) @default("SAR")
+  cancellationPolicy Json           @default("{}") @db.JsonB @map("cancellation_policy")
+
+  notes           String?
+  createdAt       DateTime          @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime          @updatedAt @db.Timestamptz @map("updated_at")
+
+  roomAssignments RoomAssignment[]
+
+  @@index([tenantId])
+  @@index([tenantId, checkIn, checkOut])
+  @@map("allotments")
+  @@schema("plugin_hotel")
+}
+
+model RoomAssignment {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid @map("tenant_id")
+  allotmentId   String   @db.Uuid @map("allotment_id")
+  allotment     Allotment @relation(fields: [allotmentId], references: [id])
+  bookingId     String   @db.Uuid @map("booking_id")
+  roomNumber    String?  @db.VarChar(20) @map("room_number")
+  pilgrims      Json     @default("[]") @db.JsonB  // pilgrim IDs
+  checkIn       DateTime @db.Date @map("check_in")
+  checkOut      DateTime @db.Date @map("check_out")
+  confirmedAt   DateTime? @db.Timestamptz @map("confirmed_at")
+
+  @@index([tenantId])
+  @@index([allotmentId])
+  @@map("room_assignments")
+  @@schema("plugin_hotel")
+}
+
+// ============================================================
+// PLUGIN: VISA & COMPLIANCE
+// ============================================================
+
+model VisaApplication {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String           @db.Uuid @map("tenant_id")
+  pilgrimId       String?          @db.Uuid @map("pilgrim_id")
+  bookingId       String?          @db.Uuid @map("booking_id")
+  operatorId      String?          @db.Uuid @map("operator_id")    // operator who submitted on behalf
+
+  status          VisaStatus       @default(NOT_STARTED)
+  regulatorySystem RegulatorySystem @map("regulatory_system")
+
+  // Applicant snapshot (external applicants who are not platform pilgrims)
+  applicantName       String?      @db.VarChar(200) @map("applicant_name")
+  applicantPassport   String?      @db.VarChar(50) @map("applicant_passport")
+  applicantNationality String?     @db.Char(2) @map("applicant_nationality")
+
+  // Visa service detail
+  visaType            String?      @db.VarChar(50) @map("visa_type")
+  destinationCountry  String?      @db.Char(2) @map("destination_country")
+  serviceCountry      String?      @db.Char(2) @map("service_country")
+  applicationNumber   String?      @db.VarChar(60) @map("application_number")
+  requiredDocuments   String[]     @map("required_documents")
+  assignedOfficer     String?      @db.VarChar(150) @map("assigned_officer")
+  expectedCompletionAt DateTime?   @db.Date @map("expected_completion_at")
+
+  // Finance
+  priceCents      BigInt           @default(0) @map("price_cents")
+  currency        String           @default("SAR") @db.VarChar(8)
+  paymentStatus   String           @db.VarChar(20) @default("UNPAID") @map("payment_status")
+
+  submittedAt     DateTime?        @db.Timestamptz @map("submitted_at")
+  approvedAt      DateTime?        @db.Timestamptz @map("approved_at")
+  rejectedAt      DateTime?        @db.Timestamptz @map("rejected_at")
+  expiresAt       DateTime?        @db.Date @map("expires_at")
+
+  // Regulator response
+  externalRef     String?          @db.VarChar(100) @map("external_ref")   // Nusuk/SISKOPATUH ref
+  regulatorData   Json?            @db.JsonB @map("regulator_data")
+  rejectionCode   String?          @db.VarChar(50) @map("rejection_code")
+  rejectionReason String?          @map("rejection_reason")
+  riskScore       Int?             @map("risk_score")  // AI-computed visa rejection risk
+
+  documents       Json             @default("[]") @db.JsonB
+  timeline        Json             @default("[]") @db.JsonB   // immutable event log
+  notes           String?
+
+  createdAt       DateTime         @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime         @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy       String?          @db.Uuid @map("created_by")
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([pilgrimId])
+  @@map("visa_applications")
+  @@schema("plugin_visa")
+}
+
+model RegulatorySubmission {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String           @db.Uuid @map("tenant_id")
+  regulatorySystem RegulatorySystem @map("regulatory_system")
+  batchRef        String?          @db.VarChar(100) @map("batch_ref")
+  pilgrimIds      String[]         @map("pilgrim_ids")
+
+  submittedAt     DateTime?        @db.Timestamptz @map("submitted_at")
+  acknowledgedAt  DateTime?        @db.Timestamptz @map("acknowledged_at")
+  completedAt     DateTime?        @db.Timestamptz @map("completed_at")
+  failedAt        DateTime?        @db.Timestamptz @map("failed_at")
+
+  requestPayload  Json?            @db.JsonB @map("request_payload")
+  responsePayload Json?            @db.JsonB @map("response_payload")
+  errorDetails    Json?            @db.JsonB @map("error_details")
+
+  createdAt       DateTime         @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([tenantId])
+  @@index([tenantId, regulatorySystem])
+  @@map("regulatory_submissions")
+  @@schema("plugin_visa")
+}
+
+// ============================================================
+// PLUGIN: TRANSPORT
+// ============================================================
+
+model Vehicle {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String        @db.Uuid @map("tenant_id")
+  vendorId        String?       @db.Uuid @map("vendor_id")
+  type            TransportType
+  name            String?       @db.VarChar(200)              // human-readable name
+  brand           String?       @db.VarChar(100)
+  plateNumber     String        @db.VarChar(30) @map("plate_number")
+  registrationNumber String?    @db.VarChar(50) @map("registration_number")
+  capacity        Int
+  bookedSeats     Int           @default(0) @map("booked_seats")
+  luggageCapacity Int?          @map("luggage_capacity")
+  hasAc           Boolean       @default(true) @map("has_ac")
+  licensedForHajj Boolean       @default(false) @map("licensed_for_hajj")
+  saudiLicenseNo  String?       @db.VarChar(50) @map("saudi_license_no")
+  model           String?       @db.VarChar(100)
+  year            Int?
+  features        String[]
+  imageUrls       String[]      @map("image_urls")
+  documentUrls    String[]      @map("document_urls")
+  status          String        @db.VarChar(20) @default("AVAILABLE")  // AVAILABLE / BOOKED / IN_SERVICE / UNDER_MAINTENANCE / INACTIVE
+  isActive        Boolean       @default(true) @map("is_active")
+  notes           String?
+
+  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+
+  drivers         VehicleDriver[]
+  assignments     TransportAssignment[]
+  tasreehPermits  TasreehPermit[]
+  routes          TransportRoute[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("vehicles")
+  @@schema("plugin_transport")
+}
+
+model Driver {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @db.Uuid @map("tenant_id")
+  vendorId        String?  @db.Uuid @map("vendor_id")
+  firstName       String   @db.VarChar(100) @map("first_name")
+  lastName        String   @db.VarChar(100) @map("last_name")
+  phone           String   @db.VarChar(30)
+  email           String?  @db.VarChar(255)
+  nationality     String?  @db.Char(2)
+  idNumber        String?  @db.VarChar(50) @map("id_number")
+  languages       String[]  // iso codes
+  licenseNumber   String?  @db.VarChar(50) @map("license_number")
+  licenseExpiry   DateTime? @db.Date @map("license_expiry")
+  photoUrl        String?  @map("photo_url")
+  documentUrls    String[] @map("document_urls")
+  status          String   @db.VarChar(20) @default("AVAILABLE")  // AVAILABLE / ASSIGNED / ON_TRIP / OFF_DUTY / INACTIVE
+  rating          Decimal? @db.Decimal(3,2)
+  isActive        Boolean  @default(true) @map("is_active")
+  notes           String?
+
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  vehicles        VehicleDriver[]
+  routes          TransportRoute[]
+  assignments     TransportAssignment[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("drivers")
+  @@schema("plugin_transport")
+}
+
+model VehicleDriver {
+  vehicleId  String   @db.Uuid @map("vehicle_id")
+  driverId   String   @db.Uuid @map("driver_id")
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
+  driver     Driver   @relation(fields: [driverId], references: [id])
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  assignedAt DateTime @default(now()) @db.Timestamptz @map("assigned_at")
+
+  @@id([vehicleId, driverId])
+  @@map("vehicle_drivers")
+  @@schema("plugin_transport")
+}
+
+model TransportRoute {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String       @db.Uuid @map("tenant_id")
+  name         String       @db.VarChar(200)
+  movementType MovementType @map("movement_type")
+  originCity   String       @db.VarChar(100) @map("origin_city")
+  destCity     String       @db.VarChar(100) @map("dest_city")
+  pickupPoint  String?      @db.VarChar(255) @map("pickup_point")
+  dropoffPoint String?      @db.VarChar(255) @map("dropoff_point")
+  distanceKm   Int?         @map("distance_km")
+  durationMins Int?         @map("duration_mins")
+  departureAt  DateTime?    @db.Timestamptz @map("departure_at")
+  arrivalAt    DateTime?    @db.Timestamptz @map("arrival_at")
+  pricePerSeatCents BigInt? @map("price_per_seat_cents")
+  pricePerVehicleCents BigInt? @map("price_per_vehicle_cents")
+  currency     String       @default("SAR") @db.VarChar(8)
+  totalSeats   Int?         @map("total_seats")
+  bookedSeats  Int          @default(0) @map("booked_seats")
+  vehicleId    String?      @db.Uuid @map("vehicle_id")
+  vehicle      Vehicle?     @relation(fields: [vehicleId], references: [id])
+  driverId     String?      @db.Uuid @map("driver_id")
+  driver       Driver?      @relation(fields: [driverId], references: [id])
+  status       String       @db.VarChar(20) @default("ACTIVE")  // DRAFT / ACTIVE / FULLY_BOOKED / COMPLETED / CANCELLED / INACTIVE
+  notes        String?
+
+  createdAt    DateTime     @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+
+  assignments  TransportAssignment[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("transport_routes")
+  @@schema("plugin_transport")
+}
+
+model TransportAssignment {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid @map("tenant_id")
+  vehicleId     String   @db.Uuid @map("vehicle_id")
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id])
+  routeId       String?  @db.Uuid @map("route_id")
+  route         TransportRoute? @relation(fields: [routeId], references: [id])
+  driverId      String?  @db.Uuid @map("driver_id")
+  driver        Driver?  @relation(fields: [driverId], references: [id])
+  groupId       String?  @db.Uuid @map("group_id")
+  bookingId     String?  @db.Uuid @map("booking_id")
+
+  customerType  String   @db.VarChar(20) @default("PLATFORM_USER") @map("customer_type")  // PLATFORM_USER / OPERATOR / EXTERNAL
+  customerName  String?  @db.VarChar(200) @map("customer_name")
+  customerEmail String?  @db.VarChar(255) @map("customer_email")
+  customerPhone String?  @db.VarChar(40) @map("customer_phone")
+
+  pickupLocation  String? @db.VarChar(255) @map("pickup_location")
+  dropoffLocation String? @db.VarChar(255) @map("dropoff_location")
+
+  scheduledAt   DateTime @db.Timestamptz @map("scheduled_at")
+  departedAt    DateTime? @db.Timestamptz @map("departed_at")
+  arrivedAt     DateTime? @db.Timestamptz @map("arrived_at")
+  pilgrims      Json     @default("[]") @db.JsonB
+  passengerCount Int     @default(1) @map("passenger_count")
+
+  priceCents    BigInt   @default(0) @map("price_cents")
+  currency      String   @default("SAR") @db.VarChar(8)
+  paymentStatus String   @db.VarChar(20) @default("UNPAID") @map("payment_status")  // UNPAID / PARTIAL / PAID / REFUNDED
+  status        String   @db.VarChar(20) @default("SCHEDULED")  // DRAFT / SCHEDULED / CONFIRMED / IN_PROGRESS / COMPLETED / CANCELLED
+  notes         String?
+
+  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("transport_assignments")
+  @@schema("plugin_transport")
+}
+
+model TasreehPermit {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String   @db.Uuid @map("tenant_id")
+  vehicleId    String   @db.Uuid @map("vehicle_id")
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
+  permitNumber String   @db.VarChar(50) @map("permit_number")
+  permitDate   DateTime @db.Date @map("permit_date")
+  zone         String   @db.VarChar(50)  // MINA, ARAFAT, MUZDALIFAH
+  issuedAt     DateTime? @db.Timestamptz @map("issued_at")
+  expiresAt    DateTime  @db.Date @map("expires_at")
+  documentUrl  String?  @map("document_url")
+
+  @@index([tenantId])
+  @@map("tasreeh_permits")
+  @@schema("plugin_transport")
+}
+
+// ============================================================
+// PLUGIN: FINANCE
+// ============================================================
+
+model Invoice {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String        @db.Uuid @map("tenant_id")
+  invoiceRef      String        @unique @map("invoice_ref")  // INV-2026-00001
+  status          InvoiceStatus @default(DRAFT)
+  type            String        @db.VarChar(30) @default("CUSTOMER")  // CUSTOMER / VENDOR / CREDIT_NOTE
+
+  // Parties
+  bookingId       String?       @db.Uuid @map("booking_id")
+  pilgrimId       String?       @db.Uuid @map("pilgrim_id")
+  vendorId        String?       @db.Uuid @map("vendor_id")
+  issuedToName    String        @map("issued_to_name")
+  issuedToAddress Json?         @db.JsonB @map("issued_to_address")
+
+  // Amounts (all bigint minor units)
+  subtotalCents   BigInt        @map("subtotal_cents")
+  taxCents        BigInt        @default(0) @map("tax_cents")
+  discountCents   BigInt        @default(0) @map("discount_cents")
+  totalCents      BigInt        @map("total_cents")
+  paidCents       BigInt        @default(0) @map("paid_cents")
+  currency        String        @db.Char(3) @default("SAR")
+
+  // Dates
+  issuedAt        DateTime?     @db.Date @map("issued_at")
+  dueAt           DateTime?     @db.Date @map("due_at")
+  paidAt          DateTime?     @db.Timestamptz @map("paid_at")
+
+  // ZATCA fields (for KSA e-invoicing)
+  zatcaUuid       String?       @db.Uuid @map("zatca_uuid")
+  zatcaHash       String?       @map("zatca_hash")
+  zatcaQrCode     String?       @map("zatca_qr_code")
+  zatcaClearedAt  DateTime?     @db.Timestamptz @map("zatca_cleared_at")
+
+  lineItems       Json          @default("[]") @db.JsonB @map("line_items")
+  notes           String?
+
+  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy       String?       @db.Uuid @map("created_by")
+
+  payments        Payment[]
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([invoiceRef])
+  @@map("invoices")
+  @@schema("plugin_finance")
+}
+
+model Payment {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String        @db.Uuid @map("tenant_id")
+  invoiceId       String?       @db.Uuid @map("invoice_id")
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
+  bookingId       String?       @db.Uuid @map("booking_id")
+  pilgrimId       String?       @db.Uuid @map("pilgrim_id")
+  status          PaymentStatus @default(PENDING)
+
+  // Amount
+  amountCents     BigInt        @map("amount_cents")
+  currency        String        @db.Char(3)
+  fxRateSar       Decimal?      @db.Decimal(15,6) @map("fx_rate_sar")  // rate to SAR at time of payment
+
+  // Gateway
+  gateway         String        @db.VarChar(50)  // stripe, hyperpay, midtrans, tabby, tamara, cash
+  gatewayRef      String?       @db.VarChar(200) @map("gateway_ref")
+  gatewayStatus   String?       @db.VarChar(50)  @map("gateway_status")
+  gatewayResponse Json?         @db.JsonB @map("gateway_response")
+
+  // BNPL
+  isBnpl          Boolean       @default(false) @map("is_bnpl")
+  bnplProvider    String?       @db.VarChar(50) @map("bnpl_provider")
+  installmentPlan Json?         @db.JsonB @map("installment_plan")
+
+  idempotencyKey  String        @unique @map("idempotency_key")
+  paidAt          DateTime?     @db.Timestamptz @map("paid_at")
+  failedAt        DateTime?     @db.Timestamptz @map("failed_at")
+  failureReason   String?       @map("failure_reason")
+  refundedCents   BigInt        @default(0) @map("refunded_cents")
+  refundedAt      DateTime?     @db.Timestamptz @map("refunded_at")
+
+  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([idempotencyKey])
+  @@map("payments")
+  @@schema("plugin_finance")
+}
+
+model BudgetPlan {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String   @db.Uuid @map("tenant_id")
+  planRef            String   @unique @map("plan_ref")  // BP-2026-00001
+
+  // Client
+  clientUserId       String?  @db.Uuid @map("client_user_id")
+  clientName         String   @db.VarChar(200) @map("client_name")
+  clientType         String   @db.VarChar(20) @default("TRAVELER") @map("client_type")  // TRAVELER / OPERATOR / EXTERNAL
+  requestId          String?  @db.Uuid @map("request_id")    // optional marketplace request link
+
+  // Trip parameters
+  destination        String?  @db.VarChar(120)
+  dateFrom           DateTime? @db.Date @map("date_from")
+  dateTo             DateTime? @db.Date @map("date_to")
+  travelers          Int      @default(1)
+  currency           String   @default("SAR") @db.VarChar(8)
+
+  // Budget breakdown (minor units)
+  totalBudgetCents   BigInt   @default(0) @map("total_budget_cents")
+  hotelBudgetCents   BigInt   @default(0) @map("hotel_budget_cents")
+  transportBudgetCents BigInt @default(0) @map("transport_budget_cents")
+  visaBudgetCents    BigInt   @default(0) @map("visa_budget_cents")
+  packageBudgetCents BigInt   @default(0) @map("package_budget_cents")
+  otherBudgetCents   BigInt   @default(0) @map("other_budget_cents")
+
+  commissionRate     Decimal? @db.Decimal(5,2) @map("commission_rate")  // percent
+  commissionCents    BigInt   @default(0) @map("commission_cents")
+
+  suggestedOptions   Json     @default("[]") @db.JsonB @map("suggested_options")
+  finalPlan          Json?    @db.JsonB @map("final_plan")
+  status             String   @db.VarChar(20) @default("DRAFT")  // DRAFT / PROPOSED / ACCEPTED / COMPLETED / CANCELLED
+  notes              String?
+
+  createdAt          DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt          DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy          String?  @db.Uuid @map("created_by")
+
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@map("budget_plans")
+  @@schema("plugin_finance")
+}
+
+model LedgerEntry {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @db.Uuid @map("tenant_id")
+  accountCode     String   @db.VarChar(20) @map("account_code")
+  type            String   @db.VarChar(10)  // DEBIT / CREDIT
+  amountCents     BigInt   @map("amount_cents")
+  currency        String   @db.Char(3)
+  fxRateSar       Decimal? @db.Decimal(15,6) @map("fx_rate_sar")
+  referenceType   String   @db.VarChar(50) @map("reference_type")   // invoice, payment, refund, fx_revaluation
+  referenceId     String   @db.Uuid @map("reference_id")
+  description     String?
+  postedAt        DateTime @default(now()) @db.Timestamptz @map("posted_at")
+  createdBy       String?  @db.Uuid @map("created_by")
+
+  @@index([tenantId, accountCode])
+  @@index([tenantId, postedAt])
+  @@map("ledger_entries")
+  @@schema("plugin_finance")
+}
+
+model FxRate {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  baseCurrency String   @db.Char(3) @default("SAR") @map("base_currency")
+  quoteCurrency String  @db.Char(3) @map("quote_currency")
+  rate         Decimal  @db.Decimal(18,8)
+  source       String   @db.VarChar(50) @default("manual")
+  rateDate     DateTime @db.Date @map("rate_date")
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@unique([baseCurrency, quoteCurrency, rateDate])
+  @@map("fx_rates")
+  @@schema("plugin_finance")
+}
+
+// ============================================================
+// PLUGIN: GROUP OPERATIONS
+// ============================================================
+
+model TripGroup {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @db.Uuid @map("tenant_id")
+  name            String   @db.VarChar(200)
+  description     String?  // Long-form description shown on detail page
+  coverUrl        String?  @map("cover_url")
+  visibility      String   @db.VarChar(20) @default("PRIVATE")  // PUBLIC / PRIVATE / UNLISTED
+  tripType        String   @db.VarChar(20) @default("UMRAH")  // UMRAH / HAJJ
+  season          String?  @db.VarChar(50)  // RAMADAN_2026, HAJJ_1446
+  departureDate   DateTime? @db.Date @map("departure_date")
+  returnDate      DateTime? @db.Date @map("return_date")
+  capacity        Int
+  enrolledCount   Int      @default(0) @map("enrolled_count")
+
+  mutawifId       String?  @db.Uuid @map("mutawif_id")
+  leadGuideId     String?  @db.Uuid @map("lead_guide_id")
+  status          String   @db.VarChar(50) @default("PLANNING")
+
+  itinerary       Json     @default("[]") @db.JsonB
+  briefingNotes   String?  @map("briefing_notes")
+  emergencyContact Json?   @db.JsonB @map("emergency_contact")
+
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy       String?  @db.Uuid @map("created_by")
+
+  incidents       Incident[]
+  members         GroupMember[]
+  posts           GroupPost[]
+  polls           GroupPoll[]
+  notes           GroupNote[]
+  invites         GroupInvite[]
+
+  @@index([tenantId])
+  @@index([visibility])
+  @@map("trip_groups")
+  @@schema("plugin_group_ops")
+}
+
+model GroupMember {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId   String   @db.Uuid @map("group_id")
+  group     TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid @map("user_id")
+  role      String   @db.VarChar(20) @default("MEMBER")  // OWNER / ADMIN / MEMBER
+  status    String   @db.VarChar(20) @default("ACTIVE")  // ACTIVE / PENDING / REMOVED
+  joinedAt  DateTime @default(now()) @db.Timestamptz @map("joined_at")
+  notes     String?
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_members")
+  @@schema("plugin_group_ops")
+}
+
+model GroupInvite {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId     String    @db.Uuid @map("group_id")
+  group       TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviteeUserId String? @db.Uuid @map("invitee_user_id")
+  inviteeEmail String? @db.VarChar(255) @map("invitee_email")
+  invitedBy   String    @db.Uuid @map("invited_by")
+  status      String    @db.VarChar(20) @default("PENDING")  // PENDING / ACCEPTED / DECLINED / REVOKED
+  message     String?
+  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  respondedAt DateTime? @db.Timestamptz @map("responded_at")
+
+  @@index([groupId, status])
+  @@index([inviteeUserId, status])
+  @@map("group_invites")
+  @@schema("plugin_group_ops")
+}
+
+model GroupPost {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId   String     @db.Uuid @map("group_id")
+  group     TripGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  authorId  String     @db.Uuid @map("author_id")
+  body      String
+  mediaUrls String[]   @map("media_urls")
+  isPinned  Boolean    @default(false) @map("is_pinned")
+  createdAt DateTime   @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt DateTime   @updatedAt @db.Timestamptz @map("updated_at")
+
+  comments  GroupPostComment[]
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@map("group_posts")
+  @@schema("plugin_group_ops")
+}
+
+model GroupPostComment {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId    String    @db.Uuid @map("post_id")
+  post      GroupPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String    @db.Uuid @map("author_id")
+  body      String
+  createdAt DateTime  @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([postId, createdAt])
+  @@map("group_post_comments")
+  @@schema("plugin_group_ops")
+}
+
+model GroupPoll {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId    String    @db.Uuid @map("group_id")
+  group      TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  authorId   String    @db.Uuid @map("author_id")
+  question   String    @db.VarChar(500)
+  options    Json      @default("[]") @db.JsonB  // [{ index, label }]
+  isMultiple Boolean   @default(false) @map("is_multiple")
+  closesAt   DateTime? @db.Timestamptz @map("closes_at")
+  status     String    @db.VarChar(20) @default("OPEN")  // OPEN / CLOSED
+  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+
+  votes      GroupPollVote[]
+
+  @@index([groupId])
+  @@map("group_polls")
+  @@schema("plugin_group_ops")
+}
+
+model GroupPollVote {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pollId     String    @db.Uuid @map("poll_id")
+  poll       GroupPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  userId     String    @db.Uuid @map("user_id")
+  optionIndex Int      @map("option_index")
+  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+
+  @@unique([pollId, userId, optionIndex])
+  @@index([pollId])
+  @@map("group_poll_votes")
+  @@schema("plugin_group_ops")
+}
+
+model GroupNote {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId    String    @db.Uuid @map("group_id")
+  group      TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  authorId   String    @db.Uuid @map("author_id")
+  title      String    @db.VarChar(200)
+  body       String?
+  category   String    @db.VarChar(30) @default("GENERAL")  // GENERAL / PLANNING / ITINERARY / CHECKLIST / TRANSPORT / HOTEL
+  pinned     Boolean   @default(false)
+  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt  DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([groupId, category])
+  @@map("group_notes")
+  @@schema("plugin_group_ops")
+}
+
+model GroupDocument {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId    String    @db.Uuid @map("group_id")
+  uploaderId String    @db.Uuid @map("uploader_id")
+  name       String    @db.VarChar(255)
+  url        String
+  mimeType   String?   @db.VarChar(120) @map("mime_type")
+  sizeBytes  Int?      @map("size_bytes")
+  description String?
+  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([groupId, createdAt(sort: Desc)])
+  @@map("group_documents")
+  @@schema("plugin_group_ops")
+}
+
+model Incident {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid @map("tenant_id")
+  groupId       String   @db.Uuid @map("group_id")
+  group         TripGroup @relation(fields: [groupId], references: [id])
+  pilgrimId     String?  @db.Uuid @map("pilgrim_id")
+  type          String   @db.VarChar(50)  // MEDICAL, LOST, DELAY, COMPLAINT, OTHER
+  severity      String   @db.VarChar(20)  // LOW, MEDIUM, HIGH, CRITICAL
+  description   String
+  location      String?
+  resolvedAt    DateTime? @db.Timestamptz @map("resolved_at")
+  resolution    String?
+  reportedBy    String?  @db.Uuid @map("reported_by")
+  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([tenantId, groupId])
+  @@map("incidents")
+  @@schema("plugin_group_ops")
+}
+
+// ============================================================
+// MARKETPLACE SCHEMA
+// ============================================================
+
+model Vendor {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String?      @db.Uuid @map("tenant_id")  // if linked to a tenant
+  status          VendorStatus @default(PENDING_KYC)
+  type            TenantType   // VENDOR_HOTEL / VENDOR_TRANSPORT / etc.
+
+  name            String       @db.VarChar(255)
+  nameAr          String?      @db.VarChar(255) @map("name_ar")
+  description     String?
+  email           String       @db.VarChar(255)
+  phone           String?      @db.VarChar(30)
+  website         String?
+  country         String       @db.Char(2)
+  city            String?      @db.VarChar(100)
+  address         String?
+
+  kycDocuments    Json         @default("[]") @db.JsonB @map("kyc_documents")
+  verifiedAt      DateTime?    @db.Timestamptz @map("verified_at")
+  verifiedBy      String?      @db.Uuid @map("verified_by")
+  rating          Decimal?     @db.Decimal(3,2)
+  ratingCount     Int          @default(0) @map("rating_count")
+
+  logoUrl         String?      @map("logo_url")
+  images          String[]
+
+  createdAt       DateTime     @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime     @updatedAt @db.Timestamptz @map("updated_at")
+
+  listings        Listing[]
+  ratings         VendorRating[]
+  quotes          Quote[]
+
+  @@index([status])
+  @@index([type])
+  @@map("vendors")
+  @@schema("marketplace")
+}
+
+model Listing {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId        String   @db.Uuid @map("vendor_id")
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  type            String   @db.VarChar(50)  // hotel_room, transport_service, guide, catering, visa_service
+  name            String   @db.VarChar(255)
+  nameAr          String?  @db.VarChar(255) @map("name_ar")
+  description     String?
+  priceCents      BigInt   @map("price_cents")
+  currency        String   @db.Char(3) @default("SAR")
+  pricingModel    String   @db.VarChar(30) @default("PER_PERSON")  // PER_PERSON / PER_GROUP / PER_NIGHT
+  attributes      Json     @default("{}") @db.JsonB
+  imageUrls       String[] @map("image_urls")
+  status          String   @db.VarChar(20) @default("PUBLISHED")  // DRAFT / PUBLISHED / PAUSED / ARCHIVED
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  quotes          Quote[]
+  inquiries       ListingInquiry[]
+  bookings        ListingBooking[]
+
+  @@index([vendorId])
+  @@index([type, status])
+  @@map("listings")
+  @@schema("marketplace")
+}
+
+model ListingInquiry {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listingId     String   @db.Uuid @map("listing_id")
+  listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  fromUserId    String?  @db.Uuid @map("from_user_id")
+  fromName      String?  @db.VarChar(200) @map("from_name")
+  fromEmail     String?  @db.VarChar(255) @map("from_email")
+  fromPhone     String?  @db.VarChar(40) @map("from_phone")
+  message       String
+  partySize     Int?     @map("party_size")
+  startDate     DateTime? @db.Date @map("start_date")
+  endDate       DateTime? @db.Date @map("end_date")
+  status        String   @db.VarChar(20) @default("NEW")  // NEW / RESPONDED / CONVERTED / CLOSED
+  response      String?
+  respondedAt   DateTime? @db.Timestamptz @map("responded_at")
+  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([listingId, status])
+  @@index([fromUserId])
+  @@map("listing_inquiries")
+  @@schema("marketplace")
+}
+
+model ListingBooking {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listingId       String   @db.Uuid @map("listing_id")
+  listing         Listing  @relation(fields: [listingId], references: [id])
+  customerUserId  String?  @db.Uuid @map("customer_user_id")
+  customerName    String   @db.VarChar(200) @map("customer_name")
+  customerEmail   String?  @db.VarChar(255) @map("customer_email")
+  customerPhone   String?  @db.VarChar(40) @map("customer_phone")
+  startDate       DateTime? @db.Date @map("start_date")
+  endDate         DateTime? @db.Date @map("end_date")
+  partySize       Int      @default(1) @map("party_size")
+  totalAmountCents BigInt  @default(0) @map("total_amount_cents")
+  currency        String   @default("SAR") @db.VarChar(8)
+  status          String   @db.VarChar(20) @default("PENDING")  // PENDING / CONFIRMED / PAID / COMPLETED / CANCELLED / REFUNDED
+  paymentStatus   String   @db.VarChar(20) @default("UNPAID") @map("payment_status")  // UNPAID / PARTIAL / PAID / REFUNDED
+  notes           String?
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([listingId, status])
+  @@index([customerUserId])
+  @@map("listing_bookings")
+  @@schema("marketplace")
+}
+
+model Quote {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String   @db.Uuid @map("tenant_id")  // requesting operator
+  vendorId        String   @db.Uuid @map("vendor_id")
+  vendor          Vendor   @relation(fields: [vendorId], references: [id])
+  listingId       String?  @db.Uuid @map("listing_id")
+  listing         Listing? @relation(fields: [listingId], references: [id])
+
+  status          String   @db.VarChar(30) @default("PENDING")  // PENDING, OFFERED, ACCEPTED, REJECTED, EXPIRED
+  requirements    Json     @default("{}") @db.JsonB
+  offeredPriceCents BigInt? @map("offered_price_cents")
+  currency        String   @db.Char(3) @default("SAR")
+  validUntil      DateTime? @db.Timestamptz @map("valid_until")
+
+  requestedAt     DateTime @default(now()) @db.Timestamptz @map("requested_at")
+  respondedAt     DateTime? @db.Timestamptz @map("responded_at")
+  acceptedAt      DateTime? @db.Timestamptz @map("accepted_at")
+  rejectedAt      DateTime? @db.Timestamptz @map("rejected_at")
+  notes           String?
+
+  @@index([tenantId])
+  @@index([vendorId])
+  @@map("quotes")
+  @@schema("marketplace")
+}
+
+model VendorRating {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId    String   @db.Uuid @map("vendor_id")
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  tenantId    String   @db.Uuid @map("tenant_id")  // rating operator
+  bookingRef  String?  @map("booking_ref")
+  score       Int      // 1-5
+  review      String?
+  isVerified  Boolean  @default(false) @map("is_verified")  // only operators with completed bookings
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  @@unique([vendorId, tenantId, bookingRef])
+  @@map("vendor_ratings")
+  @@schema("marketplace")
+}
+
+// ============================================================
+// SOCIAL SCHEMA — Cross-tenant feed (no tenant_id RLS here)
+// ============================================================
+
+model SocialAccount {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String            @unique @db.Uuid @map("user_id")
+  user            User              @relation(fields: [userId], references: [id])
+  type            SocialAccountType
+  displayName     String            @db.VarChar(100) @map("display_name")
+  bio             String?
+  avatarUrl       String?           @map("avatar_url")
+  isVerified      Boolean           @default(false) @map("is_verified")
+  verifiedBadge   String?           @map("verified_badge")  // operator, vendor, guide
+  privacyDefault  PostVisibility    @default(PUBLIC) @map("privacy_default")
+  coverUrl        String?           @map("cover_url")
+
+  // Traveler profile fields
+  phone           String?           @db.VarChar(40)
+  nationality     String?           @db.Char(2)
+  city            String?           @db.VarChar(100)
+  travelInterests String[]          @map("travel_interests")  // ["UMRAH", "HAJJ", "FAMILY_TRIP", ...]
+  preferredDateFrom DateTime?       @db.Date @map("preferred_date_from")
+  preferredDateTo   DateTime?       @db.Date @map("preferred_date_to")
+  profileVisibility String          @db.VarChar(20) @default("PUBLIC") @map("profile_visibility")  // PUBLIC / CONNECTIONS / PRIVATE
+  contactVisibility String          @db.VarChar(20) @default("CONNECTIONS") @map("contact_visibility")  // PUBLIC / CONNECTIONS / PRIVATE
+
+  followerCount   Int               @default(0) @map("follower_count")
+  followingCount  Int               @default(0) @map("following_count")
+  postCount       Int               @default(0) @map("post_count")
+  isSuspended     Boolean           @default(false) @map("is_suspended")
+  isShadowBanned  Boolean           @default(false) @map("is_shadow_banned")
+  createdAt       DateTime          @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime          @updatedAt @db.Timestamptz @map("updated_at")
+
+  posts           Post[]
+  comments        Comment[]
+  reactions       Reaction[]
+  followingList   Follow[]          @relation("Follower")
+  followerList    Follow[]          @relation("Followed")
+  sentMessages    Message[]
+  postReports     PostReport[]
+  savedPosts      SavedPost[]
+
+  @@map("social_accounts")
+  @@schema("social")
+}
+
+model SavedPost {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId   String        @db.Uuid @map("account_id")
+  account     SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  postId      String        @db.Uuid @map("post_id")
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  savedAt     DateTime      @default(now()) @db.Timestamptz @map("saved_at")
+
+  @@unique([accountId, postId])
+  @@index([accountId, savedAt(sort: Desc)])
+  @@map("saved_posts")
+  @@schema("social")
+}
+
+model Post {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authorId        String           @db.Uuid @map("author_id")
+  author          SocialAccount    @relation(fields: [authorId], references: [id])
+  type            PostType
+  visibility      PostVisibility   @default(PUBLIC)
+  moderationStatus ModerationStatus @default(PENDING) @map("moderation_status")
+
+  // Content
+  body            String?          @db.VarChar(2000)
+  structuredData  Json?            @db.JsonB @map("structured_data")  // offer/guideline/event fields
+  mediaUrls       String[]         @map("media_urls")
+  attachmentUrl   String?          @map("attachment_url")   // PDF for guidelines
+  tags            String[]
+  language        String           @default("ar") @db.VarChar(10)
+
+  // Expiry (for offers, stories)
+  expiresAt       DateTime?        @db.Timestamptz @map("expires_at")
+
+  // Engagement counts (denormalized for perf)
+  likeCount       Int              @default(0) @map("like_count")
+  commentCount    Int              @default(0) @map("comment_count")
+  shareCount      Int              @default(0) @map("share_count")
+  saveCount       Int              @default(0) @map("save_count")
+
+  // Source
+  sourceCountry   String?          @db.Char(2) @map("source_country")
+  targetRoles     String[]         @map("target_roles")  // for role-set visibility
+
+  // Moderation
+  moderatedAt     DateTime?        @db.Timestamptz @map("moderated_at")
+  moderatedBy     String?          @db.Uuid @map("moderated_by")
+  moderationNotes String?          @map("moderation_notes")
+
+  createdAt       DateTime         @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime         @updatedAt @db.Timestamptz @map("updated_at")
+  deletedAt       DateTime?        @db.Timestamptz @map("deleted_at")
+
+  comments        Comment[]
+  reactions       Reaction[]
+  reports         PostReport[]
+  savedBy         SavedPost[]
+
+  @@index([authorId])
+  @@index([type, moderationStatus])
+  @@index([createdAt])
+  @@map("posts")
+  @@schema("social")
+}
+
+model Comment {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String        @db.Uuid @map("post_id")
+  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String        @db.Uuid @map("author_id")
+  author      SocialAccount @relation(fields: [authorId], references: [id])
+  parentId    String?       @db.Uuid @map("parent_id")
+  body        String        @db.VarChar(1000)
+  likeCount   Int           @default(0) @map("like_count")
+  moderationStatus ModerationStatus @default(APPROVED) @map("moderation_status")
+  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  deletedAt   DateTime?     @db.Timestamptz @map("deleted_at")
+
+  reactions   Reaction[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@map("comments")
+  @@schema("social")
+}
+
+model Reaction {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId   String        @db.Uuid @map("account_id")
+  account     SocialAccount @relation(fields: [accountId], references: [id])
+  postId      String?       @db.Uuid @map("post_id")
+  post        Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId   String?       @db.Uuid @map("comment_id")
+  comment     Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  type        String        @db.VarChar(20) @default("LIKE")  // LIKE, SAVE, SHARE
+  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+
+  @@unique([accountId, postId, type])
+  @@unique([accountId, commentId, type])
+  @@map("reactions")
+  @@schema("social")
+}
+
+model Follow {
+  followerId  String        @db.Uuid @map("follower_id")
+  followedId  String        @db.Uuid @map("followed_id")
+  follower    SocialAccount @relation("Follower", fields: [followerId], references: [id])
+  followed    SocialAccount @relation("Followed", fields: [followedId], references: [id])
+  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+
+  @@id([followerId, followedId])
+  @@map("follows")
+  @@schema("social")
+}
+
+model Conversation {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type         String   @db.VarChar(20) @default("DM")  // DM, GROUP, BOOKING_THREAD, TRIP_THREAD
+  name         String?  @db.VarChar(200)
+  contextRef   String?  @db.VarChar(100) @map("context_ref")  // booking_id, trip_id
+  participants Json     @default("[]") @db.JsonB  // account IDs
+  lastMessageAt DateTime? @db.Timestamptz @map("last_message_at")
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  messages     Message[]
+
+  @@map("conversations")
+  @@schema("social")
+}
+
+model Message {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversationId String        @db.Uuid @map("conversation_id")
+  conversation   Conversation  @relation(fields: [conversationId], references: [id])
+  senderId       String        @db.Uuid @map("sender_id")
+  sender         SocialAccount @relation(fields: [senderId], references: [id])
+  body           String        @db.VarChar(4000)
+  mediaUrls      String[]      @map("media_urls")
+  readBy         Json          @default("[]") @db.JsonB @map("read_by")  // [{account_id, read_at}]
+  deletedAt      DateTime?     @db.Timestamptz @map("deleted_at")
+  createdAt      DateTime      @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+  @@schema("social")
+}
+
+model PostReport {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId      String        @db.Uuid @map("post_id")
+  post        Post          @relation(fields: [postId], references: [id])
+  reporterId  String        @db.Uuid @map("reporter_id")
+  reporter    SocialAccount @relation(fields: [reporterId], references: [id])
+  reason      String        @db.VarChar(50)
+  details     String?
+  resolvedAt  DateTime?     @db.Timestamptz @map("resolved_at")
+  resolvedBy  String?       @db.Uuid @map("resolved_by")
+  resolution  String?       @db.VarChar(50)  // REMOVED, NO_ACTION, SHADOW_BAN, SUSPEND
+  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+
+  @@map("post_reports")
+  @@schema("social")
+}
+
+// ─── Connection (friend) — bidirectional, requires accept ────────────────
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+
+  @@schema("social")
+}
+
+model Connection {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requesterId  String           @db.Uuid @map("requester_id")
+  recipientId  String           @db.Uuid @map("recipient_id")
+  status       ConnectionStatus @default(PENDING)
+  message      String?
+  respondedAt  DateTime?        @db.Timestamptz @map("responded_at")
+  createdAt    DateTime         @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt    DateTime         @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@unique([requesterId, recipientId])
+  @@index([requesterId])
+  @@index([recipientId, status])
+  @@map("connections")
+  @@schema("social")
+}
+
+// ─── Notification — in-app, per-user ─────────────────────────────────────
+enum NotificationType {
+  POST_COMMENT
+  POST_REACTION
+  COMMENT_REPLY
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  FOLLOW
+  MESSAGE
+  REQUEST_OFFER
+  REQUEST_OFFER_ACCEPTED
+  REQUEST_OFFER_REJECTED
+  GROUP_INVITE
+  BOOKING_CREATED
+  BOOKING_STATUS
+  PAYMENT_RECEIVED
+  VISA_STATUS
+  SYSTEM
+
+  @@schema("social")
+}
+
+model Notification {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String?          @db.Uuid @map("tenant_id")
+  recipientId String           @db.Uuid @map("recipient_id")     // user.id (not SocialAccount.id)
+  actorId     String?          @db.Uuid @map("actor_id")         // user.id who triggered it
+  type        NotificationType
+  title       String           @db.VarChar(200)
+  body        String?
+  link        String?                                            // /social/posts/:id, /messages/:id
+  data        Json?            @db.JsonB
+  readAt      DateTime?        @db.Timestamptz @map("read_at")
+  createdAt   DateTime         @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([recipientId, readAt])
+  @@index([recipientId, createdAt(sort: Desc)])
+  @@map("notifications")
+  @@schema("social")
+}
+
+// ─── Public website inquiries (contact / partner / careers / newsletter / demo) ──
+enum InquiryType {
+  CONTACT
+  PARTNER
+  CAREERS
+  NEWSLETTER
+  DEMO
+  SUPPORT
+
+  @@schema("core")
+}
+
+enum InquiryStatus {
+  NEW
+  IN_REVIEW
+  RESOLVED
+  ARCHIVED
+
+  @@schema("core")
+}
+
+model PublicInquiry {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type      InquiryType
+  status    InquiryStatus @default(NEW)
+  name      String?       @db.VarChar(160)
+  email     String        @db.VarChar(200)
+  phone     String?       @db.VarChar(40)
+  company   String?       @db.VarChar(200)
+  subject   String?       @db.VarChar(240)
+  message   String?
+  metadata  Json?         @db.JsonB   // role interest, position applied for, source page, etc.
+  createdAt DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([type, status])
+  @@index([createdAt(sort: Desc)])
+  @@map("public_inquiries")
+  @@schema("core")
+}
+
+// ─── Marketplace Request (traveler-side) + Offer (provider-side) ─────────
+enum RequestStatus {
+  OPEN
+  IN_NEGOTIATION
+  FULFILLED
+  CLOSED
+  EXPIRED
+
+  @@schema("marketplace")
+}
+
+enum RequestServiceType {
+  HOTEL
+  TRANSPORT
+  VISA
+  PACKAGE
+  GUIDE
+  CATERING
+  OTHER
+
+  @@schema("marketplace")
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+
+  @@schema("marketplace")
+}
+
+model MarketplaceRequest {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String              @db.Uuid @map("tenant_id")
+  travelerId    String              @db.Uuid @map("traveler_id")  // user.id
+  serviceType   RequestServiceType  @map("service_type")
+  title         String              @db.VarChar(200)
+  description   String?
+  city          String?
+  dateFrom      DateTime?           @db.Timestamptz @map("date_from")
+  dateTo        DateTime?           @db.Timestamptz @map("date_to")
+  travelers     Int                 @default(1)
+  budgetMinCents BigInt?            @map("budget_min_cents")
+  budgetMaxCents BigInt?            @map("budget_max_cents")
+  currency      String              @default("SAR") @db.VarChar(8)
+  requirements  Json?               @db.JsonB
+  status        RequestStatus       @default(OPEN)
+  acceptedOfferId String?           @db.Uuid @map("accepted_offer_id")
+  expiresAt     DateTime?           @db.Timestamptz @map("expires_at")
+  createdAt     DateTime            @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime            @updatedAt @db.Timestamptz @map("updated_at")
+
+  offers        RequestOffer[]
+
+  @@index([tenantId, status])
+  @@index([travelerId, status])
+  @@index([serviceType, status])
+  @@map("marketplace_requests")
+  @@schema("marketplace")
+}
+
+model RequestOffer {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId   String             @db.Uuid @map("request_id")
+  request     MarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  providerId  String             @db.Uuid @map("provider_id")    // user.id of provider
+  vendorId    String?            @db.Uuid @map("vendor_id")      // optional link to marketplace.Vendor
+  title       String             @db.VarChar(200)
+  description String?
+  priceCents  BigInt             @map("price_cents")
+  currency    String             @default("SAR") @db.VarChar(8)
+  validUntil  DateTime?          @db.Timestamptz @map("valid_until")
+  status      OfferStatus        @default(PENDING)
+  respondedAt DateTime?          @db.Timestamptz @map("responded_at")
+  createdAt   DateTime           @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime           @updatedAt @db.Timestamptz @map("updated_at")
+
+  @@index([requestId, status])
+  @@index([providerId, status])
+  @@map("request_offers")
+  @@schema("marketplace")
+}
+
+// ============================================================
+// AUDIT SCHEMA — Immutable event log
+// ============================================================
+
+model AuditLog {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String?     @db.Uuid @map("tenant_id")
+  actorId     String?     @db.Uuid @map("actor_id")
+  actorEmail  String?     @map("actor_email")
+  action      AuditAction
+  namespace   String      @db.VarChar(50)   // plugin namespace
+  resource    String      @db.VarChar(100)
+  resourceId  String?     @map("resource_id")
+  beforeState Json?       @db.JsonB @map("before_state")
+  afterState  Json?       @db.JsonB @map("after_state")
+  metadata    Json?       @db.JsonB
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  requestId   String?     @map("request_id")
+  occurredAt  DateTime    @default(now()) @db.Timestamptz @map("occurred_at")
+
+  @@index([tenantId, occurredAt])
+  @@index([actorId])
+  @@index([resource, resourceId])
+  @@map("audit_logs")
+  @@schema("audit")
+}

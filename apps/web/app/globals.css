@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Umrah Connect brand tokens (light) */
+  :root {
+    --background: 40 39% 95%;        /* Ivory Mist #F8F5EF */
+    --foreground: 210 14% 12%;       /* Text Primary #1A1F23 */
+    --card: 0 0% 100%;
+    --card-foreground: 210 14% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 14% 12%;
+    --primary: 172 61% 15%;          /* Deep Umrah Green #0F3D37 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 30% 92%;         /* warm sandstone tint */
+    --secondary-foreground: 172 40% 15%;
+    --muted: 40 25% 93%;
+    --muted-foreground: 205 11% 41%; /* Text Secondary #5E6974 */
+    --accent: 40 46% 60%;            /* Gold Accent #C8A96B */
+    --accent-foreground: 172 61% 12%;
+    --destructive: 0 44% 49%;        /* Error #B54747 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 45 13% 84%;            /* Slate Border #D9D7D0 */
+    --input: 45 13% 84%;
+    --ring: 172 61% 15%;
+    --radius: 0.625rem;
+    --saudi-green: 172 61% 15%;
+  }
+
+  /* Umrah Connect brand tokens (dark — Midnight Navy / Deep Green) */
+  .dark {
+    --background: 210 51% 14%;       /* Midnight Navy #112234 */
+    --foreground: 40 39% 95%;
+    --card: 172 45% 10%;
+    --card-foreground: 40 39% 95%;
+    --popover: 172 45% 10%;
+    --popover-foreground: 40 39% 95%;
+    --primary: 40 46% 60%;           /* Gold leads on dark */
+    --primary-foreground: 172 61% 10%;
+    --secondary: 172 30% 18%;
+    --secondary-foreground: 40 39% 95%;
+    --muted: 172 25% 16%;
+    --muted-foreground: 40 15% 75%;
+    --accent: 168 49% 32%;           /* Emerald */
+    --accent-foreground: 40 39% 95%;
+    --destructive: 0 44% 49%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 172 25% 20%;
+    --input: 172 25% 20%;
+    --ring: 40 46% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Headings use Manrope per brand typography system */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+    letter-spacing: -0.01em;
+  }
+
+  /* RTL support for Arabic/Urdu */
+  [dir="rtl"] {
+    font-family: theme('fontFamily.arabic');
+  }
+
+  [dir="rtl"] .sidebar-nav {
+    @apply right-0 left-auto;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

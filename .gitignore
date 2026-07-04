@@ -1,0 +1,88 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+.next
+out
+build
+.turbo
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+
+# Prisma
+prisma/migrations/dev.db
+*.db
+*.db-journal
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# Editor
+.vscode/settings.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Terraform state (never commit state files)
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# Secrets — never commit these
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Mobile
+.expo
+ios/Pods
+android/.gradle
+android/app/build
+
+# Storybook
+storybook-static
+
+# Build artifacts / large binaries — not source (host these elsewhere)
+*.apk
+apps/web/public/*.apk
+
+# CI workflows require a workflow-scoped token to push; re-add later
+.github/workflows/
+
+# Local QA/audit outputs (screenshots, PDFs) — keep repo lean
+audit/screenshots/
+audit/*.pdf
+audit/*.png

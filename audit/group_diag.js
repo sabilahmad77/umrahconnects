@@ -1,0 +1,20 @@
+const { chromium } = require('playwright-core');
+const fs = require('fs');
+(async () => {
+  const gid = fs.readFileSync('/tmp/gid.txt', 'utf8').trim();
+  const b = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 950 } });
+  const p = await ctx.newPage(); p.setDefaultTimeout(30000);
+  const errs = []; p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push('PAGEERR: ' + e.message));
+  await p.goto('http://localhost:3000/login', { waitUntil: 'networkidle' });
+  await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
+  await p.waitForURL(u => !u.toString().includes('login'), { timeout: 30000 });
+  await p.goto('http://localhost:3000/groups/' + gid, { waitUntil: 'networkidle' });
+  await p.waitForTimeout(2500);
+  console.log('URL:', p.url().replace('http://localhost:3000', ''));
+  console.log('404 visible:', await p.locator('text=/404|not found|could not be found/i').first().isVisible().catch(() => false));
+  console.log('ERRORS:', errs.length); errs.slice(0, 5).forEach(e => console.log('  ' + e.slice(0, 220)));
+  console.log('--- body (first 600) ---'); console.log((await p.locator('body').innerText()).slice(0, 600));
+  await p.screenshot({ path: 'screenshots/group_detail_diag.png' });
+  await b.close();
+})();

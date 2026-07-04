@@ -1,0 +1,278 @@
+[
+  {
+    "role": "traveler",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/social"
+  },
+  {
+    "role": "traveler",
+    "action": "Social: create post (composer)",
+    "status": "PASS",
+    "note": "post visible in feed"
+  },
+  {
+    "role": "traveler",
+    "action": "Social: Like button",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "traveler",
+    "action": "Social: Comment (open + submit)",
+    "status": "PASS",
+    "note": "comment visible"
+  },
+  {
+    "role": "traveler",
+    "action": "Marketplace: category filter (Hotel)",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "traveler",
+    "action": "Marketplace: open listing detail",
+    "status": "PASS",
+    "note": "http://localhost:3000/marketplace"
+  },
+  {
+    "role": "traveler",
+    "action": "Marketplace: Book modal submit",
+    "status": "PASS",
+    "note": "modal closed (booking created)"
+  },
+  {
+    "role": "traveler",
+    "action": "Requests: open create-request form",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "traveler",
+    "action": "Notifications: bell opens panel",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "traveler",
+    "action": "Sign out",
+    "status": "FAIL",
+    "note": "locator.click: Timeout 20000ms exceeded.\nCall log:\n  - waiting for locator('text=/sign out/i').first()\n    - locator resolved to <button cla"
+  },
+  {
+    "role": "operator",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/dashboard"
+  },
+  {
+    "role": "operator",
+    "action": "Pilgrims: search filter",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "operator",
+    "action": "Pilgrims: Add Pilgrim form",
+    "status": "PARTIAL",
+    "note": "modal opened, fields not matched"
+  },
+  {
+    "role": "operator",
+    "action": "Bookings: open booking detail",
+    "status": "PASS",
+    "note": "http://localhost:3000/bookings/aab50a6f-57a0-4af7-b2c8-c88ce2c93004"
+  },
+  {
+    "role": "operator",
+    "action": "Marketplace: Add Listing modal opens",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "operator",
+    "action": "Hotels page render",
+    "status": "FAIL",
+    "note": "CRASH: toLocaleString on undefined"
+  },
+  {
+    "role": "operator",
+    "action": "Groups: create-group modal opens",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "operator",
+    "action": "Reports: tabs",
+    "status": "PARTIAL",
+    "note": "no tab buttons found"
+  },
+  {
+    "role": "operator",
+    "action": "Settings: interactive controls",
+    "status": "PARTIAL",
+    "note": "4 controls (mostly static)"
+  },
+  {
+    "role": "hotel",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/hotel-dashboard"
+  },
+  {
+    "role": "hotel",
+    "action": "Hotels page",
+    "status": "FAIL",
+    "note": "crash (same as operator)"
+  },
+  {
+    "role": "hotel",
+    "action": "Hotel bookings page renders",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "admin",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/admin-dashboard"
+  },
+  {
+    "role": "admin",
+    "action": "KYC: approve action available",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "admin",
+    "action": "Users: search filter",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "admin",
+    "action": "Listings moderation: 0 action buttons",
+    "status": "PARTIAL",
+    "note": ""
+  },
+  {
+    "role": "public",
+    "action": "Signup page",
+    "status": "FAIL",
+    "note": "page exists (backend stub)"
+  },
+  {
+    "role": "public",
+    "action": "Password reset entry point",
+    "status": "FAIL",
+    "note": "no forgot-password link on login"
+  },
+  {
+    "role": "transport",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/transport-dashboard"
+  },
+  {
+    "role": "transport",
+    "action": "Fleet tabs switch (2/3)",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "transport",
+    "action": "Add Vehicle form opens",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "transport",
+    "action": "Marketplace accessible",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "visa",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/visa-dashboard"
+  },
+  {
+    "role": "visa",
+    "action": "Applications list renders (20 rows/cards)",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "visa",
+    "action": "New application form opens",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "visa",
+    "action": "Document management page",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "finance",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/finance-dashboard"
+  },
+  {
+    "role": "finance",
+    "action": "Invoices list renders (20 rows/cards)",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "finance",
+    "action": "Create-invoice form opens",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "finance",
+    "action": "Budget plans page + create button",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "finance",
+    "action": "Payments page renders",
+    "status": "PASS",
+    "note": ""
+  },
+  {
+    "role": "traveler",
+    "action": "Login via role tile",
+    "status": "PASS",
+    "note": "http://localhost:3000/social"
+  },
+  {
+    "role": "traveler",
+    "action": "Messaging page + composer",
+    "status": "FAIL",
+    "note": "no composer found"
+  },
+  {
+    "role": "traveler",
+    "action": "Groups page renders (0 cards)",
+    "status": "PARTIAL",
+    "note": ""
+  },
+  {
+    "role": "traveler",
+    "action": "Groups: join/view action",
+    "status": "PARTIAL",
+    "note": "detail/discussion not implemented"
+  },
+  {
+    "role": "traveler",
+    "action": "Sign out (retry from /settings)",
+    "status": "PASS",
+    "note": "http://localhost:3000/login"
+  }
+]

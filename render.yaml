@@ -1,0 +1,38 @@
+# Render Blueprint for the Umrah Connect API (backend only).
+# In Render: New → Blueprint → connect the GitHub repo → it reads this file.
+# The database is provisioned separately on Neon (free) — paste its URL into
+# DATABASE_URL below (sync: false means Render will prompt you for the value).
+services:
+  - type: web
+    name: umrah-connect-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false          # paste your Neon connection string in the dashboard
+      - key: JWT_SECRET
+        generateValue: true  # Render generates a strong secret
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGINS
+        # comma-separated; add your Vercel URL later. * allows all (testing only).
+        value: "*"
+      - key: WEB_URL
+        # used for password-reset links; set to your web URL once deployed
+        value: "http://localhost:3000"
+      - key: KAFKA_ENABLED
+        value: "false"
