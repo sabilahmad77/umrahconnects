@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   Store, Star, RefreshCw, Search, Plus, Package, AlertCircle, BadgeCheck, X, Loader2,
-  MapPin, ShoppingBag, Building2,
+  MapPin, ShoppingBag, Building2, CheckCircle2,
 } from 'lucide-react';
 import { useMarketplaceListings, useMarketplaceVendors, useCreateListing } from '@/hooks/use-api';
 import { cn } from '@/lib/utils';

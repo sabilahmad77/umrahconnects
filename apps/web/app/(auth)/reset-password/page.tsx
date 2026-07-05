@@ -16,8 +16,8 @@ function ResetForm() {
   const [done, setDone] = useState(false);
 
   const submit = async () => {
-    if (password.length < 8) return toast.error('Password must be at least 8 characters');
-    if (password !== confirm) return toast.error('Passwords do not match');
+    if (password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    if (password !== confirm) { toast.error('Passwords do not match'); return; }
     setBusy(true);
     try {
       await apiClient.post('/auth/reset-password', { token, password });

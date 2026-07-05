@@ -28,12 +28,20 @@
       ],
       "@/hooks/*": [
         "./hooks/*"
+      ],
+      "react": [
+        "./node_modules/@types/react"
+      ],
+      "react-dom": [
+        "./node_modules/@types/react-dom"
       ]
     },
     "strict": true,
     "noEmit": true,
     "allowJs": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "declaration": false,
+    "declarationMap": false
   },
   "include": [
     "next-env.d.ts",

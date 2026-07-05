@@ -158,7 +158,7 @@ export function useHotelStats() {
     queryKey: ['hotels', 'stats'],
     queryFn: async () => {
       const { data } = await apiClient.get('/hotels/stats');
-      return data.data as { totalHotels: number; totalRooms: number; bookedRooms: number; availableRooms: number };
+      return data.data as any;
     },
   });
 }
