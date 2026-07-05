@@ -1,4 +1,10 @@
-const API_ORIGIN = process.env.API_PROXY_ORIGIN ?? 'http://localhost:4000';
+// Backend origin for the same-origin /proxy-api rewrite.
+// Priority: explicit env override → production backend when deployed (Vercel/prod) → local dev API.
+const API_ORIGIN =
+  process.env.API_PROXY_ORIGIN ??
+  (process.env.VERCEL || process.env.NODE_ENV === 'production'
+    ? 'https://umrah-connect-api.onrender.com'
+    : 'http://localhost:4000');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
