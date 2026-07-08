@@ -11,18 +11,10 @@ import {
 import { useFinanceInvoices, useFinanceStats } from '@/hooks/use-api';
 import { useCreateInvoice } from '@/hooks/use-finance';
 import { cn } from '@/lib/utils';
+import { INVOICE_STATUS_META as INV_STATUS, INVOICE_STATUSES } from '@/lib/statuses';
 
-const INV_STATUS: Record<string, { label: string; color: string; dot: string }> = {
-  DRAFT:          { label: 'Draft',          color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
-  ISSUED:         { label: 'Issued',         color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
-  SENT:           { label: 'Sent',           color: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-500' },
-  PARTIALLY_PAID: { label: 'Partial',        color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  PAID:           { label: 'Paid',           color: 'bg-green-100 text-green-700',  dot: 'bg-green-500' },
-  OVERDUE:        { label: 'Overdue',        color: 'bg-red-100 text-red-600',      dot: 'bg-red-500' },
-  VOID:           { label: 'Void',           color: 'bg-gray-100 text-gray-500',    dot: 'bg-gray-300' },
-};
-
-const FILTERS = ['ALL', 'PAID', 'SENT', 'PARTIALLY_PAID', 'OVERDUE', 'DRAFT'];
+// FIX-04: every backend invoice state is reachable in the filter bar.
+const FILTERS = ['ALL', ...INVOICE_STATUSES];
 
 const fmtSAR = (cents?: number) =>
   cents !== undefined

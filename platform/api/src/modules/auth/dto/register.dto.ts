@@ -1,7 +1,23 @@
 import { IsEmail, IsString, IsUUID, MinLength, IsOptional, Matches } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+/**
+ * Server-authoritative allow-list of roles a visitor may express interest in
+ * at public signup. Privileged roles (admin / Super Admin) are NEVER accepted
+ * here — they can only be granted by an existing Super Admin via admin tooling.
+ * Note: actual role assignment is always server-controlled; `roleInterest` is
+ * informational (routes provider onboarding) and gated by this list.
+ */
+export const PUBLIC_SIGNUP_ROLES = [
+  'pilgrim', 'operator', 'hotel', 'transport', 'compliance', 'finance',
+] as const;
+
 export class RegisterDto {
+  @ApiPropertyOptional({ enum: PUBLIC_SIGNUP_ROLES })
+  @IsOptional()
+  @IsString()
+  roleInterest?: string;
+
   // Optional: self-registering travelers have no tenant — the service
   // auto-provisions them into the shared community tenant.
   @ApiPropertyOptional()

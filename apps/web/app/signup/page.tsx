@@ -4,13 +4,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  UserRound, Building2, Hotel, Bus, FileCheck2, Wallet, Shield,
+  UserRound, Building2, Hotel, Bus, FileCheck2, Wallet,
   ArrowRight, ArrowLeft, Loader2, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicHeader, PublicFooter } from '@/components/public/public-chrome';
 import { apiClient } from '@/lib/api';
 
+// FIX-01: public signup offers ONLY self-service roles. This list mirrors the
+// server-authoritative PUBLIC_SIGNUP_ROLES allow-list (auth/dto/register.dto.ts);
+// privileged roles (Super Admin) are never selectable publicly and are rejected
+// server-side (403) even if injected via direct API call.
 const ROLES = [
   { id: 'pilgrim', label: 'Traveler / Pilgrim', desc: 'Plan and book your Umrah journey', Icon: UserRound },
   { id: 'operator', label: 'Umrah Operator / Agency', desc: 'Full CRM & operations', Icon: Building2 },
@@ -18,7 +22,6 @@ const ROLES = [
   { id: 'transport', label: 'Transport Company', desc: 'Fleet, drivers and routes', Icon: Bus },
   { id: 'compliance', label: 'Visa Agency', desc: 'Visa processing & compliance', Icon: FileCheck2 },
   { id: 'finance', label: 'Finance Manager', desc: 'Invoices and reconciliation', Icon: Wallet },
-  { id: 'admin', label: 'Super Admin', desc: 'Platform governance', Icon: Shield },
 ];
 
 export default function SignupPage() {
@@ -45,6 +48,7 @@ export default function SignupPage() {
         lastName: form.lastName.trim() || form.firstName.trim(),
         email: form.email.trim(),
         password: form.password,
+        roleInterest: role,
       });
       // Providers also register their interest so our team can complete onboarding
       if (isProvider) {

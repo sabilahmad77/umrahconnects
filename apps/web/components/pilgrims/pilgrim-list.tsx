@@ -11,9 +11,12 @@ import {
   usePilgrims, usePilgrimStats, useCreatePilgrim, useUpdatePilgrim, useDeletePilgrim,
 } from '@/hooks/use-api';
 import { cn } from '@/lib/utils';
+import { PILGRIM_STATUSES } from '@/lib/statuses';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string; icon: any }> = {
   LEAD:                { label: 'Lead',          color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400',   icon: Clock },
+  PROSPECT:            { label: 'Prospect',      color: 'bg-slate-100 text-slate-600',  dot: 'bg-slate-400',  icon: Clock },
+  BOOKED:              { label: 'Booked',        color: 'bg-teal-100 text-teal-700',    dot: 'bg-teal-500',   icon: CheckCircle2 },
   DOCUMENTS_PENDING:   { label: 'Docs Pending',  color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500', icon: FileText },
   VISA_PENDING:        { label: 'Visa Pending',  color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500',   icon: Clock },
   VISA_APPROVED:       { label: 'Visa Approved', color: 'bg-green-100 text-green-700',  dot: 'bg-green-500',  icon: CheckCircle2 },
@@ -348,12 +351,6 @@ const COUNTRIES: { code: string; name: string }[] = [
   { code: 'GB', name: 'United Kingdom' },
   { code: 'US', name: 'United States' },
   { code: 'AE', name: 'UAE' },
-];
-
-const PILGRIM_STATUSES = [
-  'LEAD', 'REGISTERED', 'DOCUMENT_COLLECTION',
-  'VISA_APPLIED', 'VISA_APPROVED', 'DEPARTED',
-  'IN_MAKKAH', 'IN_MADINAH', 'RETURNED', 'CANCELLED',
 ];
 
 function PilgrimFormModal({

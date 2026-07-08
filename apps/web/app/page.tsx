@@ -257,9 +257,15 @@ export default function LandingPage() {
             <p className="text-[15px] text-gray-600 mt-4 max-w-md leading-relaxed">
               Plan, book and manage your Umrah experience anytime, anywhere.
             </p>
+            {/* FIX-08: store listings not live yet — badges marked "coming soon"
+                rather than looking like working buttons. */}
             <div className="mt-6 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-2 bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold">App Store</span>
-              <span className="inline-flex items-center gap-2 bg-brand-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold">Google Play</span>
+              <span className="inline-flex items-center gap-2 bg-brand-700/60 text-white/90 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-default" title="Coming soon">
+                App Store <span className="text-[10px] font-normal text-gold-300">Soon</span>
+              </span>
+              <span className="inline-flex items-center gap-2 bg-brand-700/60 text-white/90 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-default" title="Coming soon">
+                Google Play <span className="text-[10px] font-normal text-gold-300">Soon</span>
+              </span>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

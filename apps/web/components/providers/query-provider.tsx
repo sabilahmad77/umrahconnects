@@ -12,7 +12,16 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 30 * 1000,   // 30 seconds
             gcTime: 5 * 60 * 1000,  // 5 minutes
-            retry: 1,
+            // FIX-03: transient 5xx (e.g. Render free-tier cold start ~50s, upstream
+            // timeouts) should retry with backoff instead of surfacing a failed
+            // detail load. Do NOT retry auth/client errors (4xx) — those are handled
+            // by the apiClient refresh flow (FIX-02).
+            retry: (failureCount, error: any) => {
+              const status = error?.response?.status;
+              if (status && status >= 400 && status < 500) return false;
+              return failureCount < 3;
+            },
+            retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
             refetchOnWindowFocus: false,
           },
         },

@@ -91,6 +91,16 @@ export function PublicHeader() {
   );
 }
 
+// FIX-08: real social handles go here when available (set href to the URL).
+// null href renders an intentionally-disabled placeholder — never a dead link.
+const SOCIALS: { Icon: any; label: string; href: string | null }[] = [
+  { Icon: Linkedin, label: 'LinkedIn', href: null },
+  { Icon: Youtube, label: 'YouTube', href: null },
+  { Icon: Twitter, label: 'X (Twitter)', href: null },
+  { Icon: Instagram, label: 'Instagram', href: null },
+  { Icon: Facebook, label: 'Facebook', href: null },
+];
+
 const FOOTER_COLS = [
   { h: 'Platform', items: [['Solutions', '/solutions'], ['How It Works', '/workflow'], ['Security', '/security'], ['Integrations', '/integrations']] },
   { h: 'Marketplace', items: [['Hotels', '/marketplace-preview?category=hotels'], ['Transport', '/marketplace-preview?category=transport'], ['Visa Services', '/marketplace-preview?category=visa'], ['Packages', '/marketplace-preview?category=packages']] },
@@ -154,11 +164,22 @@ export function PublicFooter() {
           </div>
           <div className="flex items-center gap-3">
             <Brandmark light />
+            {/* FIX-08: social profiles not live yet — rendered as intentionally
+                disabled placeholders (no dead href="#"). Swap `href` in SOCIALS
+                for the real handles when available. */}
             <div className="flex items-center gap-2.5 ml-3">
-              {[Linkedin, Youtube, Twitter, Instagram, Facebook].map((I, i) => (
-                <a key={i} href="#" className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
-                  <I className="h-3.5 w-3.5 text-white/80" />
-                </a>
+              {SOCIALS.map(({ Icon, label, href }) => (
+                href ? (
+                  <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
+                    className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
+                    <Icon className="h-3.5 w-3.5 text-white/80" />
+                  </a>
+                ) : (
+                  <span key={label} aria-disabled="true" title={`${label} — coming soon`}
+                    className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center cursor-default">
+                    <Icon className="h-3.5 w-3.5 text-white/30" />
+                  </span>
+                )
               ))}
             </div>
           </div>

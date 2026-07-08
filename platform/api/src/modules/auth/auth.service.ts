@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -11,7 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { RegisterDto, PUBLIC_SIGNUP_ROLES } from './dto/register.dto';
 import { OtpLoginDto } from './dto/otp-login.dto';
 
 export interface JwtPayload {
@@ -64,6 +65,16 @@ export class AuthService {
 
   async register(dto: RegisterDto): Promise<AuthTokens> {
     const { email, phone, password, firstName, lastName } = dto;
+
+    // FIX-01: server-authoritative role gate. Privileged roles can never be
+    // requested at public signup, regardless of what the client sends.
+    // (Role assignment itself is server-controlled — new users only ever get
+    // the community-traveler role; privileged roles require a Super Admin.)
+    if (dto.roleInterest && !(PUBLIC_SIGNUP_ROLES as readonly string[]).includes(dto.roleInterest)) {
+      this.logger.warn(`Blocked privileged-role signup attempt: roleInterest="${dto.roleInterest}" email="${email ?? 'n/a'}"`);
+      throw new ForbiddenException('This role cannot be requested at public signup.');
+    }
+
     const tenantId = dto.tenantId ?? (await this.communityTenantId());
 
     const existing = await this.prisma.user.findFirst({

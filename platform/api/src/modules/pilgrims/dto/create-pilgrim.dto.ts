@@ -9,15 +9,19 @@ import {
   IsUUID,
 } from 'class-validator';
 
+// FIX-04: MUST mirror prisma enum PilgrimStatus (schema.prisma) exactly — this is
+// the canonical source of truth. Prior drift caused 400 on valid DB statuses and
+// 500 (Prisma reject) on DTO-only statuses.
 export enum PilgrimStatus {
   LEAD = 'LEAD',
-  REGISTERED = 'REGISTERED',
-  DOCUMENT_COLLECTION = 'DOCUMENT_COLLECTION',
-  VISA_APPLIED = 'VISA_APPLIED',
+  PROSPECT = 'PROSPECT',
+  BOOKED = 'BOOKED',
+  DOCUMENTS_PENDING = 'DOCUMENTS_PENDING',
+  VISA_PENDING = 'VISA_PENDING',
   VISA_APPROVED = 'VISA_APPROVED',
-  DEPARTED = 'DEPARTED',
-  IN_MAKKAH = 'IN_MAKKAH',
-  IN_MADINAH = 'IN_MADINAH',
+  VISA_REJECTED = 'VISA_REJECTED',
+  TRAVELING = 'TRAVELING',
+  IN_KINGDOM = 'IN_KINGDOM',
   RETURNED = 'RETURNED',
   CANCELLED = 'CANCELLED',
 }

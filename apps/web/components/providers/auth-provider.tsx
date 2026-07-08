@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getStoredUser, getToken, clearAuth, isTokenExpired, type StoredUser, type DashboardType } from '@/lib/auth';
+import { refreshAccessToken } from '@/lib/api';
 
 interface AuthContextValue {
   user: StoredUser | null;
@@ -78,28 +79,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const token = getToken();
     const storedUser = getStoredUser();
     const isPublic = isPublicPath(pathname);
 
-    if (token && !isTokenExpired(token) && storedUser) {
-      setUserState(storedUser);
+    const settleLoggedIn = (u: StoredUser) => {
+      if (cancelled) return;
+      setUserState(u);
       setIsLoaded(true);
       // Only bounce off /login, /register, /forgot-password — let / (landing) stay reachable
       if (shouldBounceLoggedInUser(pathname) && !redirected.current) {
         redirected.current = true;
-        router.push(getDashboardPath(storedUser.dashboardType));
+        router.push(getDashboardPath(u.dashboardType));
       }
-    } else {
-      // Clear stale auth
+    };
+
+    const bounceToLogin = () => {
+      if (cancelled) return;
       if (token || storedUser) clearAuth();
       setIsLoaded(true);
-      // Redirect to login only if on a protected path
       if (!isPublic && !redirected.current) {
         redirected.current = true;
-        router.push('/login');
+        // FIX-02: preserve intended destination instead of a silent bounce
+        const returnTo = pathname && pathname !== '/login' ? `?returnTo=${encodeURIComponent(pathname)}` : '';
+        router.push(`/login${returnTo}`);
       }
+    };
+
+    if (token && !isTokenExpired(token) && storedUser) {
+      settleLoggedIn(storedUser);
+      return () => { cancelled = true; };
     }
+
+    // FIX-02: access token expired/missing but a refresh token + user exist →
+    // try a silent refresh BEFORE bouncing (this is the 15-min hard-nav bounce).
+    const refreshToken = (() => { try { return localStorage.getItem('refreshToken'); } catch { return null; } })();
+    if (storedUser && refreshToken && !refreshToken.startsWith('demo.')) {
+      setIsLoaded(false);
+      (async () => {
+        const accessToken = await refreshAccessToken(); // shared/coalesced with apiClient
+        if (accessToken) settleLoggedIn(storedUser);
+        else bounceToLogin();
+      })();
+      return () => { cancelled = true; };
+    }
+
+    // Demo sessions: token may be a client persona with no refresh — keep the user
+    // on their page rather than bouncing mid-demo.
+    if (storedUser && (refreshToken?.startsWith('demo.') || token)) {
+      settleLoggedIn(storedUser);
+      return () => { cancelled = true; };
+    }
+
+    bounceToLogin();
+    return () => { cancelled = true; };
   }, [pathname]); // re-run on route changes
 
   return (

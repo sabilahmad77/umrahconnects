@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -151,6 +152,14 @@ export default function LoginPage() {
   const { login, loginAsDemo, isLoading } = useAuth();
   const { setUser } = useAuthContext();
 
+  // FIX-02: after login, honor ?returnTo=… so a session-expiry bounce resumes
+  // the user's intended page instead of dumping them on the dashboard.
+  const returnToParam = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    const rt = new URLSearchParams(window.location.search).get('returnTo');
+    return rt && rt.startsWith('/') && !rt.startsWith('/login') ? rt : null;
+  };
+
   const { register, handleSubmit, formState: { errors }, setValue, getValues } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { tenantSlug: 'al-haramain-ksa', email: 'admin@alharamain.sa', password: 'Admin@1234' },
@@ -163,7 +172,7 @@ export default function LoginPage() {
       const user = await loginAsDemo(role);
       setUser(user);
       toast.success(`Logged in as ${DEMO_ROLES.find((r) => r.id === role)?.label}`);
-      router.push(getDashboardPath(role));
+      router.push(returnToParam() ?? getDashboardPath(role));
     } catch (err) {
       toast.error('Demo login failed');
       setDemoLoading(null);
@@ -178,7 +187,7 @@ export default function LoginPage() {
       setUser(final);
       localStorage.setItem('currentUser', JSON.stringify(final));
       toast.success('Welcome back!');
-      router.push(getDashboardPath(selectedRole));
+      router.push(returnToParam() ?? getDashboardPath(selectedRole));
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message ?? err?.message ?? 'Login failed');
     }
@@ -506,11 +515,11 @@ export default function LoginPage() {
           <div className="flex items-center justify-center gap-6 mt-6 text-xs text-gray-400">
             <span>© 2026 Umrah Connect</span>
             <span>·</span>
-            <a href="#" className="hover:text-gray-600">Privacy Policy</a>
+            <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
             <span>·</span>
-            <a href="#" className="hover:text-gray-600">Terms of Service</a>
+            <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
             <span>·</span>
-            <a href="#" className="hover:text-gray-600">Help</a>
+            <Link href="/help" className="hover:text-gray-600">Help</Link>
           </div>
         </div>
       </div>
