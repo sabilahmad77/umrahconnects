@@ -520,7 +520,11 @@
       "Bash(sed -i '' 's/| Marketplace loop request→offer→booking | ☐ |/| Marketplace loop request→offer→booking | ✅ PASS |/' STATUS.md)",
       "Bash(pnpm --filter @umrah-connects/api build)",
       "Bash(echo \"API build exit: $?\")",
-      "Bash(sed -i '' 's/| FIX-10 image upload | ☐ |/| FIX-10 image upload | ◑ endpoint exists; file-UI+storage pending \\(human\\) |/' STATUS.md)"
+      "Bash(sed -i '' 's/| FIX-10 image upload | ☐ |/| FIX-10 image upload | ◑ endpoint exists; file-UI+storage pending \\(human\\) |/' STATUS.md)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}' -H 'Authorization: token __TRACKED_VAR__' https://api.github.com/user)",
+      "Bash(curl -s -m 60 https://umrah-connect-api.onrender.com/api/v1/health)",
+      "Bash(curl -s -m 60 \"https://umrah-connect-api.onrender.com/api/v1/marketplace/listings?limit=50\")",
+      "Bash(python3 -c \"import sys,json;d=json.load\\(sys.stdin\\).get\\('data'\\);i=d.get\\('items'\\) if isinstance\\(d,dict\\) else d;from collections import Counter;print\\('prod listings:',len\\(i or []\\),'by type:',dict\\(Counter\\(x.get\\('type'\\) for x in \\(i or []\\)\\)\\)\\)\")"
     ]
   }
 }
