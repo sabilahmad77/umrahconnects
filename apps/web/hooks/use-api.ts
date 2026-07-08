@@ -130,6 +130,29 @@ export function usePackages() {
   });
 }
 
+// FIX-09: package-management mutations (backend: POST/PUT /packages).
+export function useCreatePackage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) => {
+      const { data } = await apiClient.post('/packages', dto);
+      return data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+}
+
+export function useUpdatePackage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...dto }: { id: string } & Record<string, any>) => {
+      const { data } = await apiClient.put(`/packages/${id}`, dto);
+      return data.data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  });
+}
+
 export function useCreateBooking() {
   const qc = useQueryClient();
   return useMutation({
@@ -374,6 +397,7 @@ export function useReportsOverview() {
       return data.data as {
         totalPilgrims: number;
         activePilgrims: number;
+        inKingdomCount: number;
         confirmedBookings: number;
         hotelCount: number;
         vehicleCount: number;

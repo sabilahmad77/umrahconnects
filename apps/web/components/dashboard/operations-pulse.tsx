@@ -141,11 +141,9 @@ export function OperationsPulse() {
             />
             <KpiCard
               label="In Kingdom Now"
-              value={overview?.activePilgrims?.toLocaleString() ?? '—'}
+              value={overview?.inKingdomCount?.toLocaleString() ?? '0'}
               icon={Plane}
               iconBg="bg-brand-50 text-brand-600"
-              trend="+5%"
-              trendUp
             />
             <KpiCard
               label="Bookings"

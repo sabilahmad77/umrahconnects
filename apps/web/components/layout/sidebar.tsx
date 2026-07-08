@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Users, BookOpen, Hotel, FileCheck2, Bus,
   DollarSign, Users2, Store, Rss, BarChart3, Settings,
   ChevronLeft, ChevronRight, Globe, LogOut, Map, Shield, BedDouble, ClipboardList,
-  FolderOpen, Inbox, Building2, Zap, User,
+  FolderOpen, Inbox, Building2, Zap, User, Package,
 } from 'lucide-react';
 import type { DashboardType } from '@/lib/auth';
 
@@ -37,6 +37,7 @@ const NAV: Record<DashboardType, { section: string; items: { label: string; href
         { label: 'Dashboard',         href: '/dashboard',  icon: LayoutDashboard },
         { label: 'Pilgrims & CRM',    href: '/pilgrims',   icon: Users },
         { label: 'Bookings',          href: '/bookings',   icon: BookOpen },
+        { label: 'Packages',          href: '/packages',   icon: Package },
         { label: 'Groups',            href: '/groups',     icon: Users2 },
       ],
     },

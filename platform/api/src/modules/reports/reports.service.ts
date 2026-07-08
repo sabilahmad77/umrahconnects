@@ -6,7 +6,7 @@ export class ReportsService {
   constructor(private prisma: PrismaService) {}
 
   async getOverview(tenantId: string) {
-    const [totalPilgrims, activePilgrims, confirmedBookings, hotelCount, vehicleCount] = await Promise.all([
+    const [totalPilgrims, activePilgrims, inKingdomCount, confirmedBookings, hotelCount, vehicleCount] = await Promise.all([
       this.prisma.pilgrim.count({ where: { tenantId, deletedAt: null } }),
       this.prisma.pilgrim.count({
         where: {
@@ -14,6 +14,9 @@ export class ReportsService {
           status: { in: ['BOOKED', 'VISA_PENDING', 'VISA_APPROVED', 'TRAVELING', 'IN_KINGDOM'] as any },
         },
       }),
+      // FIX-07: literal "in kingdom" count — matches the CRM IN_KINGDOM filter so
+      // the dashboard tile and CRM view never contradict each other.
+      this.prisma.pilgrim.count({ where: { tenantId, deletedAt: null, status: 'IN_KINGDOM' as any } }),
       this.prisma.booking.count({
         where: { tenantId, status: { in: ['CONFIRMED', 'PARTIALLY_PAID', 'FULLY_PAID'] as any } },
       }),
@@ -25,7 +28,7 @@ export class ReportsService {
       this.prisma.invoice.aggregate({ where: { tenantId, status: { in: ['ISSUED', 'PARTIALLY_PAID', 'SENT'] as any } }, _sum: { totalCents: true } }),
     ]);
     return {
-      totalPilgrims, activePilgrims, confirmedBookings, hotelCount, vehicleCount,
+      totalPilgrims, activePilgrims, inKingdomCount, confirmedBookings, hotelCount, vehicleCount,
       revenuePaidCents: Number(revData._sum.totalCents ?? 0),
       revenueOutstandingCents: Number(outstandingData._sum.totalCents ?? 0),
     };

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Loader2, AlertCircle, Save, Edit3, Trash2,
   ListChecks, Calendar, Wallet, CheckCircle2, XCircle, CreditCard,
-  Receipt, User, Building2,
+  Receipt, User, Building2, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -217,8 +217,74 @@ function Overview({ inv }: { inv: any }) {
 function PaymentsTab({ inv }: { inv: any }) {
   const payments: any[] = Array.isArray(inv.payments) ? inv.payments : [];
   const currency = inv.currency ?? 'SAR';
+  const totalCents = Number(inv.totalCents ?? 0);
+  const paidCents = Number(inv.paidCents ?? 0);
+  const outstandingCents = Math.max(0, totalCents - paidCents);
+  const isSettled = inv.status === 'PAID' || inv.status === 'CANCELLED' || inv.status === 'VOID';
+
+  // FIX-06: record a payment against this invoice. Backend derives invoice status
+  // (DRAFT→SENT→PARTIAL→PAID) from the cumulative paid total and recalculates outstanding.
+  const record = useMarkInvoicePaid();
+  const [amount, setAmount] = useState<string>('');
+  const [method, setMethod] = useState('bank_transfer');
+  const [reference, setReference] = useState('');
+
+  const submit = async () => {
+    const sar = Number(amount || (outstandingCents / 100));
+    if (!sar || sar <= 0) { toast.error('Enter a payment amount'); return; }
+    if (sar * 100 > outstandingCents + 1) { toast.error(`Amount exceeds outstanding (${formatMoney(outstandingCents, currency)})`); return; }
+    try {
+      await record.mutateAsync({ id: inv.id, amountCents: Math.round(sar * 100), method, referenceNumber: reference || undefined });
+      toast.success('Payment recorded');
+      setAmount(''); setReference('');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error?.message ?? 'Could not record payment');
+    }
+  };
 
   return (
+    <div className="space-y-4">
+      {/* Record payment form */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><CreditCard className="h-4 w-4" /> Record a payment</h3>
+          <span className="text-xs text-gray-500">Outstanding: <span className="font-semibold text-gray-900">{formatMoney(outstandingCents, currency)}</span></span>
+        </div>
+        {isSettled ? (
+          <p className="text-sm text-gray-400 py-2">This invoice is {String(inv.status).toLowerCase()} — no further payments needed.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="sm:col-span-1">
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Amount ({currency})</label>
+              <input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}
+                placeholder={(outstandingCents / 100).toString()}
+                className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            </div>
+            <div className="sm:col-span-1">
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Method</label>
+              <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none bg-white focus:border-brand-400">
+                <option value="bank_transfer">Bank transfer</option>
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="cheque">Cheque</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <div className="sm:col-span-1">
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Reference</label>
+              <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. TXN-1234"
+                className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            </div>
+            <div className="sm:col-span-1 flex items-end">
+              <button onClick={submit} disabled={record.isPending}
+                className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-60">
+                {record.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Record
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
     <div className="bg-white rounded-2xl border border-gray-100">
       <div className="p-4 border-b border-gray-100">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
@@ -226,7 +292,7 @@ function PaymentsTab({ inv }: { inv: any }) {
         </h3>
       </div>
       {payments.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No payments recorded</div>
+        <div className="py-10 text-center text-sm text-gray-400">No payments recorded yet — use the form above.</div>
       ) : (
         <table className="w-full">
           <thead>
@@ -270,6 +336,7 @@ function PaymentsTab({ inv }: { inv: any }) {
           </tbody>
         </table>
       )}
+    </div>
     </div>
   );
 }

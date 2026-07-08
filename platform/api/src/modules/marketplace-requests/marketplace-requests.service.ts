@@ -98,14 +98,19 @@ export class MarketplaceRequestsService {
     if (!['OPEN', 'IN_NEGOTIATION'].includes(req.status as any)) {
       throw new BadRequestException('This request is no longer accepting offers');
     }
+    // FIX-05: validate/normalize so a missing title can't crash Prisma (500).
+    const priceCents = Number(dto.priceCents ?? 0);
+    if (!priceCents || priceCents <= 0) {
+      throw new BadRequestException('Offer price must be greater than zero.');
+    }
     const offer = await this.prisma.requestOffer.create({
       data: {
         requestId,
         providerId: providerUserId,
         vendorId: dto.vendorId ?? null,
-        title: dto.title,
+        title: dto.title?.trim() || `Offer for ${req.title}`,
         description: dto.description,
-        priceCents: BigInt(dto.priceCents ?? 0),
+        priceCents: BigInt(Math.round(priceCents)),
         currency: dto.currency ?? req.currency,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : null,
       },

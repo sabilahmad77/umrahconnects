@@ -69,7 +69,12 @@ export function useCreatePost() {
       const { data } = await apiClient.post('/social/posts', payload);
       return data.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['social', 'feed'] }),
+    // FIX-07: refresh the feed AND the profile account (posts counter) so the
+    // profile/dashboard counters update immediately after posting.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['social', 'feed'] });
+      qc.invalidateQueries({ queryKey: ['social', 'account'] });
+    },
   });
 }
 
@@ -79,7 +84,10 @@ export function useDeletePost() {
     mutationFn: async (postId: string) => {
       await apiClient.delete(`/social/posts/${postId}`);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['social', 'feed'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['social', 'feed'] });
+      qc.invalidateQueries({ queryKey: ['social', 'account'] });
+    },
   });
 }
 

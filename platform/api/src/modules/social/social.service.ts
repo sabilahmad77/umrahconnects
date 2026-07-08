@@ -271,9 +271,21 @@ export class SocialService {
   }
 
   async getMyAccount(tenantId: string, userId: string) {
-    const account = await this.prisma.socialAccount.findFirst({ where: { userId } });
-    if (!account) return this.getOrCreateSocialAccount(userId, tenantId);
-    return account;
+    const withCounts = { _count: { select: { posts: true, followerList: true, followingList: true } } };
+    let account = await this.prisma.socialAccount.findFirst({ where: { userId }, include: withCounts });
+    if (!account) {
+      await this.getOrCreateSocialAccount(userId, tenantId);
+      account = await this.prisma.socialAccount.findFirst({ where: { userId }, include: withCounts });
+    }
+    if (!account) return null;
+    // FIX-07: expose LIVE counts (not the stale denormalized columns) under the
+    // names the UI reads (_count.posts / followers / following), so profile
+    // counters update immediately after posting / following.
+    const { _count, ...rest } = account as any;
+    return {
+      ...rest,
+      _count: { posts: _count.posts, followers: _count.followerList, following: _count.followingList },
+    };
   }
 
   // Alias for controller

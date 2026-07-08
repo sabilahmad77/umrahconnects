@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -83,6 +83,21 @@ export class FinanceService {
   async recordPayment(tenantId: string, invoiceId: string, dto: any) {
     const inv = await this.findOne(tenantId, invoiceId);
     const amountCents = BigInt(Math.round((dto.amount ?? dto.amountCents ?? 0) * (dto.amount ? 100 : 1)));
+
+    // FIX-06: server-authoritative validation — amount > 0 and ≤ outstanding.
+    const outstanding = BigInt(inv.totalCents) - BigInt(inv.paidCents ?? 0);
+    if (amountCents <= BigInt(0)) {
+      throw new BadRequestException('Payment amount must be greater than zero.');
+    }
+    if (amountCents > outstanding) {
+      const fmt = (c: bigint) => `${inv.currency ?? 'SAR'} ${(Number(c) / 100).toLocaleString()}`;
+      throw new BadRequestException(
+        outstanding <= BigInt(0)
+          ? 'This invoice is already fully paid.'
+          : `Amount exceeds the outstanding balance (${fmt(outstanding)}).`,
+      );
+    }
+
     const idempotencyKey = dto.idempotencyKey ?? `pay-${invoiceId}-${Date.now()}`;
 
     const payment = await this.prisma.payment.create({
@@ -99,12 +114,17 @@ export class FinanceService {
       },
     });
 
+    // FIX-06: derive invoice status from the CUMULATIVE paid total (so two partial
+    // payments that sum to the total correctly reach PAID), not the single amount.
+    const newPaid = BigInt(inv.paidCents ?? 0) + amountCents;
+    const total = BigInt(inv.totalCents);
+    const derivedStatus = newPaid >= total ? 'PAID' : newPaid > BigInt(0) ? 'PARTIALLY_PAID' : (inv.status as any);
     await this.prisma.invoice.update({
       where: { id: invoiceId },
       data: {
         paidCents: { increment: amountCents },
-        paidAt: new Date(),
-        status: amountCents >= BigInt(inv.totalCents) ? 'PAID' : 'PARTIALLY_PAID',
+        paidAt: newPaid >= total ? new Date() : (inv as any).paidAt ?? undefined,
+        status: derivedStatus,
       },
     });
 

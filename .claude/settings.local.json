@@ -510,7 +510,17 @@
       "Bash(sed -i '' 's/| FIX-02 session stability \\(bounce + 401\\) | ☐ |/| FIX-02 session stability \\(bounce + 401\\) | ✅ PASS |/' STATUS.md)",
       "Bash(sed -i '' 's/| FIX-03 intermittent 503 \\(RSC prefetch\\) | ☐ |/| FIX-03 intermittent 503 \\(RSC prefetch\\) | ✅ PASS \\(client mitigation; infra cold-start noted\\) |/' STATUS.md)",
       "Bash(grep -rn \"href={'#'}\\\\|href={\\\\`#\\\\`}\\\\|to=\\\\\"#\\\\\"\" app components)",
-      "Bash(git commit -q -m 'Phase 1 blockers: FIX-01 signup role guard, FIX-02 session refresh, FIX-03 query retry, FIX-04 status enums, FIX-08 dead links *)"
+      "Bash(git commit -q -m 'Phase 1 blockers: FIX-01 signup role guard, FIX-02 session refresh, FIX-03 query retry, FIX-04 status enums, FIX-08 dead links *)",
+      "Bash(sed -i '' 's/| FIX-06 payment capture & reconciliation | ☐ |/| FIX-06 payment capture \\\\& reconciliation | ✅ PASS \\(manual\\\\/demo payments\\) |/' STATUS.md)",
+      "Bash(grep -vE \"^\\\\s*//|ApiProperty|import|^\\\\s*$\" platform/api/src/modules/bookings/dto/create-package.dto.ts)",
+      "Bash(sed -i '' 's/| FIX-09 empty modules \\\\& package management | ☐ |/| FIX-09 empty modules \\\\& package management | ✅ PASS |/' STATUS.md)",
+      "Bash(grep -vE \"^\\\\s*//|ApiProperty|^import|^\\\\s*$\" platform/api/src/modules/marketplace/dto/create-listing.dto.ts)",
+      "Bash(DATABASE_URL=\"postgresql://umrah@localhost:5432/umrah_connects\" npx ts-node prisma/seed-marketplace.ts)",
+      "Bash(sed -i '' 's/| FIX-05 marketplace supply \\(vendors\\\\/listings\\\\/offers\\) | ☐ |/| FIX-05 marketplace supply \\(vendors\\\\/listings\\\\/offers\\) | ✅ PASS \\(code; prod seed = human step\\) |/' STATUS.md)",
+      "Bash(sed -i '' 's/| Marketplace loop request→offer→booking | ☐ |/| Marketplace loop request→offer→booking | ✅ PASS |/' STATUS.md)",
+      "Bash(pnpm --filter @umrah-connects/api build)",
+      "Bash(echo \"API build exit: $?\")",
+      "Bash(sed -i '' 's/| FIX-10 image upload | ☐ |/| FIX-10 image upload | ◑ endpoint exists; file-UI+storage pending \\(human\\) |/' STATUS.md)"
     ]
   }
 }
