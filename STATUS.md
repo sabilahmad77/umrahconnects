@@ -30,6 +30,6 @@
 | Finance reconciliation partial+full | ✅ |
 | Mobile/responsive pass | ☐ |
 | Accessibility pass | ✅ PASS (focus ring, dialog ARIA, AA contrast, on-blur validation, guided empties) |
-| Final build/deploy verified | ◑ builds ✓; deploy pending human |
+| Final build/deploy verified | ✅ LIVE (umrahconnect.io + Render; prod proofs 24/24 + 23/23; 20 role screenshots) |
 
 Legend: ☐ pending · ◑ partial · ✅ pass · 🚫 blocked (reason in IMPLEMENTATION_LOG.md)

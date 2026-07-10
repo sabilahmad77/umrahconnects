@@ -3,8 +3,8 @@
 follow (route + counters), group post/note/poll counters. Red-team included."""
 import requests, sys, time
 
-API = "http://localhost:4000/api/v1"
-TEN = "ac08f9b4-aaec-4474-b61b-4832c5a5ec4c"
+API = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:4000/api/v1"
+TEN = sys.argv[2] if len(sys.argv) > 2 else "ac08f9b4-aaec-4474-b61b-4832c5a5ec4c"
 T = requests.post(f"{API}/auth/login", json={"email":"admin@alharamain.sa","password":"Admin@1234","tenantId":TEN}).json()["data"]["accessToken"]
 H = {"Authorization": f"Bearer {T}", "Content-Type": "application/json"}
 ok=fail=0

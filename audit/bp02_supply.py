@@ -68,9 +68,10 @@ if len(veh)<3:
 chk("vehicles seeded+listed", len(veh)>=3, f"({len(veh)})")
 drv=items(gd(requests.get(f"{API}/transport/drivers",headers=H)))
 if len(drv)<2:
-    for d in [{"name":"Khalid Al-Otaibi","phone":"+966501112233","licenseNumber":"DL-88231"},
-              {"name":"Yusuf Rahman","phone":"+966502223344","licenseNumber":"DL-90417"}]:
-        requests.post(f"{API}/transport/drivers",headers=H,json=d)
+    for d in [{"firstName":"Khalid","lastName":"Al-Otaibi","phone":"+966501112233","licenseNumber":"DL-88231"},
+              {"firstName":"Yusuf","lastName":"Rahman","phone":"+966502223344","licenseNumber":"DL-90417"}]:
+        r=requests.post(f"{API}/transport/drivers",headers=H,json=d)
+        if r.status_code>=400: print("  driver create failed:", r.status_code, r.text[:120])
     drv=items(gd(requests.get(f"{API}/transport/drivers",headers=H)))
 chk("drivers seeded+listed", len(drv)>=2, f"({len(drv)})")
 rts2=items(gd(requests.get(f"{API}/transport/routes",headers=H)))
@@ -88,7 +89,7 @@ aid=gd(r).get("id") if r.status_code<400 else None
 asg=items(gd(requests.get(f"{API}/transport/assignments",headers=H)))
 chk("assignment in list (persisted)", any(a.get("id")==aid for a in asg), f"({len(asg)})")
 # transport booking round-trip (bookings endpoint = assignment shape)
-r=requests.post(f"{API}/transport/bookings",headers=H,json={"routeId":rts2[0]["id"],"vehicleId":veh[1]["id"],"driverId":drv[1]["id"],
+r=requests.post(f"{API}/transport/bookings",headers=H,json={"routeId":rts2[0]["id"],"vehicleId":veh[min(1,len(veh)-1)]["id"],"driverId":drv[min(1,len(drv)-1)]["id"],
     "scheduledAt":"2026-08-02T06:00:00Z","customerName":"BP02 Group","passengerCount":18,"price":6300,
     "pickupLocation":"Jeddah Airport","dropoffLocation":"Makkah"})
 chk("transport booking create", r.status_code<400, f"({r.status_code}) {'' if r.status_code<400 else r.text[:80]}")
