@@ -33,7 +33,7 @@ export function VisaDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading visa application…
       </div>
     );
@@ -174,7 +174,7 @@ function Overview({ v }: { v: any }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">No pilgrim linked</p>
+            <p className="text-xs text-gray-500">No pilgrim linked</p>
           )}
         </div>
 
@@ -193,7 +193,7 @@ function Overview({ v }: { v: any }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">No package linked</p>
+            <p className="text-xs text-gray-500">No package linked</p>
           )}
         </div>
 
@@ -202,9 +202,9 @@ function Overview({ v }: { v: any }) {
             <Calendar className="h-3.5 w-3.5" /> Key dates
           </p>
           <ul className="space-y-1.5 text-xs">
-            <li><span className="text-gray-400">Submitted:</span> <span className="text-gray-700">{v.submittedAt ? new Date(v.submittedAt).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-400">Decision:</span> <span className="text-gray-700">{v.decisionAt ? new Date(v.decisionAt).toLocaleDateString() : v.approvedAt ? new Date(v.approvedAt).toLocaleDateString() : v.rejectedAt ? new Date(v.rejectedAt).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-400">Expires:</span> <span className="text-gray-700">{v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-500">Submitted:</span> <span className="text-gray-700">{v.submittedAt ? new Date(v.submittedAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-500">Decision:</span> <span className="text-gray-700">{v.decisionAt ? new Date(v.decisionAt).toLocaleDateString() : v.approvedAt ? new Date(v.approvedAt).toLocaleDateString() : v.rejectedAt ? new Date(v.rejectedAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-500">Expires:</span> <span className="text-gray-700">{v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : '—'}</span></li>
           </ul>
         </div>
       </div>
@@ -271,7 +271,7 @@ function DocumentsTab({ v, refetch }: { v: any; refetch: () => void }) {
           </h3>
         </div>
         {documents.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No documents recorded</div>
+          <div className="py-10 text-center text-sm text-gray-500">No documents recorded</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {documents.map((doc: any, i: number) => {
@@ -291,7 +291,7 @@ function DocumentsTab({ v, refetch }: { v: any; refetch: () => void }) {
                       ) : (
                         <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
                       )}
-                      <p className="text-[11px] text-gray-400">{type ?? 'OTHER'}</p>
+                      <p className="text-[11px] text-gray-500">{type ?? 'OTHER'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -310,7 +310,7 @@ function DocumentsTab({ v, refetch }: { v: any; refetch: () => void }) {
                         {docStatus === 'MISSING' && (
                           <button onClick={async () => { await updateDoc.mutateAsync({ visaId: v.id, docId: doc.id, status: 'REQUESTED' }); toast.success('Requested from applicant'); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Request</button>
                         )}
-                        <button onClick={async () => { if (!confirm('Remove this document?')) return; await removeDoc.mutateAsync({ visaId: v.id, docId: doc.id }); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-400">Remove</button>
+                        <button onClick={async () => { if (!confirm('Remove this document?')) return; await removeDoc.mutateAsync({ visaId: v.id, docId: doc.id }); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-500">Remove</button>
                       </>
                     )}
                   </div>
@@ -341,7 +341,7 @@ function TimelineTab({ v }: { v: any }) {
         </h3>
       </div>
       {events.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No timeline events yet</div>
+        <div className="py-10 text-center text-sm text-gray-500">No timeline events yet — submissions and status changes will appear here</div>
       ) : (
         <ul className="divide-y divide-gray-50">
           {events.map((e: any, i: number) => {
@@ -357,12 +357,12 @@ function TimelineTab({ v }: { v: any }) {
                     <p className="text-sm font-medium text-gray-900">
                       {String(status).replace(/_/g, ' ')}
                     </p>
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[11px] text-gray-500">
                       {at ? new Date(at).toLocaleString() : '—'}
                     </p>
                   </div>
                   {note && <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{note}</p>}
-                  {actor && <p className="text-[11px] text-gray-400 mt-0.5">by {actor}</p>}
+                  {actor && <p className="text-[11px] text-gray-500 mt-0.5">by {actor}</p>}
                 </div>
               </li>
             );

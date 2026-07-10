@@ -14,7 +14,7 @@ const TYPE_META: Record<string, { label: string; Icon: any }> = {
 };
 const STATUS_TINT: Record<string, string> = {
   NEW: 'bg-brand-50 text-brand-700', IN_REVIEW: 'bg-gold-50 text-gold-700',
-  RESOLVED: 'bg-gray-100 text-gray-600', ARCHIVED: 'bg-gray-100 text-gray-400',
+  RESOLVED: 'bg-gray-100 text-gray-600', ARCHIVED: 'bg-gray-100 text-gray-500',
 };
 
 export function AdminInquiriesView() {
@@ -54,7 +54,7 @@ export function AdminInquiriesView() {
           <div key={key} className="bg-white rounded-2xl border border-gray-100 p-4">
             <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center mb-2"><Icon className="h-4 w-4 text-brand-600" /></div>
             <p className="text-xl font-bold text-gray-900">{data.byType?.[key] ?? 0}</p>
-            <p className="text-[11px] text-gray-400">{label}</p>
+            <p className="text-[11px] text-gray-500">{label}</p>
           </div>
         ))}
       </div>
@@ -69,12 +69,12 @@ export function AdminInquiriesView() {
 
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-sm text-gray-400">Loading…</div>
+          <div className="p-8 text-center text-sm text-gray-500">Loading…</div>
         ) : (data.items ?? []).length === 0 ? (
-          <div className="p-12 text-center"><Inbox className="h-8 w-8 text-gray-300 mx-auto mb-2" /><p className="text-sm text-gray-400">No submissions yet.</p></div>
+          <div className="p-12 text-center"><Inbox className="h-8 w-8 text-gray-300 mx-auto mb-2" /><p className="text-sm text-gray-500">No submissions yet — public contact and inquiry forms land here.</p></div>
         ) : (
           <table className="w-full text-sm">
-            <thead><tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wider text-gray-400">
+            <thead><tr className="border-b border-gray-100 text-left text-[11px] uppercase tracking-wider text-gray-500">
               <th className="px-4 py-3 font-semibold">Type</th><th className="px-4 py-3 font-semibold">From</th>
               <th className="px-4 py-3 font-semibold">Message</th><th className="px-4 py-3 font-semibold">Status</th><th className="px-4 py-3 font-semibold">Actions</th>
             </tr></thead>
@@ -84,7 +84,7 @@ export function AdminInquiriesView() {
                 return (
                   <tr key={it.id} className="border-b border-gray-50 hover:bg-ivory/40">
                     <td className="px-4 py-3"><span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-gray-700"><m.Icon className="h-3.5 w-3.5 text-brand-500" /> {m.label}</span></td>
-                    <td className="px-4 py-3"><p className="font-medium text-gray-900">{it.name || '—'}</p><p className="text-[12px] text-gray-400">{it.email}</p>{it.company && <p className="text-[11px] text-gray-400">{it.company}</p>}</td>
+                    <td className="px-4 py-3"><p className="font-medium text-gray-900">{it.name || '—'}</p><p className="text-[12px] text-gray-500">{it.email}</p>{it.company && <p className="text-[11px] text-gray-500">{it.company}</p>}</td>
                     <td className="px-4 py-3 max-w-xs"><p className="text-[13px] text-gray-600 truncate">{it.subject ? <span className="font-medium">{it.subject}: </span> : ''}{it.message || <span className="text-gray-300">—</span>}</p></td>
                     <td className="px-4 py-3"><span className={`text-[11px] font-bold px-2 py-1 rounded-full ${STATUS_TINT[it.status] ?? STATUS_TINT.NEW}`}>{it.status}</span></td>
                     <td className="px-4 py-3">

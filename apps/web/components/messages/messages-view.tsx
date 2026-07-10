@@ -47,11 +47,11 @@ export function MessagesView() {
           </div>
           <div className="flex-1 overflow-y-auto">
             {isLoading ? (
-              <div className="py-10 text-center text-sm text-gray-400"><Loader2 className="h-5 w-5 animate-spin mx-auto mb-1" />Loading…</div>
+              <div className="py-10 text-center text-sm text-gray-500"><Loader2 className="h-5 w-5 animate-spin mx-auto mb-1" />Loading…</div>
             ) : error ? (
               <div className="py-10 text-center text-sm text-red-500"><AlertCircle className="h-5 w-5 mx-auto mb-1 opacity-60" />Failed to load</div>
             ) : items.length === 0 ? (
-              <div className="py-10 text-center text-sm text-gray-400">No conversations yet</div>
+              <div className="py-10 text-center text-sm text-gray-500">No conversations yet — open one from a member profile or the Social Hub</div>
             ) : (
               items.map((c: any) => {
                 const isActive = c.id === active;
@@ -70,7 +70,7 @@ export function MessagesView() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{c.title ?? 'Conversation'}</p>
-                      <p className="text-[11px] text-gray-400 truncate">{typeof lastMsg === 'string' ? lastMsg : new Date(lastMsg).toLocaleString()}</p>
+                      <p className="text-[11px] text-gray-500 truncate">{typeof lastMsg === 'string' ? lastMsg : new Date(lastMsg).toLocaleString()}</p>
                     </div>
                   </button>
                 );
@@ -84,7 +84,7 @@ export function MessagesView() {
           {active ? (
             <ChatPane conversationId={active} />
           ) : (
-            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+            <div className="flex-1 flex items-center justify-center text-sm text-gray-500">
               <div className="text-center">
                 <MessageSquare className="h-10 w-10 mx-auto mb-2 text-gray-300" />
                 Select a conversation
@@ -114,16 +114,16 @@ function NewMessageModal({ onClose, onOpened }: { onClose: () => void; onOpened:
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-heading font-bold text-gray-900">New message</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-400"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-50 text-gray-500"><X className="h-4 w-4" /></button>
         </div>
         {isLoading ? (
-          <div className="py-8 text-center text-sm text-gray-400"><Loader2 className="h-5 w-5 animate-spin mx-auto mb-1" />Loading people…</div>
+          <div className="py-8 text-center text-sm text-gray-500"><Loader2 className="h-5 w-5 animate-spin mx-auto mb-1" />Loading people…</div>
         ) : people.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-400">No one to message yet — connect with people in Discover first.</p>
+          <p className="py-8 text-center text-sm text-gray-500">No one to message yet — connect with people in Discover first.</p>
         ) : (
           <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
             {people.map((p: any) => {
@@ -140,7 +140,7 @@ function NewMessageModal({ onClose, onOpened }: { onClose: () => void; onOpened:
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-                    <p className="text-[11px] text-gray-400 truncate">{p.tenant?.name ?? p.headline ?? 'Umrah Connect'}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{p.tenant?.name ?? p.headline ?? 'Umrah Connect'}</p>
                   </div>
                 </button>
               );
@@ -178,16 +178,16 @@ function ChatPane({ conversationId }: { conversationId: string }) {
     <>
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {isLoading ? (
-          <div className="text-center text-sm text-gray-400"><Loader2 className="h-5 w-5 animate-spin mx-auto mb-1" />Loading messages…</div>
+          <div className="text-center text-sm text-gray-500"><Loader2 className="h-5 w-5 animate-spin mx-auto mb-1" />Loading messages…</div>
         ) : items.length === 0 ? (
-          <div className="text-center text-sm text-gray-400">No messages yet — say hi</div>
+          <div className="text-center text-sm text-gray-500">No messages yet — say hi</div>
         ) : (
           items.map((m: any, i: number) => (
             <div key={m.id ?? i} className="max-w-md">
               <div className="bg-gray-100 rounded-2xl px-3 py-2 text-sm text-gray-800">
                 {m.body ?? m.content}
               </div>
-              <p className="text-[10px] text-gray-400 mt-0.5">{m.createdAt ? new Date(m.createdAt).toLocaleString() : ''}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{m.createdAt ? new Date(m.createdAt).toLocaleString() : ''}</p>
             </div>
           ))
         )}

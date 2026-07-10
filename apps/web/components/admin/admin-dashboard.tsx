@@ -32,7 +32,7 @@ export function AdminDashboard() {
           <p className="text-sm text-red-500">Failed to load platform stats</p>
         </div>
       ) : isLoading || !stats ? (
-        <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
+        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
@@ -61,7 +61,7 @@ export function AdminDashboard() {
             <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Building2 className="h-4 w-4 text-brand-600" /> Tenants by type</h3>
               {Object.keys(stats.tenants.byType).length === 0 ? (
-                <p className="text-xs text-gray-400">No tenants</p>
+                <p className="text-xs text-gray-500">No tenants</p>
               ) : (
                 <ul className="space-y-2">
                   {Object.entries(stats.tenants.byType).map(([type, count]: any) => (
@@ -78,14 +78,14 @@ export function AdminDashboard() {
             <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:col-span-2">
               <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Activity className="h-4 w-4 text-blue-600" /> Recent platform activity</h3>
               {(stats.recentActivity ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No recent activity</p>
+                <p className="text-xs text-gray-500">No recent activity</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.recentActivity.map((a: any) => (
                     <li key={a.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-2 last:border-0">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{a.action} · {a.resource}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{a.actorEmail ?? '—'}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{a.actorEmail ?? '—'}</p>
                       </div>
                       <span className="text-[11px] text-gray-500 shrink-0">{new Date(a.occurredAt).toLocaleString()}</span>
                     </li>
@@ -141,7 +141,7 @@ function Tile({ label, value, icon: Icon, accent }: { label: string; value: numb
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3">
       <div className="flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 text-gray-400" />
+        <Icon className="h-3.5 w-3.5 text-gray-500" />
         <p className="text-[11px] text-gray-500 truncate">{label}</p>
       </div>
       <p className={cn('text-xl font-bold mt-1', accent || 'text-gray-900')}>{value.toLocaleString()}</p>

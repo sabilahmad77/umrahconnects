@@ -39,9 +39,9 @@ export function AdminRolesView() {
             <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Cog className="h-4 w-4" /> Roles</h3>
           </div>
           {rl ? (
-            <div className="py-8 text-center text-sm text-gray-400"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
+            <div className="py-8 text-center text-sm text-gray-500"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
           ) : roles.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">No roles defined</div>
+            <div className="py-8 text-center text-sm text-gray-500">No roles defined</div>
           ) : (
             <ul className="divide-y divide-gray-50">
               {roles.map((r: any) => (
@@ -58,7 +58,7 @@ export function AdminRolesView() {
                       {r.isSystem && <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">SYSTEM</span>}
                     </div>
                     <p className="text-[11px] text-gray-500">{r.description ?? '—'}</p>
-                    <div className="flex gap-3 mt-1 text-[11px] text-gray-400">
+                    <div className="flex gap-3 mt-1 text-[11px] text-gray-500">
                       <span className="inline-flex items-center gap-1"><KeyRound className="h-3 w-3" /> {r._count?.permissions ?? 0} perms</span>
                       <span className="inline-flex items-center gap-1"><Users className="h-3 w-3" /> {r._count?.userRoles ?? 0} users</span>
                       {r.tenant && <span className="text-gray-500">· {r.tenant.name}</span>}
@@ -78,9 +78,9 @@ export function AdminRolesView() {
             </h3>
           </div>
           {pl || (!role && selectedRoleId) ? (
-            <div className="py-8 text-center text-sm text-gray-400"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
+            <div className="py-8 text-center text-sm text-gray-500"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
           ) : !role ? (
-            <div className="py-12 text-center text-sm text-gray-400">No role selected</div>
+            <div className="py-12 text-center text-sm text-gray-500">No role selected</div>
           ) : (
             <div className="p-4 space-y-3">
               {Object.entries(byNamespace).map(([ns, perms]) => (
@@ -95,7 +95,7 @@ export function AdminRolesView() {
                           title={`${p.namespace}:${p.resource}:${p.action}`}
                           className={cn(
                             'text-[10px] px-2 py-1 rounded-full font-medium',
-                            has ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-400',
+                            has ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500',
                           )}
                         >
                           {p.resource}:{p.action}
@@ -111,7 +111,7 @@ export function AdminRolesView() {
                   <ul className="space-y-1">
                     {role.userRoles.map((ur: any) => (
                       <li key={ur.user.id} className="text-xs text-gray-700">
-                        {ur.user.firstName} {ur.user.lastName} <span className="text-gray-400">— {ur.user.email}</span>
+                        {ur.user.firstName} {ur.user.lastName} <span className="text-gray-500">— {ur.user.email}</span>
                       </li>
                     ))}
                   </ul>

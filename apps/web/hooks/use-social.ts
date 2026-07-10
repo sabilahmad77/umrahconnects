@@ -104,6 +104,22 @@ export function useToggleReaction() {
   });
 }
 
+// ─── Follow ───────────────────────────────────────────────────────────────────
+
+export function useToggleFollow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (accountId: string) => {
+      const { data } = await apiClient.post(`/social/accounts/${accountId}/follow`);
+      return data.data as { following: boolean };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['social', 'discover'] });
+      qc.invalidateQueries({ queryKey: ['social', 'account'] });
+    },
+  });
+}
+
 // ─── Comments ─────────────────────────────────────────────────────────────────
 
 export function useAddComment() {

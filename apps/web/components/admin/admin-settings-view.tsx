@@ -20,7 +20,7 @@ export function AdminSettingsView() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error || !s ? (
@@ -45,7 +45,7 @@ export function AdminSettingsView() {
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">Marketplace categories</h3>
             {(s.marketplaceCategories ?? []).length === 0 ? (
-              <p className="text-xs text-gray-400">No listings yet</p>
+              <p className="text-xs text-gray-500">No listings yet</p>
             ) : (
               <ul className="space-y-1.5">
                 {s.marketplaceCategories.map((c: any) => (
@@ -61,7 +61,7 @@ export function AdminSettingsView() {
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">Regulatory systems in use</h3>
             {(s.regulatorySystems ?? []).length === 0 ? (
-              <p className="text-xs text-gray-400">None</p>
+              <p className="text-xs text-gray-500">None</p>
             ) : (
               <ul className="space-y-1.5">
                 {s.regulatorySystems.map((c: any) => (

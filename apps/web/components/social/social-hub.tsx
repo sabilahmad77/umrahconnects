@@ -50,7 +50,7 @@ function PostComposer() {
             onChange={(e) => setBody(e.target.value)}
             placeholder="Share an update, tip, or experience with the Umrah community…"
             rows={3}
-            className="w-full text-sm bg-gray-50 rounded-xl px-3 py-2.5 outline-none resize-none border border-gray-200 focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all placeholder:text-gray-400"
+            className="w-full text-sm bg-gray-50 rounded-xl px-3 py-2.5 outline-none resize-none border border-gray-200 focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all placeholder:text-gray-500"
           />
           {/* Media actions (frontend-ready; upload backend pending) */}
           <div className="flex items-center gap-1 mt-2 pb-2.5 border-b border-gray-50">
@@ -121,9 +121,12 @@ const POST_TYPE_CONFIG: Record<string, { label: string; color: string; Icon: any
 };
 
 function PostCard({ post }: { post: any }) {
+  // Server truth: the feed includes the viewer's own reactions, so liked state
+  // survives reloads. Local state only tracks the delta until the next refetch.
+  const serverLiked = Array.isArray(post.reactions) && post.reactions.some((r: any) => r.type === 'LIKE');
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(serverLiked);
   const [saved, setSaved] = useState(false);
   const { mutateAsync: toggleReaction } = useToggleReaction();
   const { mutateAsync: addComment, isPending: commentPending } = useAddComment();
@@ -133,7 +136,7 @@ function PostCard({ post }: { post: any }) {
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
   const timeAgo = post.createdAt ? formatTimeAgo(new Date(post.createdAt)) : '';
   const typeCfg = POST_TYPE_CONFIG[post.type] ?? POST_TYPE_CONFIG.UPDATE;
-  const likeCount = (post._count?.reactions ?? post.likeCount ?? 0) + (liked ? 1 : 0);
+  const likeCount = (post._count?.reactions ?? post.likeCount ?? 0) + (liked === serverLiked ? 0 : liked ? 1 : -1);
   const commentCount = post._count?.comments ?? post.commentCount ?? 0;
   const shareCount = post._count?.shares ?? post.shareCount ?? 0;
   const postImage = post.imageUrl ?? (Array.isArray(post.mediaUrls) ? post.mediaUrls[0] : undefined)
@@ -164,7 +167,7 @@ function PostCard({ post }: { post: any }) {
               {post.author?.verified && <BadgeCheck className="h-3.5 w-3.5 text-brand-500" />}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] text-gray-400">{timeAgo}</p>
+              <p className="text-[11px] text-gray-500">{timeAgo}</p>
               {post.type && (
                 <span className={cn('inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md', typeCfg.color)}>
                   <typeCfg.Icon className="h-2.5 w-2.5" />
@@ -175,7 +178,7 @@ function PostCard({ post }: { post: any }) {
           </div>
         </div>
         <button className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
-          <MoreHorizontal className="h-4 w-4 text-gray-400" />
+          <MoreHorizontal className="h-4 w-4 text-gray-500" />
         </button>
       </div>
 
@@ -251,7 +254,7 @@ function PostCard({ post }: { post: any }) {
           }}
           className={cn(
             'p-2 rounded-xl transition-colors',
-            saved ? 'text-brand-600 bg-brand-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
+            saved ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:text-gray-600 hover:bg-gray-50',
           )}
           title={saved ? 'Saved' : 'Save'}
         >
@@ -328,7 +331,7 @@ function ProfilePanel() {
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-base font-bold text-gray-900">{s.value}</p>
-              <p className="text-[10px] text-gray-400">{s.label}</p>
+              <p className="text-[10px] text-gray-500">{s.label}</p>
             </div>
           ))}
         </div>
@@ -368,7 +371,7 @@ function TrendingPanel() {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-gray-400 px-2 py-2">Topics will appear as the community posts.</p>
+        <p className="text-xs text-gray-500 px-2 py-2">Topics will appear as the community posts.</p>
       )}
     </div>
   );
@@ -398,7 +401,7 @@ function SuggestedPanel() {
         <h3 className="text-sm font-bold text-gray-900">Suggested connections</h3>
       </div>
       {people.length === 0 ? (
-        <p className="text-xs text-gray-400 px-2 py-2">No suggestions yet.</p>
+        <p className="text-xs text-gray-500 px-2 py-2">No suggestions yet.</p>
       ) : (
         <div className="space-y-3">
           {people.slice(0, 6).map((u) => {
@@ -413,7 +416,7 @@ function SuggestedPanel() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-gray-800 truncate">{name}</p>
-                  <p className="text-[10px] text-gray-400 truncate">{role}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{role}</p>
                 </div>
                 <button
                   onClick={() => onConnect(u)}
@@ -492,8 +495,8 @@ export function SocialHub() {
           ) : posts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 py-20 text-center">
               <Globe className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400 mb-1">The feed is empty right now</p>
-              <p className="text-xs text-gray-400">Be the first to share an update!</p>
+              <p className="text-sm text-gray-500 mb-1">The feed is empty right now</p>
+              <p className="text-xs text-gray-500">Be the first to share an update!</p>
             </div>
           ) : (
             posts.map((post) => <PostCard key={post.id} post={post} />)

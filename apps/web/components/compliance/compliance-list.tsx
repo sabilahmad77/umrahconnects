@@ -62,7 +62,7 @@ export function ComplianceList() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
@@ -87,22 +87,19 @@ export function ComplianceList() {
         ))}
       </div>
 
-      {/* System badges */}
-      <div className="flex flex-wrap gap-2">
-        {[
-          { label: 'Nusuk Integration', ok: true },
-          { label: 'SISKOPATUH', ok: true },
-          { label: 'MOH Saudi', ok: true },
-          { label: 'eVisa Portal', ok: false },
-        ].map((sys) => (
-          <span key={sys.label} className={cn(
-            'inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border',
-            sys.ok
-              ? 'bg-green-50 text-green-700 border-green-200'
-              : 'bg-yellow-50 text-yellow-700 border-yellow-200',
-          )}>
-            {sys.ok ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-            {sys.label}
+      {/* BP-04: regulator API integrations are on the roadmap, not live — the
+          chips say so honestly. Applications are tracked here and submitted on
+          the official portals until direct integrations ship. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {['Nusuk / Masar', 'SISKOPATUH', 'MOH Saudi', 'eVisa Portal'].map((label) => (
+          <span
+            key={label}
+            title="Direct API integration planned — applications are tracked in-platform and submitted on the official portal today"
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border bg-gray-50 text-gray-500 border-gray-200"
+          >
+            <Clock className="h-3 w-3" />
+            {label}
+            <span className="text-[9px] font-bold tracking-wide text-gold-600 bg-gold-50 px-1.5 py-0.5 rounded-full">PLANNED</span>
           </span>
         ))}
       </div>
@@ -110,12 +107,12 @@ export function ComplianceList() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search applications..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -173,7 +170,7 @@ export function ComplianceList() {
                   <tr>
                     <td colSpan={4} className="py-20 text-center">
                       <FileCheck2 className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-400">No visa applications found</p>
+                      <p className="text-sm text-gray-500">No visa applications found</p>
                     </td>
                   </tr>
                 ) : items.map((v: any) => {
@@ -190,7 +187,7 @@ export function ComplianceList() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{pilgrimName}</p>
-                            <p className="text-xs text-gray-400">{v.pilgrim?.nationality ?? '—'}</p>
+                            <p className="text-xs text-gray-500">{v.pilgrim?.nationality ?? '—'}</p>
                           </div>
                         </Link>
                       </td>
@@ -213,7 +210,7 @@ export function ComplianceList() {
             </table>
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-400">Page {page} of {totalPages} · {total} results</p>
+                <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total} results</p>
                 <div className="flex gap-1.5">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Prev</button>
                   <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</button>
@@ -263,7 +260,7 @@ function NewVisaModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New visa application</h2>

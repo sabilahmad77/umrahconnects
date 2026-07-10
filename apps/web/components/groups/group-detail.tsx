@@ -42,7 +42,7 @@ export function GroupDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading group…
       </div>
     );
@@ -171,7 +171,7 @@ function DocumentsTab({ groupId }: { groupId: string }) {
           <h3 className="text-sm font-bold text-gray-900">Documents ({docs.length})</h3>
         </div>
         {docs.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No documents yet</div>
+          <div className="py-10 text-center text-sm text-gray-500">No documents yet — upload itineraries and guides for the group</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {docs.map((d: any) => (
@@ -181,7 +181,7 @@ function DocumentsTab({ groupId }: { groupId: string }) {
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{d.name}</p>
                     {d.description && <p className="text-[11px] text-gray-500 truncate">{d.description}</p>}
-                    <p className="text-[11px] text-gray-400">{new Date(d.createdAt).toLocaleString()}</p>
+                    <p className="text-[11px] text-gray-500">{new Date(d.createdAt).toLocaleString()}</p>
                   </div>
                 </a>
                 <div className="flex items-center gap-1">
@@ -209,7 +209,7 @@ function DocumentsTab({ groupId }: { groupId: string }) {
 function RelatedTab({ groupId }: { groupId: string }) {
   const { data, isLoading } = useGroupRelated(groupId);
   if (isLoading) {
-    return <div className="flex items-center justify-center py-10 text-sm text-gray-400"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading…</div>;
+    return <div className="flex items-center justify-center py-10 text-sm text-gray-500"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading…</div>;
   }
   const bookings = data?.bookings ?? [];
   const assignments = data?.transportAssignments ?? [];
@@ -220,7 +220,7 @@ function RelatedTab({ groupId }: { groupId: string }) {
           <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Hotel className="h-4 w-4" /> Linked bookings ({bookings.length})</h3>
         </div>
         {bookings.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">No bookings linked to this group yet</div>
+          <div className="py-8 text-center text-sm text-gray-500">No bookings linked to this group yet</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {bookings.map((b: any) => (
@@ -239,7 +239,7 @@ function RelatedTab({ groupId }: { groupId: string }) {
           <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Bus className="h-4 w-4" /> Transport assignments ({assignments.length})</h3>
         </div>
         {assignments.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-400">No transport assignments linked to this group yet</div>
+          <div className="py-8 text-center text-sm text-gray-500">No transport assignments linked to this group yet</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {assignments.map((a: any) => (
@@ -306,7 +306,7 @@ function OverviewTab({ group, refetch }: { group: any; refetch: () => void }) {
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-gray-400">No incidents reported.</p>
+            <p className="text-xs text-gray-500">No incidents reported.</p>
           )}
         </div>
       </div>
@@ -378,7 +378,7 @@ function MembersTab({ groupId }: { groupId: string }) {
         </div>
         <ul className="divide-y divide-gray-50">
           {members.length === 0 ? (
-            <li className="p-6 text-center text-sm text-gray-400">No members yet</li>
+            <li className="p-6 text-center text-sm text-gray-500">No members yet — invite pilgrims or share the group from Discover</li>
           ) : (
             members.map((m: any) => (
               <li key={m.id} className="flex items-center justify-between p-4">
@@ -455,7 +455,7 @@ function DiscussionTab({ groupId }: { groupId: string }) {
       </div>
 
       {posts.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">No posts yet — be the first to share an update.</div>
+        <div className="py-10 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-100">No posts yet — be the first to share an update.</div>
       ) : (
         <ul className="space-y-3">
           {posts.map((p: any) => (
@@ -465,7 +465,7 @@ function DiscussionTab({ groupId }: { groupId: string }) {
                   <p className="text-sm font-semibold text-gray-900">
                     {p.author ? `${p.author.firstName ?? ''} ${p.author.lastName ?? ''}`.trim() : 'Member'}
                   </p>
-                  <p className="text-[11px] text-gray-400">{new Date(p.createdAt).toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-500">{new Date(p.createdAt).toLocaleString()}</p>
                 </div>
                 <button
                   onClick={async () => {
@@ -588,7 +588,7 @@ function PollsTab({ groupId }: { groupId: string }) {
       </div>
 
       {polls.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">No polls yet</div>
+        <div className="py-10 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-100">No polls yet — create a poll to gather quick group decisions</div>
       ) : (
         <ul className="space-y-3">
           {polls.map((p: any) => {
@@ -596,7 +596,7 @@ function PollsTab({ groupId }: { groupId: string }) {
             return (
               <li key={p.id} className="bg-white rounded-2xl border border-gray-100 p-4">
                 <p className="text-sm font-semibold text-gray-900 mb-2">{p.question}</p>
-                <p className="text-[11px] text-gray-400 mb-3">{total} vote{total === 1 ? '' : 's'} • {p.status}</p>
+                <p className="text-[11px] text-gray-500 mb-3">{total} vote{total === 1 ? '' : 's'} • {p.status}</p>
                 <ul className="space-y-2">
                   {(p.breakdown ?? p.options).map((opt: any) => {
                     const pct = total > 0 ? Math.round((opt.count / total) * 100) : 0;
@@ -695,7 +695,7 @@ function NotesTab({ groupId }: { groupId: string }) {
       </div>
 
       {notes.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">No notes yet</div>
+        <div className="py-10 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-100">No notes yet</div>
       ) : (
         <ul className="space-y-3">
           {notes.map((n: any) => (
@@ -706,7 +706,7 @@ function NotesTab({ groupId }: { groupId: string }) {
                     {n.pinned && <Pin className="h-3.5 w-3.5 text-yellow-500" />}
                     {n.title}
                   </p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{n.category} • {new Date(n.createdAt).toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{n.category} • {new Date(n.createdAt).toLocaleString()}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -717,7 +717,7 @@ function NotesTab({ groupId }: { groupId: string }) {
                     className="p-1.5 rounded hover:bg-gray-100"
                     title="Toggle pin"
                   >
-                    <Pin className={cn('h-3.5 w-3.5', n.pinned ? 'text-yellow-500' : 'text-gray-400')} />
+                    <Pin className={cn('h-3.5 w-3.5', n.pinned ? 'text-yellow-500' : 'text-gray-500')} />
                   </button>
                   <button
                     onClick={async () => {

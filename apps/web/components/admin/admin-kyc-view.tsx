@@ -40,7 +40,7 @@ export function AdminKycView() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error ? (
@@ -51,7 +51,7 @@ export function AdminKycView() {
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <ShieldCheck className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No KYC submissions in this state</p>
+          <p className="text-sm text-gray-500">No KYC submissions in this state</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -67,7 +67,7 @@ export function AdminKycView() {
                       <p className="text-[11px] text-gray-500">
                         {k.tenant?.type?.replace(/_/g, ' ')} · {k.tenant?.country} · {k.tenant?.email ?? '—'}
                       </p>
-                      <p className="text-[10px] text-gray-400">Registry: {k.registrySource} · submitted {new Date(k.createdAt).toLocaleDateString()}</p>
+                      <p className="text-[10px] text-gray-500">Registry: {k.registrySource} · submitted {new Date(k.createdAt).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full',

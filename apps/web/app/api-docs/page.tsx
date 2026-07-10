@@ -29,7 +29,7 @@ export default function ApiDocsPage() {
         </div>
       </section>
       <section className="max-w-6xl mx-auto px-6 lg:px-8 pb-16">
-        <p className="text-center text-[13px] font-semibold tracking-wider text-gray-400 mb-5">WHAT TO EXPECT</p>
+        <p className="text-center text-[13px] font-semibold tracking-wider text-gray-500 mb-5">WHAT TO EXPECT</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PREVIEW.map(({ Icon, t, d }) => (
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-5">

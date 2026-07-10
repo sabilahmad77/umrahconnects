@@ -35,7 +35,7 @@ export function VisaDashboard() {
           <p className="text-sm text-red-500">Failed to load visa stats</p>
         </div>
       ) : isLoading || !stats ? (
-        <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
+        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
@@ -103,7 +103,7 @@ export function VisaDashboard() {
                 <Clock className="h-4 w-4 text-blue-600" /> Recent activity
               </h3>
               {(stats.recentActivity ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No recent activity</p>
+                <p className="text-xs text-gray-500">No recent activity</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.recentActivity.map((a: any) => (

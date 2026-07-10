@@ -17,7 +17,7 @@ export function MyOffersView() {
   const offersCount = requests.reduce((acc: number, r: any) => acc + (r.offers?.length ?? 0), 0);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-20 text-gray-400 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…</div>;
+    return <div className="flex items-center justify-center py-20 text-gray-500 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…</div>;
   }
   if (error) {
     return <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
@@ -36,7 +36,7 @@ export function MyOffersView() {
       {requests.length === 0 ? (
         <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
           <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No requests yet</p>
+          <p className="text-sm text-gray-500">No requests yet</p>
           <Link href="/requests" className="text-xs text-brand-500 hover:underline mt-2 inline-block">Create your first request →</Link>
         </div>
       ) : (
@@ -47,7 +47,7 @@ export function MyOffersView() {
                 <Link href={`/requests/${r.id}`} className="text-base font-bold text-gray-900 hover:text-brand-600">
                   {r.title}
                 </Link>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                <p className="text-[11px] text-gray-500 mt-0.5">
                   {r.serviceType} {r.city && `· ${r.city}`} {r.travelers && `· ${r.travelers} travelers`} · {r.status}
                 </p>
               </div>
@@ -57,7 +57,7 @@ export function MyOffersView() {
             </div>
 
             {(r.offers ?? []).length === 0 ? (
-              <p className="text-xs text-gray-400">No offers yet on this request.</p>
+              <p className="text-xs text-gray-500">No offers yet on this request.</p>
             ) : (
               <ul className="space-y-2">
                 {r.offers.map((o: any) => (
@@ -65,7 +65,7 @@ export function MyOffersView() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{o.title}</p>
-                        <p className="text-[11px] text-gray-400">{o.description?.slice(0, 100)}</p>
+                        <p className="text-[11px] text-gray-500">{o.description?.slice(0, 100)}</p>
                       </div>
                       <span className={cn(
                         'text-[11px] font-medium px-2 py-1 rounded-full',
@@ -77,7 +77,7 @@ export function MyOffersView() {
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <p className="text-sm font-bold inline-flex items-center gap-1 text-gray-900">
-                        <Wallet className="h-3.5 w-3.5 text-gray-400" />
+                        <Wallet className="h-3.5 w-3.5 text-gray-500" />
                         {o.currency} {(Number(o.priceCents) / 100).toLocaleString()}
                       </p>
                       <div className="flex items-center gap-1.5">

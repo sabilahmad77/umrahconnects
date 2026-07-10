@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -198,8 +198,8 @@ export class HotelsService {
         tenantId,
         hotelId,
         roomTypeId: dto.roomTypeId || undefined,
-        roomNumber: dto.roomNumber ?? dto.name ?? 'Room',
-        floor: dto.floor,
+        roomNumber: String(dto.roomNumber ?? dto.name ?? 'Room'),
+        floor: dto.floor != null ? String(dto.floor) : undefined,
         capacity: dto.capacity != null ? Number(dto.capacity) : 2,
         bedType: dto.bedType,
         bedCount,
@@ -229,9 +229,11 @@ export class HotelsService {
 
   async updateRoom(tenantId: string, roomId: string, dto: any) {
     const data: any = {};
-    for (const k of ['roomNumber', 'floor', 'bedType', 'images', 'facilities', 'description', 'notes', 'roomTypeId', 'seasonalPricing']) {
+    for (const k of ['bedType', 'images', 'facilities', 'description', 'notes', 'roomTypeId', 'seasonalPricing']) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
+    if (dto.roomNumber !== undefined) data.roomNumber = String(dto.roomNumber);
+    if (dto.floor !== undefined) data.floor = dto.floor != null ? String(dto.floor) : null;
     if (dto.capacity !== undefined) data.capacity = Number(dto.capacity);
     if (dto.bedCount !== undefined) data.bedCount = Number(dto.bedCount);
     if (dto.availableBeds !== undefined) data.availableBeds = Number(dto.availableBeds);
@@ -271,6 +273,7 @@ export class HotelsService {
   }
 
   async createHotelBooking(tenantId: string, dto: any) {
+    if (!dto.hotelId) throw new BadRequestException('hotelId is required');
     const hotel = await this.prisma.hotel.findFirst({ where: { id: dto.hotelId } });
     if (!hotel) throw new NotFoundException('Hotel not found');
     const totalAmountCents = dto.totalAmountCents != null

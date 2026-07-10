@@ -24,7 +24,7 @@ export default function ContactPage({ searchParams }: { searchParams: { type?: s
           cta={v.type === 'DEMO' ? 'Request demo' : v.type === 'SUPPORT' ? 'Submit support request' : 'Send message'}
           metadata={{ source: key }}
         />
-        <div className="mt-6 flex items-center justify-center gap-2 text-[13px] text-gray-400">
+        <div className="mt-6 flex items-center justify-center gap-2 text-[13px] text-gray-500">
           <Mail className="h-4 w-4" /> Prefer email? Reach us at <span className="text-brand-600 font-medium">hello@umrahconnect.app</span>
         </div>
       </section>

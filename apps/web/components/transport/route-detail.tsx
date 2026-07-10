@@ -19,7 +19,7 @@ export function RouteDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading route…
       </div>
     );
@@ -104,25 +104,25 @@ export function RouteDetail({ id }: { id: string }) {
               <p className="text-xs font-semibold text-gray-500">Assigned</p>
               {r.vehicle ? (
                 <Link href={`/transport/vehicles/${r.vehicle.id}`} className="block text-sm font-medium text-gray-900 hover:underline">
-                  {r.vehicle.plateNumber} <span className="text-[11px] text-gray-400">({r.vehicle.type})</span>
+                  {r.vehicle.plateNumber} <span className="text-[11px] text-gray-500">({r.vehicle.type})</span>
                 </Link>
-              ) : <p className="text-xs text-gray-400">No vehicle assigned</p>}
+              ) : <p className="text-xs text-gray-500">No vehicle assigned</p>}
               {r.driver ? (
                 <Link href={`/transport/drivers/${r.driver.id}`} className="block text-sm font-medium text-gray-900 hover:underline">
                   {r.driver.firstName} {r.driver.lastName}
                 </Link>
-              ) : <p className="text-xs text-gray-400">No driver assigned</p>}
+              ) : <p className="text-xs text-gray-500">No driver assigned</p>}
             </div>
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <p className="text-xs font-semibold text-gray-500 mb-2">Recent assignments ({r.assignments?.length ?? 0})</p>
               {(r.assignments ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No assignments yet</p>
+                <p className="text-xs text-gray-500">No assignments on this route yet — create one from Transport → Assignments</p>
               ) : (
                 <ul className="space-y-1 text-xs">
                   {r.assignments.slice(0, 5).map((a: any) => (
                     <li key={a.id}>
                       <p className="font-medium text-gray-800">{a.customerName ?? '—'}</p>
-                      <p className="text-[11px] text-gray-400">{new Date(a.scheduledAt).toLocaleString()}</p>
+                      <p className="text-[11px] text-gray-500">{new Date(a.scheduledAt).toLocaleString()}</p>
                     </li>
                   ))}
                 </ul>

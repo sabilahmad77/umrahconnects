@@ -23,7 +23,7 @@ export function InvoiceDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invoice…
       </div>
     );
@@ -153,7 +153,7 @@ function Overview({ inv }: { inv: any }) {
             <dd className="text-right text-green-700 font-medium">{formatMoney(paidCents, currency)}</dd>
 
             <dt className="text-gray-700 font-semibold">Outstanding</dt>
-            <dd className={cn('text-right font-bold', outstandingCents > 0 ? 'text-red-600' : 'text-gray-400')}>
+            <dd className={cn('text-right font-bold', outstandingCents > 0 ? 'text-red-600' : 'text-gray-500')}>
               {formatMoney(outstandingCents, currency)}
             </dd>
           </dl>
@@ -195,7 +195,7 @@ function Overview({ inv }: { inv: any }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">No booking linked</p>
+            <p className="text-xs text-gray-500">No booking linked</p>
           )}
         </div>
 
@@ -204,9 +204,9 @@ function Overview({ inv }: { inv: any }) {
             <Calendar className="h-3.5 w-3.5" /> Key dates
           </p>
           <ul className="space-y-1.5 text-xs">
-            <li><span className="text-gray-400">Issued:</span> <span className="text-gray-700">{issueDate ? new Date(issueDate).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-400">Due:</span> <span className="text-gray-700">{dueDate ? new Date(dueDate).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-400">Paid:</span> <span className="text-gray-700">{inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-500">Issued:</span> <span className="text-gray-700">{issueDate ? new Date(issueDate).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-500">Due:</span> <span className="text-gray-700">{dueDate ? new Date(dueDate).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-500">Paid:</span> <span className="text-gray-700">{inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : '—'}</span></li>
           </ul>
         </div>
       </div>
@@ -251,7 +251,7 @@ function PaymentsTab({ inv }: { inv: any }) {
           <span className="text-xs text-gray-500">Outstanding: <span className="font-semibold text-gray-900">{formatMoney(outstandingCents, currency)}</span></span>
         </div>
         {isSettled ? (
-          <p className="text-sm text-gray-400 py-2">This invoice is {String(inv.status).toLowerCase()} — no further payments needed.</p>
+          <p className="text-sm text-gray-500 py-2">This invoice is {String(inv.status).toLowerCase()} — no further payments needed.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="sm:col-span-1">
@@ -292,7 +292,7 @@ function PaymentsTab({ inv }: { inv: any }) {
         </h3>
       </div>
       {payments.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No payments recorded yet — use the form above.</div>
+        <div className="py-10 text-center text-sm text-gray-500">No payments recorded yet — use the form above.</div>
       ) : (
         <table className="w-full">
           <thead>

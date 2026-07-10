@@ -53,6 +53,8 @@ export class SocialService {
             orderBy: { createdAt: 'asc' },
             include: { author: { select: { id: true, displayName: true, avatarUrl: true } } },
           },
+          // viewer's own reactions so the client can restore liked state after reload
+          ...(account ? { reactions: { where: { accountId: account.id }, select: { type: true } } } : {}),
         },
       }),
       this.prisma.post.count({ where }),
@@ -352,7 +354,7 @@ export class SocialService {
         { city: { contains: params.search, mode: 'insensitive' } },
       ];
     }
-    return this.prisma.socialAccount.findMany({
+    const people = await this.prisma.socialAccount.findMany({
       where,
       take: limit,
       orderBy: { followerCount: 'desc' },
@@ -362,6 +364,12 @@ export class SocialService {
         followerCount: true, postCount: true,
       },
     });
+    const follows = await this.prisma.follow.findMany({
+      where: { followerId: me.id, followedId: { in: people.map((p) => p.id) } },
+      select: { followedId: true },
+    });
+    const followedIds = new Set(follows.map((f) => f.followedId));
+    return people.map((p) => ({ ...p, isFollowing: followedIds.has(p.id) }));
   }
 
   async discoverGroups(params: { limit?: number; search?: string } = {}) {

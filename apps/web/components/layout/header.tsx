@@ -34,13 +34,13 @@ export function Header() {
     <header className="flex items-center justify-between h-14 px-5 border-b border-gray-100 bg-white shrink-0">
       {/* Search */}
       <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 w-72 group focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100 transition-all">
-        <Search className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+        <Search className="h-3.5 w-3.5 text-gray-500 shrink-0" />
         <input
           type="text"
           placeholder="Search pilgrims, bookings..."
-          className="bg-transparent text-sm flex-1 outline-none placeholder:text-gray-400 text-gray-700"
+          className="bg-transparent text-sm flex-1 outline-none placeholder:text-gray-500 text-gray-700"
         />
-        <kbd className="hidden sm:flex text-[10px] text-gray-400 border border-gray-200 bg-white rounded px-1.5 py-0.5 font-mono">
+        <kbd className="hidden sm:flex text-[10px] text-gray-500 border border-gray-200 bg-white rounded px-1.5 py-0.5 font-mono">
           ⌘K
         </kbd>
       </div>
@@ -48,7 +48,7 @@ export function Header() {
       {/* Right side */}
       <div className="flex items-center gap-2">
         {/* Help */}
-        <button className="p-2 rounded-xl text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors">
+        <button className="p-2 rounded-xl text-gray-500 hover:bg-gray-50 hover:text-gray-600 transition-colors">
           <HelpCircle className="h-4 w-4" />
         </button>
 
@@ -70,11 +70,11 @@ export function Header() {
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-xs font-semibold text-gray-800 leading-none">{displayName}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5 leading-none">
+              <p className="text-[10px] text-gray-500 mt-0.5 leading-none">
                 {user?.dashboardType ? ROLE_LABELS[user.dashboardType] : 'Umrah Connect'}
               </p>
             </div>
-            <ChevronDown className={cn('h-3.5 w-3.5 text-gray-400 transition-transform hidden sm:block', showMenu && 'rotate-180')} />
+            <ChevronDown className={cn('h-3.5 w-3.5 text-gray-500 transition-transform hidden sm:block', showMenu && 'rotate-180')} />
           </button>
 
           {showMenu && (
@@ -89,7 +89,7 @@ export function Header() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
-                      <p className="text-xs text-gray-400 truncate">{user?.email || 'Demo mode'}</p>
+                      <p className="text-xs text-gray-500 truncate">{user?.email || 'Demo mode'}</p>
                       {user?.dashboardType && (
                         <p className="text-[10px] text-brand-600 font-medium mt-0.5">
                           {ROLE_LABELS[user.dashboardType]}
@@ -105,14 +105,14 @@ export function Header() {
                     onClick={() => { setShowMenu(false); window.location.href = '/settings'; }}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
                   >
-                    <Settings className="h-4 w-4 text-gray-400" />
+                    <Settings className="h-4 w-4 text-gray-500" />
                     Account settings
                   </button>
                   <button
                     onClick={() => { setShowMenu(false); window.location.href = '/login'; }}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
                   >
-                    <User className="h-4 w-4 text-gray-400" />
+                    <User className="h-4 w-4 text-gray-500" />
                     Switch role
                   </button>
                 </div>

@@ -29,7 +29,7 @@ export function VisaRequestsView() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error ? (
@@ -40,7 +40,7 @@ export function VisaRequestsView() {
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <Inbox className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No open visa service requests right now</p>
+          <p className="text-sm text-gray-500">No open visa service requests right now</p>
           <Link href="/marketplace" className="text-xs text-brand-500 hover:underline mt-2 inline-block">Browse the marketplace →</Link>
         </div>
       ) : (
@@ -66,7 +66,7 @@ export function VisaRequestsView() {
                 )}
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-                <span className="text-[11px] text-gray-400">{r.offers?.length ?? 0} offer(s)</span>
+                <span className="text-[11px] text-gray-500">{r.offers?.length ?? 0} offer(s)</span>
                 <span className="text-xs text-brand-600 font-medium inline-flex items-center gap-1">
                   <Send className="h-3 w-3" /> Open &amp; respond <ArrowRight className="h-3 w-3" />
                 </span>

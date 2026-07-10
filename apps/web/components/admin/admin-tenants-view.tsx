@@ -33,7 +33,7 @@ export function AdminTenantsView() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
-          <Search className="h-4 w-4 text-gray-400" />
+          <Search className="h-4 w-4 text-gray-500" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tenant name…" className="text-sm bg-transparent flex-1 outline-none" />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -51,7 +51,7 @@ export function AdminTenantsView() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error ? (
@@ -62,7 +62,7 @@ export function AdminTenantsView() {
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <Building2 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No tenants found</p>
+          <p className="text-sm text-gray-500">No tenants found</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
@@ -83,7 +83,7 @@ export function AdminTenantsView() {
                 <tr key={t.id} className="hover:bg-gray-50/60">
                   <td className="p-3">
                     <p className="font-medium text-gray-900">{t.name}</p>
-                    <p className="text-[11px] text-gray-400">{t.email ?? '—'} · {t.slug}</p>
+                    <p className="text-[11px] text-gray-500">{t.email ?? '—'} · {t.slug}</p>
                   </td>
                   <td className="p-3 text-xs text-gray-600">{t.type?.replace(/_/g, ' ')}</td>
                   <td className="p-3 text-xs text-gray-600">{t.country}</td>

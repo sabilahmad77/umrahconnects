@@ -350,12 +350,25 @@ export class BookingsService {
 
   async updatePackage(tenantId: string, id: string, dto: any) {
     await this.findPackage(tenantId, id);
+    // BP-03: map EVERY editable field — previously most fields (durationDays,
+    // price, description, dates…) were silently dropped: 200 with no change.
     const data: any = {};
     if (dto.name !== undefined) data.name = dto.name;
     if (dto.nameAr !== undefined) data.nameAr = dto.nameAr;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.descriptionAr !== undefined) data.descriptionAr = dto.descriptionAr;
+    if (dto.tier !== undefined) data.tier = dto.tier;
     if (dto.tripType !== undefined) data.tripType = dto.tripType;
+    if (dto.type !== undefined) data.tripType = dto.type; // UI alias
+    if (dto.durationDays !== undefined) data.durationDays = Number(dto.durationDays);
+    if (dto.departureDate !== undefined) data.departureDate = dto.departureDate ? new Date(dto.departureDate) : null;
+    if (dto.returnDate !== undefined) data.returnDate = dto.returnDate ? new Date(dto.returnDate) : null;
+    if (dto.priceAdult !== undefined) data.basePriceCents = BigInt(Math.round(Number(dto.priceAdult) * 100));
+    if (dto.basePriceCents !== undefined) data.basePriceCents = BigInt(Math.round(Number(dto.basePriceCents)));
+    if (dto.currency !== undefined) data.currency = dto.currency;
+    if (dto.maxCapacity !== undefined) data.maxCapacity = Number(dto.maxCapacity);
+    if (dto.includes !== undefined) data.includes = dto.includes;
     if (dto.isPublished !== undefined) data.isPublished = dto.isPublished;
-    if (dto.maxCapacity !== undefined) data.maxCapacity = dto.maxCapacity;
     const pkg = await this.prisma.package.update({ where: { id }, data });
     return this.normalizeBigInt(pkg);
   }

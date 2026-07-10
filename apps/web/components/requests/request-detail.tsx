@@ -59,7 +59,7 @@ export function RequestDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading request…
       </div>
     );
@@ -135,7 +135,7 @@ export function RequestDetail({ id }: { id: string }) {
               </h3>
             </div>
             {offers.length === 0 ? (
-              <div className="py-10 text-center text-sm text-gray-400">
+              <div className="py-10 text-center text-sm text-gray-500">
                 No offers yet
               </div>
             ) : (
@@ -191,7 +191,7 @@ function DetailsCard({ request: r }: { request: any }) {
           value={
             r.city ? (
               <span className="inline-flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-gray-400" /> {r.city}
+                <MapPin className="h-3.5 w-3.5 text-gray-500" /> {r.city}
               </span>
             ) : null
           }
@@ -205,7 +205,7 @@ function DetailsCard({ request: r }: { request: any }) {
           value={
             r.dateFrom ? (
               <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                <Calendar className="h-3.5 w-3.5 text-gray-500" />
                 {new Date(r.dateFrom).toLocaleDateString()}
               </span>
             ) : null
@@ -216,7 +216,7 @@ function DetailsCard({ request: r }: { request: any }) {
           value={
             r.dateTo ? (
               <span className="inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-gray-400" />
+                <Calendar className="h-3.5 w-3.5 text-gray-500" />
                 {new Date(r.dateTo).toLocaleDateString()}
               </span>
             ) : null
@@ -326,7 +326,7 @@ function OfferCard({
               </span>
             )}
             {offer.providerId && (
-              <span className="text-[11px] text-gray-400 font-mono">
+              <span className="text-[11px] text-gray-500 font-mono">
                 Provider {String(offer.providerId).slice(0, 8)}
               </span>
             )}
@@ -425,7 +425,7 @@ function ConvertOfferModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Convert to booking</h2>
@@ -567,7 +567,7 @@ function CreateOfferModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Send a new offer</h2>

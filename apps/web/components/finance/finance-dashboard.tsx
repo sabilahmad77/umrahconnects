@@ -37,7 +37,7 @@ export function FinanceDashboard() {
           <p className="text-sm text-red-500">Failed to load finance stats</p>
         </div>
       ) : isLoading || !stats ? (
-        <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
+        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
@@ -104,14 +104,14 @@ export function FinanceDashboard() {
                 <CreditCard className="h-4 w-4 text-blue-600" /> Recent transactions
               </h3>
               {(stats.recentTransactions ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No payments recorded yet</p>
+                <p className="text-xs text-gray-500">No payments recorded yet</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.recentTransactions.map((t: any) => (
                     <li key={t.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-2 last:border-0">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{t.counterparty ?? t.invoiceRef ?? 'Payment'}</p>
-                        <p className="text-[11px] text-gray-400">{t.gateway} · {t.status}</p>
+                        <p className="text-[11px] text-gray-500">{t.gateway} · {t.status}</p>
                       </div>
                       <span className="text-xs font-semibold text-gray-900 shrink-0">{fmt(t.amountCents, stats.currency)}</span>
                     </li>

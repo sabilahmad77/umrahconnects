@@ -42,7 +42,7 @@ export function HotelsList() {
           <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} hotels in your network</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
@@ -83,12 +83,12 @@ export function HotelsList() {
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search hotels..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
           />
         </div>
         <div className="flex gap-1.5">
@@ -129,7 +129,7 @@ export function HotelsList() {
       ) : items.length === 0 ? (
         <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
           <Hotel className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No hotels found</p>
+          <p className="text-sm text-gray-500">No hotels found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -145,7 +145,7 @@ export function HotelsList() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900 leading-tight">{h.name}</p>
-                      <p className="text-xs text-gray-400">{h.city ?? '—'} · {h.country ?? 'KSA'}</p>
+                      <p className="text-xs text-gray-500">{h.city ?? '—'} · {h.country ?? 'KSA'}</p>
                     </div>
                   </div>
                 </div>
@@ -175,7 +175,7 @@ export function HotelsList() {
                       style={{ width: `${occ}%` }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-[10px] text-gray-400">
+                  <div className="flex items-center justify-between text-[10px] text-gray-500">
                     <span>{h.bookedRooms ?? 0} booked</span>
                     <span>{h.availableRooms ?? (h.totalRooms != null && h.bookedRooms != null ? h.totalRooms - h.bookedRooms : 0)} available</span>
                   </div>
@@ -183,7 +183,7 @@ export function HotelsList() {
 
                 {/* Distance to Haram */}
                 {h.distanceToHaram && (
-                  <p className="text-[11px] text-gray-400 mt-2">📍 {h.distanceToHaram}m from Haram</p>
+                  <p className="text-[11px] text-gray-500 mt-2">📍 {h.distanceToHaram}m from Haram</p>
                 )}
               </a>
             );
@@ -194,7 +194,7 @@ export function HotelsList() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
+          <p className="text-xs text-gray-500">Page {page} of {totalPages}</p>
           <div className="flex gap-1.5">
             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Prev</button>
             <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Next</button>
@@ -271,7 +271,7 @@ function AddHotelModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Add hotel</h2>

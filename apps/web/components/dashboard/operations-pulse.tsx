@@ -41,7 +41,7 @@ function KpiCard({
       </div>
       <p className="text-2xl font-bold text-gray-900 leading-none">{value}</p>
       <p className="text-sm text-gray-500 mt-1">{label}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -189,9 +189,9 @@ export function OperationsPulse() {
           </p>
           <p className="text-3xl font-bold text-gray-900">{groupStats?.total ?? 0}</p>
           <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-gray-50 text-xs">
-            <div><span className="text-gray-400 block">Active</span><span className="font-semibold text-green-700">{groupStats?.active ?? 0}</span></div>
-            <div><span className="text-gray-400 block">Completed</span><span className="font-semibold text-blue-700">{groupStats?.completed ?? 0}</span></div>
-            <div><span className="text-gray-400 block">Incidents</span><span className="font-semibold text-red-600">{groupStats?.incidents ?? 0}</span></div>
+            <div><span className="text-gray-500 block">Active</span><span className="font-semibold text-green-700">{groupStats?.active ?? 0}</span></div>
+            <div><span className="text-gray-500 block">Completed</span><span className="font-semibold text-blue-700">{groupStats?.completed ?? 0}</span></div>
+            <div><span className="text-gray-500 block">Incidents</span><span className="font-semibold text-red-600">{groupStats?.incidents ?? 0}</span></div>
           </div>
           <Link href="/groups" className="mt-3 inline-block text-xs text-brand-500 hover:underline">View all groups →</Link>
         </div>
@@ -201,7 +201,7 @@ export function OperationsPulse() {
             <FileCheck2 className="h-3.5 w-3.5" /> Recent bookings
           </p>
           {(recentBookings?.items ?? []).length === 0 ? (
-            <p className="text-xs text-gray-400">No bookings yet</p>
+            <p className="text-xs text-gray-500">No bookings yet — create one from Bookings</p>
           ) : (
             <ul className="space-y-2">
               {recentBookings!.items.slice(0, 5).map((b: any) => (
@@ -221,7 +221,7 @@ export function OperationsPulse() {
             <Users className="h-3.5 w-3.5" /> Recent pilgrims
           </p>
           {(recentPilgrims?.items ?? []).length === 0 ? (
-            <p className="text-xs text-gray-400">No pilgrims yet</p>
+            <p className="text-xs text-gray-500">No pilgrims yet — add them from the CRM</p>
           ) : (
             <ul className="space-y-2">
               {recentPilgrims!.items.slice(0, 5).map((p: any) => {
@@ -247,14 +247,14 @@ export function OperationsPulse() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-semibold text-gray-900">Booking Trend</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Monthly confirmed bookings</p>
+              <p className="text-xs text-gray-500 mt-0.5">Monthly confirmed bookings</p>
             </div>
-            <span className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-lg">Last 12 months</span>
+            <span className="text-xs text-gray-500 bg-gray-50 px-2.5 py-1 rounded-lg">Last 12 months</span>
           </div>
           {bookingsLoading ? (
             <div className="h-48 bg-gray-50 rounded-xl animate-pulse" />
           ) : trendData.length === 0 ? (
-            <div className="h-48 flex flex-col items-center justify-center text-gray-400">
+            <div className="h-48 flex flex-col items-center justify-center text-gray-500">
               <AlertCircle className="h-8 w-8 mb-2 opacity-40" />
               <p className="text-sm">No booking data yet</p>
             </div>
@@ -283,7 +283,7 @@ export function OperationsPulse() {
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <div className="mb-5">
             <h3 className="font-semibold text-gray-900">Visa Pipeline</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{visaReport?.total ?? totalVisa} total applications</p>
+            <p className="text-xs text-gray-500 mt-0.5">{visaReport?.total ?? totalVisa} total applications</p>
           </div>
           {visaLoading ? (
             <div className="space-y-3">
@@ -296,7 +296,7 @@ export function OperationsPulse() {
               ))}
             </div>
           ) : visaEntries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-8 text-gray-500">
               <CheckCircle2 className="h-8 w-8 mb-2 opacity-40" />
               <p className="text-sm">No visa data</p>
             </div>
@@ -338,7 +338,7 @@ export function OperationsPulse() {
       <div className="bg-white rounded-2xl border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900">Quick Navigation</h3>
-          <p className="text-xs text-gray-400">Jump to any module</p>
+          <p className="text-xs text-gray-500">Jump to any module</p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2">
           {QUICK_LINKS.map((link) => (
@@ -376,7 +376,7 @@ export function OperationsPulse() {
             <p className="text-sm font-medium text-gray-600">Outstanding</p>
           </div>
           <p className="text-3xl font-bold text-gray-900">{fmtSAR(overview?.revenueOutstandingCents)}</p>
-          <p className="text-xs text-gray-400 mt-1">Pending collection</p>
+          <p className="text-xs text-gray-500 mt-1">Pending collection</p>
           <Link href="/finance" className="flex items-center gap-1 mt-3 text-xs text-brand-500 hover:text-brand-600 font-medium">
             View invoices <ArrowUpRight className="h-3 w-3" />
           </Link>
@@ -392,7 +392,7 @@ export function OperationsPulse() {
               : '—'
             }
           </p>
-          <p className="text-xs text-gray-400 mt-1">Paid vs total billed</p>
+          <p className="text-xs text-gray-500 mt-1">Paid vs total billed</p>
           <Link href="/reports" className="flex items-center gap-1 mt-3 text-xs text-brand-500 hover:text-brand-600 font-medium">
             Full analytics <ArrowUpRight className="h-3 w-3" />
           </Link>

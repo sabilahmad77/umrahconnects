@@ -47,7 +47,7 @@ export default function SocialPreviewPage() {
             <Link href="/login" className="block bg-white rounded-2xl border border-sandstone/60 p-4 hover:border-brand-300 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center"><Lock className="h-4 w-4 text-brand-600" /></div>
-                <span className="text-sm text-gray-400">Sign in to share an update with the Umrah community…</span>
+                <span className="text-sm text-gray-500">Sign in to share an update with the Umrah community…</span>
               </div>
             </Link>
 
@@ -57,7 +57,7 @@ export default function SocialPreviewPage() {
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold">{p.author[0]}</div>
                   <div>
                     <p className="font-semibold text-gray-900 text-sm flex items-center gap-1.5">{p.author} <BadgeCheck className="h-3.5 w-3.5 text-brand-500" /></p>
-                    <p className="text-[11px] text-gray-400">{p.badge} · {p.time}</p>
+                    <p className="text-[11px] text-gray-500">{p.badge} · {p.time}</p>
                   </div>
                 </div>
                 <p className="text-[14px] text-gray-700 leading-relaxed">{p.body}</p>
@@ -85,7 +85,7 @@ export default function SocialPreviewPage() {
               <ul className="space-y-3">
                 {GROUPS.map((g) => (
                   <li key={g.n} className="flex items-center justify-between">
-                    <div><p className="text-[13px] font-semibold text-gray-800">{g.n}</p><p className="text-[11px] text-gray-400">{g.m}</p></div>
+                    <div><p className="text-[13px] font-semibold text-gray-800">{g.n}</p><p className="text-[11px] text-gray-500">{g.m}</p></div>
                     <Link href="/login" className="text-[12px] font-semibold text-brand-600 hover:underline">Join</Link>
                   </li>
                 ))}
@@ -97,7 +97,7 @@ export default function SocialPreviewPage() {
                 {EVENTS.map((e) => (
                   <li key={e.t} className="flex items-center gap-3">
                     <div className="w-11 text-center shrink-0"><p className="text-[10px] font-bold text-gold-600">{e.d.split(' ')[0]}</p><p className="text-sm font-bold text-brand-600">{e.d.split(' ')[1]}</p></div>
-                    <div><p className="text-[13px] font-semibold text-gray-800">{e.t}</p><p className="text-[11px] text-gray-400">By {e.by}</p></div>
+                    <div><p className="text-[13px] font-semibold text-gray-800">{e.t}</p><p className="text-[11px] text-gray-500">By {e.by}</p></div>
                   </li>
                 ))}
               </ul>

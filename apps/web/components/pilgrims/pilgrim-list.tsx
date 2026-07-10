@@ -66,7 +66,7 @@ export function PilgrimList() {
           <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} pilgrims total</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
@@ -131,12 +131,12 @@ export function PilgrimList() {
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search by name, passport, phone..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -195,7 +195,7 @@ export function PilgrimList() {
                   <tr>
                     <td colSpan={5} className="py-20 text-center">
                       <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-400">No pilgrims found</p>
+                      <p className="text-sm text-gray-500">No pilgrims found</p>
                     </td>
                   </tr>
                 ) : items.map((pilgrim: any) => {
@@ -214,7 +214,7 @@ export function PilgrimList() {
                               <span className="text-sm font-semibold text-gray-800">{name}</span>
                               <span className="text-sm">{FLAG[pilgrim.nationality] ?? ''}</span>
                             </div>
-                            <p className="text-xs text-gray-400">{pilgrim.phone ?? pilgrim.email ?? '—'}</p>
+                            <p className="text-xs text-gray-500">{pilgrim.phone ?? pilgrim.email ?? '—'}</p>
                           </div>
                         </div>
                       </td>
@@ -227,7 +227,7 @@ export function PilgrimList() {
                       <td className="px-5 py-3.5 hidden md:table-cell">
                         <p className="text-sm font-mono text-gray-700">{pilgrim.passportNumber ?? '—'}</p>
                         {pilgrim.passportExpiry && (
-                          <p className="text-xs text-gray-400">Exp: {new Date(pilgrim.passportExpiry).toLocaleDateString()}</p>
+                          <p className="text-xs text-gray-500">Exp: {new Date(pilgrim.passportExpiry).toLocaleDateString()}</p>
                         )}
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
@@ -240,14 +240,14 @@ export function PilgrimList() {
                             title="View"
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                           >
-                            <Eye className="h-3.5 w-3.5 text-gray-400" />
+                            <Eye className="h-3.5 w-3.5 text-gray-500" />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); setEditPilgrim(pilgrim); }}
                             title="Edit"
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
                           >
-                            <Edit className="h-3.5 w-3.5 text-gray-400" />
+                            <Edit className="h-3.5 w-3.5 text-gray-500" />
                           </button>
                           <button
                             onClick={async (e) => {
@@ -263,7 +263,7 @@ export function PilgrimList() {
                             title="Archive"
                             className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors"
                           >
-                            <Trash2 className="h-3.5 w-3.5 text-gray-400" />
+                            <Trash2 className="h-3.5 w-3.5 text-gray-500" />
                           </button>
                         </div>
                       </td>
@@ -275,7 +275,7 @@ export function PilgrimList() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-400">Page {page} of {totalPages} · {total.toLocaleString()} results</p>
+                <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total.toLocaleString()} results</p>
                 <div className="flex gap-1.5">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Prev</button>
                   <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</button>
@@ -396,7 +396,7 @@ function PilgrimFormModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">{mode === 'create' ? 'Add pilgrim' : 'Edit pilgrim'}</h2>
@@ -465,7 +465,7 @@ function PilgrimFormModal({
 function PilgrimDetailModal({ pilgrim, onClose, onEdit }: { pilgrim: any; onClose: () => void; onEdit: () => void }) {
   const fullName = `${pilgrim.firstNameEn ?? ''} ${pilgrim.lastNameEn ?? ''}`.trim() || '—';
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -512,7 +512,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function Detail({ label, value, mono }: { label: string; value?: string | null; mono?: boolean }) {
   return (
     <div>
-      <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">{label}</p>
       <p className={cn('text-gray-800 mt-0.5', mono && 'font-mono')}>{value || '—'}</p>
     </div>
   );

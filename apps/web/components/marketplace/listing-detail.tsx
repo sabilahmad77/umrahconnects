@@ -43,7 +43,7 @@ export function ListingDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading listing…
       </div>
     );
@@ -207,9 +207,9 @@ function OverviewTab({ listing, price }: { listing: any; price: string | null })
               {price}
             </p>
           ) : (
-            <p className="text-base font-medium text-gray-400">Contact for pricing</p>
+            <p className="text-base font-medium text-gray-500">Contact for pricing</p>
           )}
-          <p className="text-[11px] text-gray-400 mt-1">{listing.pricingModel?.replace('_', ' ').toLowerCase()}</p>
+          <p className="text-[11px] text-gray-500 mt-1">{listing.pricingModel?.replace('_', ' ').toLowerCase()}</p>
         </div>
 
         {listing.vendor && (
@@ -223,7 +223,7 @@ function OverviewTab({ listing, price }: { listing: any; price: string | null })
               <div className="flex items-center gap-1 pt-2 border-t border-gray-50">
                 <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                 <span className="text-xs font-semibold text-gray-700">{Number(listing.vendor.rating).toFixed(1)}</span>
-                <span className="text-[11px] text-gray-400">({listing.vendor.ratingCount ?? 0} reviews)</span>
+                <span className="text-[11px] text-gray-500">({listing.vendor.ratingCount ?? 0} reviews)</span>
               </div>
             )}
           </div>
@@ -256,14 +256,14 @@ function InquiriesTab({ listingId }: { listingId: string }) {
   return (
     <div className="space-y-3">
       {inquiries.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">No inquiries yet</div>
+        <div className="py-10 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-100">No inquiries yet — inquiries from interested buyers will appear here</div>
       ) : (
         inquiries.map((q: any) => (
           <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
                 <p className="text-sm font-semibold text-gray-900">{q.fromName ?? 'Customer'}</p>
-                <p className="text-[11px] text-gray-400">
+                <p className="text-[11px] text-gray-500">
                   {q.fromEmail ?? '—'} {q.fromPhone && `• ${q.fromPhone}`}
                   {q.partySize ? ` • ${q.partySize} pax` : ''}
                 </p>
@@ -320,7 +320,7 @@ function BookingsTab({ listingId }: { listingId: string }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100">
       {bookings.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No bookings yet</div>
+        <div className="py-10 text-center text-sm text-gray-500">No bookings yet — accepted offers convert into bookings here</div>
       ) : (
         <table className="w-full text-sm">
           <thead className="text-xs text-gray-500 border-b border-gray-100">
@@ -339,7 +339,7 @@ function BookingsTab({ listingId }: { listingId: string }) {
               <tr key={b.id}>
                 <td className="p-3">
                   <p className="font-medium text-gray-900">{b.customerName}</p>
-                  <p className="text-[11px] text-gray-400">{b.customerEmail ?? b.customerPhone ?? ''}</p>
+                  <p className="text-[11px] text-gray-500">{b.customerEmail ?? b.customerPhone ?? ''}</p>
                 </td>
                 <td className="p-3 text-xs text-gray-600">
                   {b.startDate ? new Date(b.startDate).toLocaleDateString() : '—'}
@@ -494,7 +494,7 @@ function InquireModal({ listingId, onClose }: { listingId: string; onClose: () =
   const [message, setMessage] = useState('');
   const [partySize, setPartySize] = useState<string>('');
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Send inquiry</h2>
@@ -547,7 +547,7 @@ function BookModal({ listing, onClose }: { listing: any; onClose: () => void }) 
   const totalEst = unitPrice * (Number(partySize) || 1);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Create booking</h2>

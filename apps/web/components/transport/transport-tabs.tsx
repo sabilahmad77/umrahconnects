@@ -86,7 +86,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           <p className="text-sm text-gray-500 mt-0.5">{meta.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={refreshActive} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={refreshActive} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           {showAdd && (
@@ -136,7 +136,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           ) : vehicleItems.length === 0 ? (
             <div className="col-span-3 py-16 text-center bg-white rounded-2xl border border-gray-100">
               <Bus className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400">No vehicles found</p>
+              <p className="text-sm text-gray-500">No vehicles found</p>
             </div>
           ) : vehicleItems.map((v: any) => {
             const cfg = VEHICLE_STATUS[v.status] ?? { label: v.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
@@ -156,7 +156,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                       <p className="text-sm font-semibold text-gray-900 truncate">
                         {v.name ?? v.plateNumber ?? '—'}
                       </p>
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-xs text-gray-500 truncate">
                         {v.brand ?? ''} {v.model ?? ''} {v.year ? `· ${v.year}` : ''}
                       </p>
                     </div>
@@ -167,14 +167,14 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                   {cfg.label}
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                  <div><span className="text-gray-400">Plate:</span> <span className="font-medium text-gray-700">{v.plateNumber ?? '—'}</span></div>
-                  <div><span className="text-gray-400">Type:</span> <span className="font-medium text-gray-700">{v.type ?? '—'}</span></div>
-                  <div><span className="text-gray-400">Seats:</span> <span className="font-medium text-gray-700">{(v.capacity - (v.bookedSeats ?? 0))} / {v.capacity ?? '—'}</span></div>
-                  <div><span className="text-gray-400">A/C:</span> <span className="font-medium text-gray-700">{v.hasAc ? 'Yes' : 'No'}</span></div>
+                  <div><span className="text-gray-500">Plate:</span> <span className="font-medium text-gray-700">{v.plateNumber ?? '—'}</span></div>
+                  <div><span className="text-gray-500">Type:</span> <span className="font-medium text-gray-700">{v.type ?? '—'}</span></div>
+                  <div><span className="text-gray-500">Seats:</span> <span className="font-medium text-gray-700">{(v.capacity - (v.bookedSeats ?? 0))} / {v.capacity ?? '—'}</span></div>
+                  <div><span className="text-gray-500">A/C:</span> <span className="font-medium text-gray-700">{v.hasAc ? 'Yes' : 'No'}</span></div>
                 </div>
                 {primaryDriver && (
                   <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-50">
-                    <span className="text-gray-400">Driver:</span> <span className="font-medium text-gray-700">{primaryDriver.firstName} {primaryDriver.lastName}</span>
+                    <span className="text-gray-500">Driver:</span> <span className="font-medium text-gray-700">{primaryDriver.firstName} {primaryDriver.lastName}</span>
                   </div>
                 )}
               </Link>
@@ -201,7 +201,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           ) : driverItems.length === 0 ? (
             <div className="py-16 text-center">
               <User className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400">No drivers found</p>
+              <p className="text-sm text-gray-500">No drivers found</p>
             </div>
           ) : (
             <table className="w-full">
@@ -228,7 +228,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{name}</p>
-                            <p className="text-xs text-gray-400">{d.phone ?? '—'}</p>
+                            <p className="text-xs text-gray-500">{d.phone ?? '—'}</p>
                           </div>
                         </div>
                       </td>
@@ -263,7 +263,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           ) : !routes || (routes as any[]).length === 0 ? (
             <div className="col-span-2 py-16 text-center bg-white rounded-2xl border border-gray-100">
               <Map className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400">No routes defined</p>
+              <p className="text-sm text-gray-500">No routes defined</p>
             </div>
           ) : (((routes as any).items ?? routes) as any[]).map((r: any) => {
             const seats = (r.totalSeats ?? 0) - (r.bookedSeats ?? 0);
@@ -286,14 +286,14 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50 text-[11px]">
                   {r.pricePerSeatCents != null && (
-                    <span><span className="text-gray-400">From:</span> <span className="font-medium text-gray-700">{r.currency ?? 'SAR'} {(Number(r.pricePerSeatCents) / 100).toLocaleString()}</span></span>
+                    <span><span className="text-gray-500">From:</span> <span className="font-medium text-gray-700">{r.currency ?? 'SAR'} {(Number(r.pricePerSeatCents) / 100).toLocaleString()}</span></span>
                   )}
                   {r.totalSeats != null && (
-                    <span><span className="text-gray-400">Seats:</span> <span className="font-medium text-gray-700">{seats} / {r.totalSeats}</span></span>
+                    <span><span className="text-gray-500">Seats:</span> <span className="font-medium text-gray-700">{seats} / {r.totalSeats}</span></span>
                   )}
                 </div>
                 {r.distanceKm && (
-                  <p className="text-xs text-gray-400 mt-1.5">{r.distanceKm} km · ~{r.durationMins ?? '?'} mins</p>
+                  <p className="text-xs text-gray-500 mt-1.5">{r.distanceKm} km · ~{r.durationMins ?? '?'} mins</p>
                 )}
               </Link>
             );
@@ -311,7 +311,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           ) : !stats ? (
             <div className="col-span-2 py-16 text-center bg-white rounded-2xl border border-gray-100">
               <BarChart3 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400">No stats available</p>
+              <p className="text-sm text-gray-500">No stats available</p>
             </div>
           ) : (
             <>
@@ -392,7 +392,7 @@ const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg f
 
 function ModalShell({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">{title}</h2>

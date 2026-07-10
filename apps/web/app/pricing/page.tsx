@@ -42,7 +42,7 @@ export default function PricingPage() {
               <p className="text-[13px] text-gray-500 mt-1 leading-snug">{p.desc}</p>
               <div className="mt-4 mb-5">
                 <span className="font-heading text-3xl font-extrabold text-brand-600">{p.price}</span>
-                <span className="text-[12px] text-gray-400 ml-1.5">{p.cadence}</span>
+                <span className="text-[12px] text-gray-500 ml-1.5">{p.cadence}</span>
               </div>
               <ul className="space-y-2.5 flex-1">
                 {p.features.map((f) => (
@@ -57,7 +57,7 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
-        <p className="text-center text-[13px] text-gray-400 mt-8 max-w-2xl mx-auto">
+        <p className="text-center text-[13px] text-gray-500 mt-8 max-w-2xl mx-auto">
           Final provider and enterprise pricing is confirmed with our team based on your services, volume and onboarding needs. No hidden fees — SAR-native billing.
         </p>
       </section>

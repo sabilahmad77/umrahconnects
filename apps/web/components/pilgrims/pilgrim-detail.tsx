@@ -27,7 +27,7 @@ export function PilgrimDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading pilgrim…
       </div>
     );
@@ -226,7 +226,7 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
           <h3 className="text-sm font-bold text-gray-900">Documents ({p.documents?.length ?? 0})</h3>
         </div>
         {(p.documents ?? []).length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No documents on file</div>
+          <div className="py-10 text-center text-sm text-gray-500">No documents on file</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {p.documents.map((d: any) => (
@@ -235,7 +235,7 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
                   <Paperclip className="h-4 w-4 text-brand-500" />
                   <div>
                     <p className="text-sm font-medium text-gray-900">{d.fileName ?? 'document'}</p>
-                    <p className="text-[11px] text-gray-400">{d.type} · uploaded {new Date(d.createdAt).toLocaleDateString()}{d.expiresAt && ` · expires ${new Date(d.expiresAt).toLocaleDateString()}`}</p>
+                    <p className="text-[11px] text-gray-500">{d.type} · uploaded {new Date(d.createdAt).toLocaleDateString()}{d.expiresAt && ` · expires ${new Date(d.expiresAt).toLocaleDateString()}`}</p>
                   </div>
                 </a>
               </li>
@@ -291,7 +291,7 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
           <h3 className="text-sm font-bold text-gray-900">Linked bookings ({p.bookings?.length ?? 0})</h3>
         </div>
         {(p.bookings ?? []).length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">Not attached to any booking yet</div>
+          <div className="py-10 text-center text-sm text-gray-500">Not attached to any booking yet</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {p.bookings.map((bp: any) => {

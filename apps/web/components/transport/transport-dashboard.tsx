@@ -39,7 +39,7 @@ export function TransportDashboard() {
           <p className="text-sm text-red-500">Failed to load transport stats</p>
         </div>
       ) : isLoading ? (
-        <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
+        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
@@ -112,14 +112,14 @@ export function TransportDashboard() {
                 <Calendar className="h-4 w-4 text-blue-600" /> Upcoming trips
               </h3>
               {(stats.assignments.upcoming ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No upcoming trips</p>
+                <p className="text-xs text-gray-500">No upcoming trips</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.assignments.upcoming.slice(0, 5).map((u: any) => (
                     <li key={u.id} className="flex items-center justify-between text-xs">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{u.route?.name ?? '—'}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{u.vehicle?.plateNumber ?? '—'}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{u.vehicle?.plateNumber ?? '—'}</p>
                       </div>
                       <p className="text-[11px] text-gray-500 shrink-0">{new Date(u.scheduledAt).toLocaleDateString()}</p>
                     </li>

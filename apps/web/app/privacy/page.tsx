@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <section className="max-w-3xl mx-auto px-6 lg:px-8 pt-16 pb-16">
         <p className="text-[11px] font-bold tracking-[0.14em] text-gold-600">LEGAL</p>
         <h1 className="font-heading text-4xl font-extrabold text-brand-600 mt-2">Privacy Policy</h1>
-        <p className="text-[13px] text-gray-400 mt-2">Last updated: June 2026</p>
+        <p className="text-[13px] text-gray-500 mt-2">Last updated: June 2026</p>
         <p className="text-[15px] text-gray-600 mt-6 leading-relaxed">
           This Privacy Policy explains how Umrah Connect collects, uses and protects information across our platform —
           for travelers, operators, hotels, transport companies, visa agencies and finance teams.

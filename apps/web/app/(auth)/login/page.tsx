@@ -92,7 +92,7 @@ const DEMO_ROLES: {
     accent: 'from-green-500 to-green-600',
     badgeBg: 'bg-green-50',
     badgeText: 'text-green-700',
-    features: ['Visa Pipeline', 'Document Check', 'Approvals', 'Nusuk'],
+    features: ['Visa Pipeline', 'Document Check', 'Approvals', 'Nusuk-ready'],
     slug: 'al-haramain-ksa',
     email: 'admin@alharamain.sa',
     password: 'Admin@1234',
@@ -245,7 +245,7 @@ export default function LoginPage() {
               {[
                 'Pilgrim CRM & document management',
                 'Hotel allotment & real-time availability',
-                'Nusuk & SISKOPATUH visa integration',
+                'Nusuk & SISKOPATUH-ready visa workflows',
                 'Operator social network & marketplace',
                 'Finance, invoicing & payment tracking',
               ].map((f) => (
@@ -288,7 +288,7 @@ export default function LoginPage() {
                   'flex-1 py-4 text-sm font-semibold transition-all',
                   tab === 'demo'
                     ? 'text-brand-600 border-b-2 border-brand-500 bg-brand-50/50'
-                    : 'text-gray-400 hover:text-gray-600',
+                    : 'text-gray-500 hover:text-gray-600',
                 )}
               >
                 <span className="flex items-center justify-center gap-2">
@@ -302,7 +302,7 @@ export default function LoginPage() {
                   'flex-1 py-4 text-sm font-semibold transition-all',
                   tab === 'signin'
                     ? 'text-brand-600 border-b-2 border-brand-500 bg-brand-50/50'
-                    : 'text-gray-400 hover:text-gray-600',
+                    : 'text-gray-500 hover:text-gray-600',
                 )}
               >
                 <span className="flex items-center justify-center gap-2">
@@ -369,7 +369,7 @@ export default function LoginPage() {
                   })}
                 </div>
 
-                <p className="text-center text-xs text-gray-400 mt-5">
+                <p className="text-center text-xs text-gray-500 mt-5">
                   Demo mode uses pre-seeded data. No real data is affected.
                 </p>
               </div>
@@ -410,7 +410,7 @@ export default function LoginPage() {
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">Workspace</label>
                     <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
-                      <span className="flex items-center px-3 bg-gray-50 text-gray-400 text-xs border-r border-gray-300 whitespace-nowrap shrink-0">
+                      <span className="flex items-center px-3 bg-gray-50 text-gray-500 text-xs border-r border-gray-300 whitespace-nowrap shrink-0">
                         umrahconnects.io/
                       </span>
                       <input
@@ -462,7 +462,7 @@ export default function LoginPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-600"
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
@@ -500,7 +500,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <p className="text-center mt-4 text-xs text-gray-400">
+                <p className="text-center mt-4 text-xs text-gray-500">
                   For instant testing, use{' '}
                   <button onClick={() => setTab('demo')} className="text-brand-500 font-medium hover:underline">
                     Quick Demo Access
@@ -512,7 +512,7 @@ export default function LoginPage() {
           </div>
 
           {/* Footer links */}
-          <div className="flex items-center justify-center gap-6 mt-6 text-xs text-gray-400">
+          <div className="flex items-center justify-center gap-6 mt-6 text-xs text-gray-500">
             <span>© 2026 Umrah Connect</span>
             <span>·</span>
             <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>

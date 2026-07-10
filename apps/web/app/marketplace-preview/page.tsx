@@ -61,7 +61,7 @@ export default function MarketplacePreviewPage() {
         <section className="max-w-7xl mx-auto px-6 lg:px-8 pb-8">
           <div className="bg-white rounded-2xl border border-sandstone/60 p-3 flex flex-col sm:flex-row gap-3">
             <div className="flex-1 flex items-center gap-2 px-3 bg-ivory rounded-xl border border-sandstone/60">
-              <Search className="h-4 w-4 text-gray-400" />
+              <Search className="h-4 w-4 text-gray-500" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search hotels, transport, visa, packages…" className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
             </div>
             <div className="flex items-center gap-2 overflow-x-auto">
@@ -101,7 +101,7 @@ export default function MarketplacePreviewPage() {
                       <p className="font-heading font-bold text-gray-900 leading-snug">{l.name ?? 'Umrah service'}</p>
                       <span className="flex items-center gap-0.5 text-[12px] text-gold-600 font-semibold shrink-0"><Star className="h-3.5 w-3.5 fill-gold-400 text-gold-400" /> 4.7</span>
                     </div>
-                    {l.vendor?.displayName && <p className="text-[12px] text-gray-400 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {l.vendor.displayName}</p>}
+                    {l.vendor?.displayName && <p className="text-[12px] text-gray-500 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {l.vendor.displayName}</p>}
                     <p className="text-[13px] text-gray-500 mt-2 line-clamp-2 flex-1">{l.description ?? 'Verified Umrah service available through the marketplace.'}</p>
                     <div className="mt-3 pt-3 border-t border-sandstone/50 flex items-center justify-between">
                       <p className="font-heading font-bold text-brand-600">{fmt(l.priceCents, l.currency)}</p>

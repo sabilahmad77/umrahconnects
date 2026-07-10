@@ -29,7 +29,7 @@ export function BookingDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading booking…
       </div>
     );
@@ -214,7 +214,7 @@ function PilgrimsTab({ b, refetch }: { b: any; refetch: () => void }) {
           <h3 className="text-sm font-bold text-gray-900">Pilgrims in booking ({b.pilgrims?.length ?? 0})</h3>
         </div>
         {(b.pilgrims ?? []).length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No pilgrims attached yet</div>
+          <div className="py-10 text-center text-sm text-gray-500">No pilgrims attached yet — add pilgrims so documents and visas can be tracked</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {b.pilgrims.map((bp: any) => {
@@ -228,7 +228,7 @@ function PilgrimsTab({ b, refetch }: { b: any; refetch: () => void }) {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{name}</p>
-                      <p className="text-[11px] text-gray-400">{linked?.passportNumber ?? '—'}</p>
+                      <p className="text-[11px] text-gray-500">{linked?.passportNumber ?? '—'}</p>
                     </div>
                   </Link>
                   <button
@@ -360,9 +360,9 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
           </label>
         </div>
         <div className="text-xs text-gray-500 grid grid-cols-3 gap-2 pt-2 border-t border-gray-50">
-          <div><span className="text-gray-400">Total:</span> <span className="font-semibold text-gray-900">{b.currency} {(b.totalAmountCents / 100).toLocaleString()}</span></div>
-          <div><span className="text-gray-400">Paid:</span> <span className="font-semibold text-green-700">{b.currency} {(b.paidAmountCents / 100).toLocaleString()}</span></div>
-          <div><span className="text-gray-400">Outstanding:</span> <span className="font-semibold text-orange-700">{b.currency} {(outstanding / 100).toLocaleString()}</span></div>
+          <div><span className="text-gray-500">Total:</span> <span className="font-semibold text-gray-900">{b.currency} {(b.totalAmountCents / 100).toLocaleString()}</span></div>
+          <div><span className="text-gray-500">Paid:</span> <span className="font-semibold text-green-700">{b.currency} {(b.paidAmountCents / 100).toLocaleString()}</span></div>
+          <div><span className="text-gray-500">Outstanding:</span> <span className="font-semibold text-orange-700">{b.currency} {(outstanding / 100).toLocaleString()}</span></div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={save} disabled={setPayment.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">

@@ -65,12 +65,12 @@ export function FinancePaymentsView() {
       </div>
 
       <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80">
-        <Search className="h-4 w-4 text-gray-400" />
+        <Search className="h-4 w-4 text-gray-500" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice / counterparty / ref…" className="text-sm bg-transparent flex-1 outline-none" />
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error ? (
@@ -81,7 +81,7 @@ export function FinancePaymentsView() {
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No payments recorded yet</p>
+          <p className="text-sm text-gray-500">No payments recorded yet</p>
           <Link href="/finance" className="text-xs text-brand-500 hover:underline mt-2 inline-block">Record a payment from an invoice →</Link>
         </div>
       ) : (

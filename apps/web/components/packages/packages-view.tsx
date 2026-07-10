@@ -28,7 +28,7 @@ export function PackagesView() {
           <p className="text-sm text-gray-500 mt-0.5">Umrah/Hajj packages your agency offers — selectable when creating bookings.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400"><RefreshCw className="h-4 w-4" /></button>
+          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500"><RefreshCw className="h-4 w-4" /></button>
           <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
             <Plus className="h-4 w-4" /> New package
           </button>
@@ -56,7 +56,7 @@ export function PackagesView() {
                 {p.durationDays && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {p.durationDays}d</span>}
                 {p.departureCity && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {p.departureCity}</span>}
               </div>
-              <p className="font-heading font-bold text-brand-600 mt-3">{fmt(priceOf(p))}<span className="text-[11px] text-gray-400 font-normal"> / adult</span></p>
+              <p className="font-heading font-bold text-brand-600 mt-3">{fmt(priceOf(p))}<span className="text-[11px] text-gray-500 font-normal"> / adult</span></p>
               {p.status && <span className="inline-block mt-2 text-[10px] font-semibold text-gray-500">{p.status}</span>}
             </div>
           ))}
@@ -92,7 +92,7 @@ function PackageModal({ onClose, onCreate, pending }: { onClose: () => void; onC
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New package</h2>

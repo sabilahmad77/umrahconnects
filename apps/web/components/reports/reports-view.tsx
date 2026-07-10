@@ -20,7 +20,7 @@ function SectionCard({ title, children, loading }: { title: string; children: Re
     <div className="bg-white rounded-2xl border border-gray-100 p-5">
       <h3 className="font-semibold text-gray-900 mb-4">{title}</h3>
       {loading ? (
-        <div className="h-48 bg-gray-50 rounded-xl animate-pulse flex items-center justify-center text-gray-400 text-sm">
+        <div className="h-48 bg-gray-50 rounded-xl animate-pulse flex items-center justify-center text-gray-500 text-sm">
           Loading…
         </div>
       ) : children}
@@ -126,7 +126,7 @@ export function ReportsView() {
       {/* Booking Trend — full width */}
       <SectionCard title="📈 Monthly Booking Trend" loading={bl}>
         {bookingTrend.length === 0 ? (
-          <p className="text-sm text-gray-400 py-10 text-center">No trend data available</p>
+          <p className="text-sm text-gray-500 py-10 text-center">No trend data available</p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={bookingTrend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
@@ -153,7 +153,7 @@ export function ReportsView() {
         {/* Pilgrim status breakdown */}
         <SectionCard title="👥 Pilgrim Status Breakdown" loading={pl}>
           {pilgrimStatusData.length === 0 ? (
-            <p className="text-sm text-gray-400 py-10 text-center">No pilgrim data</p>
+            <p className="text-sm text-gray-500 py-10 text-center">No pilgrim data</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={pilgrimStatusData} layout="vertical" margin={{ left: 4, right: 4 }}>
@@ -180,7 +180,7 @@ export function ReportsView() {
         {/* Visa pipeline pie */}
         <SectionCard title="📋 Visa Pipeline Distribution" loading={vl}>
           {visaStatusData.length === 0 ? (
-            <p className="text-sm text-gray-400 py-10 text-center">No visa data</p>
+            <p className="text-sm text-gray-500 py-10 text-center">No visa data</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
@@ -216,7 +216,7 @@ export function ReportsView() {
       {/* Finance breakdown */}
       <SectionCard title="💰 Revenue Breakdown (SAR)" loading={fl}>
         {financeData.length === 0 ? (
-          <p className="text-sm text-gray-400 py-10 text-center">No finance data</p>
+          <p className="text-sm text-gray-500 py-10 text-center">No finance data</p>
         ) : (
           <div className="flex flex-col lg:flex-row items-center gap-8">
             <ResponsiveContainer width={200} height={180}>
@@ -247,7 +247,7 @@ export function ReportsView() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{pct}% of total billed</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5">{pct}% of total billed</p>
                   </div>
                 );
               })}

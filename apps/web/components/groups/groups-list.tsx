@@ -58,7 +58,7 @@ export function GroupsList() {
           <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} groups total</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
@@ -106,12 +106,12 @@ export function GroupsList() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search groups..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -157,7 +157,7 @@ export function GroupsList() {
       ) : items.length === 0 ? (
         <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
           <Users2 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No groups found</p>
+          <p className="text-sm text-gray-500">No groups found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -181,7 +181,7 @@ export function GroupsList() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{g.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-400">
+                      <div className="flex items-center gap-2 mt-0.5 text-[11px] text-gray-500">
                         <span className="flex items-center gap-1">
                           <VisIcon className="h-3 w-3" />
                           {visibility === 'PUBLIC' ? 'Public' : visibility === 'UNLISTED' ? 'Unlisted' : 'Private'}
@@ -235,7 +235,7 @@ export function GroupsList() {
                       style={{ width: `${Math.min(occ, 100)}%` }}
                     />
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">{occ}% filled</p>
+                  <p className="text-[10px] text-gray-500 mt-1">{occ}% filled</p>
                 </div>
 
                 {/* Mini activity tiles */}
@@ -253,7 +253,7 @@ export function GroupsList() {
 
                 {/* Dates */}
                 {(g.departureDate || g.returnDate) && (
-                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-[11px] text-gray-400">
+                  <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-50 text-[11px] text-gray-500">
                     {g.departureDate && <span>Depart: {new Date(g.departureDate).toLocaleDateString()}</span>}
                     {g.returnDate && <span>Return: {new Date(g.returnDate).toLocaleDateString()}</span>}
                   </div>
@@ -266,7 +266,7 @@ export function GroupsList() {
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
+          <p className="text-xs text-gray-500">Page {page} of {totalPages}</p>
           <div className="flex gap-1.5">
             <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Prev</button>
             <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Next</button>
@@ -326,7 +326,7 @@ function CreateGroupModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New group</h2>

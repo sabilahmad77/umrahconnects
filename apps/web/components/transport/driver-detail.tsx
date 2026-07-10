@@ -17,7 +17,7 @@ export function DriverDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading driver…
       </div>
     );
@@ -107,7 +107,7 @@ function Overview({ d }: { d: any }) {
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs font-semibold text-gray-500 mb-2">Assigned vehicles</p>
           {(d.vehicles ?? []).length === 0 ? (
-            <p className="text-xs text-gray-400">No vehicles assigned</p>
+            <p className="text-xs text-gray-500">No vehicles assigned</p>
           ) : (
             <ul className="space-y-1.5 text-sm">
               {d.vehicles.map((vd: any) => (
@@ -124,13 +124,13 @@ function Overview({ d }: { d: any }) {
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs font-semibold text-gray-500 mb-2">Recent assignments</p>
           {(d.assignments ?? []).length === 0 ? (
-            <p className="text-xs text-gray-400">No assignments yet</p>
+            <p className="text-xs text-gray-500">No assignments for this driver yet — create one from Transport → Assignments</p>
           ) : (
             <ul className="space-y-1.5 text-xs">
               {d.assignments.slice(0, 5).map((a: any) => (
                 <li key={a.id}>
                   <p className="font-medium text-gray-800">{a.route?.name ?? a.customerName ?? '—'}</p>
-                  <p className="text-[11px] text-gray-400">{new Date(a.scheduledAt).toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-500">{new Date(a.scheduledAt).toLocaleString()}</p>
                 </li>
               ))}
             </ul>

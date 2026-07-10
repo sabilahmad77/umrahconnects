@@ -45,7 +45,7 @@ export function BudgetPlansView() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
-          <Search className="h-4 w-4 text-gray-400" />
+          <Search className="h-4 w-4 text-gray-500" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search client / destination…" className="text-sm bg-transparent flex-1 outline-none" />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -63,7 +63,7 @@ export function BudgetPlansView() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error ? (
@@ -74,7 +74,7 @@ export function BudgetPlansView() {
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <ClipboardList className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No budget plans yet</p>
+          <p className="text-sm text-gray-500">No budget plans yet</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -89,7 +89,7 @@ export function BudgetPlansView() {
                       <ClipboardList className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{p.clientName} <span className="text-[11px] text-gray-400">· {p.planRef}</span></p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">{p.clientName} <span className="text-[11px] text-gray-500">· {p.planRef}</span></p>
                       <p className="text-[11px] text-gray-500 truncate">
                         {p.destination ?? '—'} · {p.travelers} traveler(s) · total {fmt(p.totalBudgetCents, p.currency)}
                       </p>
@@ -107,7 +107,7 @@ export function BudgetPlansView() {
                     >
                       {PLAN_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <button onClick={() => setExpanded(isOpen ? null : p.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
+                    <button onClick={() => setExpanded(isOpen ? null : p.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
                       {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                     <button
@@ -128,13 +128,13 @@ export function BudgetPlansView() {
                       <BudgetCell label="Commission" value={fmt(p.commissionCents, p.currency)} icon={Percent} />
                     </div>
                     <div className="text-xs text-gray-500 grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-gray-50">
-                      <span><span className="text-gray-400">Total budget:</span> <span className="font-semibold text-gray-900">{fmt(p.totalBudgetCents, p.currency)}</span></span>
-                      <span><span className="text-gray-400">Allocated:</span> <span className="font-semibold text-gray-900">{fmt(allocated, p.currency)}</span></span>
-                      <span><span className="text-gray-400">Remaining:</span> <span className={cn('font-semibold', p.totalBudgetCents - allocated < 0 ? 'text-red-600' : 'text-green-700')}>{fmt(p.totalBudgetCents - allocated, p.currency)}</span></span>
-                      <span><span className="text-gray-400">Client type:</span> <span className="font-semibold text-gray-900">{p.clientType}</span></span>
+                      <span><span className="text-gray-500">Total budget:</span> <span className="font-semibold text-gray-900">{fmt(p.totalBudgetCents, p.currency)}</span></span>
+                      <span><span className="text-gray-500">Allocated:</span> <span className="font-semibold text-gray-900">{fmt(allocated, p.currency)}</span></span>
+                      <span><span className="text-gray-500">Remaining:</span> <span className={cn('font-semibold', p.totalBudgetCents - allocated < 0 ? 'text-red-600' : 'text-green-700')}>{fmt(p.totalBudgetCents - allocated, p.currency)}</span></span>
+                      <span><span className="text-gray-500">Client type:</span> <span className="font-semibold text-gray-900">{p.clientType}</span></span>
                     </div>
                     {(p.dateFrom || p.dateTo) && (
-                      <p className="text-[11px] text-gray-400 mt-2">
+                      <p className="text-[11px] text-gray-500 mt-2">
                         {p.dateFrom ? new Date(p.dateFrom).toLocaleDateString() : '?'} → {p.dateTo ? new Date(p.dateTo).toLocaleDateString() : '?'}
                       </p>
                     )}
@@ -213,7 +213,7 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New budget plan</h2>

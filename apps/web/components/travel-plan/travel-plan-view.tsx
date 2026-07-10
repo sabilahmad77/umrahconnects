@@ -18,7 +18,7 @@ export function TravelPlanView() {
   const isLoading = gl || bl || rl || vl;
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-20 text-gray-400 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Building your travel plan…</div>;
+    return <div className="flex items-center justify-center py-20 text-gray-500 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Building your travel plan…</div>;
   }
 
   return (
@@ -46,7 +46,7 @@ export function TravelPlanView() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{g.name}</p>
-                      <p className="text-[11px] text-gray-400">{g.tripType ?? 'GROUP'} · {g.enrolledCount ?? 0}/{g.capacity ?? '?'} members</p>
+                      <p className="text-[11px] text-gray-500">{g.tripType ?? 'GROUP'} · {g.enrolledCount ?? 0}/{g.capacity ?? '?'} members</p>
                     </div>
                     {(g.departureDate || g.returnDate) && (
                       <p className="text-[11px] text-gray-500 inline-flex items-center gap-1">
@@ -72,7 +72,7 @@ export function TravelPlanView() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{b.listing?.name ?? 'Booking'}</p>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-[11px] text-gray-500">
                         {b.partySize} pax · {b.startDate ? new Date(b.startDate).toLocaleDateString() : '?'}
                         {b.endDate && ` → ${new Date(b.endDate).toLocaleDateString()}`}
                       </p>
@@ -96,7 +96,7 @@ export function TravelPlanView() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{r.title}</p>
-                      <p className="text-[11px] text-gray-400">{r.serviceType} · {r.status} · {r.offers?.length ?? 0} offers</p>
+                      <p className="text-[11px] text-gray-500">{r.serviceType} · {r.status} · {r.offers?.length ?? 0} offers</p>
                     </div>
                     {r.budgetMaxCents && (
                       <p className="text-[11px] text-gray-500">Up to {r.currency} {(Number(r.budgetMaxCents) / 100).toLocaleString()}</p>
@@ -119,7 +119,7 @@ export function TravelPlanView() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{v.type ?? 'Visa'} — {v.applicationNumber ?? '—'}</p>
-                      <p className="text-[11px] text-gray-400">{v.regulatorySystem ?? '—'}</p>
+                      <p className="text-[11px] text-gray-500">{v.regulatorySystem ?? '—'}</p>
                     </div>
                     <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{v.status}</span>
                   </div>
@@ -162,5 +162,5 @@ function Section({ title, icon: Icon, link, children }: { title: string; icon: a
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-gray-400 bg-white rounded-xl border border-gray-100 px-3 py-4 text-center">{children}</p>;
+  return <p className="text-sm text-gray-500 bg-white rounded-xl border border-gray-100 px-3 py-4 text-center">{children}</p>;
 }

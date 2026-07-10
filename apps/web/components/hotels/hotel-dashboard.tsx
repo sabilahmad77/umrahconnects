@@ -35,7 +35,7 @@ export function HotelDashboard() {
           <p className="text-sm text-red-500">Failed to load hotel stats</p>
         </div>
       ) : isLoading || !stats ? (
-        <div className="flex items-center justify-center py-12 text-gray-400 text-sm">
+        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
@@ -82,14 +82,14 @@ export function HotelDashboard() {
                 <CalendarCheck2 className="h-4 w-4 text-green-600" /> Upcoming check-ins
               </h3>
               {(stats.upcomingCheckIns ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No check-ins in the next 7 days</p>
+                <p className="text-xs text-gray-500">No check-ins in the next 7 days</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.upcomingCheckIns.slice(0, 5).map((c: any) => (
                     <li key={c.id} className="flex items-center justify-between text-xs">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{c.guestName}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{c.hotel ?? ''}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{c.hotel ?? ''}</p>
                       </div>
                       <span className="text-[11px] text-gray-500 shrink-0">{new Date(c.checkIn).toLocaleDateString()}</span>
                     </li>
@@ -104,14 +104,14 @@ export function HotelDashboard() {
                 <CalendarX2 className="h-4 w-4 text-orange-600" /> Upcoming check-outs
               </h3>
               {(stats.upcomingCheckOuts ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No check-outs in the next 7 days</p>
+                <p className="text-xs text-gray-500">No check-outs in the next 7 days</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.upcomingCheckOuts.slice(0, 5).map((c: any) => (
                     <li key={c.id} className="flex items-center justify-between text-xs">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{c.guestName}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{c.hotel ?? ''}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{c.hotel ?? ''}</p>
                       </div>
                       <span className="text-[11px] text-gray-500 shrink-0">{new Date(c.checkOut).toLocaleDateString()}</span>
                     </li>
@@ -139,14 +139,14 @@ export function HotelDashboard() {
                 <MessageSquare className="h-4 w-4 text-blue-600" /> Recent inquiries
               </h3>
               {(stats.marketplace.recentInquiries ?? []).length === 0 ? (
-                <p className="text-xs text-gray-400">No inquiries yet</p>
+                <p className="text-xs text-gray-500">No inquiries yet</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.marketplace.recentInquiries.map((i: any) => (
                     <li key={i.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-2 last:border-0">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{i.fromName ?? 'Customer'}</p>
-                        <p className="text-[11px] text-gray-400 truncate">{i.listingName ?? ''}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{i.listingName ?? ''}</p>
                       </div>
                       <span className={cn('text-[10px] font-medium px-2 py-0.5 rounded-full',
                         i.status === 'NEW' ? 'bg-blue-50 text-blue-600' :

@@ -78,7 +78,7 @@ export function TransportBookingsView() {
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
-          <Search className="h-4 w-4 text-gray-400" />
+          <Search className="h-4 w-4 text-gray-500" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customer / phone…" className="text-sm bg-transparent flex-1 outline-none" />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -96,7 +96,7 @@ export function TransportBookingsView() {
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-400">
+        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
       ) : error ? (
@@ -107,7 +107,7 @@ export function TransportBookingsView() {
       ) : items.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
           <BookOpen className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No transport bookings yet</p>
+          <p className="text-sm text-gray-500">No transport bookings yet — use “New booking” to schedule the first trip</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
@@ -130,7 +130,7 @@ export function TransportBookingsView() {
                 <tr key={a.id} className="hover:bg-gray-50/60">
                   <td className="p-3">
                     <p className="font-medium text-gray-900">{a.customerName ?? '—'}</p>
-                    <p className="text-[11px] text-gray-400">{a.customerPhone ?? a.customerEmail ?? ''}</p>
+                    <p className="text-[11px] text-gray-500">{a.customerPhone ?? a.customerEmail ?? ''}</p>
                     <p className="text-[10px] text-brand-700">{a.customerType?.replace(/_/g, ' ')}</p>
                   </td>
                   <td className="p-3">
@@ -142,7 +142,7 @@ export function TransportBookingsView() {
                     {a.vehicle ? (
                       <Link href={`/transport/vehicles/${a.vehicle.id}`} className="text-brand-600 hover:underline">{a.vehicle.plateNumber}</Link>
                     ) : '—'}
-                    {a.driver && <span className="block text-[11px] text-gray-400">{a.driver.firstName} {a.driver.lastName}</span>}
+                    {a.driver && <span className="block text-[11px] text-gray-500">{a.driver.firstName} {a.driver.lastName}</span>}
                   </td>
                   <td className="p-3 text-xs text-gray-600">{a.scheduledAt ? new Date(a.scheduledAt).toLocaleString() : '—'}</td>
                   <td className="p-3">{a.passengerCount}</td>
@@ -242,7 +242,7 @@ function NewBookingModal({ onClose, onCreated }: { onClose: () => void; onCreate
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New transport booking</h2>

@@ -25,7 +25,7 @@ export function VehicleDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading vehicle…
       </div>
     );
@@ -133,13 +133,13 @@ function Overview({ v }: { v: any }) {
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1"><Wallet className="h-3.5 w-3.5" /> Recent assignments</p>
           {(v.assignments ?? []).length === 0 ? (
-            <p className="text-xs text-gray-400">No assignments yet</p>
+            <p className="text-xs text-gray-500">No assignments for this vehicle yet — create one from Transport → Assignments</p>
           ) : (
             <ul className="space-y-1.5 text-xs">
               {(v.assignments ?? []).slice(0, 5).map((a: any) => (
                 <li key={a.id}>
                   <p className="font-medium text-gray-800">{a.route?.name ?? a.customerName ?? '—'}</p>
-                  <p className="text-[11px] text-gray-400">{new Date(a.scheduledAt).toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-500">{new Date(a.scheduledAt).toLocaleString()}</p>
                 </li>
               ))}
             </ul>
@@ -217,7 +217,7 @@ function DriversTab({ vehicle, refetch }: { vehicle: any; refetch: () => void })
         </div>
         <ul className="divide-y divide-gray-50">
           {assigned.length === 0 ? (
-            <li className="p-6 text-center text-sm text-gray-400">No drivers assigned</li>
+            <li className="p-6 text-center text-sm text-gray-500">No drivers assigned</li>
           ) : (
             assigned.map((ad: any) => (
               <li key={ad.driverId} className="flex items-center justify-between p-4">
@@ -227,7 +227,7 @@ function DriversTab({ vehicle, refetch }: { vehicle: any; refetch: () => void })
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{ad.driver.firstName} {ad.driver.lastName}</p>
-                    <p className="text-[11px] text-gray-400">{ad.driver.phone}</p>
+                    <p className="text-[11px] text-gray-500">{ad.driver.phone}</p>
                   </div>
                 </Link>
                 <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ function AssignmentsTab({ vehicle }: { vehicle: any }) {
         <h3 className="text-sm font-bold text-gray-900">Assignments history ({vehicle.assignments?.length ?? 0})</h3>
       </div>
       {(vehicle.assignments ?? []).length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No assignments yet</div>
+        <div className="py-10 text-center text-sm text-gray-500">No assignments for this vehicle yet — create one from Transport → Assignments</div>
       ) : (
         <ul className="divide-y divide-gray-50">
           {vehicle.assignments.map((a: any) => (
@@ -268,7 +268,7 @@ function AssignmentsTab({ vehicle }: { vehicle: any }) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium text-gray-900">{a.route?.name ?? a.customerName ?? '—'}</p>
-                  <p className="text-[11px] text-gray-400">Scheduled: {new Date(a.scheduledAt).toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-500">Scheduled: {new Date(a.scheduledAt).toLocaleString()}</p>
                 </div>
                 <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full',
                   a.status === 'COMPLETED' ? 'bg-green-50 text-green-700' :

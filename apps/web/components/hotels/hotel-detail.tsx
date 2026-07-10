@@ -26,7 +26,7 @@ export function HotelDetail({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading hotel…
       </div>
     );
@@ -151,7 +151,7 @@ function RoomsTab({ hotelId }: { hotelId: string }) {
       </div>
       <div className="bg-white rounded-2xl border border-gray-100">
         {rooms.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No room types yet</div>
+          <div className="py-10 text-center text-sm text-gray-500">No room types yet — add one to start managing inventory and prices</div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {rooms.map((r: any) => (
@@ -162,14 +162,14 @@ function RoomsTab({ hotelId }: { hotelId: string }) {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{r.name}</p>
-                    <p className="text-xs text-gray-400">{r.bedConfiguration ?? r.bedConfig ?? '—'} · {r.maxOccupancy ?? '?'} pax max</p>
+                    <p className="text-xs text-gray-500">{r.bedConfiguration ?? r.bedConfig ?? '—'} · {r.maxOccupancy ?? '?'} pax max</p>
                   </div>
                 </div>
                 <div className="text-right">
                   {r.basePriceCents != null && (
                     <p className="text-sm font-bold text-gray-900">SAR {(Number(r.basePriceCents) / 100).toLocaleString()}</p>
                   )}
-                  <p className="text-[11px] text-gray-400">{r.totalCount ?? r.inventory ?? '?'} rooms</p>
+                  <p className="text-[11px] text-gray-500">{r.totalCount ?? r.inventory ?? '?'} rooms</p>
                 </div>
               </li>
             ))}
@@ -200,7 +200,7 @@ function RoomTypeModal({ hotelId, onClose, onCreated, create }: { hotelId: strin
   });
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Add room type</h2>
@@ -266,7 +266,7 @@ function AllotmentsTab({ hotelId }: { hotelId: string }) {
         </h3>
       </div>
       {allots.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No allotments configured</div>
+        <div className="py-10 text-center text-sm text-gray-500">No allotments configured</div>
       ) : (
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-100">
@@ -399,7 +399,7 @@ function IndividualRoomsTab({ hotelId }: { hotelId: string }) {
       </div>
       <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
         {rooms.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-400">No rooms added yet</div>
+          <div className="py-10 text-center text-sm text-gray-500">No rooms added yet — add rooms to track availability and occupancy</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-100">
@@ -467,7 +467,7 @@ function AddRoomModal({ hotelId, roomTypes, create, onClose, onCreated }: { hote
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Add room</h2>
@@ -552,7 +552,7 @@ function HotelBookingsTab({ hotelId }: { hotelId: string }) {
         <Link href="/hotel-bookings" className="text-xs text-brand-500 hover:underline">Open bookings page →</Link>
       </div>
       {bookings.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-400">No bookings for this hotel yet</div>
+        <div className="py-10 text-center text-sm text-gray-500">No bookings for this hotel yet — new reservations will appear here</div>
       ) : (
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-xs text-gray-500 border-b border-gray-100">
@@ -570,7 +570,7 @@ function HotelBookingsTab({ hotelId }: { hotelId: string }) {
               <tr key={b.id}>
                 <td className="p-3">
                   <p className="font-medium text-gray-900">{b.guestName}</p>
-                  <p className="text-[11px] text-gray-400">{b.guestEmail ?? b.guestPhone ?? ''}</p>
+                  <p className="text-[11px] text-gray-500">{b.guestEmail ?? b.guestPhone ?? ''}</p>
                 </td>
                 <td className="p-3 text-xs text-gray-600">
                   {b.checkIn ? new Date(b.checkIn).toLocaleDateString() : '—'}

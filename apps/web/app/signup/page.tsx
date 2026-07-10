@@ -31,16 +31,24 @@ export default function SignupPage() {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const touch = (k: string) => setTouched((t) => ({ ...t, [k]: true }));
+  // Inline field errors, shown on blur; input is always preserved.
+  const fieldErrors: Record<string, string> = {
+    firstName: form.firstName.trim() ? '' : 'First name is required.',
+    email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email) ? '' : 'Enter a valid email address.',
+    password: form.password.length >= 8 ? '' : 'Password must be at least 8 characters.',
+  };
+  const fieldErr = (k: string) => (touched[k] ? fieldErrors[k] : '');
   const roleMeta = ROLES.find((r) => r.id === role);
   const isProvider = role && role !== 'pilgrim';
 
   const submit = async () => {
     setErr('');
-    if (!form.firstName.trim()) return setErr('Please enter your first name.');
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) return setErr('Please enter a valid email address.');
-    if (form.password.length < 8) return setErr('Password must be at least 8 characters.');
+    setTouched({ firstName: true, email: true, password: true });
+    if (fieldErrors.firstName || fieldErrors.email || fieldErrors.password) return;
     setBusy(true);
     try {
       await apiClient.post('/auth/register', {
@@ -78,8 +86,8 @@ export default function SignupPage() {
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === 1 ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-600'}`}>1</span> Choose role
             </span>
             <span className="w-8 h-px bg-sandstone" />
-            <span className={`flex items-center gap-1.5 text-[12px] font-semibold ${step === 2 ? 'text-brand-600' : 'text-gray-400'}`}>
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === 2 ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-400'}`}>2</span> Your details
+            <span className={`flex items-center gap-1.5 text-[12px] font-semibold ${step === 2 ? 'text-brand-600' : 'text-gray-500'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step === 2 ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-500'}`}>2</span> Your details
             </span>
           </div>
 
@@ -131,16 +139,25 @@ export default function SignupPage() {
                 )}
                 <div className="space-y-3.5">
                   <div className="grid grid-cols-2 gap-3">
-                    <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} placeholder="First name" className="text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400" />
-                    <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} placeholder="Last name" className="text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400" />
+                    <div>
+                      <input value={form.firstName} onChange={(e) => set('firstName', e.target.value)} onBlur={() => touch('firstName')} aria-label="First name" aria-invalid={!!fieldErr('firstName')} placeholder="First name" className={`w-full text-sm px-3.5 py-2.5 border rounded-xl outline-none focus:border-brand-400 ${fieldErr('firstName') ? 'border-red-300' : 'border-sandstone'}`} />
+                      {fieldErr('firstName') && <p className="text-[11.5px] text-red-600 mt-1">{fieldErr('firstName')}</p>}
+                    </div>
+                    <input value={form.lastName} onChange={(e) => set('lastName', e.target.value)} aria-label="Last name" placeholder="Last name" className="text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400" />
                   </div>
-                  <input value={form.email} onChange={(e) => set('email', e.target.value)} type="email" placeholder="Email address" className="w-full text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400" />
-                  <input value={form.password} onChange={(e) => set('password', e.target.value)} type="password" placeholder="Password (min 8 characters)" className="w-full text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400" />
-                  {err && <p className="text-[13px] text-red-500">{err}</p>}
+                  <div>
+                    <input value={form.email} onChange={(e) => set('email', e.target.value)} onBlur={() => touch('email')} type="email" aria-label="Email address" aria-invalid={!!fieldErr('email')} placeholder="Email address" className={`w-full text-sm px-3.5 py-2.5 border rounded-xl outline-none focus:border-brand-400 ${fieldErr('email') ? 'border-red-300' : 'border-sandstone'}`} />
+                    {fieldErr('email') && <p className="text-[11.5px] text-red-600 mt-1">{fieldErr('email')}</p>}
+                  </div>
+                  <div>
+                    <input value={form.password} onChange={(e) => set('password', e.target.value)} onBlur={() => touch('password')} type="password" aria-label="Password" aria-invalid={!!fieldErr('password')} placeholder="Password (min 8 characters)" className={`w-full text-sm px-3.5 py-2.5 border rounded-xl outline-none focus:border-brand-400 ${fieldErr('password') ? 'border-red-300' : 'border-sandstone'}`} />
+                    {fieldErr('password') && <p className="text-[11.5px] text-red-600 mt-1">{fieldErr('password')}</p>}
+                  </div>
+                  {err && <p role="alert" className="text-[13px] text-red-600">{err}</p>}
                   <button onClick={submit} disabled={busy} className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm py-3 rounded-xl transition-colors disabled:opacity-60">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Create account
                   </button>
-                  <p className="text-[11px] text-gray-400 text-center">By continuing you agree to our <Link href="/terms" className="text-brand-600 hover:underline">Terms</Link> and <Link href="/privacy" className="text-brand-600 hover:underline">Privacy Policy</Link>.</p>
+                  <p className="text-[11px] text-gray-500 text-center">By continuing you agree to our <Link href="/terms" className="text-brand-600 hover:underline">Terms</Link> and <Link href="/privacy" className="text-brand-600 hover:underline">Privacy Policy</Link>.</p>
                 </div>
               </div>
             </div>

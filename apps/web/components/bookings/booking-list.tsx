@@ -64,7 +64,7 @@ export function BookingList() {
           <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} total bookings</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 hover:text-gray-600 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
@@ -117,12 +117,12 @@ export function BookingList() {
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search bookings..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -183,7 +183,7 @@ export function BookingList() {
                   <tr>
                     <td colSpan={6} className="py-20 text-center">
                       <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-400">No bookings found</p>
+                      <p className="text-sm text-gray-500">No bookings found</p>
                     </td>
                   </tr>
                 ) : items.map((b: any) => {
@@ -203,7 +203,7 @@ export function BookingList() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{b.bookingRef ?? b.id?.slice(0, 8)}</p>
-                            <p className="text-xs text-gray-400">{pilgrimName}</p>
+                            <p className="text-xs text-gray-500">{pilgrimName}</p>
                           </div>
                         </div>
                       </td>
@@ -215,7 +215,7 @@ export function BookingList() {
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell">
                         <p className="text-sm text-gray-700">{b.package?.name ?? '—'}</p>
-                        <p className="text-xs text-gray-400">{b.package?.type ?? ''}</p>
+                        <p className="text-xs text-gray-500">{b.package?.type ?? ''}</p>
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
                         <p className="text-sm font-semibold text-gray-800">{amt}</p>
@@ -226,7 +226,7 @@ export function BookingList() {
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <button onClick={(e) => { e.stopPropagation(); setViewBooking(b); }} title="View" className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                            <Eye className="h-3.5 w-3.5 text-gray-400" />
+                            <Eye className="h-3.5 w-3.5 text-gray-500" />
                           </button>
                         </div>
                       </td>
@@ -238,7 +238,7 @@ export function BookingList() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-400">Page {page} of {totalPages} · {total.toLocaleString()} results</p>
+                <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total.toLocaleString()} results</p>
                 <div className="flex gap-1.5">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors">Prev</button>
                   <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors">Next</button>
@@ -278,7 +278,7 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
     ? `${booking.currency ?? 'SAR'} ${(Number(cents) / 100).toLocaleString()}`
     : '—';
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -290,17 +290,17 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
           </button>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Package</p><p className="text-gray-800 mt-0.5">{booking.package?.name ?? '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Status</p><p className="text-gray-800 mt-0.5">{booking.status?.replace(/_/g, ' ') ?? '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Total</p><p className="text-brand-700 font-bold mt-0.5">{fmt(booking.totalAmountCents)}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Paid</p><p className="text-gray-800 mt-0.5">{fmt(booking.paidAmountCents)}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Departure</p><p className="text-gray-800 mt-0.5">{booking.departureDate ? new Date(booking.departureDate).toLocaleDateString() : '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Return</p><p className="text-gray-800 mt-0.5">{booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Created</p><p className="text-gray-800 mt-0.5">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Pilgrims</p><p className="text-gray-800 mt-0.5">{booking.pilgrims?.length ?? 0} assigned</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Package</p><p className="text-gray-800 mt-0.5">{booking.package?.name ?? '—'}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Status</p><p className="text-gray-800 mt-0.5">{booking.status?.replace(/_/g, ' ') ?? '—'}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Total</p><p className="text-brand-700 font-bold mt-0.5">{fmt(booking.totalAmountCents)}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Paid</p><p className="text-gray-800 mt-0.5">{fmt(booking.paidAmountCents)}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Departure</p><p className="text-gray-800 mt-0.5">{booking.departureDate ? new Date(booking.departureDate).toLocaleDateString() : '—'}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Return</p><p className="text-gray-800 mt-0.5">{booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : '—'}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Created</p><p className="text-gray-800 mt-0.5">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : '—'}</p></div>
+          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Pilgrims</p><p className="text-gray-800 mt-0.5">{booking.pilgrims?.length ?? 0} assigned</p></div>
           {booking.notes && (
             <div className="col-span-2 mt-2 pt-3 border-t border-gray-100">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Notes</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Notes</p>
               <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">{booking.notes}</p>
             </div>
           )}
@@ -364,7 +364,7 @@ function NewBookingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New booking</h2>

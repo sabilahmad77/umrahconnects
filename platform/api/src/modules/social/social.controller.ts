@@ -70,6 +70,12 @@ export class SocialController {
     return { success: true, data: await this.service.updateAccount(tenantId, user.sub, dto) };
   }
 
+  @Post('accounts/:id/follow')
+  @RequirePermissions('social:post:create')
+  async toggleFollow(@TenantId() tenantId: string, @CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.toggleFollow(tenantId, user.sub, id) };
+  }
+
   // ─── Messaging ───────────────────────────────────────────────────────
   @Get('conversations')
   async listConversations(@TenantId() tenantId: string, @CurrentUser() user: any) {

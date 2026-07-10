@@ -52,7 +52,7 @@ export function ProfileView() {
   }, [profile]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center py-20 text-gray-400 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…</div>;
+    return <div className="flex items-center justify-center py-20 text-gray-500 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…</div>;
   }
   if (error || !profile) {
     return <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
@@ -107,7 +107,7 @@ export function ProfileView() {
               value={form.coverUrl}
               onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
               placeholder="https://…"
-              className="ml-2 text-xs bg-transparent outline-none w-44 placeholder:text-gray-400"
+              className="ml-2 text-xs bg-transparent outline-none w-44 placeholder:text-gray-500"
             />
           </label>
         </div>

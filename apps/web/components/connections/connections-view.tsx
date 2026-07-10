@@ -74,7 +74,7 @@ export function ConnectionsView() {
             {Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-gray-50 rounded-xl animate-pulse" />)}
           </div>
         ) : connected.length === 0 ? (
-          <p className="text-center text-sm text-gray-400 py-8">No connections yet — discover and connect with people from the Social Hub.</p>
+          <p className="text-center text-sm text-gray-500 py-8">No connections yet — discover and connect with people from the Social Hub.</p>
         ) : (
           <div className="grid sm:grid-cols-2 gap-2">
             {connected.map((c) => (
@@ -85,7 +85,7 @@ export function ConnectionsView() {
                   <p className="text-xs text-gray-500 truncate">{c.email}</p>
                 </div>
                 <button
-                  className="p-1.5 text-gray-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg"
+                  className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 rounded-lg"
                   title="Message"
                 >
                   <Mail className="h-4 w-4" />

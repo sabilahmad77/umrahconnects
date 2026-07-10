@@ -69,7 +69,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <button className="text-sm font-medium text-brand-600 hover:text-brand-700">Change photo</button>
-                  <p className="text-xs text-gray-400 mt-0.5">JPG, PNG up to 2MB</p>
+                  <p className="text-xs text-gray-500 mt-0.5">JPG, PNG up to 2MB</p>
                 </div>
               </div>
 
@@ -143,7 +143,7 @@ export default function SettingsPage() {
                   <div key={n.label} className="flex items-center justify-between p-3.5 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
                     <div>
                       <p className="text-sm font-medium text-gray-800">{n.label}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{n.desc}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{n.desc}</p>
                     </div>
                     <div className={cn(
                       'w-10 h-6 rounded-full transition-colors relative cursor-pointer',

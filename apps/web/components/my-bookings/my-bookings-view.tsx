@@ -16,7 +16,7 @@ export function MyBookingsView() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20 text-gray-400 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…</div>
+        <div className="flex items-center justify-center py-20 text-gray-500 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading…</div>
       ) : error ? (
         <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
           <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
@@ -25,7 +25,7 @@ export function MyBookingsView() {
       ) : bookings.length === 0 ? (
         <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
           <CalendarCheck2 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-400">No bookings yet</p>
+          <p className="text-sm text-gray-500">No bookings yet</p>
           <Link href="/marketplace" className="text-xs text-brand-500 hover:underline mt-2 inline-block">Browse marketplace →</Link>
         </div>
       ) : (
@@ -50,7 +50,7 @@ export function MyBookingsView() {
                   </Link>
                   <div className="text-right">
                     <p className="text-sm font-bold text-gray-900 inline-flex items-center gap-1">
-                      <Wallet className="h-3.5 w-3.5 text-gray-400" />
+                      <Wallet className="h-3.5 w-3.5 text-gray-500" />
                       {b.currency} {(Number(b.totalAmountCents) / 100).toLocaleString()}
                     </p>
                     <div className="flex items-center gap-1 justify-end mt-1">

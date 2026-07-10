@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -215,7 +215,7 @@ export class GroupsService {
   async createInvite(tenantId: string, groupId: string, invitedBy: string, dto: { inviteeUserId?: string; inviteeEmail?: string; message?: string }) {
     await this.findOne(tenantId, groupId);
     if (!dto.inviteeUserId && !dto.inviteeEmail) {
-      throw new Error('inviteeUserId or inviteeEmail required');
+      throw new BadRequestException('inviteeUserId or inviteeEmail required');
     }
     const invite = await this.prisma.groupInvite.create({
       data: {
@@ -291,7 +291,7 @@ export class GroupsService {
 
   async createPost(tenantId: string, groupId: string, authorId: string, dto: { body: string; mediaUrls?: string[]; isPinned?: boolean }) {
     await this.findOne(tenantId, groupId);
-    if (!dto.body || !dto.body.trim()) throw new Error('Post body is required');
+    if (!dto.body || !dto.body.trim()) throw new BadRequestException('Post body is required');
     return this.prisma.groupPost.create({
       data: {
         groupId,
@@ -326,7 +326,7 @@ export class GroupsService {
   }
 
   async createComment(postId: string, authorId: string, body: string) {
-    if (!body || !body.trim()) throw new Error('Comment body is required');
+    if (!body || !body.trim()) throw new BadRequestException('Comment body is required');
     return this.prisma.groupPostComment.create({ data: { postId, authorId, body } });
   }
 
@@ -348,7 +348,7 @@ export class GroupsService {
   async createPoll(tenantId: string, groupId: string, authorId: string, dto: { question: string; options: string[]; isMultiple?: boolean; closesAt?: string }) {
     await this.findOne(tenantId, groupId);
     if (!dto.question || !dto.options || dto.options.length < 2) {
-      throw new Error('Poll must have a question and at least 2 options');
+      throw new BadRequestException('Poll must have a question and at least 2 options');
     }
     const optionsJson = dto.options.map((label, index) => ({ index, label }));
     return this.prisma.groupPoll.create({
@@ -433,7 +433,7 @@ export class GroupsService {
 
   async addDocument(tenantId: string, groupId: string, uploaderId: string, dto: { name: string; url: string; mimeType?: string; sizeBytes?: number; description?: string }) {
     await this.findOne(tenantId, groupId);
-    if (!dto.name?.trim() || !dto.url?.trim()) throw new Error('Name and URL are required');
+    if (!dto.name?.trim() || !dto.url?.trim()) throw new BadRequestException('Name and URL are required');
     return this.prisma.groupDocument.create({
       data: {
         groupId,

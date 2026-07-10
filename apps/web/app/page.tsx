@@ -138,7 +138,7 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <p className="text-[12px] font-bold text-gray-800 leading-tight">{t}</p>
-                    <p className="text-[11px] text-gray-400 leading-tight mt-0.5">{s}</p>
+                    <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{s}</p>
                   </div>
                 </div>
               ))}
@@ -172,7 +172,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   {[['Total Bookings', '1,248', '+18.2%'], ['Total Revenue', '2.85M', '+16.7%'], ['Active Users', '4.29M', '+21.3%'], ['Completion', '96%', '+8.4%']].map(([l, v, d]) => (
                     <div key={l} className="rounded-xl border border-sandstone/60 bg-ivory/40 px-2 py-2">
-                      <p className="text-[6.5px] font-semibold text-gray-400 truncate">{l}</p>
+                      <p className="text-[6.5px] font-semibold text-gray-500 truncate">{l}</p>
                       <p className="text-[12px] font-bold text-gray-900 leading-tight mt-0.5">{v}</p>
                       <p className="text-[6.5px] font-bold text-brand-500">{d}</p>
                     </div>
@@ -180,11 +180,11 @@ export default function LandingPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl border border-sandstone/60 p-2">
-                    <p className="text-[7px] font-semibold text-gray-400 mb-1">Bookings Overview</p>
+                    <p className="text-[7px] font-semibold text-gray-500 mb-1">Bookings Overview</p>
                     <MiniLine />
                   </div>
                   <div className="rounded-xl border border-sandstone/60 p-2 flex flex-col">
-                    <p className="text-[7px] font-semibold text-gray-400 mb-1">By Status</p>
+                    <p className="text-[7px] font-semibold text-gray-500 mb-1">By Status</p>
                     <div className="flex items-center gap-2">
                       <MiniDonut />
                       <div className="space-y-1">
@@ -215,7 +215,7 @@ export default function LandingPage() {
               <p className="font-heading font-bold text-[13px] text-gray-900 leading-tight">{title}</p>
               <p className="text-[11px] text-gray-500 mt-1 leading-snug">{desc}</p>
               <div className="mt-3 pt-3 border-t border-sandstone/50">
-                <p className="text-[10px] text-gray-400">{metric}</p>
+                <p className="text-[10px] text-gray-500">{metric}</p>
                 <div className="flex items-end justify-between mt-0.5">
                   <p className="text-[15px] font-bold text-gray-900">{value}</p>
                   <Sparkline />
@@ -275,7 +275,7 @@ export default function LandingPage() {
                   <Icon className="h-5 w-5 text-brand-600" />
                 </div>
                 <p className="text-[12px] font-bold text-gray-800">{t}</p>
-                <p className="text-[10px] text-gray-400 mt-1 leading-snug">{s}</p>
+                <p className="text-[10px] text-gray-500 mt-1 leading-snug">{s}</p>
               </div>
             ))}
           </div>

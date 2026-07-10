@@ -53,7 +53,7 @@ export function MarketplaceView() {
           <p className="text-sm text-gray-500 mt-0.5">Discover & connect with Umrah service providers</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => rl()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={() => rl()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button
@@ -88,12 +88,12 @@ export function MarketplaceView() {
         <>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-              <Search className="h-4 w-4 text-gray-400 shrink-0" />
+              <Search className="h-4 w-4 text-gray-500 shrink-0" />
               <input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Search listings..."
-                className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+                className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
               />
             </div>
             <div className="flex gap-1.5 flex-wrap">
@@ -133,7 +133,7 @@ export function MarketplaceView() {
           ) : listings.length === 0 ? (
             <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
               <Store className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400">No listings found</p>
+              <p className="text-sm text-gray-500">No listings found</p>
             </div>
           ) : (
             <>
@@ -170,7 +170,7 @@ export function MarketplaceView() {
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star key={i} className={cn('h-3.5 w-3.5', i < Math.floor(l.rating ?? 4.6) ? 'fill-gold-400 text-gold-400' : 'text-gray-200')} />
                           ))}
-                          <span className="text-[11px] text-gray-400 ml-1">
+                          <span className="text-[11px] text-gray-500 ml-1">
                             {(l.rating ?? 4.6).toFixed(1)} ({l.reviewCount ?? 0})
                           </span>
                         </div>
@@ -184,7 +184,7 @@ export function MarketplaceView() {
                             <span className="text-[11px] text-gray-500 truncate">{provider ?? CATEGORY_META[normalizeCategory(cat)].label + ' provider'}</span>
                           </div>
                           {city && (
-                            <span className="flex items-center gap-1 text-[11px] text-gray-400 shrink-0">
+                            <span className="flex items-center gap-1 text-[11px] text-gray-500 shrink-0">
                               <MapPin className="h-3 w-3" /> {city}
                             </span>
                           )}
@@ -197,7 +197,7 @@ export function MarketplaceView() {
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-2">
-                  <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
+                  <p className="text-xs text-gray-500">Page {page} of {totalPages}</p>
                   <div className="flex gap-1.5">
                     <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Prev</button>
                     <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Next</button>
@@ -219,7 +219,7 @@ export function MarketplaceView() {
           ) : !vendors || (vendors as any[]).length === 0 ? (
             <div className="col-span-3 py-16 text-center bg-white rounded-2xl border border-gray-100">
               <Package className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-400">No vendors found</p>
+              <p className="text-sm text-gray-500">No vendors found</p>
             </div>
           ) : (vendors as any[]).map((v: any) => (
             <div key={v.id} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
@@ -229,7 +229,7 @@ export function MarketplaceView() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{v.companyName ?? v.name}</p>
-                  <p className="text-xs text-gray-400">{v.type ?? 'Vendor'} · {v.city ?? '—'}</p>
+                  <p className="text-xs text-gray-500">{v.type ?? 'Vendor'} · {v.city ?? '—'}</p>
                 </div>
               </div>
               {v.rating != null && (
@@ -237,7 +237,7 @@ export function MarketplaceView() {
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className={cn('h-3 w-3', i < Math.floor(v.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200')} />
                   ))}
-                  <span className="text-[10px] text-gray-400 ml-1">{v.rating?.toFixed(1)}</span>
+                  <span className="text-[10px] text-gray-500 ml-1">{v.rating?.toFixed(1)}</span>
                 </div>
               )}
               {v.verified && (
@@ -357,7 +357,7 @@ function CreateListingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New marketplace listing</h2>

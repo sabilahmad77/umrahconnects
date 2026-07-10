@@ -47,7 +47,7 @@ export function FinanceView() {
           <p className="text-sm text-gray-500 mt-0.5">Invoices, payments & revenue tracking</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { refetch(); refetchStats(); }} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-400 transition-colors">
+          <button onClick={() => { refetch(); refetchStats(); }} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </button>
           <button onClick={() => setCreateOpen(true)} className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30">
@@ -88,13 +88,13 @@ export function FinanceView() {
           ) : (
             <p className="text-3xl font-bold text-gray-900">{fmtSAR(stats?.outstanding?.amountCents)}</p>
           )}
-          <p className="text-xs text-gray-400 mt-1">{stats?.outstanding?.count ?? 0} invoices pending</p>
+          <p className="text-xs text-gray-500 mt-1">{stats?.outstanding?.count ?? 0} invoices pending</p>
         </div>
 
         {/* Draft */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5">
           <div className="flex items-center gap-2 mb-3">
-            <FileText className="h-5 w-5 text-gray-400" />
+            <FileText className="h-5 w-5 text-gray-500" />
             <p className="text-sm font-medium text-gray-600">Draft Invoices</p>
           </div>
           {statsLoading ? (
@@ -102,19 +102,19 @@ export function FinanceView() {
           ) : (
             <p className="text-3xl font-bold text-gray-900">{fmtSAR(stats?.draft?.amountCents)}</p>
           )}
-          <p className="text-xs text-gray-400 mt-1">{stats?.draft?.count ?? 0} invoices in draft</p>
+          <p className="text-xs text-gray-500 mt-1">{stats?.draft?.count ?? 0} invoices in draft</p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-400 shrink-0" />
+          <Search className="h-4 w-4 text-gray-500 shrink-0" />
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search invoices..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-400"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
@@ -175,7 +175,7 @@ export function FinanceView() {
                   <tr>
                     <td colSpan={6} className="py-20 text-center">
                       <DollarSign className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-400">No invoices found</p>
+                      <p className="text-sm text-gray-500">No invoices found</p>
                     </td>
                   </tr>
                 ) : items.map((inv: any) => {
@@ -190,7 +190,7 @@ export function FinanceView() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800 group-hover:text-brand-600 transition-colors">{inv.invoiceRef ?? inv.id?.slice(0, 8)}</p>
-                            <p className="text-xs text-gray-400">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '—'}</p>
+                            <p className="text-xs text-gray-500">{inv.createdAt ? new Date(inv.createdAt).toLocaleDateString() : '—'}</p>
                           </div>
                         </Link>
                       </td>
@@ -211,7 +211,7 @@ export function FinanceView() {
                           {fmtSAR(inv.totalCents)}
                         </p>
                         {inv.paidCents > 0 && inv.paidCents < inv.totalCents && (
-                          <p className="text-[10px] text-gray-400">Paid: {fmtSAR(inv.paidCents)}</p>
+                          <p className="text-[10px] text-gray-500">Paid: {fmtSAR(inv.paidCents)}</p>
                         )}
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
@@ -221,7 +221,7 @@ export function FinanceView() {
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <Link href={`/finance/invoices/${inv.id}`} className="inline-flex items-center p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                          <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                          <ChevronRight className="h-3.5 w-3.5 text-gray-500" />
                         </Link>
                       </td>
                     </tr>
@@ -232,7 +232,7 @@ export function FinanceView() {
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-400">Page {page} of {totalPages} · {total} results</p>
+                <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total} results</p>
                 <div className="flex gap-1.5">
                   <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Prev</button>
                   <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</button>
