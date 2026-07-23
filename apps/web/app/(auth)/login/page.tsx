@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,11 +19,19 @@ import type { DashboardType } from '@/lib/auth';
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
-  tenantSlug: z.string().min(1, 'Workspace slug is required'),
   email: z.string().email('Enter a valid email address'),
-  password: z.string().min(6, 'Password is required'),
+  password: z.string().min(1, 'Password is required'),
 });
 type LoginForm = z.infer<typeof loginSchema>;
+
+// Demo access is a development/testing convenience only. It must never appear
+// in the production experience. Gate on hostname so production (umrahconnect.io)
+// shows real auth only, while local/preview keeps the quick-demo tiles.
+const PRODUCTION_HOSTS = ['umrahconnect.io', 'www.umrahconnect.io'];
+function isDemoAllowed(): boolean {
+  if (typeof window === 'undefined') return false;
+  return !PRODUCTION_HOSTS.includes(window.location.hostname);
+}
 
 // ─── Demo Roles ───────────────────────────────────────────────────────────────
 
@@ -144,9 +152,8 @@ const DEMO_ROLES: {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
-  const [tab, setTab] = useState<'demo' | 'signin'>('demo');
+  const [tab, setTab] = useState<'demo' | 'signin'>('signin');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<DashboardType>('operator');
   const [demoLoading, setDemoLoading] = useState<DashboardType | null>(null);
   const router = useRouter();
   const { login, loginAsDemo, isLoading } = useAuth();
@@ -160,9 +167,12 @@ export default function LoginPage() {
     return rt && rt.startsWith('/') && !rt.startsWith('/login') ? rt : null;
   };
 
+  const [demoAllowed, setDemoAllowed] = useState(false);
+  useEffect(() => { setDemoAllowed(isDemoAllowed()); }, []);
+
   const { register, handleSubmit, formState: { errors }, setValue, getValues } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { tenantSlug: 'al-haramain-ksa', email: 'admin@alharamain.sa', password: 'Admin@1234' },
+    defaultValues: { email: '', password: '' },
   });
 
   // Quick demo — bypasses real auth
@@ -179,26 +189,17 @@ export default function LoginPage() {
     }
   };
 
-  // Real login
+  // Real login — email + password only; role/dashboard come from the JWT.
   const onSubmit = async (data: LoginForm) => {
     try {
-      const user = await login(data.tenantSlug, data.email, data.password);
-      const final = { ...user, dashboardType: selectedRole };
-      setUser(final);
-      localStorage.setItem('currentUser', JSON.stringify(final));
+      const user = await login(data.email, data.password);
+      setUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
       toast.success('Welcome back!');
-      router.push(returnToParam() ?? getDashboardPath(selectedRole));
+      router.push(returnToParam() ?? getDashboardPath(user.dashboardType));
     } catch (err: any) {
       toast.error(err?.response?.data?.error?.message ?? err?.message ?? 'Login failed');
     }
-  };
-
-  // Pre-fill form when a role is selected on sign-in tab
-  const selectRole = (role: typeof DEMO_ROLES[0]) => {
-    setSelectedRole(role.id);
-    if (role.slug) setValue('tenantSlug', role.slug);
-    if (role.email) setValue('email', role.email);
-    if (role.password) setValue('password', role.password);
   };
 
   return (
@@ -282,6 +283,7 @@ export default function LoginPage() {
 
             {/* Tab bar */}
             <div className="flex border-b border-gray-100">
+              {demoAllowed && (
               <button
                 onClick={() => setTab('demo')}
                 className={cn(
@@ -296,6 +298,7 @@ export default function LoginPage() {
                   Quick Demo Access
                 </span>
               </button>
+              )}
               <button
                 onClick={() => setTab('signin')}
                 className={cn(
@@ -312,8 +315,8 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* ── DEMO TAB ── */}
-            {tab === 'demo' && (
+            {/* ── DEMO TAB (development/testing only) ── */}
+            {demoAllowed && tab === 'demo' && (
               <div className="p-6">
                 <div className="text-center mb-6">
                   <p className="text-gray-500 text-sm">
@@ -379,49 +382,11 @@ export default function LoginPage() {
             {tab === 'signin' && (
               <div className="p-6">
                 <div className="mb-5">
-                  <h2 className="text-lg font-bold text-gray-900">Sign in to your workspace</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Use your operator account credentials</p>
-                </div>
-
-                {/* Role selector */}
-                <div className="mb-5">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2.5">I am signing in as</p>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {DEMO_ROLES.filter((r) => r.id !== 'pilgrim').map((role) => (
-                      <button
-                        key={role.id}
-                        type="button"
-                        onClick={() => selectRole(role)}
-                        className={cn(
-                          'flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-center transition-all text-xs',
-                          selectedRole === role.id
-                            ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
-                            : 'border-gray-200 text-gray-500 hover:border-gray-300',
-                        )}
-                      >
-                        <role.icon className="h-4 w-4" />
-                        <span className="font-medium text-[10px] leading-tight">{role.label.split('/')[0].trim()}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <h2 className="text-lg font-bold text-gray-900">Sign in to Umrah Connect</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">Enter your account email and password</p>
                 </div>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Workspace</label>
-                    <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 transition-all">
-                      <span className="flex items-center px-3 bg-gray-50 text-gray-500 text-xs border-r border-gray-300 whitespace-nowrap shrink-0">
-                        umrahconnects.io/
-                      </span>
-                      <input
-                        {...register('tenantSlug')}
-                        placeholder="your-workspace"
-                        className="flex-1 px-3 py-2.5 text-sm bg-white outline-none text-gray-900"
-                      />
-                    </div>
-                    {errors.tenantSlug && <p className="text-red-500 text-xs mt-1">{errors.tenantSlug.message}</p>}
-                  </div>
-
                   <div>
                     <label className="block text-xs font-semibold text-gray-700 mb-1.5">Email address</label>
                     <input
@@ -481,14 +446,11 @@ export default function LoginPage() {
                   </button>
                 </form>
 
-                {/* Demo credentials hint */}
+                {/* Demo credentials hint — development/testing only */}
+                {demoAllowed && (
                 <div className="mt-5 p-3.5 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-xs font-semibold text-amber-700 mb-1.5">🔑 Demo credentials (pre-filled)</p>
-                  <div className="grid grid-cols-3 gap-2 text-xs text-amber-600">
-                    <div>
-                      <p className="font-medium text-amber-500">Workspace</p>
-                      <p className="font-mono">al-haramain-ksa</p>
-                    </div>
+                  <p className="text-xs font-semibold text-amber-700 mb-1.5">🔑 Demo credentials (dev only)</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-amber-600">
                     <div>
                       <p className="font-medium text-amber-500">Email</p>
                       <p className="font-mono">admin@alharamain.sa</p>
@@ -499,14 +461,22 @@ export default function LoginPage() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 <p className="text-center mt-4 text-xs text-gray-500">
-                  For instant testing, use{' '}
-                  <button onClick={() => setTab('demo')} className="text-brand-500 font-medium hover:underline">
-                    Quick Demo Access
-                  </button>{' '}
-                  instead.
+                  New to Umrah Connect?{' '}
+                  <Link href="/signup" className="text-brand-500 font-medium hover:underline">
+                    Create an account
+                  </Link>
                 </p>
+                {demoAllowed && (
+                  <p className="text-center mt-2 text-xs text-gray-400">
+                    For dev testing, use{' '}
+                    <button onClick={() => setTab('demo')} className="text-brand-500 font-medium hover:underline">
+                      Quick Demo Access
+                    </button>
+                  </p>
+                )}
               </div>
             )}
           </div>

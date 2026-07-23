@@ -111,26 +111,47 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthTokens> {
     const { email, password, tenantId } = dto;
 
-    const user = await this.prisma.user.findFirst({
-      where: { tenantId, email, deletedAt: null },
+    // Real production login resolves the user by email. tenantId is optional —
+    // a returning user cannot be expected to know their tenant UUID. Email is
+    // unique per tenant, so we resolve the matching account by verifying the
+    // password against every account that shares this email, and only ask for a
+    // workspace when the same email+password genuinely exists in >1 tenant.
+    const candidates = await this.prisma.user.findMany({
+      where: { email, deletedAt: null, ...(tenantId ? { tenantId } : {}) },
       include: { userRoles: { include: { role: true } } },
     });
 
-    if (!user?.passwordHash) {
-      throw new UnauthorizedException('Invalid credentials');
+    const matched: typeof candidates = [];
+    for (const c of candidates) {
+      if (c.passwordHash && (await bcrypt.compare(password, c.passwordHash))) {
+        matched.push(c);
+      }
     }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isValid) {
+    if (matched.length === 0) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    if (matched.length > 1) {
+      // Ambiguous: same credentials in multiple workspaces — ask which one.
+      const tenants = await this.prisma.tenant.findMany({
+        where: { id: { in: matched.map((m) => m.tenantId) } },
+        select: { id: true, name: true, slug: true },
+      });
+      throw new UnauthorizedException({
+        code: 'TENANT_REQUIRED',
+        message: 'This email is registered in multiple workspaces. Select one to continue.',
+        tenants,
+      });
+    }
+
+    const user = matched[0];
 
     if (user.status === 'LOCKED') {
       throw new UnauthorizedException('Account is locked. Contact your administrator.');
     }
 
     if (user.status === 'INACTIVE') {
-      throw new UnauthorizedException('Account is inactive.');
+      throw new UnauthorizedException('Your account has been suspended or deactivated. Contact your administrator.');
     }
 
     await this.prisma.user.update({

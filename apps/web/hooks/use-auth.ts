@@ -96,15 +96,18 @@ const DEMO_USERS: Record<DashboardType, StoredUser> = {
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
 
-  /** Real login — resolves slug → login → JWT decode */
+  /**
+   * Real production login by email + password. The backend resolves the tenant
+   * from the email (tenantId optional), so the user never needs a workspace
+   * slug. Tenant + roles are read from the signed JWT. If the same email exists
+   * in multiple workspaces the backend returns TENANT_REQUIRED with a tenant
+   * list, which callers surface for disambiguation.
+   */
   const login = useCallback(
-    async (tenantSlug: string, email: string, password: string): Promise<StoredUser> => {
+    async (email: string, password: string, tenantId?: string): Promise<StoredUser> => {
       setIsLoading(true);
       try {
-        const tenantRes = await apiClient.get(`/tenants/slug/${tenantSlug}`);
-        const { id: tenantId, name: tenantName, slug } = tenantRes.data.data;
-
-        const { data } = await apiClient.post('/auth/login', { tenantId, email, password });
+        const { data } = await apiClient.post('/auth/login', { email, password, ...(tenantId ? { tenantId } : {}) });
         const { accessToken, refreshToken } = data.data;
 
         const decoded = decodeJwt(accessToken);
@@ -114,9 +117,9 @@ export function useAuth() {
         const user: StoredUser = {
           id: decoded?.sub ?? '',
           email,
-          tenantId,
-          tenantName,
-          tenantSlug: slug,
+          tenantId: decoded?.tenantId ?? tenantId ?? '',
+          tenantName: '',
+          tenantSlug: '',
           tenantType: decoded?.tenantType ?? 'OPERATOR',
           roles,
           dashboardType,
