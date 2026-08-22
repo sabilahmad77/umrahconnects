@@ -106,6 +106,7 @@ enum BookingStatus {
 enum PaymentStatus {
   PENDING
   PROCESSING
+  AUTHORIZED
   COMPLETED
   FAILED
   REFUNDED
@@ -1463,6 +1464,8 @@ model Payment {
   @@index([tenantId, status])
   @@index([idempotencyKey])
   @@map("payments")
+
+  transactions    PaymentTransaction[]
   @@schema("plugin_finance")
 }
 
@@ -2330,4 +2333,50 @@ model AuditLog {
   @@index([resource, resourceId])
   @@map("audit_logs")
   @@schema("audit")
+}
+
+// ─── Payment gateway plumbing ───────────────────────────────────────────
+model PaymentTransaction {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @db.Uuid @map("tenant_id")
+  paymentId     String   @db.Uuid @map("payment_id")
+  payment       Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  /// INTENT_CREATED | AUTHORIZED | CAPTURED | FAILED | REFUNDED | WEBHOOK_RECEIVED
+  type          String   @db.VarChar(40)
+  provider      String   @db.VarChar(40)
+  amountCents   BigInt   @default(0) @map("amount_cents")
+  currency      String   @db.Char(3) @default("SAR")
+  providerRef   String?  @db.VarChar(200) @map("provider_ref")
+  status        String?  @db.VarChar(40)
+  message       String?  @db.VarChar(400)
+  payload       Json?    @db.JsonB
+
+  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
+  actorId       String?  @db.Uuid @map("actor_id")
+
+  @@index([tenantId, paymentId])
+  @@index([paymentId, createdAt])
+  @@map("payment_transactions")
+  @@schema("plugin_finance")
+}
+
+/// Every webhook delivery, stored so a replay is recognised and ignored.
+model PaymentWebhookEvent {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider     String    @db.VarChar(40)
+  eventId      String    @db.VarChar(200) @map("event_id")
+  type         String    @db.VarChar(80)
+  paymentId    String?   @db.Uuid @map("payment_id")
+  tenantId     String?   @db.Uuid @map("tenant_id")
+  signature    String?   @db.VarChar(400)
+  payload      Json?     @db.JsonB
+  processedAt  DateTime? @db.Timestamptz @map("processed_at")
+  result       String?   @db.VarChar(200)
+  createdAt    DateTime  @default(now()) @db.Timestamptz @map("created_at")
+
+  @@unique([provider, eventId])
+  @@index([paymentId])
+  @@map("payment_webhook_events")
+  @@schema("plugin_finance")
 }

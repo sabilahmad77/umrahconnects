@@ -33,6 +33,8 @@
 | BP-07 Super Admin Tenants + Users management | ✅ PASS (55/55 API + 34/34 browser; 9 real defects fixed) |
 | BP-08 Visa Document Management | ✅ PASS (46/46 API + 19/19 browser); cloud storage keys pending (human) |
 | FIX-10 image upload / object storage | ◑ storage abstraction shipped; needs Cloudinary or S3 keys |
+| BP-09 Finance payments (gateway abstraction + sandbox) | ✅ PASS (46/46 API + 13/13 browser); Stripe test keys pending (human) |
+| FIX-06 payment capture & reconciliation | ✅ upgraded: manual + gateway, refunds reconcile |
 | Mobile/responsive pass | ☐ |
 | Accessibility pass | ✅ PASS (focus ring, dialog ARIA, AA contrast, on-blur validation, guided empties) |
 | Final build/deploy verified | ◑ Vercel LIVE (umrahconnect.io 200, /visa-requests 200); **Render API not responding** — see DEPLOY-3, needs dashboard access |

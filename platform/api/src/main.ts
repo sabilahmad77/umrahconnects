@@ -15,6 +15,8 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    // Payment webhooks are signature-verified against the exact bytes sent.
+    rawBody: true,
     logger: ['error', 'warn', 'log', 'debug'],
   });
 

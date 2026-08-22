@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from '@/hooks/use-finance';
+import { PaymentGatewayPanel } from './payment-gateway-panel';
 
 const INVOICE_STATUSES = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'VOID'];
 
@@ -77,10 +78,27 @@ export function InvoiceDetail({ id }: { id: string }) {
       </div>
 
       {tab === 'overview' && <Overview inv={inv} />}
-      {tab === 'payments' && <PaymentsTab inv={inv} />}
+      {tab === 'payments' && <PaymentsTab inv={inv} refetch={refetch} />}
       {tab === 'edit' && <EditTab inv={inv} refetch={refetch} />}
     </div>
   );
+}
+
+/**
+ * issuedToAddress is a JSONB column: older rows hold a plain string, seeded
+ * ones hold { line1, city, country, ... }. Rendering the object directly
+ * threw "Objects are not valid as a React child" and took the whole invoice
+ * page down, so flatten whatever shape arrives.
+ */
+function formatAddress(address: unknown): string {
+  if (!address) return '';
+  if (typeof address === 'string') return address;
+  if (typeof address === 'object') {
+    return Object.values(address as Record<string, unknown>)
+      .filter((v) => typeof v === 'string' || typeof v === 'number')
+      .join(', ');
+  }
+  return String(address);
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -176,7 +194,7 @@ function Overview({ inv }: { inv: any }) {
             <p className="font-medium text-gray-900">{customerName}</p>
             {customerEmail && <p className="text-xs text-gray-500">{customerEmail}</p>}
             {inv.issuedToAddress && (
-              <p className="text-xs text-gray-500 whitespace-pre-wrap">{inv.issuedToAddress}</p>
+              <p className="text-xs text-gray-500 whitespace-pre-wrap">{formatAddress(inv.issuedToAddress)}</p>
             )}
           </div>
         </div>
@@ -214,7 +232,7 @@ function Overview({ inv }: { inv: any }) {
   );
 }
 
-function PaymentsTab({ inv }: { inv: any }) {
+function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
   const payments: any[] = Array.isArray(inv.payments) ? inv.payments : [];
   const currency = inv.currency ?? 'SAR';
   const totalCents = Number(inv.totalCents ?? 0);
@@ -244,6 +262,15 @@ function PaymentsTab({ inv }: { inv: any }) {
 
   return (
     <div className="space-y-4">
+      {/* Gateway payments — sits above manual recording, which stays for
+          cash and bank transfers. */}
+      <PaymentGatewayPanel
+        invoiceId={inv.id}
+        currency={currency}
+        outstandingCents={outstandingCents}
+        onChanged={refetch}
+      />
+
       {/* Record payment form */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-3">
