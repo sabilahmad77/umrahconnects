@@ -30,8 +30,9 @@
 | Finance reconciliation partial+full | ✅ |
 | BP-06 Visa Service Requests (ticket workflow) | ✅ PASS (51/51 API + 29/29 browser; 2 real defects fixed) |
 | Audit browser harness (demo-tile login) | ✅ PASS (17 scripts repaired after login-tab change) |
+| BP-07 Super Admin Tenants + Users management | ✅ PASS (55/55 API + 34/34 browser; 9 real defects fixed) |
 | Mobile/responsive pass | ☐ |
 | Accessibility pass | ✅ PASS (focus ring, dialog ARIA, AA contrast, on-blur validation, guided empties) |
-| Final build/deploy verified | ✅ LIVE (umrahconnect.io + Render; prod proofs 24/24 + 23/23; 20 role screenshots) |
+| Final build/deploy verified | ◑ Vercel LIVE (umrahconnect.io 200, /visa-requests 200); **Render API not responding** — see DEPLOY-3, needs dashboard access |
 
 Legend: ☐ pending · ◑ partial · ✅ pass · 🚫 blocked (reason in IMPLEMENTATION_LOG.md)

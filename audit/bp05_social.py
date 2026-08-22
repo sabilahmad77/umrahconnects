@@ -40,7 +40,15 @@ chk("comment persists in feed + count", mine.get("commentCount")==1 and any("BP0
 # ── FOLLOW: route live, counters move, state survives fresh fetch ──
 people=gd(requests.get(f"{API}/social/discover/people",headers=H))
 people=items(people)
-target=[p for p in people if not p.get("isFollowing")][0]
+# Re-runnable: if a previous run (or the browser proof) left everyone followed,
+# unfollow one first so the follow round-trip still has a subject.
+unfollowed=[p for p in people if not p.get("isFollowing")]
+if not unfollowed and people:
+    requests.post(f"{API}/social/accounts/{people[0]['id']}/follow",headers=H)  # toggles off
+    people=items(gd(requests.get(f"{API}/social/discover/people",headers=H)))
+    unfollowed=[p for p in people if not p.get("isFollowing")]
+assert unfollowed, "no discoverable accounts to follow"
+target=unfollowed[0]
 tid=target["id"]; before_followers=target.get("followerCount",0)
 me_before=gd(requests.get(f"{API}/social/accounts/me",headers=H))["_count"]["following"]
 r=gd(requests.post(f"{API}/social/accounts/{tid}/follow",headers=H))

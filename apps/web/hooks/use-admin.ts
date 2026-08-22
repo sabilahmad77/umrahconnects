@@ -12,10 +12,12 @@ export function useAdminStats() {
 }
 
 // ── Tenants ──
-export function useAdminTenants(params?: { status?: string; type?: string; search?: string }) {
+export function useAdminTenants(params?: { status?: string; type?: string; search?: string; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['admin', 'tenants', params],
-    queryFn: async () => (await apiClient.get('/admin/tenants', { params })).data.data as { items: any[]; total: number },
+    queryFn: async () =>
+      (await apiClient.get('/admin/tenants', { params })).data.data as
+        { items: any[]; total: number; page: number; limit: number; totalPages: number },
   });
 }
 export function useAdminTenant(id?: string) {
@@ -28,8 +30,8 @@ export function useAdminTenant(id?: string) {
 export function useSetTenantStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) =>
-      (await apiClient.put(`/admin/tenants/${id}/status`, { status })).data.data,
+    mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
+      (await apiClient.put(`/admin/tenants/${id}/status`, { status, reason })).data.data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
   });
 }
@@ -42,23 +44,49 @@ export function useArchiveTenant() {
 }
 
 // ── Users ──
-export function useAdminUsers(params?: { status?: string; tenantId?: string; search?: string }) {
+export function useAdminUsers(params?: { status?: string; tenantId?: string; search?: string; page?: number; limit?: number }) {
   return useQuery({
     queryKey: ['admin', 'users', params],
-    queryFn: async () => (await apiClient.get('/admin/users', { params })).data.data as { items: any[]; total: number },
+    queryFn: async () =>
+      (await apiClient.get('/admin/users', { params })).data.data as
+        { items: any[]; total: number; page: number; limit: number; totalPages: number },
   });
 }
 export function useSetUserStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) =>
-      (await apiClient.put(`/admin/users/${id}/status`, { status })).data.data,
+    mutationFn: async ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
+      (await apiClient.put(`/admin/users/${id}/status`, { status, reason })).data.data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
   });
 }
 export function useForceLogout() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => (await apiClient.post(`/admin/users/${id}/force-logout`)).data.data,
+    mutationFn: async (id: string) =>
+      (await apiClient.post(`/admin/users/${id}/force-logout`)).data.data as { sessionsRevoked: number },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
+  });
+}
+
+/**
+ * CSV export. The endpoint streams a text/csv attachment, so the response is
+ * pulled as a blob and handed to the browser as a download.
+ */
+export function useAdminExport() {
+  return useMutation({
+    mutationFn: async ({ kind, params }: { kind: 'tenants' | 'users'; params?: Record<string, unknown> }) => {
+      const res = await apiClient.get(`/admin/${kind}/export`, { params, responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `umrah-connect-${kind}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return { kind };
+    },
   });
 }
 export function useAssignUserRole() {

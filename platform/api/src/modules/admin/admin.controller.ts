@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe, Header } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { SetTenantStatusDto, SetUserStatusDto, AssignRoleDto } from './dto/admin.dto';
 
 @ApiTags('admin')
 @Controller({ path: 'admin', version: '1' })
@@ -24,6 +25,14 @@ export class AdminController {
     return { success: true, data: await this.service.listTenants(query) };
   }
 
+  @Get('tenants/export')
+  @RequirePermissions('core:tenant:read')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="umrah-connect-tenants.csv"')
+  async exportTenants(@CurrentUser() user: any, @Query() query: any) {
+    return this.service.exportTenants(query, user);
+  }
+
   @Get('tenants/:id')
   @RequirePermissions('core:tenant:read')
   async findTenant(@Param('id', ParseUUIDPipe) id: string) {
@@ -32,14 +41,18 @@ export class AdminController {
 
   @Put('tenants/:id/status')
   @RequirePermissions('core:tenant:update')
-  async setTenantStatus(@Param('id', ParseUUIDPipe) id: string, @Body() body: { status: string }) {
-    return { success: true, data: await this.service.updateTenantStatus(id, body.status) };
+  async setTenantStatus(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetTenantStatusDto,
+  ) {
+    return { success: true, data: await this.service.updateTenantStatus(id, dto.status, user, dto.reason) };
   }
 
   @Delete('tenants/:id')
   @RequirePermissions('core:tenant:update')
-  async archiveTenant(@Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.archiveTenant(id) };
+  async archiveTenant(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.archiveTenant(id, user) };
   }
 
   // ── Users ──────────────────────────────────────────────────────────
@@ -49,28 +62,48 @@ export class AdminController {
     return { success: true, data: await this.service.listUsers(query) };
   }
 
+  @Get('users/export')
+  @RequirePermissions('core:user:read')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="umrah-connect-users.csv"')
+  async exportUsers(@CurrentUser() user: any, @Query() query: any) {
+    return this.service.exportUsers(query, user);
+  }
+
   @Put('users/:id/status')
   @RequirePermissions('core:user:update')
-  async setUserStatus(@Param('id', ParseUUIDPipe) id: string, @Body() body: { status: string }) {
-    return { success: true, data: await this.service.setUserStatus(id, body.status) };
+  async setUserStatus(
+    @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetUserStatusDto,
+  ) {
+    return { success: true, data: await this.service.setUserStatus(id, dto.status, user, dto.reason) };
   }
 
   @Post('users/:id/force-logout')
   @RequirePermissions('core:user:update')
-  async forceLogout(@Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.forceLogoutUser(id) };
+  async forceLogout(@CurrentUser() actor: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.forceLogoutUser(id, actor) };
   }
 
   @Post('users/:id/roles')
   @RequirePermissions('core:role:manage')
-  async assignRole(@Param('id', ParseUUIDPipe) id: string, @Body() body: { roleId: string }) {
-    return { success: true, data: await this.service.assignUserRole(id, body.roleId) };
+  async assignRole(
+    @CurrentUser() actor: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignRoleDto,
+  ) {
+    return { success: true, data: await this.service.assignUserRole(id, dto.roleId, actor) };
   }
 
   @Delete('users/:id/roles/:roleId')
   @RequirePermissions('core:role:manage')
-  async removeRole(@Param('id', ParseUUIDPipe) id: string, @Param('roleId', ParseUUIDPipe) roleId: string) {
-    return { success: true, data: await this.service.removeUserRole(id, roleId) };
+  async removeRole(
+    @CurrentUser() actor: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('roleId', ParseUUIDPipe) roleId: string,
+  ) {
+    return { success: true, data: await this.service.removeUserRole(id, roleId, actor) };
   }
 
   // ── KYC ────────────────────────────────────────────────────────────

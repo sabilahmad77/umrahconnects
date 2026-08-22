@@ -44,6 +44,10 @@ const BASE = 'http://localhost:3000';
     await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(2500);
     const followingAfterReload = await p.getByRole('button', { name: /^Following$/ }).first().isVisible().catch(() => false);
     chk('Following SURVIVES hard reload', followingAfterReload);
+    // Restore the previous state — leaving everyone followed breaks the
+    // follow round-trip in bp05_social.py on the next run.
+    await p.getByRole('button', { name: /^Following$/ }).first().click().catch(() => {});
+    await p.waitForTimeout(1200);
   } else {
     // all already followed from API proof — Following visible counts as pass
     const followingVisible = await p.getByRole('button', { name: /^Following$/ }).first().isVisible().catch(() => false);
