@@ -8,6 +8,9 @@ const { chromium } = require('playwright-core');
   p.on('response', res => { if (res.url().includes('/proxy-api') || res.url().includes('_rsc')) { total++; if (res.status() >= 500) { fivexx++; console.log('  5xx:', res.status(), res.url().replace(base, '').slice(0, 60)); } } });
 
   await p.goto(base + '/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await p.waitForURL(u => !u.toString().includes('login'), { timeout: 45000 });
 

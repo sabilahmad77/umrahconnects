@@ -33,3 +33,45 @@ export const INVOICE_STATUS_META: Record<string, { label: string; color: string;
 // Human label for any status token (Title Case from SNAKE_CASE)
 export const humanizeStatus = (s?: string) =>
   (s ?? '').split('_').map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+
+// ── Visa service requests (support tickets) ──────────────────────────────
+// Mirrors VisaRequestStatus / VisaRequestPriority / VisaRequestCategory in
+// platform/api/prisma/schema.prisma.
+
+export const VISA_REQUEST_STATUSES = [
+  'OPEN', 'IN_PROGRESS', 'WAITING_ON_CUSTOMER', 'ESCALATED', 'RESOLVED', 'CLOSED',
+] as const;
+export type VisaRequestStatus = typeof VISA_REQUEST_STATUSES[number];
+
+/** Statuses the plain status control may set — the rest have dedicated actions. */
+export const VISA_REQUEST_WORKFLOW_STATUSES = ['OPEN', 'IN_PROGRESS', 'WAITING_ON_CUSTOMER'] as const;
+
+/** A ticket is "live" (and can go overdue) in these states. */
+export const VISA_REQUEST_OPEN_STATUSES = ['OPEN', 'IN_PROGRESS', 'WAITING_ON_CUSTOMER', 'ESCALATED'] as const;
+
+export const VISA_REQUEST_STATUS_META: Record<string, { label: string; color: string; dot: string }> = {
+  OPEN:                { label: 'Open',        color: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-500' },
+  IN_PROGRESS:         { label: 'In Progress', color: 'bg-indigo-100 text-indigo-700',  dot: 'bg-indigo-500' },
+  WAITING_ON_CUSTOMER: { label: 'Waiting',     color: 'bg-yellow-100 text-yellow-700',  dot: 'bg-yellow-500' },
+  ESCALATED:           { label: 'Escalated',   color: 'bg-red-100 text-red-600',        dot: 'bg-red-500' },
+  RESOLVED:            { label: 'Resolved',    color: 'bg-green-100 text-green-700',    dot: 'bg-green-500' },
+  CLOSED:              { label: 'Closed',      color: 'bg-gray-100 text-gray-600',      dot: 'bg-gray-400' },
+};
+
+export const VISA_REQUEST_PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'URGENT'] as const;
+export type VisaRequestPriority = typeof VISA_REQUEST_PRIORITIES[number];
+
+export const VISA_REQUEST_PRIORITY_META: Record<string, { label: string; color: string }> = {
+  LOW:    { label: 'Low',    color: 'bg-gray-100 text-gray-600' },
+  NORMAL: { label: 'Normal', color: 'bg-blue-50 text-blue-700' },
+  HIGH:   { label: 'High',   color: 'bg-orange-100 text-orange-700' },
+  URGENT: { label: 'Urgent', color: 'bg-red-100 text-red-600' },
+};
+
+export const VISA_REQUEST_CATEGORIES = [
+  'NEW_APPLICATION', 'DOCUMENT_ISSUE', 'STATUS_INQUIRY', 'URGENT_PROCESSING',
+  'APPOINTMENT', 'CORRECTION', 'REFUND', 'CANCELLATION', 'OTHER',
+] as const;
+export type VisaRequestCategory = typeof VISA_REQUEST_CATEGORIES[number];
+
+export const VISA_REQUEST_NOTE_VISIBILITIES = ['INTERNAL', 'PUBLIC'] as const;

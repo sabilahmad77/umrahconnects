@@ -13,6 +13,9 @@ const BASE = 'http://localhost:3000';
   const chk = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log(`${cond ? '✓' : '✗'} ${label} ${extra}`); };
 
   await p.goto(BASE + '/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await p.waitForURL(u => !u.toString().includes('login'), { timeout: 45000 });
 

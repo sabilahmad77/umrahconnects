@@ -24,6 +24,9 @@ const PAGES = [
 
   // login via demo tile (operator/agency admin sees all modules)
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await page.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await page.waitForTimeout(400);
   await page.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await page.waitForURL(u => !u.toString().includes('login'), { timeout: 45000 });
   await page.waitForTimeout(2500);

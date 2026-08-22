@@ -991,6 +991,135 @@ model RegulatorySubmission {
   @@schema("plugin_visa")
 }
 
+// ─── Visa service requests (support ticket workflow) ────────────────────
+enum VisaRequestCategory {
+  NEW_APPLICATION
+  DOCUMENT_ISSUE
+  STATUS_INQUIRY
+  URGENT_PROCESSING
+  APPOINTMENT
+  CORRECTION
+  REFUND
+  CANCELLATION
+  OTHER
+
+  @@schema("plugin_visa")
+}
+
+enum VisaRequestPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+
+  @@schema("plugin_visa")
+}
+
+enum VisaRequestStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_ON_CUSTOMER
+  ESCALATED
+  RESOLVED
+  CLOSED
+
+  @@schema("plugin_visa")
+}
+
+enum VisaRequestNoteVisibility {
+  INTERNAL
+  PUBLIC
+
+  @@schema("plugin_visa")
+}
+
+model VisaServiceRequest {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId       String              @db.Uuid @map("tenant_id")
+  ticketNumber   String              @db.VarChar(30) @map("ticket_number")
+
+  subject        String              @db.VarChar(200)
+  description    String?
+  category       VisaRequestCategory @default(OTHER)
+  priority       VisaRequestPriority @default(NORMAL)
+  status         VisaRequestStatus   @default(OPEN)
+
+  // Who raised it (pilgrim / operator contact — not necessarily a platform user)
+  requesterName  String?             @db.VarChar(150) @map("requester_name")
+  requesterEmail String?             @db.VarChar(255) @map("requester_email")
+  requesterPhone String?             @db.VarChar(30) @map("requester_phone")
+  requesterId    String?             @db.Uuid @map("requester_id")
+
+  // Optional links into the visa domain
+  pilgrimId          String?         @db.Uuid @map("pilgrim_id")
+  visaApplicationId  String?         @db.Uuid @map("visa_application_id")
+
+  assigneeId     String?             @db.Uuid @map("assignee_id")
+  assigneeName   String?             @db.VarChar(150) @map("assignee_name")
+
+  dueAt          DateTime?           @db.Timestamptz @map("due_at")
+  firstResponseAt DateTime?          @db.Timestamptz @map("first_response_at")
+  escalatedAt    DateTime?           @db.Timestamptz @map("escalated_at")
+  escalationReason String?           @map("escalation_reason")
+  resolvedAt     DateTime?           @db.Timestamptz @map("resolved_at")
+  resolution     String?
+  closedAt       DateTime?           @db.Timestamptz @map("closed_at")
+  reopenedAt     DateTime?           @db.Timestamptz @map("reopened_at")
+  reopenCount    Int                 @default(0) @map("reopen_count")
+
+  createdAt      DateTime            @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt      DateTime            @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy      String?             @db.Uuid @map("created_by")
+
+  notes          VisaServiceRequestNote[]
+  events         VisaServiceRequestEvent[]
+
+  @@unique([tenantId, ticketNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, assigneeId])
+  @@index([tenantId, dueAt])
+  @@map("visa_service_requests")
+  @@schema("plugin_visa")
+}
+
+model VisaServiceRequestNote {
+  id         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId  String                    @db.Uuid @map("request_id")
+  request    VisaServiceRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  visibility VisaRequestNoteVisibility @default(INTERNAL)
+  body       String
+  authorId   String?                   @db.Uuid @map("author_id")
+  authorName String?                   @db.VarChar(150) @map("author_name")
+
+  createdAt  DateTime                  @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([requestId, createdAt])
+  @@map("visa_service_request_notes")
+  @@schema("plugin_visa")
+}
+
+model VisaServiceRequestEvent {
+  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId  String             @db.Uuid @map("request_id")
+  request    VisaServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  type       String             @db.VarChar(40)   // CREATED | STATUS_CHANGED | ASSIGNED | ...
+  message    String             @db.VarChar(400)
+  fromValue  String?            @db.VarChar(100) @map("from_value")
+  toValue    String?            @db.VarChar(100) @map("to_value")
+  actorId    String?            @db.Uuid @map("actor_id")
+  actorEmail String?            @db.VarChar(255) @map("actor_email")
+  metadata   Json?              @db.JsonB
+
+  createdAt  DateTime           @default(now()) @db.Timestamptz @map("created_at")
+
+  @@index([requestId, createdAt])
+  @@map("visa_service_request_events")
+  @@schema("plugin_visa")
+}
+
+
 // ============================================================
 // PLUGIN: TRANSPORT
 // ============================================================
@@ -1955,6 +2084,7 @@ enum NotificationType {
   BOOKING_STATUS
   PAYMENT_RECEIVED
   VISA_STATUS
+  VISA_REQUEST
   SYSTEM
 
   @@schema("social")

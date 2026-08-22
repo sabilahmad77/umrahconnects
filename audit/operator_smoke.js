@@ -11,6 +11,9 @@ const { chromium } = require('playwright-core');
   const stamp = Date.now();
 
   await p.goto('http://localhost:3000/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await p.waitForURL(u => !u.toString().includes('login'), { timeout: 30000 });
   log(true, 'Login as Umrah Operator / Agency');

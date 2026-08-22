@@ -14,6 +14,9 @@ const BASE = 'http://localhost:3000';
 
   // 1) focus-visible ring (keyboard Tab → outline present)
   await p.goto(BASE + '/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.keyboard.press('Tab'); await p.keyboard.press('Tab');
   const focusInfo = await p.evaluate(() => {
     const el = document.activeElement;
@@ -38,6 +41,9 @@ const BASE = 'http://localhost:3000';
 
   // 3) modal role=dialog (login → bookings → open create modal)
   await p.goto(BASE + '/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await p.waitForURL(u => !u.toString().includes('login'), { timeout: 45000 });
   await p.goto(BASE + '/bookings', { waitUntil: 'networkidle' }); await p.waitForTimeout(2000);

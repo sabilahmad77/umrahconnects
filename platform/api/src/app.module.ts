@@ -18,6 +18,7 @@ import { SocialModule } from './modules/social/social.module';
 import { TransportModule } from './modules/transport/transport.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
+import { VisaRequestsModule } from './modules/visa-requests/visa-requests.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ConnectionsModule } from './modules/connections/connections.module';
@@ -81,6 +82,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     TransportModule,
     FinanceModule,
     ComplianceModule,
+    VisaRequestsModule,
     ReportsModule,
     NotificationsModule,
     ConnectionsModule,

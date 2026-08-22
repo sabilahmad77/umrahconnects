@@ -18,6 +18,7 @@ const TYPE_LABEL: Record<string, string> = {
   REQUEST_OFFER_ACCEPTED: '🎉',
   REQUEST_OFFER_REJECTED: '😞',
   GROUP_INVITE: '👥',
+  VISA_REQUEST: '🛂',
   SYSTEM: '🔔',
 };
 

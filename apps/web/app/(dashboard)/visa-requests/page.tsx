@@ -1,5 +1,5 @@
-import { VisaRequestsView } from '@/components/compliance/visa-requests-view';
+import { VisaRequestsTabs } from '@/components/compliance/visa-requests-tabs';
 export const metadata = { title: 'Visa Service Requests' };
 export default function VisaRequestsPage() {
-  return <VisaRequestsView />;
+  return <VisaRequestsTabs />;
 }

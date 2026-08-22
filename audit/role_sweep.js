@@ -14,6 +14,9 @@ const { chromium } = require('playwright-core');
     const bad=[]; p.on('response',r=>{const m=r.request().method(); if(r.url().includes('/proxy-api')&&m!=='GET'&&r.status()>=500){total500++;bad.push(m+' '+r.url().split('/proxy-api')[1]+' '+r.status());}});
     try {
       await p.goto('http://localhost:3000/login',{waitUntil:'networkidle'});
+      // Login defaults to the email-first tab; reveal the demo personas first.
+      await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+      await p.waitForTimeout(400);
       await p.getByRole('button',{name:rx}).first().click();
       await p.waitForURL(u=>!u.toString().includes('login'),{timeout:40000});
     } catch(e){ console.log('✗ '+role+' LOGIN FAIL'); await ctx.close(); continue; }

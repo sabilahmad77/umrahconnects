@@ -7,6 +7,9 @@ const fs = require('fs');
   const p = await ctx.newPage(); p.setDefaultTimeout(30000);
   const errs = []; p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', e => errs.push('PAGEERR: ' + e.message));
   await p.goto('http://localhost:3000/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await p.waitForURL(u => !u.toString().includes('login'), { timeout: 30000 });
   await p.goto('http://localhost:3000/groups/' + gid, { waitUntil: 'networkidle' });

@@ -26,6 +26,9 @@ const ROLES = [
     const p = await ctx.newPage();
     try {
       await p.goto(BASE + '/login', { waitUntil: 'networkidle', timeout: 90000 });
+      // Login defaults to the email-first tab; reveal the demo personas first.
+      await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+      await p.waitForTimeout(400);
       await p.getByRole('button', { name: role.tile }).first().click();
       await p.waitForURL(u => !u.toString().includes('login'), { timeout: 90000 });
       await p.waitForTimeout(3000);

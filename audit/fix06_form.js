@@ -6,6 +6,9 @@ const fs = require('fs');
   const p = await (await b.newContext({ viewport:{width:1440,height:950} })).newPage(); p.setDefaultTimeout(45000);
   let payStatus=null; p.on('response',r=>{if(r.url().includes('/payments')&&r.request().method()==='POST')payStatus=r.status()});
   await p.goto('http://localhost:3000/login',{waitUntil:'networkidle'});
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button',{name:/Umrah Operator \/ Agency/i}).first().click();
   await p.waitForURL(u=>!u.toString().includes('login'),{timeout:45000});
   await p.goto('http://localhost:3000/finance/invoices/'+gid,{waitUntil:'networkidle'}); await p.waitForTimeout(1500);

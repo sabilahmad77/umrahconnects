@@ -8,6 +8,9 @@ const { chromium } = require('playwright-core');
   p.on('response', r => { if (r.url().includes('/payments') && r.request().method() === 'POST') payStatus = r.status(); });
 
   await p.goto(base + '/login', { waitUntil: 'networkidle' });
+  // Login defaults to the email-first tab; reveal the demo personas first.
+  await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
+  await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Umrah Operator \/ Agency/i }).first().click();
   await p.waitForURL(u => !u.toString().includes('login'), { timeout: 45000 });
 
