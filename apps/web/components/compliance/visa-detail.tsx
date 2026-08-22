@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useVisa, useUpdateVisa, useDeleteVisa, useAddVisaDocument, useUpdateVisaDocument, useRemoveVisaDocument } from '@/hooks/use-visa';
+import { useVisa, useUpdateVisa, useDeleteVisa } from '@/hooks/use-visa';
+import { VisaDocumentPanel } from './visa-document-panel';
 
 const VISA_STATUSES = [
   'NOT_STARTED',
@@ -85,7 +86,7 @@ export function VisaDetail({ id }: { id: string }) {
       </div>
 
       {tab === 'overview' && <Overview v={v} />}
-      {tab === 'documents' && <DocumentsTab v={v} refetch={refetch} />}
+      {tab === 'documents' && <VisaDocumentPanel visaId={v.id} />}
       {tab === 'timeline' && <TimelineTab v={v} />}
       {tab === 'edit' && <EditTab v={v} refetch={refetch} />}
     </div>
@@ -214,115 +215,6 @@ function Overview({ v }: { v: any }) {
 
 const DOC_TYPES = ['PASSPORT', 'PHOTO', 'ID_CARD', 'BANK_STATEMENT', 'INVITATION', 'VACCINATION', 'SUPPORTING', 'OTHER'];
 
-function DocumentsTab({ v, refetch }: { v: any; refetch: () => void }) {
-  const documents: any[] = Array.isArray(v.documents) ? v.documents : [];
-  const add = useAddVisaDocument();
-  const updateDoc = useUpdateVisaDocument();
-  const removeDoc = useRemoveVisaDocument();
-  const [form, setForm] = useState({ name: '', type: 'PASSPORT', url: '', status: 'RECEIVED' });
-
-  const submit = async () => {
-    if (!form.name.trim()) { toast.error('Document name is required'); return; }
-    try {
-      await add.mutateAsync({ visaId: v.id, name: form.name.trim(), type: form.type, url: form.url || undefined, status: form.url ? 'RECEIVED' : form.status });
-      toast.success('Document added');
-      setForm({ name: '', type: 'PASSPORT', url: '', status: 'RECEIVED' });
-      refetch();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      {/* Add / upload document */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-          <FileText className="h-4 w-4" /> Upload / record a document
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="block text-xs font-semibold text-gray-600 mb-1">Document name</span>
-            <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" placeholder="Passport scan" />
-          </label>
-          <label className="block">
-            <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
-              {DOC_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
-            </select>
-          </label>
-          <label className="block col-span-2">
-            <span className="block text-xs font-semibold text-gray-600 mb-1">File URL (leave empty to mark as missing)</span>
-            <input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" placeholder="https://…" />
-          </label>
-        </div>
-        <div className="flex justify-end mt-3">
-          <button onClick={submit} disabled={add.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
-            {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Add document
-          </button>
-        </div>
-      </div>
-
-      {/* Document list */}
-      <div className="bg-white rounded-2xl border border-gray-100">
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-            <FileText className="h-4 w-4" /> Documents ({documents.length})
-          </h3>
-        </div>
-        {documents.length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-500">No documents recorded</div>
-        ) : (
-          <ul className="divide-y divide-gray-50">
-            {documents.map((doc: any, i: number) => {
-              const name = doc.name ?? doc.fileName ?? `Document ${i + 1}`;
-              const type = doc.type ?? doc.documentType;
-              const url = doc.url ?? doc.fileUrl;
-              const docStatus = (doc.status ?? (url ? 'RECEIVED' : 'MISSING')).toUpperCase();
-              return (
-                <li key={doc.id ?? `${name}-${i}`} className="p-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 shrink-0">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      {url ? (
-                        <a href={url} target="_blank" rel="noreferrer" className="text-sm font-medium text-brand-600 hover:underline truncate block">{name}</a>
-                      ) : (
-                        <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-                      )}
-                      <p className="text-[11px] text-gray-500">{type ?? 'OTHER'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full',
-                      docStatus === 'RECEIVED' ? 'bg-green-50 text-green-700' :
-                      docStatus === 'MISSING' ? 'bg-red-50 text-red-600' :
-                      'bg-yellow-50 text-yellow-700')}>{docStatus}</span>
-                    {doc.id && (
-                      <>
-                        {docStatus !== 'RECEIVED' && (
-                          <button onClick={async () => { await updateDoc.mutateAsync({ visaId: v.id, docId: doc.id, status: 'RECEIVED' }); toast.success('Marked received'); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100">Received</button>
-                        )}
-                        {docStatus !== 'MISSING' && (
-                          <button onClick={async () => { await updateDoc.mutateAsync({ visaId: v.id, docId: doc.id, status: 'MISSING' }); toast.success('Marked missing'); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100">Missing</button>
-                        )}
-                        {docStatus === 'MISSING' && (
-                          <button onClick={async () => { await updateDoc.mutateAsync({ visaId: v.id, docId: doc.id, status: 'REQUESTED' }); toast.success('Requested from applicant'); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg bg-yellow-50 text-yellow-700 hover:bg-yellow-100">Request</button>
-                        )}
-                        <button onClick={async () => { if (!confirm('Remove this document?')) return; await removeDoc.mutateAsync({ visaId: v.id, docId: doc.id }); refetch(); }} className="text-[11px] px-2 py-1 rounded-lg hover:bg-gray-100 text-gray-500">Remove</button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function TimelineTab({ v }: { v: any }) {
   const events: any[] = Array.isArray(v.timeline)

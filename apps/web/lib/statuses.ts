@@ -109,3 +109,26 @@ export const USER_STATUS_META: Record<string, { label: string; color: string; do
 
 /** Tenant states that block sign-in (the auth guard rejects non-ACTIVE tenants). */
 export const TENANT_BLOCKING_STATUSES = TENANT_STATUSES.filter((s) => s !== 'ACTIVE');
+
+// ── Visa documents ───────────────────────────────────────────────────────
+// Mirrors VisaDocumentStatus in schema.prisma. EXPIRED is derived from
+// expiresAt by the API (`effectiveStatus`) rather than stored, so a document
+// never sits at "verified" past its expiry date.
+export const VISA_DOCUMENT_STATUSES = ['MISSING', 'RECEIVED', 'VERIFIED', 'REJECTED', 'EXPIRED'] as const;
+export type VisaDocumentStatus = typeof VISA_DOCUMENT_STATUSES[number];
+
+export const VISA_DOCUMENT_STATUS_META: Record<string, { label: string; color: string; dot: string }> = {
+  MISSING:  { label: 'Missing',  color: 'bg-gray-100 text-gray-600',      dot: 'bg-gray-400' },
+  RECEIVED: { label: 'Received', color: 'bg-blue-100 text-blue-700',      dot: 'bg-blue-500' },
+  VERIFIED: { label: 'Verified', color: 'bg-green-100 text-green-700',    dot: 'bg-green-500' },
+  REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-600',        dot: 'bg-red-500' },
+  EXPIRED:  { label: 'Expired',  color: 'bg-orange-100 text-orange-700',  dot: 'bg-orange-500' },
+};
+
+/** Statuses an operator may set directly; VERIFIED/REJECTED need a decision route. */
+export const VISA_DOCUMENT_EDITABLE_STATUSES = ['MISSING', 'RECEIVED'] as const;
+
+export const VISA_DOCUMENT_TYPES = [
+  'PASSPORT', 'PHOTO', 'VACCINATION', 'ID_CARD', 'BIRTH_CERTIFICATE',
+  'MARRIAGE_CERTIFICATE', 'MAHRAM_PROOF', 'BANK_STATEMENT', 'OTHER',
+] as const;

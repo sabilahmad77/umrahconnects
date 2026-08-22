@@ -17,12 +17,26 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   let nativeDialog = false;
   p.on('dialog', async (d) => { nativeDialog = true; await d.dismiss(); });
 
+  /**
+   * Poll until `fn()` is truthy. Fixed sleeps are unreliable when the dev
+   * server is recompiling or another suite is competing for CPU, and a flaky
+   * proof is worse than no proof.
+   */
+  const until = async (fn, timeout = 20000, step = 300) => {
+    const deadline = Date.now() + timeout;
+    for (;;) {
+      try { if (await fn()) return true; } catch { /* element churn — retry */ }
+      if (Date.now() > deadline) return false;
+      await p.waitForTimeout(step);
+    }
+  };
+
   // Real email-first sign-in (no tenant field) — the documented login path.
   await p.goto(BASE + '/login', { waitUntil: 'networkidle' });
   await p.fill('input[type="email"]', 'admin@alharamain.sa');
   await p.fill('input[type="password"]', 'Admin@1234');
   await p.getByRole('button', { name: /^Sign in$/i }).click();
-  await p.waitForURL((u) => !u.toString().includes('login'), { timeout: 45000 });
+  await p.waitForURL((u) => !u.toString().includes('login'), { timeout: 90000 });
 
   // ── queue renders ──
   await p.goto(BASE + '/visa-requests', { waitUntil: 'networkidle' });
@@ -51,8 +65,7 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   await p.getByLabel('Priority').selectOption('URGENT');
   await p.getByLabel('Requester name').fill('Abubakar Suleiman');
   await p.getByRole('button', { name: /Create request/i }).click();
-  await p.waitForTimeout(2500);
-  chk('ticket created and listed', await p.getByText(SUBJ).first().isVisible());
+  chk('ticket created and listed', await until(() => p.getByText(SUBJ).first().isVisible()));
 
   // ── open detail ──
   await p.getByText(SUBJ).first().click();
@@ -64,29 +77,29 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   await p.getByRole('button', { name: /^Internal note$/ }).click();
   await p.getByLabel('Note body').fill('INTERNAL ONLY: portal credentials expired, renewing now.');
   await p.getByRole('button', { name: /^Add note$/ }).click();
-  await p.waitForTimeout(2000);
   chk('internal note rendered with INTERNAL badge',
-    await p.getByText('INTERNAL', { exact: true }).first().isVisible());
+    await until(() => p.getByText('INTERNAL', { exact: true }).first().isVisible()));
 
   // ── public response ──
   await p.getByRole('button', { name: /^Public response$/ }).click();
   await p.getByLabel('Note body').fill('Your filing is with our Nusuk desk today.');
   await p.getByRole('button', { name: /^Send response$/ }).click();
-  await p.waitForTimeout(2000);
   chk('public response rendered with PUBLIC badge',
-    await p.getByText('PUBLIC', { exact: true }).first().isVisible());
+    await until(() => p.getByText('PUBLIC', { exact: true }).first().isVisible()));
 
   // ── escalate / resolve / close / reopen through the reason dialog ──
   const act = async (button, reason, expectStatus) => {
-    await p.getByRole('button', { name: button }).click();
-    await p.waitForTimeout(700);
+    // The previous action's dialog must be gone before the next click, or the
+    // workflow button and a dialog control can both match the same name.
+    await until(async () => (await p.getByRole('dialog').count()) === 0);
+    await p.getByRole('button', { name: new RegExp(`^${button}$`) }).click();
+    await until(() => p.getByRole('dialog').isVisible());
     const dlg = p.getByRole('dialog');
     chk(`${button}: opens an accessible dialog (role=dialog)`, await dlg.isVisible());
     await dlg.locator('textarea').fill(reason);
     await dlg.getByRole('button', { name: button === 'Close' ? /Close ticket/ : new RegExp(`^${button}$`) }).click();
-    await p.waitForTimeout(2200);
-    const body = await p.textContent('body');
-    chk(`${button} → status ${expectStatus}`, body.includes(expectStatus));
+    chk(`${button} → status ${expectStatus}`,
+      await until(async () => (await p.textContent('body')).includes(expectStatus)));
   };
 
   await act('Escalate', 'Departure in 48 hours, no Nusuk confirmation.', 'Escalated');

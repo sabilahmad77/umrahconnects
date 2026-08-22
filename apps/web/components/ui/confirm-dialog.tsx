@@ -12,7 +12,10 @@ export interface ConfirmSpec {
   tone?: 'danger' | 'default';
   /** When set, the operator must type this exact text to enable the CTA. */
   typeToConfirm?: string;
-  onConfirm: () => Promise<unknown> | unknown;
+  /** When set, a free-text reason is captured and passed to onConfirm. */
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
+  onConfirm: (reason?: string) => Promise<unknown> | unknown;
 }
 
 /**
@@ -23,13 +26,16 @@ export interface ConfirmSpec {
 export function ConfirmDialog({ spec, onClose }: { spec: ConfirmSpec; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [typed, setTyped] = useState('');
+  const [reason, setReason] = useState('');
   const danger = spec.tone === 'danger';
-  const blocked = !!spec.typeToConfirm && typed.trim() !== spec.typeToConfirm;
+  const blocked =
+    (!!spec.typeToConfirm && typed.trim() !== spec.typeToConfirm) ||
+    (!!spec.reasonLabel && reason.trim().length < 3);
 
   const go = async () => {
     if (blocked) return;
     setBusy(true);
-    try { await spec.onConfirm(); onClose(); } finally { setBusy(false); }
+    try { await spec.onConfirm(reason.trim() || undefined); onClose(); } finally { setBusy(false); }
   };
 
   return (
@@ -47,12 +53,27 @@ export function ConfirmDialog({ spec, onClose }: { spec: ConfirmSpec; onClose: (
             </span>
             <h2 className="text-lg font-bold text-gray-900">{spec.title}</h2>
           </div>
-          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-gray-100 rounded-lg">
             <X className="h-4 w-4 text-gray-500" />
           </button>
         </div>
 
         <p className="text-sm text-gray-600">{spec.body}</p>
+
+        {spec.reasonLabel && (
+          <label className="block mt-3">
+            <span className="block text-xs font-semibold text-gray-600 mb-1">{spec.reasonLabel} *</span>
+            <textarea
+              autoFocus
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              aria-label={spec.reasonLabel}
+              placeholder={spec.reasonPlaceholder}
+              className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none"
+            />
+          </label>
+        )}
 
         {spec.typeToConfirm && (
           <label className="block mt-3">

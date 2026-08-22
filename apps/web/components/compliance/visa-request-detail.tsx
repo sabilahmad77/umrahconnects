@@ -387,7 +387,7 @@ function ReasonModal({
       <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-gray-900">{prompt.title}</h2>
-          <button onClick={onClose} aria-label="Close" className="p-1.5 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-gray-100 rounded-lg">
             <X className="h-4 w-4 text-gray-500" />
           </button>
         </div>

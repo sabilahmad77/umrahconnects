@@ -1,6 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe,
+  UploadedFile, UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { ComplianceService } from './compliance.service';
+import { VisaDocumentsService } from './visa-documents.service';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
@@ -8,7 +13,10 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 @Controller({ path: 'compliance', version: '1' })
 @ApiBearerAuth()
 export class ComplianceController {
-  constructor(private readonly service: ComplianceService) {}
+  constructor(
+    private readonly service: ComplianceService,
+    private readonly docs: VisaDocumentsService,
+  ) {}
 
   @Get('visas')
   @RequirePermissions('visa:application:read')
@@ -37,8 +45,24 @@ export class ComplianceController {
   // Aggregate documents across all applications (collection route — before :id)
   @Get('visas/documents')
   @RequirePermissions('visa:application:read')
-  async allDocuments(@TenantId() tenantId: string, @Query('status') status?: string) {
-    return { success: true, data: await this.service.allDocuments(tenantId, status) };
+  async allDocuments(
+    @TenantId() tenantId: string,
+    @Query('status') status?: string,
+    @Query('expiringInDays') expiringInDays?: string,
+  ) {
+    return {
+      success: true,
+      data: await this.docs.listAll(tenantId, {
+        status,
+        expiringInDays: expiringInDays ? Number(expiringInDays) : undefined,
+      }),
+    };
+  }
+
+  @Get('visas/documents/stats')
+  @RequirePermissions('visa:application:read')
+  async documentStats(@TenantId() tenantId: string) {
+    return { success: true, data: await this.docs.stats(tenantId) };
   }
 
   @Get('visas/:id')
@@ -81,25 +105,88 @@ export class ComplianceController {
   @Get('visas/:id/documents')
   @RequirePermissions('visa:application:read')
   async listDocuments(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.listDocuments(tenantId, id) };
+    return { success: true, data: await this.docs.list(tenantId, id) };
   }
 
   @Post('visas/:id/documents')
   @RequirePermissions('visa:application:submit')
-  async addDocument(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: any) {
-    return { success: true, data: await this.service.addDocument(tenantId, id, body) };
+  async addDocument(
+    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string, @Body() body: any,
+  ) {
+    return { success: true, data: await this.docs.create(tenantId, id, body, user) };
+  }
+
+  @Get('visas/:id/documents/:docId')
+  @RequirePermissions('visa:application:read')
+  async findDocument(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('docId', ParseUUIDPipe) docId: string,
+  ) {
+    return { success: true, data: await this.docs.findOne(tenantId, id, docId) };
+  }
+
+  @Get('visas/:id/documents/:docId/versions')
+  @RequirePermissions('visa:application:read')
+  async documentVersions(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('docId', ParseUUIDPipe) docId: string,
+  ) {
+    return { success: true, data: await this.docs.versions(tenantId, id, docId) };
+  }
+
+  /** Upload or replace the file behind a document — always a new version. */
+  @Post('visas/:id/documents/:docId/versions')
+  @RequirePermissions('visa:application:submit')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 15 * 1024 * 1024 } }))
+  async uploadDocumentVersion(
+    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('docId', ParseUUIDPipe) docId: string,
+    @UploadedFile() file: any,
+  ) {
+    return { success: true, data: await this.docs.addVersion(tenantId, id, docId, file, user) };
   }
 
   @Put('visas/:id/documents/:docId')
   @RequirePermissions('visa:application:submit')
-  async updateDocument(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Param('docId') docId: string, @Body() body: { status: string; url?: string }) {
-    return { success: true, data: await this.service.updateDocumentStatus(tenantId, id, docId, body.status, body.url) };
+  async updateDocument(
+    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
+    @Body() body: { status?: string; url?: string; expiresAt?: string; notes?: string },
+  ) {
+    return { success: true, data: await this.docs.updateStatus(tenantId, id, docId, body, user) };
+  }
+
+  @Put('visas/:id/documents/:docId/verify')
+  @RequirePermissions('visa:application:manage')
+  async verifyDocument(
+    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
+  ) {
+    return { success: true, data: await this.docs.verify(tenantId, id, docId, user) };
+  }
+
+  @Put('visas/:id/documents/:docId/reject')
+  @RequirePermissions('visa:application:manage')
+  async rejectDocument(
+    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
+    @Body() body: { reason: string },
+  ) {
+    return { success: true, data: await this.docs.reject(tenantId, id, docId, body?.reason ?? '', user) };
   }
 
   @Delete('visas/:id/documents/:docId')
   @RequirePermissions('visa:application:submit')
-  async removeDocument(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Param('docId') docId: string) {
-    return { success: true, data: await this.service.removeDocument(tenantId, id, docId) };
+  async removeDocument(
+    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
+  ) {
+    return { success: true, data: await this.docs.remove(tenantId, id, docId, user) };
   }
 
   @Get('submissions')

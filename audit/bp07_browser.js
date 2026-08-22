@@ -19,11 +19,25 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   let nativeDialog = false;
   p.on('dialog', async (d) => { nativeDialog = true; await d.dismiss(); });
 
+  /**
+   * Poll until `fn()` is truthy. Fixed sleeps are unreliable when the dev
+   * server is recompiling or another suite is competing for CPU, and a flaky
+   * proof is worse than no proof.
+   */
+  const until = async (fn, timeout = 20000, step = 300) => {
+    const deadline = Date.now() + timeout;
+    for (;;) {
+      try { if (await fn()) return true; } catch { /* element churn — retry */ }
+      if (Date.now() > deadline) return false;
+      await p.waitForTimeout(step);
+    }
+  };
+
   await p.goto(BASE + '/login', { waitUntil: 'networkidle' });
   await p.getByRole('button', { name: /Quick Demo Access/i }).first().click().catch(() => {});
   await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Super Admin/i }).first().click();
-  await p.waitForURL((u) => !u.toString().includes('login'), { timeout: 45000 });
+  await p.waitForURL((u) => !u.toString().includes('login'), { timeout: 90000 });
 
   // ── TENANTS ────────────────────────────────────────────────────────────
   await p.goto(BASE + '/admin-tenants', { waitUntil: 'networkidle' });
@@ -38,6 +52,16 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
 
   const row = p.locator('tbody tr').filter({ hasText: 'Kaaba Travel' }).first();
   const slug = 'kaaba-travel-pk';
+
+  // Re-runnable: a previous run that died mid-way can leave this tenant
+  // suspended, which would shift every assertion below. Normalise first.
+  if ((await row.locator('select').inputValue()) !== 'ACTIVE') {
+    await row.locator('select').selectOption('ACTIVE');
+    await p.waitForTimeout(600);
+    await p.getByRole('dialog').getByRole('button', { name: /Change status/i }).click();
+    await p.waitForTimeout(2000);
+  }
+
   await row.locator('select').selectOption('SUSPENDED');
   await p.waitForTimeout(700);
   let dlg = p.getByRole('dialog');
@@ -45,14 +69,13 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   chk('confirmation states the real consequence',
     /signed out of the platform/i.test(await dlg.textContent()));
   await dlg.getByRole('button', { name: /Change status/i }).click();
-  await p.waitForTimeout(2200);
   chk('tenant shows Suspended after confirming',
-    /Suspended/.test(await row.textContent()));
+    await until(async () => (await row.locator('select').inputValue()) === 'SUSPENDED'));
 
   await p.reload({ waitUntil: 'networkidle' });
-  await p.waitForTimeout(2200);
   const rowAfter = p.locator('tbody tr').filter({ hasText: 'Kaaba Travel' }).first();
-  chk('suspension SURVIVES hard reload', /Suspended/.test(await rowAfter.textContent()));
+  chk('suspension SURVIVES hard reload',
+    await until(async () => (await rowAfter.locator('select').inputValue()) === 'SUSPENDED'));
 
   // type-to-confirm archive gate (open, verify the gate, cancel — no mutation)
   await rowAfter.getByRole('button', { name: /^Archive / }).click();
@@ -87,8 +110,8 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   await p.locator('select').first().selectOption('ACTIVE');
   await p.waitForTimeout(700);
   await p.getByRole('dialog').getByRole('button', { name: /Change status/i }).click();
-  await p.waitForTimeout(2200);
-  chk('tenant restored to Active', /Active/.test(await p.textContent('body')));
+  chk('tenant restored to Active',
+    await until(async () => (await p.locator('select').first().inputValue()) === 'ACTIVE'));
 
   // ── USERS ──────────────────────────────────────────────────────────────
   await p.goto(BASE + '/admin-users', { waitUntil: 'networkidle' });
@@ -109,12 +132,12 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   chk('user status change asks for confirmation', await dlg.isVisible());
   chk('confirmation explains the lockout', /will not be able to sign in/i.test(await dlg.textContent()));
   await dlg.getByRole('button', { name: /Change status/i }).click();
-  await p.waitForTimeout(2200);
-  chk('user shows Locked', /Locked/.test(await officer.textContent()));
+  chk('user shows Locked',
+    await until(async () => (await officer.locator('select').last().inputValue()) === 'LOCKED'));
   await p.reload({ waitUntil: 'networkidle' });
-  await p.waitForTimeout(2200);
   const officer2 = p.locator('tbody tr').filter({ hasText: 'visa.officer@alharamain.sa' }).first();
-  chk('user lock SURVIVES hard reload', /Locked/.test(await officer2.textContent()));
+  chk('user lock SURVIVES hard reload',
+    await until(async () => (await officer2.locator('select').last().inputValue()) === 'LOCKED'));
   await officer2.locator('select').last().selectOption('ACTIVE');
   await p.waitForTimeout(700);
   await p.getByRole('dialog').getByRole('button', { name: /Change status/i }).click();
@@ -127,9 +150,8 @@ const BASE = process.env.WEB_URL || 'http://localhost:3000';
   dlg = p.getByRole('dialog');
   chk('force logout asks for confirmation', await dlg.isVisible());
   await dlg.getByRole('button', { name: /Revoke sessions/i }).click();
-  await p.waitForTimeout(2000);
   chk('force logout reports how many sessions were revoked',
-    /session\(s\) revoked/i.test(await p.textContent('body')));
+    await until(async () => /session\(s\) revoked/i.test(await p.textContent('body'))));
 
   // CSV download is a real browser download
   const [download] = await Promise.all([

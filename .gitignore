@@ -86,3 +86,6 @@ apps/web/public/*.apk
 audit/screenshots/
 audit/*.pdf
 audit/*.png
+
+# Locally stored uploads — user content, never committed
+uploads/

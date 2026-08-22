@@ -1119,6 +1119,76 @@ model VisaServiceRequestEvent {
   @@schema("plugin_visa")
 }
 
+// ─── Visa document management (versioned, auditable) ────────────────────
+enum VisaDocumentStatus {
+  MISSING
+  RECEIVED
+  VERIFIED
+  REJECTED
+  EXPIRED
+
+  @@schema("plugin_visa")
+}
+
+model VisaDocument {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String             @db.Uuid @map("tenant_id")
+  applicationId String             @db.Uuid @map("application_id")
+
+  name          String             @db.VarChar(200)
+  type          String             @db.VarChar(60) @default("OTHER")
+  status        VisaDocumentStatus @default(MISSING)
+
+  /// Current version's stored location, denormalised for list views.
+  url           String?
+  mimeType      String?            @db.VarChar(120) @map("mime_type")
+  sizeBytes     Int?               @map("size_bytes")
+  version       Int                @default(0)
+
+  expiresAt     DateTime?          @db.Date @map("expires_at")
+  verifiedAt    DateTime?          @db.Timestamptz @map("verified_at")
+  verifiedBy    String?            @db.Uuid @map("verified_by")
+  rejectedAt    DateTime?          @db.Timestamptz @map("rejected_at")
+  rejectionReason String?          @map("rejection_reason")
+  notes         String?
+
+  createdAt     DateTime           @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime           @updatedAt @db.Timestamptz @map("updated_at")
+  createdBy     String?            @db.Uuid @map("created_by")
+
+  versions      VisaDocumentVersion[]
+
+  @@index([tenantId, applicationId])
+  @@index([tenantId, status])
+  @@index([tenantId, expiresAt])
+  @@map("visa_documents")
+  @@schema("plugin_visa")
+}
+
+model VisaDocumentVersion {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId  String       @db.Uuid @map("document_id")
+  document    VisaDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  version     Int
+  url         String
+  storageKey  String?      @map("storage_key")
+  driver      String       @db.VarChar(20) @default("local")
+  mimeType    String?      @db.VarChar(120) @map("mime_type")
+  sizeBytes   Int?         @map("size_bytes")
+  checksum    String?      @db.VarChar(64)
+
+  uploadedAt  DateTime     @default(now()) @db.Timestamptz @map("uploaded_at")
+  uploadedBy  String?      @db.Uuid @map("uploaded_by")
+  replacedAt  DateTime?    @db.Timestamptz @map("replaced_at")
+
+  @@unique([documentId, version])
+  @@index([documentId, uploadedAt])
+  @@map("visa_document_versions")
+  @@schema("plugin_visa")
+}
+
+
 
 // ============================================================
 // PLUGIN: TRANSPORT
