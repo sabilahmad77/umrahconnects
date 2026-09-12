@@ -79,10 +79,13 @@ storybook-static
 *.apk
 apps/web/public/*.apk
 
-# CI workflows require a workflow-scoped token to push; re-add later
-.github/workflows/
+# NOTE: .github/workflows/ was previously ignored because the token in use
+# lacked the `workflow` scope. The current gh token has it, and ignoring CI
+# config risks silently losing it on a machine migration, so it is tracked.
 
-# Local QA/audit outputs (screenshots, PDFs) — keep repo lean
+# Local QA/audit outputs — keep the repo lean.
+# NOTE: the committed role-sign-off screenshots live in audit/screens/ and are
+# deliberately tracked; this rule targets ad-hoc local output only.
 audit/screenshots/
 audit/*.pdf
 audit/*.png
