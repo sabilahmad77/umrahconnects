@@ -25,6 +25,9 @@ Name:            Umrah Connect  (brand is exactly "Umrah Connect"; only the
 GitHub:          https://github.com/sabilahmad77/umrahconnects   (PUBLIC)
 GitHub account:  sabilahmad77
 Branch:          main
+Migration checkpoint commit: 941bfa0fac9c7f3f749f3092d554adf28b364b94
+                 (the tip of main may be one docs-only commit ahead of this;
+                  both are fine — just make sure you are on main)
 Local path:      ~/Projects/umrah-connects
 Live web:        https://umrahconnect.io          (Vercel, auto-deploys from main)
 Live API:        https://umrah-connect-api.onrender.com/api/v1  (Render, auto-deploys from main)

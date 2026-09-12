@@ -8,6 +8,10 @@ central Super Admin.
 - **Live API:** https://umrah-connect-api.onrender.com/api/v1 (Render, auto-deploys from `main`)
 - **Full project picture, state of work, credentials map, and roadmap:**
   **[docs/HANDOFF.md](docs/HANDOFF.md)** ← read this first on a new machine.
+- **Setting this up on a new Mac?** See **[docs/migration/](docs/migration/)** —
+  architecture, exact runtime versions, deployment state, local setup, database,
+  environment variables, and a ready-to-paste bootstrap prompt
+  ([09_NEW_MAC_BOOTSTRAP_PROMPT.md](docs/migration/09_NEW_MAC_BOOTSTRAP_PROMPT.md)).
 
 ## Repo layout (pnpm + turbo monorepo)
 
