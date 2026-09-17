@@ -1,5 +1,23 @@
 # Backend dependencies
 
+> **Reconciled by the web integration closure loop (2026-09-18).** Every row below
+> was recorded against the pre-hardening backend. Each has now been reproduced
+> against the current API on `integration/web-final`:
+>
+> | Original dependency | Status now |
+> |---|---|
+> | Signup provisions no role | **RESOLVED** — registration always creates a Traveler in the community organization; verified at runtime (`roles: ['PILGRIM']`, marketplace readable, `/admin` and `/pilgrims` refused). |
+> | Personal group membership | **RESOLVED** — `GET /groups/mine` exists and is traveler-scoped. |
+> | Personal visa status | **STILL BLOCKED — product decision.** Visa applications belong to organization pilgrim records with no consented link to a traveler account (BLK-08). |
+> | Server-authoritative marketplace pricing | **RESOLVED** — the server computes the total; a mismatched client figure is rejected; unsupported pricing models refuse rather than guess. Verified at runtime, including a 1-cent tampering attempt. |
+> | Settings preferences / credentials | **STILL DEFERRED** — no preferences model. Change-password and sign-out-everywhere endpoints exist; the settings UI for them is not built (XT-R13). |
+> | Google sign-in and email verification | **CONTRACT CHANGED** — both are implemented and tested server-side. The frontend pages are not built (XT-R06, XT-R07). |
+> | Platform-admin restriction | **RESOLVED** — every `/admin/*` route requires a `platform:*` capability. 63 direct probes across nine non-platform identities were all refused; the operator account that previously returned global records now gets 403. |
+> | Legitimate accounts for every role | **RESOLVED** — `seed-demo-roles.ts` plus `seed-isolation-pairs.ts` give a real account per role and a genuine second organization per type. |
+> | Local API availability | **RESOLVED** — documented ports and launch configurations; the integrated stack runs on :4300/:3300. |
+>
+> The original text is kept below as the record of what the frontend track found.
+
 Backend source was read but not modified. Runtime smoke tests use the existing compiled API on isolated port 4101; no seeds, migrations, purchases or domain mutations are submitted.
 
 | Route / screen | Required endpoint / behavior | Actual inspected behavior | Severity / frontend response |

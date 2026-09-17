@@ -1,26 +1,35 @@
-# Scorecard — Claude core track (2026-09-17)
+# Scorecard — web integration closure loop (2026-09-18)
+
+Supersedes the core-track scorecard of 2026-09-17, which scored the backend
+alone. This one scores the merged system.
 
 | Measure | Value |
 |---|---|
-| Mandatory gates (SECURITY_GATES.md) | **8 / 8 PASS** |
-| Verified execution score (EXECUTION_MATRIX.md) | **76 / 90 = 84.4** |
+| Mandatory gates (SECURITY_GATES.md) | **9 / 9 PASS** |
+| Verified execution score (INTEGRATION_EXECUTION_MATRIX.md) | **109 / 131 = 83.2** |
 | Target for a launch recommendation | ≥ 95 |
-| Items not passed | 8 BLOCKED (external), 6 DEFERRED |
+| Items not passed | 9 BLOCKED (8 external + 1 credential revocation), 13 DEFERRED / NOT DONE |
+| Known open P0 code defects | **0** |
+| Known open P1 code defects | **0** |
 
-## What would move the score
+## Where the 22 not-passed items sit
 
-| Item | Unblocks with | Points |
+| Group | Count | Nature |
 |---|---|---|
-| A11 Google against real credentials | Google Cloud OAuth client | +1 |
-| A13 Production email | SMTP mailbox credentials | +1 |
-| T04 Stripe test mode | Stripe test secret, publishable and webhook secret | +1 |
-| O03 Real R2 bucket | R2 buckets + API token | +1 |
-| D06 Off-site backups | R2 backup bucket + rclone remote | +1 |
-| I06 Production API | KVM server access, DNS record, deployment authorization | +1 |
-| I07 `www` certificate | Vercel domain configuration | +1 |
-| P06 Traveler visa status | product decision (pilgrim ↔ user link) | +1 |
-| Deferred items (RLS, preferences, envelope, seed realism, orphan cleanup, uptime monitor) | later loops | +6 |
+| Frontend surfaces never built | 5 | Google sign-in, email verification, provider onboarding + KYC, Stripe Elements checkout, settings account actions. Every one has a finished, tested server contract waiting for it. |
+| Frontend hardening not attempted | 2 | Capability-driven UI guards and full WCAG certification. |
+| External credentials / access | 8 | Google, SMTP, Stripe, R2, off-site backup, KVM host + DNS, `www` certificate, and the traveler↔pilgrim product decision. |
+| Credential revocation | 1 | Two exposed tokens in pushed history. |
+| Core backlog, justified | 6 | RLS defence in depth, preferences model, response-envelope consistency, seed realism, orphan cleanup, uptime monitor. |
 
-With all eight external items resolved the score becomes 84/90 = 93.3. Reaching 95 also needs at least two deferred items done (e.g. the uptime monitor at cutover and the orphan cleanup job).
+## Trend
 
-Score trend: 2026-09-17 audit baseline — 25 of 73 functional capabilities verified (34 %), 3 P0 and 9 P1 open. Now — 0 open P0/P1 code defects, all mandatory gates pass, 84.4 % of the 90-item matrix verified.
+| Date | Score | Note |
+|---|---|---|
+| 2026-09-17 (audit baseline) | 25 of 73 capabilities verified (34 %) | 3 P0, 9 P1 open |
+| 2026-09-17 (core track) | 76/90 = 84.4 | backend only; frontend explicitly out of scope |
+| 2026-09-18 (this loop) | **109/131 = 83.2** | denominator widened to include the web; 0 open P0/P1 code defects; 9/9 mandatory gates pass |
+
+The score went down slightly because the denominator grew to include the web
+items the core track excluded, not because anything regressed. On the core
+track's own 90 items the merged system still scores 76.

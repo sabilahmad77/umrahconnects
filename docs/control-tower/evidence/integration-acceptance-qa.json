@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3300",
-  "timestamp": "2026-09-17T21:45:49Z",
+  "timestamp": "2026-09-17T22:15:08Z",
   "passed": 210,
   "total": 210,
   "sections": {
@@ -1046,7 +1046,7 @@
       "section": "DATABASE PERSISTENCE",
       "check": "update readable immediately",
       "result": "PASS",
-      "detail": "Persisted 6fbdac"
+      "detail": "Persisted 9c91a1"
     },
     {
       "section": "DATABASE PERSISTENCE",
@@ -1058,13 +1058,13 @@
       "section": "DATABASE PERSISTENCE",
       "check": "survives a fresh login / new session",
       "result": "PASS",
-      "detail": "Persisted 6fbdac"
+      "detail": "Persisted 9c91a1"
     },
     {
       "section": "DATABASE PERSISTENCE",
       "check": "appears in the owner's list query",
       "result": "PASS",
-      "detail": "n=3"
+      "detail": "n=4"
     },
     {
       "section": "DATABASE PERSISTENCE",
@@ -1244,7 +1244,7 @@
       "section": "DOCUMENT / STORAGE AUTHORIZATION",
       "check": "the stored reference is private, not a guessable path",
       "result": "PASS",
-      "detail": "url=private:visa-documents/cb4d30b2-76ef-4a58-a627-2e235304be5e/1789681548736-dc849d5a3b426c645085ca5c.png"
+      "detail": "url=private:visa-documents/7719dc17-ab9f-4eff-bd40-e11d0d6760f3/1789683307677-438030b081af2f13511faba6.png"
     },
     {
       "section": "DOCUMENT / STORAGE AUTHORIZATION",

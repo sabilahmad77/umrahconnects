@@ -66,3 +66,34 @@ Follow-ups raised by the red team and closed in the same loop: over-collection b
 - Isolation is service-layer only. RLS is deferred (D-009); every new query must use the ownership helpers. Mitigations: the typed catalogue, the boot-time policy check and the isolation suite.
 - Rate limits are in-memory per API process. This is correct for a single container; they need Redis before scaling horizontally.
 - The web client still stores the refresh token in `localStorage` until XT-R01 ships.
+
+---
+
+## Red-team re-run — web integration closure loop (2026-09-18)
+
+Re-run against the merged branch after every integration fix, over real HTTP
+through the `/proxy-api` rewrite, using genuine A/B organizations for hotel,
+transport, visa, operator and traveler.
+
+| Attack | Attempts | Result |
+|---|---|---|
+| Vertical escalation to platform scope | 63 direct calls: nine non-platform identities × seven platform routes, plus anonymous | All refused (401/403/404). Navigation was not relied on. |
+| Role escalation by minting capability | Tenant admin creating a role holding `platform:user:read`; requesting SUPER_ADMIN in the assignable list | 403; SUPER_ADMIN is not offered. |
+| Horizontal / cross-tenant access | Hotel A↔B, Transport A↔B, Visa A↔B, Operator A↔B↔C, Traveler A↔B — read, update, delete, approve, reject, void, close, list | All refused. Records verified unchanged afterwards, and absent from the other tenant's list queries. |
+| IDOR on money | Confirming and reading another organization's payment; refunding without `finance:payment:refund` | 404 and 403. |
+| Payment tampering | 1-cent client total; `status`/`paymentStatus`/`currency` on create; rewriting a booking total or payment state through update; paying a DRAFT invoice; an amount above the outstanding balance; a negative amount; an intent with no invoice or booking | All 400. |
+| Webhook forgery | Forged sandbox signature; unsigned Stripe delivery | 400; 404 (provider not configured). |
+| Document access bypass | Cross-agency signed URL; traveler requesting an organization document; a random document id; a tampered signature; `/uploads/...` and `/uploads/../.env` directly | 404, 403, 404, 401, 404. |
+| Mass assignment | `tenantId` on hotel, vehicle and visa creation; `roles` and `tenantId` on signup | All 400. |
+| Session misuse | Tampered signature; `alg:none`; empty bearer; no credentials; replaying a token after sign-out-everywhere | All 401, including the same-second case that INT-001 fixed. |
+| Rate-limit evasion | Rotating a forged `x-vercel-forwarded-for` to escape the bucket | Discarded — 36 attempts from one real client all landed in one bucket and throttled at 31. |
+| User enumeration | Unknown email versus wrong password | Identical status, code and message. |
+
+**New defects found:** INT-001 (same-second session revocation) — fixed and
+regression-tested this loop. **Remaining:** none known in code.
+
+Accepted design risks, unchanged: service-layer-only tenant isolation (RLS
+deferred, ADR-001 amendment) and an in-memory throttler (single instance).
+
+One open security item is not a code defect: two credential-shaped tokens are in
+pushed git history. See BLOCKERS.md BLK-09.

@@ -13,3 +13,21 @@
 11. **Documentation:** Control Tower set, ADR-001 amendment, cross-track requests.
 
 Commits on `claude/core-finalization` (local only): `15caaa8`, `ffb9671`, `6926c25`, `e13f183`, `befb496`, `be76d2b`, plus the documentation commit.
+
+---
+
+# Progress — web integration closure loop (2026-09-18)
+
+1. **Workspace gate:** canonical root proved; three worktrees found (`main`, `claude/core-finalization`, `codex/web-frontend-finalization`). The Codex track's work was uncommitted, so it was committed to its own branch before anything else.
+2. **Integration:** new worktree and branch `integration/web-final` from the core branch; Codex merged in. File sets were disjoint apart from `pnpm-lock.yaml`, which git resolved and `pnpm install` confirmed — no conflicts.
+3. **Baseline on the merged branch:** both typechecks, both lints, 19 unit, 145 e2e, 39 web tests all green before any change, so later failures were attributable.
+4. **Isolated environment:** fresh database `umrah_connects_integration`, ports 4300/3300, locally generated dev secrets, full seed plus a new "B side" of organizations (`seed-isolation-pairs.ts`) so isolation probes have a real second tenant.
+5. **Parallel analysis:** three read-only tracks — frontend/backend contract reconciliation, fake/mock runtime data, and environment + infrastructure — run concurrently while the runtime was brought up.
+6. **Remediation:** 23 findings (INT-001…023) — two P0-severity, twelve P1. Every locally fixable one closed and re-verified. Details in FINDINGS_CHECKLIST.md.
+7. **Acceptance harness:** `audit/integration_acceptance_qa.py` written for this loop — 210 adversarial checks across Super Admin isolation, A/B tenant isolation for every role pair, pricing, mass assignment, persistence, payments, documents, sessions and error hygiene.
+8. **Red team re-run:** eleven attack classes re-run after the fixes. One new defect found (INT-001, same-second session revocation), fixed, regression-tested.
+9. **Browser QA:** public site, operator, hotel and Super Admin surfaces walked; console and network clean; responsive checked at six widths.
+10. **Reproducibility:** both services stopped and cold-booted from the canonical worktree, then the full smoke re-run — 65/65 and 210/210.
+11. **Documentation:** integration execution matrix, release evidence, gates, scorecard, blockers, findings, red team and verification all reconciled. Historical records are marked superseded, not deleted.
+
+Commits on `integration/web-final` (local only): `001553a` (merge), `a99f948` (remediation), plus this documentation commit. Nothing pushed, nothing deployed.

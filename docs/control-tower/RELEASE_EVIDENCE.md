@@ -1,5 +1,10 @@
 # Release Evidence — Claude core track
 
+> **Superseded by INTEGRATION_RELEASE_EVIDENCE.md (2026-09-18)** for the merged
+> system. The per-module contract detail below remains accurate and is what the
+> web track was reconciled against.
+
+
 Branch `claude/core-finalization` (worktree `/Users/macbook/Projects/umrah-connects-core-finalization`), based on `65ce3dc`. Not pushed, not deployed.
 
 ## Commands (run from `platform/api`)

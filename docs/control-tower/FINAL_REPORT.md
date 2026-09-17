@@ -1,5 +1,12 @@
 # CLAUDE CODE — UMRAH CONNECT CORE FINALIZATION REPORT
 
+> **Superseded by INTEGRATION_FINAL_REPORT.md (2026-09-18).** This report covers
+> the backend track alone, before the Codex frontend was merged. Its findings
+> stand except where the integration loop re-verified them — see the
+> "Re-verified from the core matrix" section of INTEGRATION_EXECUTION_MATRIX.md,
+> which records that session revocation (S18) and secret hygiene (S23) did not
+> hold as originally scored.
+
 ## 1. Workspace
 - **Canonical root:** `/Users/macbook/Projects/umrah-connects`. This was verified with `pwd -P`, the git top level, the origin remote and `verify-workspace.sh`.
 - **Branch/worktree:** `claude/core-finalization`, checked out in the worktree `/Users/macbook/Projects/umrah-connects-core-finalization`.

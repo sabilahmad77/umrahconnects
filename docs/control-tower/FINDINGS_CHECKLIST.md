@@ -196,3 +196,46 @@ Evidence keys: **U** unit test · **E** e2e security test (`platform/api/test/*.
 | XT-009 | VERIFIED CLOSED |
 
 **Remaining P0/P1 code defects: none.** Remaining P0/P1 items are external: AUD-001 (production host), and the provider verifications inside AUD-010/AUD-011/AUD-022.
+
+---
+
+## Web integration closure loop (2026-09-18)
+
+Findings raised on the merged branch `integration/web-final`. Every one is
+VERIFIED CLOSED unless marked otherwise. "Runtime" means reproduced over real
+HTTP through the `/proxy-api` rewrite before and after the fix.
+
+| ID | Sev | Finding | Status | Fix / evidence |
+|---|---|---|---|---|
+| INT-001 | **P1** | Sign-out-everywhere (and password change) did not revoke an access token minted in the same wall-clock second. `iat` has one-second resolution and the revocation instant rounded down, so the token stayed valid for its full 15-minute life. Defeats the control an account-recovery flow depends on. | CLOSED | `revocationInstant()` rounds up; `generateTokens` mints `iat` at or after the cut-off. Runtime: 200 → 401 at a 0.0 s gap. Regression test with no sleeps (the existing test's 1.1 s delays are what hid it). |
+| INT-002 | **P0** | Two credential-shaped tokens (a GitHub PAT and a Render API key) are in `.claude/settings.local.json`, which was tracked and is present on `origin/main` and `origin/develop`. | OPEN — external | File untracked and added to `.gitignore`. Only revocation at the providers closes the exposure. BLK-09. |
+| INT-003 | **P0** | Listing creation sent SAR as cents and the server converted again: every new listing was priced at 100×, and traveler booking totals derive from that figure. | CLOSED | `marketplace-view.tsx` sends major units, matching the edit form and the DTO. |
+| INT-004 | **P0** | Visa and KYC documents could not be opened at all. Files are private objects stored as `private:<key>`; the UI linked that value straight into `href`. | CLOSED | `lib/private-documents.ts` mints a short-lived signed URL. Runtime: signed fetch 200, tampered signature 401, cross-tenant 404. |
+| INT-005 | **P1** | Any account whose email exists in more than one workspace could never sign in: the page read `error.tenants`, but the API nests the list under `error.details.tenants`, so the workspace picker never appeared. | CLOSED | Reproduced with a real two-workspace account, then fixed. |
+| INT-006 | **P1** | Listing creation defaulted to the first vendor in the public directory — usually another organization's — which the server 404s. | CLOSED | Authoring uses `GET /marketplace/vendors/mine`, fetched only when the create dialog opens. |
+| INT-007 | **P1** | The bookings search box returned 400 (`property search should not exist`) on every keystroke, and the status filters offered `PENDING`, which is not a `BookingStatus` member. | CLOSED | `search` added to the query contract and the service; filters replaced with the real enum. Runtime: 400 → 200. |
+| INT-008 | **P1** | Listing-booking and invoice screens offered status transitions and payment states the server refuses, and gateway refunds were routed to the finance endpoint that rejects them. | CLOSED | Both transition maps mirrored from the services and asserted in tests; payment state read-only where the payments module owns it; refunds routed by gateway. |
+| INT-009 | **P1** | Visa decisions were pushed through a generic update, which silently dropped the visa number and the applicant notification. | CLOSED | Explicit submit / approve / reject actions on the dedicated endpoints. |
+| INT-010 | **P1** | Pilgrim status, pilgrim document type and regulatory-system pickers offered values that are not enum members, so records already holding one could not be saved at all. An empty email string also failed validation on every pilgrim without one. | CLOSED | All three lists replaced with the real enums; empty email sent as `undefined`. |
+| INT-011 | **P1** | Every listing card showed a curated stock photograph and a manufactured "<Category> provider" label, because the component read field names the API does not return. | CLOSED | `imageUrls` and `vendor.name`; falls back to the branded panel and to nothing. Confirmed in the browser. |
+| INT-012 | **P1** | The production web build fell back to a dead `onrender.com` origin when `API_PROXY_ORIGIN` was unset, so a misconfigured deploy hangs with no user-visible error. | CLOSED | Missing origin now fails the build; verified. |
+| INT-013 | **P1** | The shared proxy secret and client-IP header were never sent — `rewrites()` cannot add headers and no middleware existed — so the whole user base shared one rate-limit bucket at the platform's egress IP. | CLOSED | `apps/web/middleware.ts`. Independent buckets verified; a forged header is discarded. |
+| INT-014 | **P1** | The refresh token was kept in `localStorage`, where any XSS could lift it, while the API already issued an httpOnly cookie. | CLOSED | Cookie-only refresh and logout; `AUTH_REFRESH_TOKEN_IN_BODY=false`; verified over HTTP and in the browser. |
+| INT-015 | P2 | The notification bell never unwrapped the response envelope, so it always read "No notifications yet" with zero unread. | CLOSED | `use-platform.ts` returns `data.data`. |
+| INT-016 | P2 | Social bookmarks ignored server state: a saved post rendered empty and the first click un-saved it. | CLOSED | Feed returns the viewer's own save; the client seeds from it. |
+| INT-017 | P2 | Admin tenant and user tiles counted only the current page while sitting beside a platform-wide total. | CLOSED | `/admin/stats` returns `tenants.byStatus` and `usersByStatus`. |
+| INT-018 | P2 | Vehicle type options were aliases the service rewrote, so a stored `PRIVATE_CAR` or `BUS_SMALL` matched no option and rendered blank. | CLOSED | Canonical `TransportType` members. |
+| INT-019 | P2 | Validation failures rendered as raw JSON arrays in front of users. | CLOSED | `lib/api-error.ts` across 49 call sites. |
+| INT-020 | P2 | Hotel room count and route booked-seats were editable, accepted, ignored, and silently reverted. | CLOSED | Inputs removed; the values are server-owned. |
+| INT-021 | P3 | Signup and reset advertised "at least 8 characters" while the server also requires a letter and a digit. | CLOSED | Shared `lib/password-policy.ts`, asserted against the register DTO. |
+| INT-022 | P3 | A "Demo mode" placeholder appeared in the identity slot, and an unclassified workspace was labelled OPERATOR. | CLOSED | Both render nothing rather than something untrue. |
+| INT-023 | P3 | The public marketplace preview read `vendor.displayName`, which does not exist, so the provider line never rendered. | CLOSED | Reads `vendor.name`. |
+
+### Not defects (investigated and dismissed)
+
+| Observation | Why it is correct |
+|---|---|
+| Deleting a hotel leaves it readable | Removal is a soft delete to `INACTIVE`. The record is retained for history, stays visible to its owner and is refused to everyone else — all three now asserted. |
+| `VISA_OFFICER` can approve through a plain update | That role genuinely holds `visa:application:manage`. The probe was re-pointed at `OPERATOR_STAFF`, which holds submit only and is correctly refused. |
+| An unsigned Stripe webhook returns 404 | With no Stripe provider configured the endpoint does not admit it exists. That is a legitimate refusal. |
+| Login responses "differ" | Only `requestId` and `timestamp` differ, which are per-request by design. Status, code and message are identical for an unknown email and a wrong password. |

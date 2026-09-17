@@ -1,5 +1,16 @@
 # Cross-track requests — Claude core track → Codex web track
 
+> **Superseded for XT-R01…R14 by the web integration closure loop (2026-09-18).**
+> The two tracks are now merged on `integration/web-final` and each request below
+> has been actioned or explicitly left open. Current status:
+>
+> | Done this loop | Not done |
+> |---|---|
+> | XT-R01 refresh cookie · XT-R02 role routing · XT-R03 private documents · XT-R04 demo personas · XT-R05 proxy headers · XT-R10 request contracts · XT-R11 media hosts · XT-R12 platform label · XT-R14 password policy | XT-R02 capability-driven guards · XT-R06 Google UI · XT-R07 verify-email UI · XT-R08 onboarding + KYC UI · XT-R09 Stripe Elements · XT-R13 settings actions |
+>
+> See INTEGRATION_EXECUTION_MATRIX.md (W07–W21) for the evidence behind each.
+> The table below is kept as the original contract description.
+
 The backend lives on branch `claude/core-finalization`. Nothing in `apps/web` was changed by the core track. Each item below is a frontend action the new backend contract needs or enables.
 
 ## Status of Codex's backend dependencies (`docs/ui-ux/BACKEND_DEPENDENCIES.md`)

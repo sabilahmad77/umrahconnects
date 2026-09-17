@@ -1,5 +1,9 @@
 # Execution Matrix — Claude core track
 
+> **Superseded by INTEGRATION_EXECUTION_MATRIX.md (2026-09-18)**, which scores the
+> merged system over a wider denominator. This matrix remains the record for the
+> backend track's own 90 items.
+
 Every scored requirement of this loop, with its status and the evidence behind it. Denominator = **all 90 items** (BLOCKED and DEFERRED count as not passed; nothing is excluded). Evidence keys: see FINDINGS_CHECKLIST.md.
 
 | Status | Count |
