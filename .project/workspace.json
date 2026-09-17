@@ -1,0 +1,46 @@
+{
+  "project": "Umrah Connect",
+  "packageName": "umrah-connects",
+  "canonicalLocalWorkspace": true,
+  "canonicalRoot": "/Users/macbook/Projects/umrah-connects",
+  "gitRemote": "https://github.com/sabilahmad77/umrahconnects.git",
+  "gitRemoteVisibility": "public",
+  "defaultBranch": "main",
+  "monorepo": { "packageManager": "pnpm@9.12.0", "taskRunner": "turbo", "node": ">=20 (verified with 22.23.2)" },
+  "frontend": {
+    "path": "apps/web",
+    "package": "@umrah-connects/web",
+    "framework": "Next.js 14 (App Router)",
+    "localUrl": "http://localhost:3000",
+    "apiProxy": "/proxy-api -> API_PROXY_ORIGIN (local: http://localhost:4100)"
+  },
+  "backend": {
+    "path": "platform/api",
+    "package": "@umrah-connects/api",
+    "framework": "NestJS 10",
+    "localUrl": "http://localhost:4100/api/v1",
+    "healthUrl": "http://localhost:4100/api/v1/health"
+  },
+  "database": {
+    "engine": "PostgreSQL 15 (Homebrew postgresql@15, native, not Docker)",
+    "host": "127.0.0.1",
+    "port": 5433,
+    "name": "umrah_connects",
+    "orm": "Prisma 5.22 (multiSchema)",
+    "schemaWorkflow": "prisma db push (no migrations directory)",
+    "schemaFile": "platform/api/prisma/schema.prisma"
+  },
+  "mobile": { "path": "apps/mobile", "package": "@umrah-connects/mobile", "framework": "Expo", "status": "not at parity" },
+  "plugins": "plugins/*",
+  "envFiles": {
+    "required": ["platform/api/.env", "apps/web/.env.local"],
+    "localOverrides": ["platform/api/.env.local", "apps/web/.env.development.local"],
+    "templates": ["platform/api/.env.example", "apps/web/.env.local.example"]
+  },
+  "production": {
+    "web": "Vercel (auto-deploys from main)",
+    "api": "Render (auto-deploys from main)"
+  },
+  "controlTower": "docs/control-tower",
+  "verifyCommand": "scripts/verify-workspace.sh"
+}
