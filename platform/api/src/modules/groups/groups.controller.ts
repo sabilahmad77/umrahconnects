@@ -26,6 +26,13 @@ export class GroupsController {
     return { success: true, data: await this.service.findAll(tenantId, query) };
   }
 
+  /** Groups the signed-in user is an active member of (travelers included). */
+  @Get('mine')
+  @AnyAuthenticated()
+  async findMine(@CurrentUser() user: any) {
+    return { success: true, data: await this.service.findMine(user.sub) };
+  }
+
   @Get('public')
   @Public()
   async findPublic(@Query() query: QueryPublicGroupDto) {

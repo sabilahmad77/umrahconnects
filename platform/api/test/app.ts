@@ -20,6 +20,13 @@ export async function createTestApp(): Promise<TestContext> {
   const app = moduleRef.createNestApplication<NestExpressApplication>({ rawBody: true, bodyParser: false, logger: ['error'] });
   configureApp(app);
   await app.init();
+  // One real listener for the whole file (avoids per-request ephemeral servers and
+  // keep-alive races that surface as "socket hang up").
+  await app.listen(0, '127.0.0.1');
+  const server = app.getHttpServer();
+  server.keepAliveTimeout = 60_000;
+  server.headersTimeout = 65_000;
+  const base = `http://127.0.0.1:${server.address().port}`;
 
   const mails: TestContext['mails'] = [];
   const mail = app.get(MailService);
@@ -31,7 +38,7 @@ export async function createTestApp(): Promise<TestContext> {
   return {
     app,
     prisma: app.get(PrismaService),
-    http: () => request(app.getHttpServer()),
+    http: () => request(base),
     mails,
     close: () => app.close(),
   };

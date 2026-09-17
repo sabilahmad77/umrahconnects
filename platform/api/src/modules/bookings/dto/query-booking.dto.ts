@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsUUID, IsInt, Min, IsDateString } from 'class-validator';
+import { IsOptional, IsEnum, IsUUID, IsInt, Min, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BookingStatus } from './create-booking.dto';
 

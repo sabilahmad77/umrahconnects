@@ -2,7 +2,7 @@ import {
   Injectable, Logger, NotFoundException, BadRequestException, ServiceUnavailableException, ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, PaymentStatus } from '@prisma/client';
+import { Prisma, PaymentStatus, Payment } from '@prisma/client';
 import { randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -266,7 +266,7 @@ export class PaymentsService {
     return this.reconcile(payment, scenario, actor);
   }
 
-  private async reconcile(payment: Prisma.PaymentGetPayload<{}>, scenario?: string, actor?: PayActor) {
+  private async reconcile(payment: Payment, scenario?: string, actor?: PayActor) {
     if (payment.status === PaymentStatus.COMPLETED) throw new BadRequestException('Payment is already captured');
     if (payment.status === PaymentStatus.REFUNDED || payment.status === PaymentStatus.PARTIALLY_REFUNDED) {
       throw new BadRequestException('Payment has been refunded');
@@ -291,7 +291,7 @@ export class PaymentsService {
   }
 
   /** Server-side captures must not push an invoice / booking past its total. */
-  private async assertStillPayable(payment: Prisma.PaymentGetPayload<{}>) {
+  private async assertStillPayable(payment: Payment) {
     const settledSum = async (where: Prisma.PaymentWhereInput) => {
       const agg = await this.prisma.payment.aggregate({ where: { ...where, status: { in: SETTLED } }, _sum: { amountCents: true, refundedCents: true } });
       return BigInt(agg._sum.amountCents ?? 0) - BigInt(agg._sum.refundedCents ?? 0);
@@ -318,7 +318,7 @@ export class PaymentsService {
   }
 
   private async markFailed(
-    payment: Prisma.PaymentGetPayload<{}>, providerName: string, reason: string, raw: Record<string, unknown>, actor?: PayActor,
+    payment: Payment, providerName: string, reason: string, raw: Record<string, unknown>, actor?: PayActor,
   ) {
     const failed = await this.prisma.payment.update({
       where: { id: payment.id },
@@ -597,7 +597,7 @@ export class PaymentsService {
     return this.checkoutView(payment, intent.clientSecret);
   }
 
-  private checkoutView(payment: Prisma.PaymentGetPayload<{}>, clientSecret?: string) {
+  private checkoutView(payment: Payment, clientSecret?: string) {
     return {
       paymentId: payment.id,
       status: payment.status,
@@ -707,7 +707,7 @@ export class PaymentsService {
     return { received: true, duplicate: false, eventId: verified.eventId, result };
   }
 
-  private async applyWebhook(providerName: string, payment: Prisma.PaymentGetPayload<{}>, ev: WebhookVerification): Promise<string> {
+  private async applyWebhook(providerName: string, payment: Payment, ev: WebhookVerification): Promise<string> {
     if (providerName === 'stripe' && ev.livemode !== undefined && ev.livemode === this.stripe.testMode) {
       this.logger.warn(`Ignoring Stripe event ${ev.eventId}: livemode=${ev.livemode} does not match the configured key`);
       return 'ignored: livemode mismatch';

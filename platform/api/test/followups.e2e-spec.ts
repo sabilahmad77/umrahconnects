@@ -64,6 +64,20 @@ describe('core follow-ups: approvals, over-collection, offers, drafts, Stripe we
     expect((await ctx.prisma.payment.findUniqueOrThrow({ where: { id: first.id } })).status).toBe('FAILED');
   });
 
+  it('GET /groups/mine lists only the caller\'s memberships with safe fields', async () => {
+    const group = await ctx.prisma.tripGroup.create({
+      data: { tenantId: w.tenants.opA, name: `Mine ${uniq()}`, visibility: 'PRIVATE', capacity: 10, briefingNotes: 'secret briefing' } as any,
+    });
+    await ctx.prisma.groupMember.create({ data: { groupId: group.id, userId: w.travelerA.id, role: 'MEMBER', status: 'ACTIVE' } });
+    const mine = await ok(w.travelerA, 'get', '/groups/mine');
+    expect(mine.map((g: any) => g.id)).toContain(group.id);
+    expect(JSON.stringify(mine)).not.toContain('secret briefing');
+    expect(mine.find((g: any) => g.id === group.id).membership.role).toBe('MEMBER');
+    const others = await ok(w.travelerB, 'get', '/groups/mine');
+    expect(others.map((g: any) => g.id)).not.toContain(group.id);
+    expect((await call(null, 'get', '/groups/mine')).status).toBe(401);
+  });
+
   describe('marketplace', () => {
     let vendor: any;
 

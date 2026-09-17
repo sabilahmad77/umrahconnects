@@ -1,0 +1,58 @@
+# API quality gate: typecheck, lint, unit + security e2e tests against PostgreSQL,
+# production build and container build. Deployments must only use commits that pass.
+name: api-ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: umrah
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: umrah_connects_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U umrah -d umrah_connects_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://umrah:ci-only-password@localhost:5432/umrah_connects_test
+      DATABASE_URL: postgresql://umrah:ci-only-password@localhost:5432/umrah_connects_test
+      PRISMA_HIDE_UPDATE_MESSAGE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @umrah-connects/api...
+      - run: pnpm --filter @umrah-connects/api exec prisma generate
+      - name: Migrations apply cleanly and the schema matches them
+        working-directory: platform/api
+        run: |
+          npx prisma migrate deploy
+          npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code
+      - run: pnpm --filter @umrah-connects/api typecheck
+      - run: pnpm --filter @umrah-connects/api lint
+      - run: pnpm --filter @umrah-connects/api exec vitest run
+      - run: pnpm --filter @umrah-connects/api exec vitest run --config vitest.e2e.config.ts
+      - run: pnpm --filter @umrah-connects/api build
+      - name: Production container builds
+        run: docker build -t umrah-connect-api:ci .

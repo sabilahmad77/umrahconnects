@@ -78,7 +78,7 @@ export class MarketplaceService {
 
   // ── Listings ──────────────────────────────────────────────────────────────────
 
-  async findAllListings(query: any, tenantId?: string) {
+  async findAllListings(query: any, _tenantId?: string) {
     const { page = 1, limit = 20, type, category, search, vendorId, status, includeInactive } = query;
     const skip = (+page - 1) * +limit;
     // Public catalogue: only live listings. Owners manage drafts through /marketplace/listings/mine.

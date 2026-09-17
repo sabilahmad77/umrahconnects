@@ -47,6 +47,17 @@ export class GroupsService {
   }
 
   // Public/discoverable groups across tenants (PUBLIC visibility)
+  /** Membership-scoped list: only safe group fields plus the caller's own membership role. */
+  async findMine(userId: string) {
+    const memberships = await this.prisma.groupMember.findMany({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { joinedAt: 'desc' },
+      take: 100,
+      select: { role: true, joinedAt: true, group: { select: PUBLIC_GROUP_SELECT } },
+    });
+    return memberships.map((m) => ({ ...m.group, membership: { role: m.role, joinedAt: m.joinedAt } }));
+  }
+
   async findPublic(query: any) {
     const { search, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;

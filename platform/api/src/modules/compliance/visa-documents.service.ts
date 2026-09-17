@@ -217,7 +217,7 @@ export class VisaDocumentsService {
     dto: { name: string; type?: string; url?: string; status?: string; expiresAt?: string; notes?: string },
     actor?: DocActor,
   ) {
-    const app = await this.mustFindApplication(tenantId, applicationId);
+    await this.mustFindApplication(tenantId, applicationId);
     const name = (dto?.name ?? '').trim();
     if (!name) throw new BadRequestException('Document name is required');
 

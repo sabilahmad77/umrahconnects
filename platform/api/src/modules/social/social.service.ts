@@ -38,7 +38,7 @@ export class SocialService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  private async getOrCreateSocialAccount(userId: string, tenantId: string) {
+  private async getOrCreateSocialAccount(userId: string, _tenantId: string) {
     let account = await this.prisma.socialAccount.findFirst({ where: { userId } });
     if (!account) {
       account = await this.prisma.socialAccount.create({
