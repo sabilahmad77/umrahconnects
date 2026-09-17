@@ -24,3 +24,8 @@ export class RefundDto {
   @IsOptional() @Type(() => Number) @IsNumber() @Min(0.01) amount?: number;
   @IsOptional() @IsString() @MaxLength(500) reason?: string;
 }
+
+export class CheckoutDto {
+  @IsUUID() listingBookingId!: string;
+  @IsOptional() @IsString() @MaxLength(120) idempotencyKey?: string;
+}

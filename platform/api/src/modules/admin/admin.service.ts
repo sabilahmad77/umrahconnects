@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { TenantStatus, UserStatus } from '@prisma/client';
+import { ASSIGNABLE_ROLES_BY_TENANT_TYPE } from '../rbac/catalog';
+import { REGISTRY_SOURCES } from './dto/admin.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -234,7 +236,21 @@ export class AdminService {
   async setUserStatus(id: string, status: UserStatus, actor?: AdminActor, reason?: string) {
     const before = await this.mustFindUser(id);
     if (before.status === status) throw new BadRequestException(`User is already ${status}`);
-    const user = await this.prisma.user.update({ where: { id }, data: { status } });
+    if (actor?.sub === id && status !== UserStatus.ACTIVE) {
+      throw new BadRequestException('You cannot lock or deactivate your own account');
+    }
+    const revoke = status === UserStatus.LOCKED || status === UserStatus.INACTIVE;
+    const user = await this.prisma.user.update({
+      where: { id },
+      data: {
+        status,
+        ...(revoke ? { sessionsRevokedAt: AdminService.revocationInstant() } : {}),
+        ...(status === UserStatus.ACTIVE ? { failedLoginCount: 0, lockedUntil: null } : {}),
+      },
+    });
+    if (revoke) {
+      await this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
+    }
     await this.trail(
       actor, 'UPDATE', 'user', id,
       { status: before.status }, { status: user.status },
@@ -250,6 +266,8 @@ export class AdminService {
       where: { userId: id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    // Access tokens already issued stop working on the next request.
+    await this.prisma.user.update({ where: { id }, data: { sessionsRevokedAt: AdminService.revocationInstant() } });
     await this.trail(
       actor, 'LOGOUT', 'user', id, undefined, undefined,
       { email: user.email, sessionsRevoked: res.count }, user.tenantId,
@@ -261,12 +279,7 @@ export class AdminService {
     const user = await this.mustFindUser(userId);
     const role = await this.prisma.role.findUnique({ where: { id: roleId } });
     if (!role) throw new NotFoundException('Role not found');
-    // A tenant-scoped role only grants anything inside its own tenant, so
-    // attaching one to a user elsewhere silently does nothing — reject it
-    // instead of showing a role chip that carries no permissions.
-    if (role.tenantId && role.tenantId !== user.tenantId) {
-      throw new BadRequestException('Role belongs to a different tenant');
-    }
+    await this.assertGrantable(user.tenantId, role);
     const existing = await this.prisma.userRole
       .findUnique({ where: { userId_roleId: { userId, roleId } } })
       .catch(() => null);
@@ -281,8 +294,39 @@ export class AdminService {
     return created;
   }
 
+  /**
+   * Which role may be granted to which account:
+   *  - SUPER_ADMIN only to accounts of the PLATFORM organization;
+   *  - global organization roles only where that organization type allows them;
+   *  - organization custom roles only inside their own organization;
+   *  - platform accounts never receive organization roles.
+   */
+  private async assertGrantable(userTenantId: string, role: { name: string; tenantId: string | null }) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: userTenantId }, select: { type: true } });
+    const type = tenant?.type ?? '';
+    if (role.tenantId) {
+      if (role.tenantId !== userTenantId) throw new BadRequestException('Role belongs to a different tenant');
+      return;
+    }
+    if (role.name === 'SUPER_ADMIN') {
+      if (type !== 'PLATFORM') throw new ForbiddenException('Super Admin can only be granted to platform accounts');
+      return;
+    }
+    const allowed = ASSIGNABLE_ROLES_BY_TENANT_TYPE[type] ?? [];
+    const communityRole = role.name === 'PILGRIM';
+    if (!(allowed as string[]).includes(role.name) && !(communityRole && type !== 'PLATFORM')) {
+      throw new ForbiddenException(`Role ${role.name} cannot be granted to a ${type} organization`);
+    }
+  }
+
+  /** Revocation timestamps are truncated to whole seconds to match JWT `iat`. */
+  static revocationInstant() {
+    return new Date(Math.floor(Date.now() / 1000) * 1000);
+  }
+
   async removeUserRole(userId: string, roleId: string, actor?: AdminActor) {
     const user = await this.mustFindUser(userId);
+    if (actor?.sub === userId) throw new BadRequestException('You cannot remove your own roles');
     const existing = await this.prisma.userRole.findUnique({
       where: { userId_roleId: { userId, roleId } },
       include: { role: { select: { name: true } } },
@@ -345,36 +389,48 @@ export class AdminService {
     return kyc;
   }
 
-  async approveKyc(id: string, actorId?: string, notes?: string) {
+  async approveKyc(id: string, actor?: AdminActor, notes?: string) {
     const kyc = await this.findKyc(id);
-    const updated = await this.prisma.tenantKyc.update({
-      where: { id },
-      data: { verifiedAt: new Date(), verifiedBy: actorId, rejectionReason: null },
+    if (kyc.verifiedAt) throw new BadRequestException('KYC record is already approved');
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.tenantKyc.update({
+        where: { id },
+        data: { verifiedAt: new Date(), verifiedBy: actor?.sub, rejectionReason: null },
+      });
+      if (!kyc.tenant.deletedAt && kyc.tenant.status !== TenantStatus.SUSPENDED) {
+        await tx.tenant.update({ where: { id: kyc.tenantId }, data: { status: TenantStatus.ACTIVE } });
+      }
+      return row;
     });
-    // Bump tenant status to ACTIVE on approve
-    await this.prisma.tenant.update({ where: { id: kyc.tenantId }, data: { status: 'ACTIVE' as any } });
+    await this.trail(actor, 'TENANT_CONFIG_CHANGE', 'tenant_kyc', id, { status: kyc.tenant.status }, { status: 'ACTIVE' }, { decision: 'APPROVED', notes }, kyc.tenantId);
     return updated;
   }
 
-  async rejectKyc(id: string, reason: string) {
+  async rejectKyc(id: string, reason: string, actor?: AdminActor) {
+    if (!reason?.trim()) throw new BadRequestException('A rejection reason is required');
     const kyc = await this.findKyc(id);
-    return this.prisma.tenantKyc.update({
-      where: { id },
-      data: { rejectionReason: reason, verifiedAt: null, verifiedBy: null },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.tenantKyc.update({
+        where: { id },
+        data: { rejectionReason: reason.trim(), verifiedAt: null, verifiedBy: null },
+      });
+      if (kyc.tenant.status !== TenantStatus.ACTIVE && kyc.tenant.status !== TenantStatus.SUSPENDED) {
+        await tx.tenant.update({ where: { id: kyc.tenantId }, data: { status: TenantStatus.KYC_REJECTED } });
+      }
+      return row;
     });
+    await this.trail(actor, 'TENANT_CONFIG_CHANGE', 'tenant_kyc', id, undefined, undefined, { decision: 'REJECTED', reason }, kyc.tenantId);
+    return updated;
   }
 
-  async createKyc(tenantId: string, dto: any) {
-    if (!tenantId) throw new BadRequestException('tenantId is required to submit KYC');
+  async createKyc(tenantId: string, dto: { registrySource?: string; documents?: any[]; registryData?: any }, actor?: AdminActor) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
-    if (!tenant) throw new BadRequestException(`Tenant ${tenantId} not found`);
-
-    const VALID = ['NUSUK_MASAR', 'SISKOPATUH', 'NAHCON', 'DIYANET', 'TABUNG_HAJI', 'MOTAC', 'IBA_DGRP', 'MANUAL'];
+    if (!tenant) throw new NotFoundException('Tenant not found');
     const raw = String(dto.registrySource ?? 'MANUAL').toUpperCase().replace(/[\s-]+/g, '_');
-    if (!VALID.includes(raw)) {
-      throw new BadRequestException(`Invalid registrySource "${dto.registrySource}". Allowed: ${VALID.join(', ')}`);
+    if (!(REGISTRY_SOURCES as readonly string[]).includes(raw)) {
+      throw new BadRequestException(`Invalid registrySource "${dto.registrySource}". Allowed: ${REGISTRY_SOURCES.join(', ')}`);
     }
-    return this.prisma.tenantKyc.create({
+    const row = await this.prisma.tenantKyc.create({
       data: {
         tenantId,
         registrySource: raw as any,
@@ -382,6 +438,8 @@ export class AdminService {
         registryData: dto.registryData ?? undefined,
       },
     });
+    await this.trail(actor, 'CREATE', 'tenant_kyc', row.id, undefined, undefined, { registrySource: raw }, tenantId);
+    return row;
   }
 
   // ── Roles & permissions ─────────────────────────────────────────────
@@ -432,12 +490,20 @@ export class AdminService {
     };
   }
 
-  async approveListing(id: string) {
-    return this.prisma.listing.update({ where: { id }, data: { status: 'PUBLISHED', isActive: true } });
+  async approveListing(id: string, actor?: AdminActor) {
+    const before = await this.prisma.listing.findUnique({ where: { id }, include: { vendor: { select: { tenantId: true } } } });
+    if (!before) throw new NotFoundException('Listing not found');
+    const listing = await this.prisma.listing.update({ where: { id }, data: { status: 'PUBLISHED', isActive: true } });
+    await this.trail(actor, 'UPDATE', 'listing', id, { status: before.status }, { status: listing.status }, undefined, before.vendor?.tenantId ?? undefined);
+    return { ...listing, priceCents: Number(listing.priceCents) };
   }
 
-  async removeListing(id: string) {
-    return this.prisma.listing.update({ where: { id }, data: { status: 'ARCHIVED', isActive: false } });
+  async removeListing(id: string, actor?: AdminActor) {
+    const before = await this.prisma.listing.findUnique({ where: { id }, include: { vendor: { select: { tenantId: true } } } });
+    if (!before) throw new NotFoundException('Listing not found');
+    const listing = await this.prisma.listing.update({ where: { id }, data: { status: 'ARCHIVED', isActive: false } });
+    await this.trail(actor, 'SOFT_DELETE', 'listing', id, { status: before.status }, { status: listing.status }, undefined, before.vendor?.tenantId ?? undefined);
+    return { ...listing, priceCents: Number(listing.priceCents) };
   }
 
   // ── Cross-tenant bookings ───────────────────────────────────────────
@@ -497,28 +563,30 @@ export class AdminService {
     return { items, total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
   }
 
-  // ── Platform settings (in-memory feature flags + categories) ────────
+  // ── Platform settings (read-only overview) ──────────────────────────
+  /**
+   * There is no persisted settings store. This returns real aggregates plus the
+   * configuration the running API actually enforces — nothing here is editable,
+   * and nothing is presented as a toggle.
+   */
   async getSettings() {
-    // Aggregate the existing data into a settings overview
     const [marketplaceCategories, regulatorySystems] = await Promise.all([
       this.prisma.listing.groupBy({ by: ['type'], _count: true }),
       this.prisma.visaApplication.groupBy({ by: ['regulatorySystem'], _count: true }),
     ]);
     return {
-      featureFlags: {
-        marketplace: true,
-        socialHub: true,
-        groups: true,
-        marketplaceRequests: true,
-        budgetPlans: true,
-        kyc: true,
+      editable: false,
+      source: 'runtime-configuration',
+      enforced: {
+        kycRequiredBeforeActivation: true,
+        organizationTypesRequiringKyc: ['OPERATOR', 'MU_ASSASA', 'SUB_AGENT', 'VENDOR_HOTEL', 'VENDOR_TRANSPORT', 'VENDOR_VISA'],
+        paymentProvider: process.env.PAYMENT_PROVIDER ?? (process.env.NODE_ENV === 'production' ? 'none' : 'sandbox'),
+        storageDriver: process.env.STORAGE_DRIVER ?? 'local',
+        mailDriver: process.env.MAIL_DRIVER ?? (process.env.NODE_ENV === 'production' ? 'none' : 'log'),
+        googleSignIn: !!process.env.GOOGLE_CLIENT_ID,
       },
-      marketplaceCategories: marketplaceCategories.map((c) => ({ category: c.type, count: (c._count as any) })),
-      regulatorySystems: regulatorySystems.map((c) => ({ system: c.regulatorySystem, count: (c._count as any) })),
-      policies: {
-        cancellationDefaultHours: 48,
-        kycRequiredFor: ['OPERATOR', 'VENDOR_HOTEL', 'VENDOR_TRANSPORT', 'VENDOR_VISA'],
-      },
+      marketplaceCategories: marketplaceCategories.map((c) => ({ category: c.type, count: c._count as any })),
+      regulatorySystems: regulatorySystems.map((c) => ({ system: c.regulatorySystem, count: c._count as any })),
     };
   }
 }

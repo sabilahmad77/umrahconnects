@@ -1,8 +1,13 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { HotelsService } from './hotels.service';
 import { TenantId } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import {
+  CreateAllotmentDto, CreateHotelBookingDto, CreateHotelDto, CreateRoomAssignmentDto, CreateRoomDto,
+  CreateRoomTypeDto, HOTEL_BOOKING_STATUSES, QueryHotelDto, UpdateHotelBookingDto, UpdateHotelDto,
+  UpdateRoomDto, UpdateRoomTypeDto,
+} from './dto/hotel.dto';
 
 @ApiTags('hotels')
 @Controller({ path: 'hotels', version: '1' })
@@ -12,13 +17,13 @@ export class HotelsController {
 
   @Get()
   @RequirePermissions('hotel:allotment:read')
-  async findAll(@TenantId() tenantId: string, @Query() query: any) {
+  async findAll(@TenantId() tenantId: string, @Query() query: QueryHotelDto) {
     return { success: true, data: await this.service.findAll(tenantId, query) };
   }
 
   @Post()
   @RequirePermissions('hotel:allotment:manage')
-  async create(@TenantId() tenantId: string, @Body() dto: any) {
+  async create(@TenantId() tenantId: string, @Body() dto: CreateHotelDto) {
     return { success: true, data: await this.service.create(tenantId, dto) };
   }
 
@@ -37,13 +42,20 @@ export class HotelsController {
   // ── Hotel bookings (collection routes — must precede :id) ──────────────
   @Get('bookings')
   @RequirePermissions('hotel:allotment:read')
-  async getHotelBookings(@TenantId() tenantId: string, @Query('hotelId') hotelId?: string, @Query('status') status?: string) {
+  async getHotelBookings(
+    @TenantId() tenantId: string,
+    @Query('hotelId', new ParseUUIDPipe({ optional: true })) hotelId?: string,
+    @Query('status') status?: string,
+  ) {
+    if (status && !(HOTEL_BOOKING_STATUSES as readonly string[]).includes(status)) {
+      throw new BadRequestException(`status must be one of ${HOTEL_BOOKING_STATUSES.join(', ')}`);
+    }
     return { success: true, data: await this.service.getHotelBookings(tenantId, { hotelId, status }) };
   }
 
   @Post('bookings')
   @RequirePermissions('hotel:allotment:manage')
-  async createHotelBooking(@TenantId() tenantId: string, @Body() dto: any) {
+  async createHotelBooking(@TenantId() tenantId: string, @Body() dto: CreateHotelBookingDto) {
     return { success: true, data: await this.service.createHotelBooking(tenantId, dto) };
   }
 
@@ -55,14 +67,14 @@ export class HotelsController {
 
   @Put('bookings/:bookingId')
   @RequirePermissions('hotel:allotment:manage')
-  async updateHotelBooking(@TenantId() tenantId: string, @Param('bookingId', ParseUUIDPipe) bookingId: string, @Body() dto: any) {
+  async updateHotelBooking(@TenantId() tenantId: string, @Param('bookingId', ParseUUIDPipe) bookingId: string, @Body() dto: UpdateHotelBookingDto) {
     return { success: true, data: await this.service.updateHotelBooking(tenantId, bookingId, dto) };
   }
 
   // ── Rooms / room-types (collection routes — must precede :id) ──────────
   @Put('rooms/:roomId')
   @RequirePermissions('hotel:allotment:manage')
-  async updateRoom(@TenantId() tenantId: string, @Param('roomId', ParseUUIDPipe) roomId: string, @Body() dto: any) {
+  async updateRoom(@TenantId() tenantId: string, @Param('roomId', ParseUUIDPipe) roomId: string, @Body() dto: UpdateRoomDto) {
     return { success: true, data: await this.service.updateRoom(tenantId, roomId, dto) };
   }
 
@@ -74,7 +86,7 @@ export class HotelsController {
 
   @Put('room-types/:roomTypeId')
   @RequirePermissions('hotel:allotment:manage')
-  async updateRoomType(@TenantId() tenantId: string, @Param('roomTypeId', ParseUUIDPipe) roomTypeId: string, @Body() dto: any) {
+  async updateRoomType(@TenantId() tenantId: string, @Param('roomTypeId', ParseUUIDPipe) roomTypeId: string, @Body() dto: UpdateRoomTypeDto) {
     return { success: true, data: await this.service.updateRoomType(tenantId, roomTypeId, dto) };
   }
 
@@ -87,7 +99,7 @@ export class HotelsController {
 
   @Put(':id')
   @RequirePermissions('hotel:allotment:manage')
-  async update(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async update(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateHotelDto) {
     return { success: true, data: await this.service.update(tenantId, id, dto) };
   }
 
@@ -106,7 +118,7 @@ export class HotelsController {
 
   @Post(':id/room-types')
   @RequirePermissions('hotel:allotment:manage')
-  async addRoomType(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async addRoomType(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateRoomTypeDto) {
     return { success: true, data: await this.service.addRoomType(tenantId, id, dto) };
   }
 
@@ -119,7 +131,7 @@ export class HotelsController {
 
   @Post(':id/rooms')
   @RequirePermissions('hotel:allotment:manage')
-  async createRoom(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async createRoom(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateRoomDto) {
     return { success: true, data: await this.service.createRoom(tenantId, id, dto) };
   }
 
@@ -132,7 +144,7 @@ export class HotelsController {
 
   @Post(':id/allotments')
   @RequirePermissions('hotel:allotment:manage')
-  async createAllotment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async createAllotment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateAllotmentDto) {
     return { success: true, data: await this.service.createAllotment(tenantId, id, dto) };
   }
 
@@ -144,7 +156,7 @@ export class HotelsController {
 
   @Post(':id/assignments')
   @RequirePermissions('hotel:assignment:manage')
-  async createAssignment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async createAssignment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateRoomAssignmentDto) {
     return { success: true, data: await this.service.createAssignment(tenantId, id, dto) };
   }
 }

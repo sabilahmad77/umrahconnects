@@ -3,9 +3,13 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
-import { SetTenantStatusDto, SetUserStatusDto, AssignRoleDto } from './dto/admin.dto';
+import { SetTenantStatusDto, SetUserStatusDto, AssignRoleDto, AdminListQueryDto, CreateKycDto, KycDecisionDto, KycRejectDto } from './dto/admin.dto';
 
 @ApiTags('admin')
+/**
+ * Platform administration. Every route requires a `platform:*` capability, which
+ * only SUPER_ADMIN accounts of the PLATFORM organization hold (see rbac/catalog.ts).
+ */
 @Controller({ path: 'admin', version: '1' })
 @ApiBearerAuth()
 export class AdminController {
@@ -13,34 +17,34 @@ export class AdminController {
 
   // ── Overview / dashboard ───────────────────────────────────────────
   @Get('stats')
-  @RequirePermissions('core:tenant:read')
+  @RequirePermissions('platform:tenant:read')
   async getStats() {
     return { success: true, data: await this.service.getStats() };
   }
 
   // ── Tenants ────────────────────────────────────────────────────────
   @Get('tenants')
-  @RequirePermissions('core:tenant:read')
-  async listTenants(@Query() query: any) {
+  @RequirePermissions('platform:tenant:read')
+  async listTenants(@Query() query: AdminListQueryDto) {
     return { success: true, data: await this.service.listTenants(query) };
   }
 
   @Get('tenants/export')
-  @RequirePermissions('core:tenant:read')
+  @RequirePermissions('platform:tenant:read')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="umrah-connect-tenants.csv"')
-  async exportTenants(@CurrentUser() user: any, @Query() query: any) {
+  async exportTenants(@CurrentUser() user: any, @Query() query: AdminListQueryDto) {
     return this.service.exportTenants(query, user);
   }
 
   @Get('tenants/:id')
-  @RequirePermissions('core:tenant:read')
+  @RequirePermissions('platform:tenant:read')
   async findTenant(@Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.findTenant(id) };
   }
 
   @Put('tenants/:id/status')
-  @RequirePermissions('core:tenant:update')
+  @RequirePermissions('platform:tenant:manage')
   async setTenantStatus(
     @CurrentUser() user: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -50,28 +54,28 @@ export class AdminController {
   }
 
   @Delete('tenants/:id')
-  @RequirePermissions('core:tenant:update')
+  @RequirePermissions('platform:tenant:manage')
   async archiveTenant(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.archiveTenant(id, user) };
   }
 
   // ── Users ──────────────────────────────────────────────────────────
   @Get('users')
-  @RequirePermissions('core:user:read')
-  async listUsers(@Query() query: any) {
+  @RequirePermissions('platform:user:read')
+  async listUsers(@Query() query: AdminListQueryDto) {
     return { success: true, data: await this.service.listUsers(query) };
   }
 
   @Get('users/export')
-  @RequirePermissions('core:user:read')
+  @RequirePermissions('platform:user:read')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="umrah-connect-users.csv"')
-  async exportUsers(@CurrentUser() user: any, @Query() query: any) {
+  async exportUsers(@CurrentUser() user: any, @Query() query: AdminListQueryDto) {
     return this.service.exportUsers(query, user);
   }
 
   @Put('users/:id/status')
-  @RequirePermissions('core:user:update')
+  @RequirePermissions('platform:user:manage')
   async setUserStatus(
     @CurrentUser() user: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -81,13 +85,13 @@ export class AdminController {
   }
 
   @Post('users/:id/force-logout')
-  @RequirePermissions('core:user:update')
+  @RequirePermissions('platform:user:manage')
   async forceLogout(@CurrentUser() actor: any, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.forceLogoutUser(id, actor) };
   }
 
   @Post('users/:id/roles')
-  @RequirePermissions('core:role:manage')
+  @RequirePermissions('platform:role:manage')
   async assignRole(
     @CurrentUser() actor: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -97,7 +101,7 @@ export class AdminController {
   }
 
   @Delete('users/:id/roles/:roleId')
-  @RequirePermissions('core:role:manage')
+  @RequirePermissions('platform:role:manage')
   async removeRole(
     @CurrentUser() actor: any,
     @Param('id', ParseUUIDPipe) id: string,
@@ -108,97 +112,97 @@ export class AdminController {
 
   // ── KYC ────────────────────────────────────────────────────────────
   @Get('kyc')
-  @RequirePermissions('core:tenant:read')
-  async listKyc(@Query() query: any) {
+  @RequirePermissions('platform:kyc:review')
+  async listKyc(@Query() query: AdminListQueryDto) {
     return { success: true, data: await this.service.listKyc(query) };
   }
 
   @Get('kyc/:id')
-  @RequirePermissions('core:tenant:read')
+  @RequirePermissions('platform:kyc:review')
   async findKyc(@Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.findKyc(id) };
   }
 
   @Post('kyc')
-  @RequirePermissions('core:tenant:update')
-  async createKyc(@Body() body: { tenantId: string; registrySource?: string; documents?: any[]; registryData?: any }) {
-    return { success: true, data: await this.service.createKyc(body.tenantId, body) };
+  @RequirePermissions('platform:kyc:review')
+  async createKyc(@CurrentUser() user: any, @Body() body: CreateKycDto) {
+    return { success: true, data: await this.service.createKyc(body.tenantId, body, user) };
   }
 
   @Put('kyc/:id/approve')
-  @RequirePermissions('core:tenant:update')
-  async approveKyc(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any, @Body() body: { notes?: string }) {
-    return { success: true, data: await this.service.approveKyc(id, user?.sub, body?.notes) };
+  @RequirePermissions('platform:kyc:review')
+  async approveKyc(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any, @Body() body: KycDecisionDto) {
+    return { success: true, data: await this.service.approveKyc(id, user, body?.notes) };
   }
 
   @Put('kyc/:id/reject')
-  @RequirePermissions('core:tenant:update')
-  async rejectKyc(@Param('id', ParseUUIDPipe) id: string, @Body() body: { reason: string }) {
-    return { success: true, data: await this.service.rejectKyc(id, body.reason ?? '') };
+  @RequirePermissions('platform:kyc:review')
+  async rejectKyc(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any, @Body() body: KycRejectDto) {
+    return { success: true, data: await this.service.rejectKyc(id, body.reason, user) };
   }
 
   // ── Roles & permissions ────────────────────────────────────────────
   @Get('roles')
-  @RequirePermissions('core:role:manage')
+  @RequirePermissions('platform:role:manage')
   async listRoles() {
     return { success: true, data: await this.service.listRoles() };
   }
 
   @Get('roles/:id')
-  @RequirePermissions('core:role:manage')
+  @RequirePermissions('platform:role:manage')
   async findRole(@Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.findRole(id) };
   }
 
   @Get('permissions')
-  @RequirePermissions('core:role:manage')
+  @RequirePermissions('platform:role:manage')
   async listPermissions() {
     return { success: true, data: await this.service.listPermissions() };
   }
 
   // ── Marketplace control ────────────────────────────────────────────
   @Get('listings')
-  @RequirePermissions('marketplace:listing:read')
-  async listAllListings(@Query() query: any) {
+  @RequirePermissions('platform:marketplace:moderate')
+  async listAllListings(@Query() query: AdminListQueryDto) {
     return { success: true, data: await this.service.listAllListings(query) };
   }
 
   @Put('listings/:id/approve')
-  @RequirePermissions('marketplace:listing:manage')
-  async approveListing(@Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.approveListing(id) };
+  @RequirePermissions('platform:marketplace:moderate')
+  async approveListing(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.approveListing(id, user) };
   }
 
   @Delete('listings/:id')
-  @RequirePermissions('marketplace:listing:manage')
-  async removeListing(@Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.removeListing(id) };
+  @RequirePermissions('platform:marketplace:moderate')
+  async removeListing(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.removeListing(id, user) };
   }
 
   // ── Cross-tenant bookings ──────────────────────────────────────────
   @Get('bookings')
-  @RequirePermissions('booking:booking:read')
-  async listAllBookings(@Query() query: any) {
+  @RequirePermissions('platform:booking:read')
+  async listAllBookings(@Query() query: AdminListQueryDto) {
     return { success: true, data: await this.service.listAllBookings(query) };
   }
 
   // ── Finance summary ────────────────────────────────────────────────
   @Get('finance')
-  @RequirePermissions('finance:report:read')
+  @RequirePermissions('platform:finance:read')
   async getFinanceSummary() {
     return { success: true, data: await this.service.getFinanceSummary() };
   }
 
   // ── Audit logs ─────────────────────────────────────────────────────
   @Get('audit-logs')
-  @RequirePermissions('core:tenant:read')
-  async listAuditLogs(@Query() query: any) {
+  @RequirePermissions('platform:audit:read')
+  async listAuditLogs(@Query() query: AdminListQueryDto) {
     return { success: true, data: await this.service.listAuditLogs(query) };
   }
 
   // ── Settings ───────────────────────────────────────────────────────
   @Get('settings')
-  @RequirePermissions('core:tenant:read')
+  @RequirePermissions('platform:settings:read')
   async getSettings() {
     return { success: true, data: await this.service.getSettings() };
   }

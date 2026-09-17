@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { assertAllOwned, findOwned, requireId } from '../../common/tenant-scope';
 
 const BOOKING_STATUSES = [
   'DRAFT', 'CONFIRMED', 'PARTIALLY_PAID', 'FULLY_PAID', 'VISA_PROCESSING',
@@ -74,8 +75,12 @@ export class BookingsService {
 
   async create(tenantId: string, createdBy: string | null, dto: any) {
     const bookingRef = `UC-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
-    const pkg = await this.prisma.package.findFirst({ where: { id: dto.packageId, tenantId } });
-    const pricePerPax = pkg ? Number((pkg as any).basePriceCents ?? 0) : 0;
+    // A supplied packageId must belong to the caller's tenant — never persist an
+    // id we could not resolve (previously a failed lookup was ignored).
+    const pkg = dto.packageId
+      ? await findOwned<any>(this.prisma.package, dto.packageId, tenantId, 'Package', { deletedAt: null })
+      : null;
+    const pricePerPax = pkg ? Number(pkg.basePriceCents ?? 0) : 0;
 
     // Accept several shapes for pilgrim list — DTO uses `pilgrims[]`, callers
     // may also send `pilgrimIds[]`. Lead pilgrim is included automatically.
@@ -89,7 +94,10 @@ export class BookingsService {
     if (leadId && !pilgrimIds.includes(leadId)) {
       pilgrimIds.unshift(leadId);
     }
-    const pilgrimCount = Math.max(pilgrimIds.length, dto.paxAdult ?? 1);
+    // Every pilgrim linked to the booking must be a live pilgrim of this tenant.
+    await assertAllOwned(this.prisma.pilgrim, pilgrimIds, tenantId, 'Pilgrim', { deletedAt: null });
+    const uniquePilgrimIds = [...new Set(pilgrimIds)];
+    const pilgrimCount = Math.max(uniquePilgrimIds.length, dto.paxAdult ?? 1);
 
     // Prefer the explicit totalAmount the caller passed, else compute from package
     const totalAmountCents = dto.totalAmount != null
@@ -100,6 +108,12 @@ export class BookingsService {
     const paidAmountCents = dto.depositAmount != null
       ? BigInt(Math.round(Number(dto.depositAmount) * 100))
       : BigInt(0);
+    if (totalAmountCents < BigInt(0) || paidAmountCents < BigInt(0)) {
+      throw new BadRequestException('Amounts must not be negative');
+    }
+    if (paidAmountCents > totalAmountCents) {
+      throw new BadRequestException('depositAmount must not exceed the booking total');
+    }
 
     // Empty-string createdBy was the cause of "INTERNAL_ERROR" (invalid UUID)
     const safeCreatedBy = createdBy && createdBy.length === 36 ? createdBy : null;
@@ -110,7 +124,7 @@ export class BookingsService {
       data: {
         tenantId,
         bookingRef,
-        packageId: dto.packageId,
+        packageId: pkg ? pkg.id : null,
         createdBy: safeCreatedBy,
         status: status as any,
         currency: dto.currency ?? 'SAR',
@@ -121,8 +135,8 @@ export class BookingsService {
         departureDate: dto.departureDate ? new Date(dto.departureDate) : undefined,
         returnDate: dto.returnDate ? new Date(dto.returnDate) : undefined,
         notes: dto.notes,
-        pilgrims: pilgrimIds.length > 0
-          ? { create: pilgrimIds.map((pilgrimId: string) => ({ tenantId, pilgrimId })) }
+        pilgrims: uniquePilgrimIds.length > 0
+          ? { create: uniquePilgrimIds.map((pilgrimId: string) => ({ tenantId, pilgrimId })) }
           : undefined,
       },
       include: { package: { select: { id: true, name: true } }, pilgrims: true },
@@ -142,8 +156,9 @@ export class BookingsService {
     return this.normalizeBigInt(booking);
   }
 
-  createBooking(tenantId: string, dto: any) {
-    return this.create(tenantId, dto.createdBy ?? null, dto);
+  // createdBy is server-owned: never taken from the request body.
+  createBooking(tenantId: string, dto: any, createdBy: string | null = null) {
+    return this.create(tenantId, createdBy, dto);
   }
 
   async updateBooking(tenantId: string, id: string, dto: any) {
@@ -177,7 +192,7 @@ export class BookingsService {
   }
 
   updateBookingStatus(tenantId: string, id: string, dto: any) {
-    return this.updateStatus(tenantId, id, dto.status);
+    return this.updateStatus(tenantId, id, normalizeBookingStatus(dto.status));
   }
 
   // ── Assignment actions ─────────────────────────────────────────────────
@@ -198,11 +213,22 @@ export class BookingsService {
   }
 
   async setPayment(tenantId: string, id: string, dto: { paidAmount?: number; paidAmountCents?: number; status?: string }) {
-    await this.findOne(tenantId, id);
+    const booking = await this.findOne(tenantId, id);
     const data: any = {};
-    if (dto.paidAmount != null) data.paidAmountCents = BigInt(Math.round(Number(dto.paidAmount) * 100));
-    if (dto.paidAmountCents != null) data.paidAmountCents = BigInt(dto.paidAmountCents);
-    if (dto.status !== undefined) data.status = dto.status as any;
+    let paid: bigint | undefined;
+    if (dto.paidAmount != null) paid = BigInt(Math.round(Number(dto.paidAmount) * 100));
+    if (dto.paidAmountCents != null) paid = BigInt(Math.round(Number(dto.paidAmountCents)));
+    if (paid !== undefined) {
+      const total = BigInt(booking.totalAmountCents ?? 0);
+      if (paid < BigInt(0)) throw new BadRequestException('Paid amount must not be negative');
+      if (paid > total) throw new BadRequestException('Paid amount must not exceed the booking total');
+      data.paidAmountCents = paid;
+    }
+    if (dto.status !== undefined && dto.status !== null) {
+      const status = normalizeBookingStatus(dto.status);
+      data.status = status as any;
+      if (status === 'CANCELLED' && booking.status !== 'CANCELLED') data.cancelledAt = new Date();
+    }
     return this.normalizeBigInt(await this.prisma.booking.update({ where: { id }, data }));
   }
 
@@ -237,7 +263,8 @@ export class BookingsService {
     let issuedToName = 'Customer';
     const leadPilgrimId = (booking as any).pilgrims?.[0]?.pilgrimId;
     if (leadPilgrimId) {
-      const pilgrim = await this.prisma.pilgrim.findUnique({ where: { id: leadPilgrimId } });
+      // Tenant-scoped: never copy another tenant's pilgrim name onto an invoice.
+      const pilgrim = await this.prisma.pilgrim.findFirst({ where: { id: leadPilgrimId, tenantId } });
       if (pilgrim) {
         issuedToName = [pilgrim.firstNameEn, pilgrim.lastNameEn].filter(Boolean).join(' ').trim()
           || pilgrim.firstNameAr
@@ -293,6 +320,8 @@ export class BookingsService {
    */
   async addPilgrim(tenantId: string, bookingId: string, pilgrimId: string) {
     await this.findOne(tenantId, bookingId);
+    requireId(pilgrimId, 'Pilgrim');
+    await findOwned(this.prisma.pilgrim, pilgrimId, tenantId, 'Pilgrim', { deletedAt: null }, { id: true });
     const existing = await this.prisma.bookingPilgrim.findFirst({ where: { bookingId, pilgrimId } });
     if (existing) return existing;
     return this.prisma.bookingPilgrim.create({ data: { tenantId, bookingId, pilgrimId } });

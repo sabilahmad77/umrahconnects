@@ -4,6 +4,7 @@ import { CreatePilgrimDto } from './dto/create-pilgrim.dto';
 import { UpdatePilgrimDto } from './dto/update-pilgrim.dto';
 import { QueryPilgrimDto } from './dto/query-pilgrim.dto';
 import { AddDocumentDto } from './dto/add-document.dto';
+import { assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
 
 @Injectable()
 export class PilgrimsService {
@@ -86,7 +87,8 @@ export class PilgrimsService {
     return { ...pilgrim, lifetimeSpend: Number((pilgrim as any).lifetimeSpend ?? 0), bookings, visaApplications };
   }
 
-  async create(tenantId: string, dto: CreatePilgrimDto, createdBy: string) {
+  async create(tenantId: string, dto: CreatePilgrimDto, createdBy: string | null) {
+    await assertOwnedIfPresent(this.prisma.familyGroup, dto.familyGroupId, tenantId, 'Family group');
     return this.prisma.pilgrim.create({
       data: {
         tenantId,
@@ -127,14 +129,18 @@ export class PilgrimsService {
     if (dto.notes !== undefined) data.notes = dto.notes;
     if (dto.tags !== undefined) data.tags = dto.tags;
     if (dto.status !== undefined) data.status = dto.status;
-    if ((dto as any).familyGroupId !== undefined) data.familyGroupId = (dto as any).familyGroupId;
+    if (dto.familyGroupId !== undefined) {
+      await assertOwnedIfPresent(this.prisma.familyGroup, dto.familyGroupId, tenantId, 'Family group');
+      data.familyGroupId = dto.familyGroupId || null;
+    }
     return this.prisma.pilgrim.update({ where: { id }, data });
   }
 
   // ── Assignment helpers ──────────────────────────────────────────────
   async assignToFamilyGroup(tenantId: string, id: string, familyGroupId: string | null) {
     await this.findOne(tenantId, id);
-    return this.prisma.pilgrim.update({ where: { id }, data: { familyGroupId } });
+    await assertOwnedIfPresent(this.prisma.familyGroup, familyGroupId, tenantId, 'Family group');
+    return this.prisma.pilgrim.update({ where: { id }, data: { familyGroupId: familyGroupId || null } });
   }
 
   /**
@@ -143,6 +149,7 @@ export class PilgrimsService {
    */
   async assignToBooking(tenantId: string, pilgrimId: string, bookingId: string) {
     await this.findOne(tenantId, pilgrimId);
+    requireId(bookingId, 'Booking');
     const booking = await this.prisma.booking.findFirst({ where: { id: bookingId, tenantId } });
     if (!booking) throw new NotFoundException('Booking not found');
     const existing = await this.prisma.bookingPilgrim.findFirst({ where: { bookingId, pilgrimId } });

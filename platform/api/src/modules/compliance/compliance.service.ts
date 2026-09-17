@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { assertAllOwned, assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
+import { VISA_DECISION_STATUSES } from './dto/compliance.dto';
+
+const OPERATOR_TENANT_TYPES = ['OPERATOR', 'MU_ASSASA', 'SUB_AGENT'];
 
 @Injectable()
 export class ComplianceService {
@@ -40,24 +44,50 @@ export class ComplianceService {
     // Hydrate the linked pilgrim (if any) for display
     let pilgrim: any = null;
     if (visa.pilgrimId) {
-      pilgrim = await this.prisma.pilgrim.findUnique({
-        where: { id: visa.pilgrimId },
+      // Tenant-scoped: a stale/foreign pilgrimId must never expose another tenant's passport data.
+      pilgrim = await this.prisma.pilgrim.findFirst({
+        where: { id: visa.pilgrimId, tenantId },
         select: { id: true, firstNameEn: true, lastNameEn: true, firstNameAr: true, passportNumber: true, nationality: true, email: true, phone: true },
       });
     }
     return { ...this.serialize(visa), pilgrim };
   }
 
+  /** Pilgrim/booking links must resolve inside the caller's tenant. */
+  private async assertVisaLinks(tenantId: string, dto: { pilgrimId?: unknown; bookingId?: unknown }) {
+    await assertOwnedIfPresent(this.prisma.pilgrim, dto.pilgrimId, tenantId, 'Pilgrim', { deletedAt: null });
+    await assertOwnedIfPresent(this.prisma.booking, dto.bookingId, tenantId, 'Booking');
+  }
+
+  /** operatorId: the caller's own organization, or an ACTIVE operator organization (read-only link). */
+  private async resolveOperatorId(tenantId: string, operatorId: unknown): Promise<string | null> {
+    if (operatorId === undefined || operatorId === null || operatorId === '') return null;
+    const id = requireId(operatorId, 'Operator');
+    if (id === tenantId) return id;
+    const op = await this.prisma.tenant.findFirst({
+      where: { id, status: 'ACTIVE' as any, type: { in: OPERATOR_TENANT_TYPES as any } },
+      select: { id: true },
+    });
+    if (!op) throw new NotFoundException('Operator not found');
+    return op.id;
+  }
+
   async createVisa(tenantId: string, dto: any, createdBy?: string) {
+    await this.assertVisaLinks(tenantId, dto);
+    const operatorId = await this.resolveOperatorId(tenantId, dto.operatorId);
+    const status = dto.status ?? 'NOT_STARTED';
+    if (!['NOT_STARTED', 'DOCUMENTS_COLLECTING'].includes(status)) {
+      throw new BadRequestException('A new visa application must start as NOT_STARTED or DOCUMENTS_COLLECTING');
+    }
     const appNo = dto.applicationNumber ?? `VISA-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
     const visa = await this.prisma.visaApplication.create({
       data: {
         tenantId,
-        pilgrimId: dto.pilgrimId && String(dto.pilgrimId).length === 36 ? dto.pilgrimId : null,
-        bookingId: dto.bookingId && String(dto.bookingId).length === 36 ? dto.bookingId : null,
-        operatorId: dto.operatorId && String(dto.operatorId).length === 36 ? dto.operatorId : null,
+        pilgrimId: dto.pilgrimId || null,
+        bookingId: dto.bookingId || null,
+        operatorId,
         regulatorySystem: (dto.regulatorySystem ?? dto.system ?? 'NUSUK_MASAR') as any,
-        status: (dto.status ?? 'NOT_STARTED') as any,
+        status: status as any,
         applicantName: dto.applicantName,
         applicantPassport: dto.applicantPassport ?? dto.passportNumber,
         applicantNationality: dto.applicantNationality ?? dto.nationality,
@@ -70,7 +100,7 @@ export class ComplianceService {
         expectedCompletionAt: dto.expectedCompletionAt ? new Date(dto.expectedCompletionAt) : undefined,
         priceCents: dto.priceCents != null ? BigInt(Math.round(Number(dto.priceCents))) : dto.price != null ? BigInt(Math.round(Number(dto.price) * 100)) : BigInt(0),
         currency: dto.currency ?? 'SAR',
-        paymentStatus: (dto.paymentStatus ?? 'UNPAID').toUpperCase(),
+        paymentStatus: String(dto.paymentStatus ?? 'UNPAID').toUpperCase(),
         notes: dto.notes,
         documents: dto.documents ?? [],
         timeline: [{ at: new Date().toISOString(), event: 'CREATED', by: createdBy ?? 'system' }],
@@ -80,9 +110,15 @@ export class ComplianceService {
     return this.serialize(visa);
   }
 
-  async updateVisa(tenantId: string, id: string, dto: any) {
+  async updateVisa(
+    tenantId: string, id: string, dto: any,
+    opts: { canDecide?: boolean; actorId?: string } = {},
+  ) {
     const current = await this.findVisaById(tenantId, id);
+    await this.assertVisaLinks(tenantId, dto);
     const data: any = {};
+    if (dto.pilgrimId !== undefined) data.pilgrimId = dto.pilgrimId || null;
+    if (dto.bookingId !== undefined) data.bookingId = dto.bookingId || null;
     for (const k of ['applicantName', 'applicantPassport', 'applicantNationality', 'visaType', 'destinationCountry', 'serviceCountry', 'applicationNumber', 'requiredDocuments', 'assignedOfficer', 'notes', 'externalRef', 'rejectionReason']) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
@@ -91,13 +127,25 @@ export class ComplianceService {
     if (dto.paymentStatus !== undefined) data.paymentStatus = String(dto.paymentStatus).toUpperCase();
     if (dto.priceCents !== undefined) data.priceCents = BigInt(Math.round(Number(dto.priceCents)));
     if (dto.price !== undefined) data.priceCents = BigInt(Math.round(Number(dto.price) * 100));
+    if (data.priceCents !== undefined && data.priceCents < BigInt(0)) {
+      throw new BadRequestException('Price must not be negative');
+    }
+    if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.expectedCompletionAt !== undefined) data.expectedCompletionAt = dto.expectedCompletionAt ? new Date(dto.expectedCompletionAt) : null;
     if (dto.expiresAt !== undefined) data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     if (dto.submittedAt !== undefined) data.submittedAt = dto.submittedAt ? new Date(dto.submittedAt) : null;
-    if (dto.status) {
+    if (dto.status && dto.status !== current.status) {
+      if (VISA_DECISION_STATUSES.includes(dto.status) && !opts.canDecide) {
+        throw new ForbiddenException('Approving or rejecting a visa application requires visa:application:manage');
+      }
       data.status = dto.status;
+      // Decision / submission timestamps are server-stamped.
+      if (dto.status === 'APPROVED') data.approvedAt = new Date();
+      if (dto.status === 'REJECTED') data.rejectedAt = new Date();
+      if (dto.status === 'SUBMITTED' && data.submittedAt === undefined && !current.submittedAt) data.submittedAt = new Date();
+      // The timeline is an append-only server log; clients cannot write it.
       const tl = Array.isArray((current as any).timeline) ? (current as any).timeline : [];
-      data.timeline = [...tl, { at: new Date().toISOString(), event: `STATUS_${dto.status}` }];
+      data.timeline = [...tl, { at: new Date().toISOString(), event: `STATUS_${dto.status}`, by: opts.actorId ?? 'system' }];
     }
     const visa = await this.prisma.visaApplication.update({ where: { id }, data });
     return this.serialize(visa);
@@ -218,12 +266,15 @@ export class ComplianceService {
   }
 
   async createSubmission(tenantId: string, dto: any) {
+    // Every pilgrim in a regulator batch must be a live pilgrim of this tenant.
+    const pilgrimIds: string[] = Array.isArray(dto.pilgrimIds) ? [...new Set<string>(dto.pilgrimIds)] : [];
+    await assertAllOwned(this.prisma.pilgrim, pilgrimIds, tenantId, 'Pilgrim', { deletedAt: null });
     return this.prisma.regulatorySubmission.create({
       data: {
         tenantId,
         regulatorySystem: dto.regulatorySystem as any,
         batchRef: dto.batchRef ?? `BATCH-${Date.now().toString(36).toUpperCase()}`,
-        pilgrimIds: dto.pilgrimIds ?? [],
+        pilgrimIds,
         submittedAt: new Date(),
         requestPayload: dto.payload ?? {},
       },

@@ -1,5 +1,23 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { assertAllOwned, findOwned, requireId } from '../../common/tenant-scope';
+import {
+  CreateAllotmentDto, CreateHotelBookingDto, CreateHotelDto, CreateRoomAssignmentDto, CreateRoomDto,
+  CreateRoomTypeDto, UpdateHotelBookingDto, UpdateHotelDto, UpdateRoomDto, UpdateRoomTypeDto,
+} from './dto/hotel.dto';
+
+/** Money in: prefers explicit cents, else major units ×100. `null` clears; `undefined` = not provided. */
+function toCents(major?: number | null, cents?: number | null): bigint | null | undefined {
+  if (cents != null) return BigInt(Math.round(cents));
+  if (major != null) return BigInt(Math.round(major * 100));
+  if (cents === null || major === null) return null;
+  return undefined;
+}
+
+function assertStayDates(checkIn: Date, checkOut: Date) {
+  if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) throw new BadRequestException('checkIn and checkOut must be valid dates');
+  if (checkOut <= checkIn) throw new BadRequestException('checkOut must be after checkIn');
+}
 
 @Injectable()
 export class HotelsService {
@@ -42,14 +60,59 @@ export class HotelsService {
     return { items: enriched, total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
   }
 
-  async findOne(tenantId: string, id: string) {
+  // ── Ownership helpers ──────────────────────────────────────────────────
+  /** A hotel the caller may READ: its own, or a shared marketplace hotel (tenantId null). */
+  private async readableHotel(tenantId: string, id: unknown) {
+    const safeId = requireId(id, 'Hotel');
+    if (!tenantId) throw new NotFoundException('Hotel not found');
     const hotel = await this.prisma.hotel.findFirst({
-      where: { id },
+      where: { id: safeId, OR: [{ tenantId }, { tenantId: null }] },
+    });
+    if (!hotel) throw new NotFoundException('Hotel not found');
+    return hotel;
+  }
+
+  /** A hotel the caller may WRITE: only its own. Shared marketplace hotels are read-only. */
+  private async ownedHotel(tenantId: string, id: unknown) {
+    const hotel = await this.readableHotel(tenantId, id);
+    if (hotel.tenantId !== tenantId) {
+      throw new ForbiddenException('Shared marketplace hotels are read-only');
+    }
+    return hotel;
+  }
+
+  /** A room type the caller may write: its hotel must be owned by the caller. */
+  private async ownedRoomType(tenantId: string, id: unknown) {
+    const safeId = requireId(id, 'Room type');
+    if (!tenantId) throw new NotFoundException('Room type not found');
+    const rt = await this.prisma.roomType.findFirst({ where: { id: safeId, hotel: { tenantId } } });
+    if (!rt) throw new NotFoundException('Room type not found');
+    return rt;
+  }
+
+  /** Validates that an (optional) room type id belongs to the given hotel. */
+  private async assertRoomTypeInHotel(roomTypeId: unknown, hotelId: string) {
+    if (roomTypeId === undefined || roomTypeId === null || roomTypeId === '') return;
+    const safeId = requireId(roomTypeId, 'Room type');
+    const rt = await this.prisma.roomType.findFirst({ where: { id: safeId, hotelId }, select: { id: true } });
+    if (!rt) throw new NotFoundException('Room type not found');
+  }
+
+  /** Recomputes the hotel's room counter from the rooms that actually exist. */
+  private async syncHotelRoomCount(tenantId: string, hotelId: string) {
+    const count = await this.prisma.room.count({ where: { hotelId, tenantId, status: { not: 'INACTIVE' } } });
+    await this.prisma.hotel.updateMany({ where: { id: hotelId, tenantId }, data: { totalRooms: count } });
+  }
+
+  async findOne(tenantId: string, id: string) {
+    const readable = await this.readableHotel(tenantId, id);
+    const hotel = await this.prisma.hotel.findFirst({
+      where: { id: readable.id },
       include: {
         roomTypes: { orderBy: { name: 'asc' } },
-        rooms: { orderBy: { roomNumber: 'asc' } },
+        rooms: { where: { tenantId }, orderBy: { roomNumber: 'asc' } },
         allotments: { where: { tenantId }, orderBy: { checkIn: 'asc' } },
-        hotelBookings: { orderBy: { checkIn: 'desc' }, take: 20 },
+        hotelBookings: { where: { tenantId }, orderBy: { checkIn: 'desc' }, take: 20 },
       },
     });
     if (!hotel) throw new NotFoundException('Hotel not found');
@@ -77,58 +140,65 @@ export class HotelsService {
     };
   }
 
-  async create(tenantId: string, dto: any) {
+  async create(tenantId: string, dto: CreateHotelDto) {
     return this.prisma.hotel.create({
       data: {
         tenantId,
         name: dto.name,
         nameAr: dto.nameAr,
-        city: dto.city ?? 'MAKKAH',
-        country: dto.country ?? 'SA',
+        city: dto.city || 'MAKKAH',
+        country: dto.country || 'SA',
         area: dto.area,
         address: dto.address,
         postalCode: dto.postalCode,
-        starRating: dto.starRating != null ? Number(dto.starRating) : undefined,
-        distanceToHaram: dto.distanceToHaram != null ? Number(dto.distanceToHaram) : undefined,
+        starRating: dto.starRating ?? undefined,
+        distanceToHaram: (dto.distanceToHaram ?? dto.distanceFromHaram) != null
+          ? Math.round((dto.distanceToHaram ?? dto.distanceFromHaram) as number)
+          : undefined,
         amenities: dto.amenities ?? [],
         images: dto.images ?? dto.imageUrls ?? [],
         description: dto.description,
         contactPerson: dto.contactPerson,
         phone: dto.phone,
-        email: dto.email,
+        email: dto.email || undefined,
         checkInTime: dto.checkInTime,
         checkOutTime: dto.checkOutTime,
         cancellationPolicy: dto.cancellationPolicy,
-        totalRooms: dto.totalRooms != null ? Number(dto.totalRooms) : 0,
-        status: (dto.status ?? 'ACTIVE').toUpperCase(),
+        // Room counter is server-owned: it starts at 0 and follows the rooms actually created.
+        totalRooms: 0,
+        status: dto.status ?? 'ACTIVE',
         notes: dto.notes,
         isVerified: false,
       },
     });
   }
 
-  async update(tenantId: string, id: string, dto: any) {
-    await this.findOne(tenantId, id);
+  async update(tenantId: string, id: string, dto: UpdateHotelDto) {
+    const hotel = await this.ownedHotel(tenantId, id);
     const data: any = {};
-    for (const k of ['name', 'nameAr', 'city', 'country', 'area', 'address', 'postalCode', 'amenities', 'images', 'description', 'contactPerson', 'phone', 'email', 'checkInTime', 'checkOutTime', 'cancellationPolicy', 'notes']) {
+    for (const k of ['nameAr', 'area', 'address', 'postalCode', 'amenities', 'images', 'description', 'contactPerson', 'phone', 'email', 'checkInTime', 'checkOutTime', 'cancellationPolicy', 'notes', 'status'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
+    // Required columns: a cleared form field ('') leaves the stored value unchanged.
+    for (const k of ['name', 'city', 'country'] as const) {
+      if (dto[k]) data[k] = dto[k];
+    }
     if (dto.imageUrls !== undefined) data.images = dto.imageUrls;
-    if (dto.starRating !== undefined) data.starRating = Number(dto.starRating);
-    if (dto.distanceToHaram !== undefined) data.distanceToHaram = dto.distanceToHaram ? Number(dto.distanceToHaram) : null;
-    if (dto.totalRooms !== undefined) data.totalRooms = Number(dto.totalRooms);
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    return this.prisma.hotel.update({ where: { id }, data });
+    if (dto.starRating !== undefined) data.starRating = dto.starRating || null;
+    if (dto.distanceToHaram !== undefined) data.distanceToHaram = dto.distanceToHaram != null ? Math.round(dto.distanceToHaram) : null;
+    // totalRooms is server-owned (derived from rooms) and is ignored if sent.
+    return this.prisma.hotel.update({ where: { id: hotel.id }, data });
   }
 
   async remove(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
-    return this.prisma.hotel.update({ where: { id }, data: { status: 'INACTIVE' } });
+    const hotel = await this.ownedHotel(tenantId, id);
+    return this.prisma.hotel.update({ where: { id: hotel.id }, data: { status: 'INACTIVE' } });
   }
 
   // ── Room types ─────────────────────────────────────────────────────────
   async getRoomTypes(tenantId: string, hotelId: string) {
-    const items = await this.prisma.roomType.findMany({ where: { hotelId }, orderBy: { name: 'asc' } });
+    const hotel = await this.readableHotel(tenantId, hotelId);
+    const items = await this.prisma.roomType.findMany({ where: { hotelId: hotel.id }, orderBy: { name: 'asc' } });
     return items.map((rt: any) => ({
       ...rt,
       basePriceCents: Number(rt.basePriceCents),
@@ -136,27 +206,27 @@ export class HotelsService {
     }));
   }
 
-  async addRoomType(tenantId: string, hotelId: string, dto: any) {
+  async addRoomType(tenantId: string, hotelId: string, dto: CreateRoomTypeDto) {
+    const hotel = await this.ownedHotel(tenantId, hotelId);
     const occupancyMap: Record<string, number> = { SINGLE: 1, DOUBLE: 2, TWIN: 2, TRIPLE: 3, QUAD: 4, QUINTUPLE: 5, SUITE: 2 };
-    const occupancy = typeof dto.capacity === 'number'
-      ? dto.capacity
-      : (occupancyMap[String(dto.capacity ?? dto.bedConfiguration ?? '').toUpperCase()] ?? dto.maxOccupancy ?? dto.occupancy ?? 2);
-    const basePriceCents = dto.basePriceCents != null
-      ? BigInt(Math.round(Number(dto.basePriceCents)))
-      : dto.basePrice != null
-        ? BigInt(Math.round(Number(dto.basePrice) * 100))
-        : BigInt(0);
+    const capacityNum = dto.capacity != null && dto.capacity !== '' && !isNaN(Number(dto.capacity)) ? Number(dto.capacity) : undefined;
+    const occupancy = capacityNum
+      ?? occupancyMap[String(dto.capacity ?? dto.bedConfiguration ?? '').toUpperCase()]
+      ?? dto.maxOccupancy ?? dto.occupancy ?? 2;
+    if (!Number.isInteger(occupancy) || occupancy < 1 || occupancy > 20) {
+      throw new BadRequestException('Room type occupancy must be an integer between 1 and 20');
+    }
     const rt = await this.prisma.roomType.create({
       data: {
-        hotelId,
+        hotelId: hotel.id,
         name: dto.name,
         occupancy,
         bedConfig: dto.bedConfig ?? dto.bedConfiguration,
         description: dto.description,
-        basePriceCents,
-        pricePerPersonCents: dto.pricePerPersonCents != null ? BigInt(Math.round(Number(dto.pricePerPersonCents))) : undefined,
-        totalCount: dto.totalCount != null ? Number(dto.totalCount) : 0,
-        status: (dto.status ?? 'ACTIVE').toUpperCase(),
+        basePriceCents: toCents(dto.basePrice, dto.basePriceCents) ?? BigInt(0),
+        pricePerPersonCents: toCents(dto.pricePerPerson, dto.pricePerPersonCents) ?? undefined,
+        totalCount: dto.totalCount ?? 0,
+        status: dto.status ?? 'ACTIVE',
         amenities: dto.amenities ?? [],
         images: dto.images ?? [],
       },
@@ -164,24 +234,30 @@ export class HotelsService {
     return { ...rt, basePriceCents: Number(rt.basePriceCents), pricePerPersonCents: rt.pricePerPersonCents != null ? Number(rt.pricePerPersonCents) : null };
   }
 
-  async updateRoomType(tenantId: string, roomTypeId: string, dto: any) {
+  async updateRoomType(tenantId: string, roomTypeId: string, dto: UpdateRoomTypeDto) {
+    const existing = await this.ownedRoomType(tenantId, roomTypeId);
     const data: any = {};
-    for (const k of ['name', 'bedConfig', 'description', 'amenities', 'images']) {
+    for (const k of ['name', 'bedConfig', 'description', 'amenities', 'images', 'occupancy', 'totalCount', 'status'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    if (dto.occupancy !== undefined) data.occupancy = Number(dto.occupancy);
-    if (dto.totalCount !== undefined) data.totalCount = Number(dto.totalCount);
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    if (dto.basePriceCents !== undefined) data.basePriceCents = BigInt(Math.round(Number(dto.basePriceCents)));
-    if (dto.basePrice !== undefined) data.basePriceCents = BigInt(Math.round(Number(dto.basePrice) * 100));
-    if (dto.pricePerPersonCents !== undefined) data.pricePerPersonCents = dto.pricePerPersonCents != null ? BigInt(Math.round(Number(dto.pricePerPersonCents))) : null;
-    const rt = await this.prisma.roomType.update({ where: { id: roomTypeId }, data });
+    if (dto.basePriceCents !== undefined || dto.basePrice !== undefined) {
+      data.basePriceCents = toCents(dto.basePrice, dto.basePriceCents) ?? BigInt(0);
+    }
+    if (dto.pricePerPersonCents !== undefined || dto.pricePerPerson !== undefined) {
+      data.pricePerPersonCents = toCents(dto.pricePerPerson, dto.pricePerPersonCents);
+    }
+    const rt = await this.prisma.roomType.update({ where: { id: existing.id }, data });
     return { ...rt, basePriceCents: Number(rt.basePriceCents), pricePerPersonCents: rt.pricePerPersonCents != null ? Number(rt.pricePerPersonCents) : null };
   }
 
   // ── Rooms ──────────────────────────────────────────────────────────────
   async getRooms(tenantId: string, hotelId: string) {
-    const items = await this.prisma.room.findMany({ where: { hotelId }, orderBy: { roomNumber: 'asc' }, include: { roomType: { select: { id: true, name: true } } } });
+    const hotel = await this.readableHotel(tenantId, hotelId);
+    const items = await this.prisma.room.findMany({
+      where: { hotelId: hotel.id, tenantId },
+      orderBy: { roomNumber: 'asc' },
+      include: { roomType: { select: { id: true, name: true } } },
+    });
     return items.map((r: any) => ({
       ...r,
       pricePerNightCents: Number(r.pricePerNightCents),
@@ -189,65 +265,73 @@ export class HotelsService {
     }));
   }
 
-  async createRoom(tenantId: string, hotelId: string, dto: any) {
-    const hotel = await this.prisma.hotel.findFirst({ where: { id: hotelId } });
-    if (!hotel) throw new NotFoundException('Hotel not found');
-    const bedCount = dto.bedCount != null ? Number(dto.bedCount) : 1;
+  async createRoom(tenantId: string, hotelId: string, dto: CreateRoomDto) {
+    const hotel = await this.ownedHotel(tenantId, hotelId);
+    await this.assertRoomTypeInHotel(dto.roomTypeId, hotel.id);
+    const bedCount = dto.bedCount ?? 1;
+    const availableBeds = dto.availableBeds ?? bedCount;
+    if (availableBeds > bedCount) throw new BadRequestException('availableBeds cannot exceed bedCount');
     const room = await this.prisma.room.create({
       data: {
         tenantId,
-        hotelId,
+        hotelId: hotel.id,
         roomTypeId: dto.roomTypeId || undefined,
         roomNumber: String(dto.roomNumber ?? dto.name ?? 'Room'),
-        floor: dto.floor != null ? String(dto.floor) : undefined,
-        capacity: dto.capacity != null ? Number(dto.capacity) : 2,
+        floor: dto.floor != null && dto.floor !== '' ? String(dto.floor) : undefined,
+        capacity: dto.capacity ?? 2,
         bedType: dto.bedType,
         bedCount,
-        availableBeds: dto.availableBeds != null ? Number(dto.availableBeds) : bedCount,
-        pricePerNightCents: dto.pricePerNightCents != null
-          ? BigInt(Math.round(Number(dto.pricePerNightCents)))
-          : dto.pricePerNight != null
-            ? BigInt(Math.round(Number(dto.pricePerNight) * 100))
-            : BigInt(0),
-        pricePerPersonCents: dto.pricePerPersonCents != null
-          ? BigInt(Math.round(Number(dto.pricePerPersonCents)))
-          : dto.pricePerPerson != null
-            ? BigInt(Math.round(Number(dto.pricePerPerson) * 100))
-            : undefined,
-        seasonalPricing: dto.seasonalPricing ?? [],
+        availableBeds,
+        pricePerNightCents: toCents(dto.pricePerNight, dto.pricePerNightCents) ?? BigInt(0),
+        pricePerPersonCents: toCents(dto.pricePerPerson, dto.pricePerPersonCents) ?? undefined,
+        seasonalPricing: (dto.seasonalPricing ?? []) as any,
         images: dto.images ?? [],
         facilities: dto.facilities ?? [],
         description: dto.description,
-        status: (dto.status ?? 'AVAILABLE').toUpperCase(),
+        status: dto.status ?? 'AVAILABLE',
         notes: dto.notes,
       },
     });
-    const count = await this.prisma.room.count({ where: { hotelId } });
-    await this.prisma.hotel.update({ where: { id: hotelId }, data: { totalRooms: count } }).catch(() => undefined);
+    await this.syncHotelRoomCount(tenantId, hotel.id);
     return { ...room, pricePerNightCents: Number(room.pricePerNightCents), pricePerPersonCents: room.pricePerPersonCents != null ? Number(room.pricePerPersonCents) : null };
   }
 
-  async updateRoom(tenantId: string, roomId: string, dto: any) {
+  async updateRoom(tenantId: string, roomId: string, dto: UpdateRoomDto) {
+    const existing = await findOwned<{ id: string; hotelId: string; bedCount: number; availableBeds: number }>(
+      this.prisma.room, roomId, tenantId, 'Room',
+    );
     const data: any = {};
-    for (const k of ['bedType', 'images', 'facilities', 'description', 'notes', 'roomTypeId', 'seasonalPricing']) {
+    for (const k of ['bedType', 'images', 'facilities', 'description', 'notes', 'capacity', 'bedCount', 'availableBeds', 'status'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    if (dto.roomNumber !== undefined) data.roomNumber = String(dto.roomNumber);
-    if (dto.floor !== undefined) data.floor = dto.floor != null ? String(dto.floor) : null;
-    if (dto.capacity !== undefined) data.capacity = Number(dto.capacity);
-    if (dto.bedCount !== undefined) data.bedCount = Number(dto.bedCount);
-    if (dto.availableBeds !== undefined) data.availableBeds = Number(dto.availableBeds);
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    if (dto.pricePerNightCents !== undefined) data.pricePerNightCents = BigInt(Math.round(Number(dto.pricePerNightCents)));
-    if (dto.pricePerNight !== undefined) data.pricePerNightCents = BigInt(Math.round(Number(dto.pricePerNight) * 100));
-    if (dto.pricePerPersonCents !== undefined) data.pricePerPersonCents = dto.pricePerPersonCents != null ? BigInt(Math.round(Number(dto.pricePerPersonCents))) : null;
-    if (dto.pricePerPerson !== undefined) data.pricePerPersonCents = dto.pricePerPerson != null ? BigInt(Math.round(Number(dto.pricePerPerson) * 100)) : null;
-    const room = await this.prisma.room.update({ where: { id: roomId }, data });
+    if (dto.seasonalPricing !== undefined) data.seasonalPricing = dto.seasonalPricing ?? [];
+    if (dto.roomTypeId !== undefined) {
+      await this.assertRoomTypeInHotel(dto.roomTypeId, existing.hotelId);
+      data.roomTypeId = dto.roomTypeId || null;
+    }
+    if (dto.roomNumber !== undefined && dto.roomNumber !== null) data.roomNumber = String(dto.roomNumber);
+    if (dto.floor !== undefined) data.floor = dto.floor != null && dto.floor !== '' ? String(dto.floor) : null;
+    const bedCount = data.bedCount ?? existing.bedCount;
+    const availableBeds = data.availableBeds ?? existing.availableBeds;
+    if ((data.bedCount !== undefined || data.availableBeds !== undefined) && availableBeds > bedCount) {
+      throw new BadRequestException('availableBeds cannot exceed bedCount');
+    }
+    if (dto.pricePerNightCents !== undefined || dto.pricePerNight !== undefined) {
+      data.pricePerNightCents = toCents(dto.pricePerNight, dto.pricePerNightCents) ?? BigInt(0);
+    }
+    if (dto.pricePerPersonCents !== undefined || dto.pricePerPerson !== undefined) {
+      data.pricePerPersonCents = toCents(dto.pricePerPerson, dto.pricePerPersonCents);
+    }
+    const room = await this.prisma.room.update({ where: { id: existing.id }, data });
+    if (data.status !== undefined) await this.syncHotelRoomCount(tenantId, existing.hotelId);
     return { ...room, pricePerNightCents: Number(room.pricePerNightCents), pricePerPersonCents: room.pricePerPersonCents != null ? Number(room.pricePerPersonCents) : null };
   }
 
   async deleteRoom(tenantId: string, roomId: string) {
-    return this.prisma.room.update({ where: { id: roomId }, data: { status: 'INACTIVE' } });
+    const existing = await findOwned<{ id: string; hotelId: string }>(this.prisma.room, roomId, tenantId, 'Room');
+    const room = await this.prisma.room.update({ where: { id: existing.id }, data: { status: 'INACTIVE' } });
+    await this.syncHotelRoomCount(tenantId, existing.hotelId);
+    return room;
   }
 
   // ── Hotel bookings (direct guest bookings) ─────────────────────────────
@@ -272,66 +356,77 @@ export class HotelsService {
     return { ...b, totalAmountCents: Number(b.totalAmountCents) };
   }
 
-  async createHotelBooking(tenantId: string, dto: any) {
+  async createHotelBooking(tenantId: string, dto: CreateHotelBookingDto) {
     if (!dto.hotelId) throw new BadRequestException('hotelId is required');
-    const hotel = await this.prisma.hotel.findFirst({ where: { id: dto.hotelId } });
-    if (!hotel) throw new NotFoundException('Hotel not found');
-    const totalAmountCents = dto.totalAmountCents != null
-      ? BigInt(Math.round(Number(dto.totalAmountCents)))
-      : dto.amount != null
-        ? BigInt(Math.round(Number(dto.amount) * 100))
-        : BigInt(0);
+    // Direct bookings may only be recorded against the caller's own hotels.
+    const hotel = await this.ownedHotel(tenantId, dto.hotelId);
+    await this.assertRoomTypeInHotel(dto.roomTypeId, hotel.id);
+    if (dto.roomId) await findOwned(this.prisma.room, dto.roomId, tenantId, 'Room', { hotelId: hotel.id }, { id: true });
+    if (dto.customerUserId) await findOwned(this.prisma.user, dto.customerUserId, tenantId, 'Customer', {}, { id: true });
+    const checkIn = new Date(dto.checkIn);
+    const checkOut = new Date(dto.checkOut);
+    assertStayDates(checkIn, checkOut);
     const booking = await this.prisma.hotelBooking.create({
       data: {
         tenantId,
-        hotelId: dto.hotelId,
+        hotelId: hotel.id,
         roomTypeId: dto.roomTypeId || undefined,
         roomId: dto.roomId || undefined,
-        customerUserId: dto.customerUserId && String(dto.customerUserId).length === 36 ? dto.customerUserId : undefined,
-        guestName: dto.guestName ?? 'Guest',
-        guestEmail: dto.guestEmail,
-        guestPhone: dto.guestPhone,
-        guestNationality: dto.guestNationality,
-        source: (dto.source ?? 'EXTERNAL').toUpperCase(),
-        checkIn: new Date(dto.checkIn),
-        checkOut: new Date(dto.checkOut),
-        guests: dto.guests != null ? Number(dto.guests) : 1,
-        totalAmountCents,
+        customerUserId: dto.customerUserId || undefined,
+        guestName: dto.guestName || 'Guest',
+        guestEmail: dto.guestEmail || undefined,
+        guestPhone: dto.guestPhone || undefined,
+        guestNationality: dto.guestNationality || undefined,
+        source: dto.source ?? 'EXTERNAL',
+        checkIn,
+        checkOut,
+        guests: dto.guests ?? 1,
+        totalAmountCents: toCents(dto.amount, dto.totalAmountCents) ?? BigInt(0),
         currency: dto.currency ?? 'SAR',
-        status: (dto.status ?? 'PENDING').toUpperCase(),
-        paymentStatus: (dto.paymentStatus ?? 'UNPAID').toUpperCase(),
+        status: dto.status ?? 'PENDING',
+        paymentStatus: dto.paymentStatus ?? 'UNPAID',
         notes: dto.notes,
       },
     });
-    if (dto.roomId) {
-      await this.prisma.room.update({ where: { id: dto.roomId }, data: { status: 'OCCUPIED' } }).catch(() => undefined);
+    if (booking.roomId && booking.status !== 'CANCELLED' && booking.status !== 'CHECKED_OUT' && booking.status !== 'COMPLETED') {
+      await this.prisma.room.updateMany({ where: { id: booking.roomId, tenantId }, data: { status: 'OCCUPIED' } });
     }
     return { ...booking, totalAmountCents: Number(booking.totalAmountCents) };
   }
 
-  async updateHotelBooking(tenantId: string, id: string, dto: any) {
-    await this.findHotelBooking(tenantId, id);
+  async updateHotelBooking(tenantId: string, id: string, dto: UpdateHotelBookingDto) {
+    const existing = await this.findHotelBooking(tenantId, id);
     const data: any = {};
-    for (const k of ['guestName', 'guestEmail', 'guestPhone', 'guestNationality', 'notes', 'roomId', 'roomTypeId']) {
+    for (const k of ['guestName', 'guestPhone', 'guestNationality', 'notes', 'guests', 'status', 'paymentStatus', 'source'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
+    }
+    if (dto.guestEmail !== undefined) data.guestEmail = dto.guestEmail || null;
+    if (dto.roomTypeId !== undefined) {
+      await this.assertRoomTypeInHotel(dto.roomTypeId, existing.hotelId);
+      data.roomTypeId = dto.roomTypeId || null;
+    }
+    if (dto.roomId !== undefined) {
+      if (dto.roomId) {
+        await findOwned(this.prisma.room, dto.roomId, tenantId, 'Room', { hotelId: existing.hotelId }, { id: true });
+      }
+      data.roomId = dto.roomId || null;
     }
     if (dto.checkIn !== undefined) data.checkIn = new Date(dto.checkIn);
     if (dto.checkOut !== undefined) data.checkOut = new Date(dto.checkOut);
-    if (dto.guests !== undefined) data.guests = Number(dto.guests);
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    if (dto.paymentStatus !== undefined) data.paymentStatus = String(dto.paymentStatus).toUpperCase();
-    if (dto.source !== undefined) data.source = String(dto.source).toUpperCase();
-    if (dto.totalAmountCents !== undefined) data.totalAmountCents = BigInt(Math.round(Number(dto.totalAmountCents)));
-    if (dto.amount !== undefined) data.totalAmountCents = BigInt(Math.round(Number(dto.amount) * 100));
-    const booking = await this.prisma.hotelBooking.update({ where: { id }, data });
-    if (data.status === 'CANCELLED' && booking.roomId) {
-      await this.prisma.room.update({ where: { id: booking.roomId }, data: { status: 'AVAILABLE' } }).catch(() => undefined);
+    if (data.checkIn || data.checkOut) assertStayDates(data.checkIn ?? existing.checkIn, data.checkOut ?? existing.checkOut);
+    if (dto.totalAmountCents !== undefined || dto.amount !== undefined) {
+      data.totalAmountCents = toCents(dto.amount, dto.totalAmountCents) ?? BigInt(0);
     }
-    if (data.status === 'CHECKED_IN' && booking.roomId) {
-      await this.prisma.room.update({ where: { id: booking.roomId }, data: { status: 'OCCUPIED' } }).catch(() => undefined);
-    }
-    if (data.status === 'CHECKED_OUT' && booking.roomId) {
-      await this.prisma.room.update({ where: { id: booking.roomId }, data: { status: 'AVAILABLE' } }).catch(() => undefined);
+    const booking = await this.prisma.hotelBooking.update({ where: { id: existing.id }, data });
+    // Room status follows the booking — only rooms of the caller's tenant are ever touched.
+    if (booking.roomId) {
+      const roomStatus =
+        data.status === 'CANCELLED' || data.status === 'CHECKED_OUT' ? 'AVAILABLE'
+          : data.status === 'CHECKED_IN' ? 'OCCUPIED'
+            : undefined;
+      if (roomStatus) {
+        await this.prisma.room.updateMany({ where: { id: booking.roomId, tenantId }, data: { status: roomStatus } });
+      }
     }
     return { ...booking, totalAmountCents: Number(booking.totalAmountCents) };
   }
@@ -342,18 +437,28 @@ export class HotelsService {
     return allotments.map((a: any) => ({ ...a, rateCents: Number(a.rateCents) }));
   }
 
-  async createAllotment(tenantId: string, hotelId: string, dto: any) {
+  async createAllotment(tenantId: string, hotelId: string, dto: CreateAllotmentDto) {
+    // Operators contract allotments on their own hotels or on shared marketplace hotels.
+    const hotel = await this.readableHotel(tenantId, hotelId);
+    await this.assertRoomTypeInHotel(dto.roomTypeId, hotel.id);
+    const checkIn = new Date(dto.checkIn);
+    const checkOut = new Date(dto.checkOut);
+    assertStayDates(checkIn, checkOut);
     const allotment = await this.prisma.allotment.create({
       data: {
-        tenantId, hotelId,
-        roomTypeId: dto.roomTypeId,
-        checkIn: new Date(dto.checkIn),
-        checkOut: new Date(dto.checkOut),
+        tenantId,
+        hotelId: hotel.id,
+        roomTypeId: dto.roomTypeId || undefined,
+        contractType: dto.contractType ?? undefined,
+        checkIn,
+        checkOut,
         totalRooms: dto.totalRooms,
         bookedRooms: 0,
-        rateCents: BigInt(Math.round((dto.rateCents ?? dto.contractPrice ?? 0) * (dto.contractPrice ? 100 : 1))),
+        overbookBuffer: dto.overbookBuffer ?? 0,
+        rateCents: toCents(dto.contractPrice, dto.rateCents) ?? BigInt(0),
         currency: dto.currency ?? 'SAR',
         cancellationPolicy: {},
+        notes: dto.notes ?? dto.contractRef,
       },
     });
     return { ...allotment, rateCents: Number(allotment.rateCents) };
@@ -365,21 +470,41 @@ export class HotelsService {
     return this.prisma.roomAssignment.findMany({ where: { tenantId, allotmentId: { in: allotmentIds } }, orderBy: { checkIn: 'asc' } });
   }
 
-  async createAssignment(tenantId: string, hotelId: string, dto: any) {
-    if (dto.allotmentId) {
-      await this.prisma.allotment.update({ where: { id: dto.allotmentId }, data: { bookedRooms: { increment: 1 } } });
+  async createAssignment(tenantId: string, hotelId: string, dto: CreateRoomAssignmentDto) {
+    const safeHotelId = requireId(hotelId, 'Hotel');
+    const allotment = await findOwned<{ id: string; totalRooms: number; bookedRooms: number; overbookBuffer: number; checkIn: Date; checkOut: Date }>(
+      this.prisma.allotment, dto.allotmentId, tenantId, 'Allotment', { hotelId: safeHotelId },
+    );
+    await findOwned(this.prisma.booking, dto.bookingId, tenantId, 'Booking', {}, { id: true });
+    await assertAllOwned(this.prisma.pilgrim, dto.pilgrims, tenantId, 'Pilgrim');
+    const checkIn = new Date(dto.checkIn);
+    const checkOut = new Date(dto.checkOut);
+    assertStayDates(checkIn, checkOut);
+    if (checkIn < allotment.checkIn || checkOut > allotment.checkOut) {
+      throw new BadRequestException('Assignment dates must fall within the allotment period');
     }
-    return this.prisma.roomAssignment.create({
-      data: {
-        tenantId,
-        allotmentId: dto.allotmentId,
-        bookingId: dto.bookingId,
-        checkIn: new Date(dto.checkIn),
-        checkOut: new Date(dto.checkOut),
-        roomNumber: dto.roomNumber,
-        pilgrims: dto.pilgrims ?? [],
-        confirmedAt: new Date(),
-      },
+
+    return this.prisma.$transaction(async (tx) => {
+      // Optimistic, tenant-scoped capacity claim: fails if another request took the room first.
+      const capacity = allotment.totalRooms + (allotment.overbookBuffer ?? 0);
+      if (allotment.bookedRooms >= capacity) throw new ConflictException('Allotment is fully booked');
+      const claimed = await tx.allotment.updateMany({
+        where: { id: allotment.id, tenantId, bookedRooms: allotment.bookedRooms },
+        data: { bookedRooms: { increment: 1 } },
+      });
+      if (claimed.count !== 1) throw new ConflictException('Allotment changed concurrently, please retry');
+      return tx.roomAssignment.create({
+        data: {
+          tenantId,
+          allotmentId: allotment.id,
+          bookingId: dto.bookingId,
+          checkIn,
+          checkOut,
+          roomNumber: dto.roomNumber,
+          pilgrims: dto.pilgrims ?? [],
+          confirmedAt: new Date(),
+        },
+      });
     });
   }
 

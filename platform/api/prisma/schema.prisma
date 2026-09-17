@@ -1,6 +1,6 @@
 // ============================================================
 // Umrah Connects — Prisma Schema
-// PostgreSQL 16 · Row-Level Security enabled per-table
+// PostgreSQL 15+ · tenant isolation enforced in the service layer (see docs/adr/001)
 // All money: bigint minor units + currency code (no floats)
 // All timestamps: timestamptz stored UTC
 // All tenant-scoped tables: non-null tenant_id
@@ -45,9 +45,10 @@ enum TenantTier {
 }
 
 enum TenantType {
-  OPERATOR            // Licensed Umrah/Hajj operator
-  MU_ASSASA           // Saudi-licensed ground operator
-  SUB_AGENT           // Sub-agent under an operator
+  PLATFORM // Umrah Connect itself — holds platform (Super Admin) accounts only
+  OPERATOR // Licensed Umrah/Hajj operator
+  MU_ASSASA // Saudi-licensed ground operator
+  SUB_AGENT // Sub-agent under an operator
   VENDOR_HOTEL
   VENDOR_TRANSPORT
   VENDOR_CATERING
@@ -164,9 +165,9 @@ enum HotelContractType {
 }
 
 enum TransportType {
-  BUS_SMALL         // Hiace/Coaster
-  BUS_MEDIUM        // 30-seat
-  BUS_LARGE         // 50-seat
+  BUS_SMALL // Hiace/Coaster
+  BUS_MEDIUM // 30-seat
+  BUS_LARGE // 50-seat
   PRIVATE_CAR
   VAN
 
@@ -269,110 +270,115 @@ enum AuditAction {
 // ============================================================
 
 model Tenant {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  slug             String       @unique @db.VarChar(100)
-  name             String       @db.VarChar(255)
-  nameAr           String?      @db.VarChar(255) @map("name_ar")
-  type             TenantType
-  status           TenantStatus @default(PENDING_KYC)
-  tier             TenantTier   @default(STARTER)
+  id     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug   String       @unique @db.VarChar(100)
+  name   String       @db.VarChar(255)
+  nameAr String?      @map("name_ar") @db.VarChar(255)
+  type   TenantType
+  status TenantStatus @default(PENDING_KYC)
+  tier   TenantTier   @default(STARTER)
 
   // Licensing
-  licenseNumber    String?      @db.VarChar(100) @map("license_number")
-  licenseCountry   String?      @db.Char(2)      @map("license_country")
-  licenseExpiry    DateTime?    @db.Date         @map("license_expiry")
+  licenseNumber    String?           @map("license_number") @db.VarChar(100)
+  licenseCountry   String?           @map("license_country") @db.Char(2)
+  licenseExpiry    DateTime?         @map("license_expiry") @db.Date
   regulatorySystem RegulatorySystem? @map("regulatory_system")
 
   // Contact
-  email            String       @db.VarChar(255)
-  phone            String?      @db.VarChar(30)
-  website          String?      @db.VarChar(255)
-  country          String       @db.Char(2)
-  timezone         String       @default("Asia/Riyadh") @db.VarChar(50)
-  locale           String       @default("en") @db.VarChar(10)
-  currency         String       @default("SAR") @db.Char(3)
+  email    String  @db.VarChar(255)
+  phone    String? @db.VarChar(30)
+  website  String? @db.VarChar(255)
+  country  String  @db.Char(2)
+  timezone String  @default("Asia/Riyadh") @db.VarChar(50)
+  locale   String  @default("en") @db.VarChar(10)
+  currency String  @default("SAR") @db.Char(3)
 
   // Hierarchy
-  parentTenantId   String?      @db.Uuid @map("parent_tenant_id")
-  parentTenant     Tenant?      @relation("SubTenants", fields: [parentTenantId], references: [id])
-  subTenants       Tenant[]     @relation("SubTenants")
+  parentTenantId String?  @map("parent_tenant_id") @db.Uuid
+  parentTenant   Tenant?  @relation("SubTenants", fields: [parentTenantId], references: [id])
+  subTenants     Tenant[] @relation("SubTenants")
 
   // Metadata
-  metadata         Json?        @db.JsonB
-  settings         Json         @default("{}") @db.JsonB
-  createdAt        DateTime     @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt        DateTime     @updatedAt @db.Timestamptz @map("updated_at")
-  deletedAt        DateTime?    @db.Timestamptz @map("deleted_at")
+  metadata  Json?     @db.JsonB
+  settings  Json      @default("{}") @db.JsonB
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   // Relations
-  users            User[]
-  roles            Role[]
-  kycRecords       TenantKyc[]
-  pluginInstalls   TenantPlugin[]
+  users          User[]
+  roles          Role[]
+  kycRecords     TenantKyc[]
+  pluginInstalls TenantPlugin[]
 
   @@map("tenants")
   @@schema("core")
 }
 
 model TenantKyc {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId         String    @db.Uuid @map("tenant_id")
-  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   registrySource   RegulatorySystem @map("registry_source")
-  registryLookupAt DateTime? @db.Timestamptz @map("registry_lookup_at")
-  registryData     Json?     @db.JsonB @map("registry_data")
-  verifiedAt       DateTime? @db.Timestamptz @map("verified_at")
-  verifiedBy       String?   @db.Uuid @map("verified_by")
-  rejectionReason  String?   @map("rejection_reason")
-  documents        Json      @default("[]") @db.JsonB
+  registryLookupAt DateTime?        @map("registry_lookup_at") @db.Timestamptz
+  registryData     Json?            @map("registry_data") @db.JsonB
+  verifiedAt       DateTime?        @map("verified_at") @db.Timestamptz
+  verifiedBy       String?          @map("verified_by") @db.Uuid
+  rejectionReason  String?          @map("rejection_reason")
+  documents        Json             @default("[]") @db.JsonB
 
-  createdAt        DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt        DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("tenant_kyc")
   @@schema("core")
 }
 
 model User {
-  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId         String     @db.Uuid @map("tenant_id")
-  tenant           Tenant     @relation(fields: [tenantId], references: [id])
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  email            String?    @db.VarChar(255)
-  phone            String?    @db.VarChar(30)
-  passwordHash     String?    @map("password_hash")
-  status           UserStatus @default(PENDING_VERIFICATION)
+  email        String?    @db.VarChar(255)
+  phone        String?    @db.VarChar(30)
+  passwordHash String?    @map("password_hash")
+  status       UserStatus @default(PENDING_VERIFICATION)
 
   // Profile
-  firstName        String     @db.VarChar(100) @map("first_name")
-  lastName         String     @db.VarChar(100) @map("last_name")
-  firstNameAr      String?    @db.VarChar(100) @map("first_name_ar")
-  lastNameAr       String?    @db.VarChar(100) @map("last_name_ar")
-  avatarUrl        String?    @map("avatar_url")
-  locale           String     @default("en") @db.VarChar(10)
-  timezone         String     @default("Asia/Riyadh") @db.VarChar(50)
+  firstName   String  @map("first_name") @db.VarChar(100)
+  lastName    String  @map("last_name") @db.VarChar(100)
+  firstNameAr String? @map("first_name_ar") @db.VarChar(100)
+  lastNameAr  String? @map("last_name_ar") @db.VarChar(100)
+  avatarUrl   String? @map("avatar_url")
+  locale      String  @default("en") @db.VarChar(10)
+  timezone    String  @default("Asia/Riyadh") @db.VarChar(50)
 
   // Auth
-  mfaEnabled       Boolean    @default(false) @map("mfa_enabled")
-  mfaSecret        String?    @map("mfa_secret")
-  emailVerifiedAt  DateTime?  @db.Timestamptz @map("email_verified_at")
-  phoneVerifiedAt  DateTime?  @db.Timestamptz @map("phone_verified_at")
-  lastLoginAt      DateTime?  @db.Timestamptz @map("last_login_at")
-  lastLoginIp      String?    @map("last_login_ip")
-  loginCount       Int        @default(0) @map("login_count")
+  mfaEnabled        Boolean   @default(false) @map("mfa_enabled")
+  mfaSecret         String?   @map("mfa_secret")
+  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz
+  phoneVerifiedAt   DateTime? @map("phone_verified_at") @db.Timestamptz
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz
+  lastLoginIp       String?   @map("last_login_ip")
+  loginCount        Int       @default(0) @map("login_count")
+  failedLoginCount  Int       @default(0) @map("failed_login_count")
+  lockedUntil       DateTime? @map("locked_until") @db.Timestamptz
+  // Access tokens issued before this instant are rejected (lock, force-logout, password change).
+  sessionsRevokedAt DateTime? @map("sessions_revoked_at") @db.Timestamptz
 
-  createdAt        DateTime   @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt        DateTime   @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy        String?    @db.Uuid @map("created_by")
-  deletedAt        DateTime?  @db.Timestamptz @map("deleted_at")
-  rowVersion       Int        @default(1) @map("row_version")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy  String?   @map("created_by") @db.Uuid
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+  rowVersion Int       @default(1) @map("row_version")
 
   // Relations
-  userRoles        UserRole[]
-  refreshTokens    RefreshToken[]
-  otpCodes         OtpCode[]
-  socialAccount    SocialAccount?
+  userRoles     UserRole[]
+  refreshTokens RefreshToken[]
+  otpCodes      OtpCode[]
+  identities    UserIdentity[]
+  socialAccount SocialAccount?
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -383,33 +389,51 @@ model User {
 }
 
 model RefreshToken {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String   @db.Uuid @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String   @unique @map("token_hash")
-  expiresAt  DateTime @db.Timestamptz @map("expires_at")
-  revokedAt  DateTime? @db.Timestamptz @map("revoked_at")
-  createdAt  DateTime @default(now()) @db.Timestamptz @map("created_at")
-  userAgent  String?  @map("user_agent")
-  ipAddress  String?  @map("ip_address")
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
 
   @@index([userId])
   @@map("refresh_tokens")
   @@schema("core")
 }
 
+/// External identity (e.g. Google) linked to a local account.
+model UserIdentity {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider        String    @db.VarChar(30)
+  providerSubject String    @map("provider_subject") @db.VarChar(255)
+  email           String?   @db.VarChar(255)
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([provider, providerSubject])
+  @@index([userId])
+  @@map("user_identities")
+  @@schema("core")
+}
+
 model OtpCode {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String?  @db.Uuid @map("user_id")
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phone       String?
-  email       String?
-  codeHash    String   @map("code_hash")
-  purpose     String   @db.VarChar(50)  // phone_verify, login, password_reset
-  expiresAt   DateTime @db.Timestamptz @map("expires_at")
-  usedAt      DateTime? @db.Timestamptz @map("used_at")
-  attempts    Int      @default(0)
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String?   @map("user_id") @db.Uuid
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String?
+  email     String?
+  codeHash  String    @map("code_hash")
+  purpose   String    @db.VarChar(50) // phone_verify, login, password_reset
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz
+  usedAt    DateTime? @map("used_at") @db.Timestamptz
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([phone])
   @@index([email])
@@ -419,13 +443,13 @@ model OtpCode {
 
 model Role {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String?  @db.Uuid @map("tenant_id")   // null = platform-wide role
+  tenantId    String?  @map("tenant_id") @db.Uuid // null = platform-wide role
   tenant      Tenant?  @relation(fields: [tenantId], references: [id])
   name        String   @db.VarChar(100)
   description String?
-  isSystem    Boolean  @default(false) @map("is_system")   // platform-defined, not deletable
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  isSystem    Boolean  @default(false) @map("is_system") // platform-defined, not deletable
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   userRoles   UserRole[]
   permissions RolePermission[]
@@ -442,7 +466,7 @@ model Permission {
   resource    String   @db.VarChar(100)
   action      String   @db.VarChar(50)
   description String?
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   rolePermissions RolePermission[]
 
@@ -452,12 +476,12 @@ model Permission {
 }
 
 model RolePermission {
-  roleId       String     @db.Uuid @map("role_id")
-  permissionId String     @db.Uuid @map("permission_id")
+  roleId       String     @map("role_id") @db.Uuid
+  permissionId String     @map("permission_id") @db.Uuid
   role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  grantedAt    DateTime   @default(now()) @db.Timestamptz @map("granted_at")
-  grantedBy    String?    @db.Uuid @map("granted_by")
+  grantedAt    DateTime   @default(now()) @map("granted_at") @db.Timestamptz
+  grantedBy    String?    @map("granted_by") @db.Uuid
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
@@ -465,13 +489,13 @@ model RolePermission {
 }
 
 model UserRole {
-  userId    String   @db.Uuid @map("user_id")
-  roleId    String   @db.Uuid @map("role_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  grantedAt DateTime @default(now()) @db.Timestamptz @map("granted_at")
-  grantedBy String?  @db.Uuid @map("granted_by")
-  expiresAt DateTime? @db.Timestamptz @map("expires_at")
+  userId    String    @map("user_id") @db.Uuid
+  roleId    String    @map("role_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  grantedAt DateTime  @default(now()) @map("granted_at") @db.Timestamptz
+  grantedBy String?   @map("granted_by") @db.Uuid
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
 
   @@id([userId, roleId])
   @@map("user_roles")
@@ -480,15 +504,15 @@ model UserRole {
 
 model TenantPlugin {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String   @db.Uuid @map("tenant_id")
+  tenantId    String   @map("tenant_id") @db.Uuid
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  pluginId    String   @db.VarChar(100) @map("plugin_id")
+  pluginId    String   @map("plugin_id") @db.VarChar(100)
   version     String   @db.VarChar(20)
   enabled     Boolean  @default(true)
   config      Json     @default("{}") @db.JsonB
-  installedAt DateTime @default(now()) @db.Timestamptz @map("installed_at")
-  installedBy String?  @db.Uuid @map("installed_by")
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  installedAt DateTime @default(now()) @map("installed_at") @db.Timestamptz
+  installedBy String?  @map("installed_by") @db.Uuid
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([tenantId, pluginId])
   @@map("tenant_plugins")
@@ -500,66 +524,66 @@ model TenantPlugin {
 // ============================================================
 
 model Pilgrim {
-  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId         String        @db.Uuid @map("tenant_id")
-  status           PilgrimStatus @default(LEAD)
+  id       String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String        @map("tenant_id") @db.Uuid
+  status   PilgrimStatus @default(LEAD)
 
   // Personal
-  firstNameEn      String        @db.VarChar(100) @map("first_name_en")
-  lastNameEn       String        @db.VarChar(100) @map("last_name_en")
-  firstNameAr      String?       @db.VarChar(100) @map("first_name_ar")
-  lastNameAr       String?       @db.VarChar(100) @map("last_name_ar")
-  gender           Gender
-  dateOfBirth      DateTime      @db.Date @map("date_of_birth")
-  nationality      String        @db.Char(2)
+  firstNameEn String   @map("first_name_en") @db.VarChar(100)
+  lastNameEn  String   @map("last_name_en") @db.VarChar(100)
+  firstNameAr String?  @map("first_name_ar") @db.VarChar(100)
+  lastNameAr  String?  @map("last_name_ar") @db.VarChar(100)
+  gender      Gender
+  dateOfBirth DateTime @map("date_of_birth") @db.Date
+  nationality String   @db.Char(2)
 
   // Contact
-  email            String?       @db.VarChar(255)
-  phone            String?       @db.VarChar(30)
-  whatsapp         String?       @db.VarChar(30)
-  address          String?
-  city             String?       @db.VarChar(100)
-  country          String        @db.Char(2)
-  preferredLanguage String       @default("ar") @db.VarChar(10) @map("preferred_language")
+  email             String? @db.VarChar(255)
+  phone             String? @db.VarChar(30)
+  whatsapp          String? @db.VarChar(30)
+  address           String?
+  city              String? @db.VarChar(100)
+  country           String  @db.Char(2)
+  preferredLanguage String  @default("ar") @map("preferred_language") @db.VarChar(10)
 
   // Passport / ID
-  passportNumber   String?       @db.VarChar(30) @map("passport_number")  // encrypted
-  passportExpiry   DateTime?     @db.Date @map("passport_expiry")
-  passportCountry  String?       @db.Char(2) @map("passport_country")
-  nationalId       String?       @db.VarChar(30) @map("national_id")      // encrypted
+  passportNumber  String?   @map("passport_number") @db.VarChar(30) // encrypted
+  passportExpiry  DateTime? @map("passport_expiry") @db.Date
+  passportCountry String?   @map("passport_country") @db.Char(2)
+  nationalId      String?   @map("national_id") @db.VarChar(30) // encrypted
 
   // Medical / accessibility
-  hasDisability    Boolean       @default(false) @map("has_disability")
-  needsWheelchair  Boolean       @default(false) @map("needs_wheelchair")
-  medicalNotes     String?       @map("medical_notes")
-  vaccinated       Boolean       @default(false)
-  vaccinationRecords Json        @default("[]") @db.JsonB @map("vaccination_records")
+  hasDisability      Boolean @default(false) @map("has_disability")
+  needsWheelchair    Boolean @default(false) @map("needs_wheelchair")
+  medicalNotes       String? @map("medical_notes")
+  vaccinated         Boolean @default(false)
+  vaccinationRecords Json    @default("[]") @map("vaccination_records") @db.JsonB
 
   // CRM
-  source           String?       @db.VarChar(100) // sub_agent_id, marketing_channel, referral
-  subAgentId       String?       @db.Uuid @map("sub_agent_id")
-  notes            String?
-  tags             String[]
+  source     String?  @db.VarChar(100) // sub_agent_id, marketing_channel, referral
+  subAgentId String?  @map("sub_agent_id") @db.Uuid
+  notes      String?
+  tags       String[]
 
   // Stats
-  priorUmrahCount  Int           @default(0) @map("prior_umrah_count")
-  priorHajjCount   Int           @default(0) @map("prior_hajj_count")
-  lifetimeSpend    BigInt        @default(0) @map("lifetime_spend")  // minor units SAR
-  lifetimeCurrency String        @default("SAR") @db.Char(3) @map("lifetime_currency")
+  priorUmrahCount  Int    @default(0) @map("prior_umrah_count")
+  priorHajjCount   Int    @default(0) @map("prior_hajj_count")
+  lifetimeSpend    BigInt @default(0) @map("lifetime_spend") // minor units SAR
+  lifetimeCurrency String @default("SAR") @map("lifetime_currency") @db.Char(3)
 
   // Family
-  familyGroupId    String?       @db.Uuid @map("family_group_id")
-  familyGroup      FamilyGroup?  @relation(fields: [familyGroupId], references: [id])
-  mahramId         String?       @db.Uuid @map("mahram_id")    // for female pilgrims
+  familyGroupId String?      @map("family_group_id") @db.Uuid
+  familyGroup   FamilyGroup? @relation(fields: [familyGroupId], references: [id])
+  mahramId      String?      @map("mahram_id") @db.Uuid // for female pilgrims
 
-  createdAt        DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt        DateTime      @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy        String?       @db.Uuid @map("created_by")
-  updatedBy        String?       @db.Uuid @map("updated_by")
-  deletedAt        DateTime?     @db.Timestamptz @map("deleted_at")
-  rowVersion       Int           @default(1) @map("row_version")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy  String?   @map("created_by") @db.Uuid
+  updatedBy  String?   @map("updated_by") @db.Uuid
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+  rowVersion Int       @default(1) @map("row_version")
 
-  documents        PilgrimDocument[]
+  documents PilgrimDocument[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -569,15 +593,15 @@ model Pilgrim {
 }
 
 model FamilyGroup {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String    @db.Uuid @map("tenant_id")
-  name        String    @db.VarChar(200)
-  leadPilgrimId String? @db.Uuid @map("lead_pilgrim_id")
-  notes       String?
-  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  name          String   @db.VarChar(200)
+  leadPilgrimId String?  @map("lead_pilgrim_id") @db.Uuid
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  pilgrims    Pilgrim[]
+  pilgrims Pilgrim[]
 
   @@index([tenantId])
   @@map("family_groups")
@@ -585,25 +609,25 @@ model FamilyGroup {
 }
 
 model PilgrimDocument {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String   @db.Uuid @map("tenant_id")
-  pilgrimId    String   @db.Uuid @map("pilgrim_id")
-  pilgrim      Pilgrim  @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  pilgrimId String  @map("pilgrim_id") @db.Uuid
+  pilgrim   Pilgrim @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
 
-  type         String   @db.VarChar(50) // passport, visa, vaccination, mahram_cert, photo
-  fileName     String   @map("file_name")
-  fileUrl      String   @map("file_url")       // S3 key
-  mimeType     String   @map("mime_type")
-  fileSizeBytes Int     @map("file_size_bytes")
-  ocrData      Json?    @db.JsonB @map("ocr_data")
-  verified     Boolean  @default(false)
-  verifiedAt   DateTime? @db.Timestamptz @map("verified_at")
-  verifiedBy   String?  @db.Uuid @map("verified_by")
-  expiresAt    DateTime? @db.Date @map("expires_at")
-  version      Int      @default(1)
+  type          String    @db.VarChar(50) // passport, visa, vaccination, mahram_cert, photo
+  fileName      String    @map("file_name")
+  fileUrl       String    @map("file_url") // S3 key
+  mimeType      String    @map("mime_type")
+  fileSizeBytes Int       @map("file_size_bytes")
+  ocrData       Json?     @map("ocr_data") @db.JsonB
+  verified      Boolean   @default(false)
+  verifiedAt    DateTime? @map("verified_at") @db.Timestamptz
+  verifiedBy    String?   @map("verified_by") @db.Uuid
+  expiresAt     DateTime? @map("expires_at") @db.Date
+  version       Int       @default(1)
 
-  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
-  createdBy    String?  @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
   @@index([tenantId, pilgrimId])
   @@map("pilgrim_documents")
@@ -615,37 +639,37 @@ model PilgrimDocument {
 // ============================================================
 
 model Package {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @db.Uuid @map("tenant_id")
-  name            String   @db.VarChar(255)
-  nameAr          String?  @db.VarChar(255) @map("name_ar")
-  description     String?
-  descriptionAr   String?  @map("description_ar")
-  tier            String   @db.VarChar(50) @default("STANDARD") // ECONOMY/STANDARD/PREMIUM/VIP
-  tripType        String   @db.VarChar(20)  // UMRAH / HAJJ
-  durationDays    Int      @map("duration_days")
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String  @map("tenant_id") @db.Uuid
+  name          String  @db.VarChar(255)
+  nameAr        String? @map("name_ar") @db.VarChar(255)
+  description   String?
+  descriptionAr String? @map("description_ar")
+  tier          String  @default("STANDARD") @db.VarChar(50) // ECONOMY/STANDARD/PREMIUM/VIP
+  tripType      String  @db.VarChar(20) // UMRAH / HAJJ
+  durationDays  Int     @map("duration_days")
 
   // Travel dates
-  departureDate   DateTime? @db.Date @map("departure_date")
-  returnDate      DateTime? @db.Date @map("return_date")
+  departureDate DateTime? @map("departure_date") @db.Date
+  returnDate    DateTime? @map("return_date") @db.Date
 
   // Pricing (bigint minor units)
-  basePriceCents  BigInt   @map("base_price_cents")
-  currency        String   @db.Char(3) @default("SAR")
-  maxCapacity     Int      @map("max_capacity")
-  bookedCount     Int      @default(0) @map("booked_count")
+  basePriceCents BigInt @map("base_price_cents")
+  currency       String @default("SAR") @db.Char(3)
+  maxCapacity    Int    @map("max_capacity")
+  bookedCount    Int    @default(0) @map("booked_count")
 
   // Composition (services included)
-  includes        Json     @default("{}") @db.JsonB  // visa, flight, hotel_makkah, hotel_madinah, transport, meals, guide
-  pricingRules    Json     @default("[]") @db.JsonB  // seasonal multipliers, early-bird discounts
+  includes     Json @default("{}") @db.JsonB // visa, flight, hotel_makkah, hotel_madinah, transport, meals, guide
+  pricingRules Json @default("[]") @db.JsonB // seasonal multipliers, early-bird discounts
 
-  isPublished     Boolean  @default(false) @map("is_published")
-  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy       String?  @db.Uuid @map("created_by")
-  deletedAt       DateTime? @db.Timestamptz @map("deleted_at")
+  isPublished Boolean   @default(false) @map("is_published")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy   String?   @map("created_by") @db.Uuid
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
-  bookings        Booking[]
+  bookings Booking[]
 
   @@index([tenantId])
   @@map("packages")
@@ -653,41 +677,41 @@ model Package {
 }
 
 model Booking {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String        @db.Uuid @map("tenant_id")
-  bookingRef      String        @unique @map("booking_ref")  // UC-2026-00001
-  packageId       String?       @db.Uuid @map("package_id")
-  package         Package?      @relation(fields: [packageId], references: [id])
-  status          BookingStatus @default(DRAFT)
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String        @map("tenant_id") @db.Uuid
+  bookingRef String        @unique @map("booking_ref") // UC-2026-00001
+  packageId  String?       @map("package_id") @db.Uuid
+  package    Package?      @relation(fields: [packageId], references: [id])
+  status     BookingStatus @default(DRAFT)
 
   // Origination
-  subAgentId      String?       @db.Uuid @map("sub_agent_id")
-  subAgentCommissionRate Decimal? @db.Decimal(5,2) @map("sub_agent_commission_rate")
+  subAgentId             String?  @map("sub_agent_id") @db.Uuid
+  subAgentCommissionRate Decimal? @map("sub_agent_commission_rate") @db.Decimal(5, 2)
 
   // Pricing snapshot (at time of booking)
-  totalAmountCents  BigInt      @map("total_amount_cents")
-  paidAmountCents   BigInt      @default(0) @map("paid_amount_cents")
-  currency          String      @db.Char(3) @default("SAR")
-  discountCents     BigInt      @default(0) @map("discount_cents")
-  taxCents          BigInt      @default(0) @map("tax_cents")
+  totalAmountCents BigInt @map("total_amount_cents")
+  paidAmountCents  BigInt @default(0) @map("paid_amount_cents")
+  currency         String @default("SAR") @db.Char(3)
+  discountCents    BigInt @default(0) @map("discount_cents")
+  taxCents         BigInt @default(0) @map("tax_cents")
 
   // Travel
-  groupId         String?       @db.Uuid @map("group_id")
-  departureDate   DateTime?     @db.Date @map("departure_date")
-  returnDate      DateTime?     @db.Date @map("return_date")
-  flightDetails   Json?         @db.JsonB @map("flight_details")
+  groupId       String?   @map("group_id") @db.Uuid
+  departureDate DateTime? @map("departure_date") @db.Date
+  returnDate    DateTime? @map("return_date") @db.Date
+  flightDetails Json?     @map("flight_details") @db.JsonB
 
-  notes           String?
-  cancellationReason String?    @map("cancellation_reason")
-  cancelledAt     DateTime?     @db.Timestamptz @map("cancelled_at")
+  notes              String?
+  cancellationReason String?   @map("cancellation_reason")
+  cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz
 
-  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy       String?       @db.Uuid @map("created_by")
-  updatedBy       String?       @db.Uuid @map("updated_by")
-  rowVersion      Int           @default(1) @map("row_version")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy  String?  @map("created_by") @db.Uuid
+  updatedBy  String?  @map("updated_by") @db.Uuid
+  rowVersion Int      @default(1) @map("row_version")
 
-  pilgrims        BookingPilgrim[]
+  pilgrims BookingPilgrim[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -697,22 +721,22 @@ model Booking {
 }
 
 model BookingPilgrim {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String   @db.Uuid @map("tenant_id")
-  bookingId   String   @db.Uuid @map("booking_id")
-  booking     Booking  @relation(fields: [bookingId], references: [id])
-  pilgrimId   String   @db.Uuid @map("pilgrim_id")
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  bookingId String  @map("booking_id") @db.Uuid
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  pilgrimId String  @map("pilgrim_id") @db.Uuid
 
   // Per-pilgrim pricing override
-  priceCents  BigInt?  @map("price_cents")
-  currency    String?  @db.Char(3)
-  roomType    String?  @db.VarChar(50) @map("room_type")
-  bedType     String?  @db.VarChar(30) @map("bed_type")
-  seatNumber  String?  @db.VarChar(20) @map("seat_number")
-  mealPref    String?  @db.VarChar(50) @map("meal_pref")
-  specialReqs String?  @map("special_reqs")
+  priceCents  BigInt? @map("price_cents")
+  currency    String? @db.Char(3)
+  roomType    String? @map("room_type") @db.VarChar(50)
+  bedType     String? @map("bed_type") @db.VarChar(30)
+  seatNumber  String? @map("seat_number") @db.VarChar(20)
+  mealPref    String? @map("meal_pref") @db.VarChar(50)
+  specialReqs String? @map("special_reqs")
 
-  addedAt     DateTime @default(now()) @db.Timestamptz @map("added_at")
+  addedAt DateTime @default(now()) @map("added_at") @db.Timestamptz
 
   @@unique([bookingId, pilgrimId])
   @@index([tenantId])
@@ -725,44 +749,44 @@ model BookingPilgrim {
 // ============================================================
 
 model Hotel {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId         String?  @db.Uuid @map("tenant_id")  // null = marketplace-wide
-  vendorId         String?  @db.Uuid @map("vendor_id")
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String? @map("tenant_id") @db.Uuid // null = marketplace-wide
+  vendorId String? @map("vendor_id") @db.Uuid
 
-  name             String   @db.VarChar(255)
-  nameAr           String?  @db.VarChar(255) @map("name_ar")
-  city             String   @db.VarChar(100)  // MAKKAH / MADINAH / JEDDAH
-  country          String   @db.Char(2) @default("SA")
-  area             String?  @db.VarChar(120)              // district / neighbourhood
-  address          String?
-  postalCode       String?  @db.VarChar(20) @map("postal_code")
-  starRating       Int?     @map("star_rating")
-  distanceToHaram  Int?     @map("distance_to_haram")  // meters
-  coordinates      Json?    @db.JsonB
-  amenities        String[]
-  images           String[]
-  description      String?
-  descriptionAr    String?  @map("description_ar")
+  name            String   @db.VarChar(255)
+  nameAr          String?  @map("name_ar") @db.VarChar(255)
+  city            String   @db.VarChar(100) // MAKKAH / MADINAH / JEDDAH
+  country         String   @default("SA") @db.Char(2)
+  area            String?  @db.VarChar(120) // district / neighbourhood
+  address         String?
+  postalCode      String?  @map("postal_code") @db.VarChar(20)
+  starRating      Int?     @map("star_rating")
+  distanceToHaram Int?     @map("distance_to_haram") // meters
+  coordinates     Json?    @db.JsonB
+  amenities       String[]
+  images          String[]
+  description     String?
+  descriptionAr   String?  @map("description_ar")
 
   // Contact + operations
-  contactPerson    String?  @db.VarChar(150) @map("contact_person")
-  phone            String?  @db.VarChar(40)
-  email            String?  @db.VarChar(255)
-  checkInTime      String?  @db.VarChar(10) @map("check_in_time")    // "15:00"
-  checkOutTime     String?  @db.VarChar(10) @map("check_out_time")   // "12:00"
+  contactPerson      String? @map("contact_person") @db.VarChar(150)
+  phone              String? @db.VarChar(40)
+  email              String? @db.VarChar(255)
+  checkInTime        String? @map("check_in_time") @db.VarChar(10) // "15:00"
+  checkOutTime       String? @map("check_out_time") @db.VarChar(10) // "12:00"
   cancellationPolicy String? @map("cancellation_policy")
-  totalRooms       Int      @default(0) @map("total_rooms")
-  status           String   @db.VarChar(20) @default("ACTIVE")  // ACTIVE / INACTIVE / MAINTENANCE
-  notes            String?
-  isVerified       Boolean  @default(false) @map("is_verified")
+  totalRooms         Int     @default(0) @map("total_rooms")
+  status             String  @default("ACTIVE") @db.VarChar(20) // ACTIVE / INACTIVE / MAINTENANCE
+  notes              String?
+  isVerified         Boolean @default(false) @map("is_verified")
 
-  createdAt        DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt        DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  roomTypes        RoomType[]
-  allotments       Allotment[]
-  rooms            Room[]
-  hotelBookings    HotelBooking[]
+  roomTypes     RoomType[]
+  allotments    Allotment[]
+  rooms         Room[]
+  hotelBookings HotelBooking[]
 
   @@index([tenantId])
   @@index([city])
@@ -772,21 +796,21 @@ model Hotel {
 }
 
 model RoomType {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  hotelId       String   @db.Uuid @map("hotel_id")
-  hotel         Hotel    @relation(fields: [hotelId], references: [id])
-  name          String   @db.VarChar(100)
-  occupancy     Int      // 1=single, 2=double, 3=triple, 4=quad
-  bedConfig     String?  @db.VarChar(50) @map("bed_config")
-  description   String?
-  basePriceCents BigInt  @default(0) @map("base_price_cents")    // per room per night
-  pricePerPersonCents BigInt? @map("price_per_person_cents")
-  totalCount    Int      @default(0) @map("total_count")          // number of rooms of this type
-  status        String   @db.VarChar(20) @default("ACTIVE")
-  amenities     String[]
-  images        String[]
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hotelId             String   @map("hotel_id") @db.Uuid
+  hotel               Hotel    @relation(fields: [hotelId], references: [id])
+  name                String   @db.VarChar(100)
+  occupancy           Int // 1=single, 2=double, 3=triple, 4=quad
+  bedConfig           String?  @map("bed_config") @db.VarChar(50)
+  description         String?
+  basePriceCents      BigInt   @default(0) @map("base_price_cents") // per room per night
+  pricePerPersonCents BigInt?  @map("price_per_person_cents")
+  totalCount          Int      @default(0) @map("total_count") // number of rooms of this type
+  status              String   @default("ACTIVE") @db.VarChar(20)
+  amenities           String[]
+  images              String[]
 
-  rooms         Room[]
+  rooms Room[]
 
   @@index([hotelId])
   @@map("room_types")
@@ -794,29 +818,29 @@ model RoomType {
 }
 
 model Room {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String    @db.Uuid @map("tenant_id")
-  hotelId       String    @db.Uuid @map("hotel_id")
-  hotel         Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  roomTypeId    String?   @db.Uuid @map("room_type_id")
-  roomType      RoomType? @relation(fields: [roomTypeId], references: [id])
-  roomNumber    String    @db.VarChar(40) @map("room_number")
-  floor         String?   @db.VarChar(20)
-  capacity      Int       @default(2)
-  bedType       String?   @db.VarChar(40) @map("bed_type")
-  bedCount      Int       @default(1) @map("bed_count")
-  availableBeds Int       @default(0) @map("available_beds")
-  pricePerNightCents BigInt @default(0) @map("price_per_night_cents")
-  pricePerPersonCents BigInt? @map("price_per_person_cents")
-  seasonalPricing Json    @default("[]") @db.JsonB @map("seasonal_pricing")
-  images        String[]
-  facilities    String[]
-  description   String?
-  status        String    @db.VarChar(20) @default("AVAILABLE")  // AVAILABLE / OCCUPIED / MAINTENANCE / INACTIVE
-  notes         String?
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  hotelId             String    @map("hotel_id") @db.Uuid
+  hotel               Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomTypeId          String?   @map("room_type_id") @db.Uuid
+  roomType            RoomType? @relation(fields: [roomTypeId], references: [id])
+  roomNumber          String    @map("room_number") @db.VarChar(40)
+  floor               String?   @db.VarChar(20)
+  capacity            Int       @default(2)
+  bedType             String?   @map("bed_type") @db.VarChar(40)
+  bedCount            Int       @default(1) @map("bed_count")
+  availableBeds       Int       @default(0) @map("available_beds")
+  pricePerNightCents  BigInt    @default(0) @map("price_per_night_cents")
+  pricePerPersonCents BigInt?   @map("price_per_person_cents")
+  seasonalPricing     Json      @default("[]") @map("seasonal_pricing") @db.JsonB
+  images              String[]
+  facilities          String[]
+  description         String?
+  status              String    @default("AVAILABLE") @db.VarChar(20) // AVAILABLE / OCCUPIED / MAINTENANCE / INACTIVE
+  notes               String?
 
-  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([hotelId])
   @@index([hotelId, status])
@@ -825,32 +849,32 @@ model Room {
 }
 
 model HotelBooking {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String    @db.Uuid @map("tenant_id")
-  hotelId       String    @db.Uuid @map("hotel_id")
-  hotel         Hotel     @relation(fields: [hotelId], references: [id])
-  roomTypeId    String?   @db.Uuid @map("room_type_id")
-  roomId        String?   @db.Uuid @map("room_id")
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  hotelId    String  @map("hotel_id") @db.Uuid
+  hotel      Hotel   @relation(fields: [hotelId], references: [id])
+  roomTypeId String? @map("room_type_id") @db.Uuid
+  roomId     String? @map("room_id") @db.Uuid
 
   // Guest — platform user OR external
-  customerUserId String?  @db.Uuid @map("customer_user_id")
-  guestName     String    @db.VarChar(200) @map("guest_name")
-  guestEmail    String?   @db.VarChar(255) @map("guest_email")
-  guestPhone    String?   @db.VarChar(40) @map("guest_phone")
-  guestNationality String? @db.Char(2) @map("guest_nationality")
-  source        String    @db.VarChar(20) @default("EXTERNAL")  // PLATFORM_USER / EXTERNAL / OPERATOR / MARKETPLACE
+  customerUserId   String? @map("customer_user_id") @db.Uuid
+  guestName        String  @map("guest_name") @db.VarChar(200)
+  guestEmail       String? @map("guest_email") @db.VarChar(255)
+  guestPhone       String? @map("guest_phone") @db.VarChar(40)
+  guestNationality String? @map("guest_nationality") @db.Char(2)
+  source           String  @default("EXTERNAL") @db.VarChar(20) // PLATFORM_USER / EXTERNAL / OPERATOR / MARKETPLACE
 
-  checkIn       DateTime  @db.Date @map("check_in")
-  checkOut      DateTime  @db.Date @map("check_out")
-  guests        Int       @default(1)
-  totalAmountCents BigInt @default(0) @map("total_amount_cents")
-  currency      String    @default("SAR") @db.VarChar(8)
-  status        String    @db.VarChar(20) @default("PENDING")  // PENDING / CONFIRMED / CHECKED_IN / CHECKED_OUT / COMPLETED / CANCELLED
-  paymentStatus String    @db.VarChar(20) @default("UNPAID") @map("payment_status")  // UNPAID / PARTIAL / PAID / REFUNDED
-  notes         String?
+  checkIn          DateTime @map("check_in") @db.Date
+  checkOut         DateTime @map("check_out") @db.Date
+  guests           Int      @default(1)
+  totalAmountCents BigInt   @default(0) @map("total_amount_cents")
+  currency         String   @default("SAR") @db.VarChar(8)
+  status           String   @default("PENDING") @db.VarChar(20) // PENDING / CONFIRMED / CHECKED_IN / CHECKED_OUT / COMPLETED / CANCELLED
+  paymentStatus    String   @default("UNPAID") @map("payment_status") @db.VarChar(20) // UNPAID / PARTIAL / PAID / REFUNDED
+  notes            String?
 
-  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt     DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([tenantId])
   @@index([hotelId, status])
@@ -860,27 +884,27 @@ model HotelBooking {
 }
 
 model Allotment {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String            @db.Uuid @map("tenant_id")
-  hotelId         String            @db.Uuid @map("hotel_id")
-  hotel           Hotel             @relation(fields: [hotelId], references: [id])
-  roomTypeId      String?           @db.Uuid @map("room_type_id")
-  contractType    HotelContractType @default(ALLOTMENT) @map("contract_type")
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String            @map("tenant_id") @db.Uuid
+  hotelId      String            @map("hotel_id") @db.Uuid
+  hotel        Hotel             @relation(fields: [hotelId], references: [id])
+  roomTypeId   String?           @map("room_type_id") @db.Uuid
+  contractType HotelContractType @default(ALLOTMENT) @map("contract_type")
 
-  checkIn         DateTime          @db.Date @map("check_in")
-  checkOut        DateTime          @db.Date @map("check_out")
-  totalRooms      Int               @map("total_rooms")
-  bookedRooms     Int               @default(0) @map("booked_rooms")
-  overbookBuffer  Int               @default(0) @map("overbook_buffer")
+  checkIn        DateTime @map("check_in") @db.Date
+  checkOut       DateTime @map("check_out") @db.Date
+  totalRooms     Int      @map("total_rooms")
+  bookedRooms    Int      @default(0) @map("booked_rooms")
+  overbookBuffer Int      @default(0) @map("overbook_buffer")
 
   // Pricing
-  rateCents       BigInt            @map("rate_cents")   // per room per night
-  currency        String            @db.Char(3) @default("SAR")
-  cancellationPolicy Json           @default("{}") @db.JsonB @map("cancellation_policy")
+  rateCents          BigInt @map("rate_cents") // per room per night
+  currency           String @default("SAR") @db.Char(3)
+  cancellationPolicy Json   @default("{}") @map("cancellation_policy") @db.JsonB
 
-  notes           String?
-  createdAt       DateTime          @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime          @updatedAt @db.Timestamptz @map("updated_at")
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   roomAssignments RoomAssignment[]
 
@@ -891,16 +915,16 @@ model Allotment {
 }
 
 model RoomAssignment {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String   @db.Uuid @map("tenant_id")
-  allotmentId   String   @db.Uuid @map("allotment_id")
-  allotment     Allotment @relation(fields: [allotmentId], references: [id])
-  bookingId     String   @db.Uuid @map("booking_id")
-  roomNumber    String?  @db.VarChar(20) @map("room_number")
-  pilgrims      Json     @default("[]") @db.JsonB  // pilgrim IDs
-  checkIn       DateTime @db.Date @map("check_in")
-  checkOut      DateTime @db.Date @map("check_out")
-  confirmedAt   DateTime? @db.Timestamptz @map("confirmed_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  allotmentId String    @map("allotment_id") @db.Uuid
+  allotment   Allotment @relation(fields: [allotmentId], references: [id])
+  bookingId   String    @map("booking_id") @db.Uuid
+  roomNumber  String?   @map("room_number") @db.VarChar(20)
+  pilgrims    Json      @default("[]") @db.JsonB // pilgrim IDs
+  checkIn     DateTime  @map("check_in") @db.Date
+  checkOut    DateTime  @map("check_out") @db.Date
+  confirmedAt DateTime? @map("confirmed_at") @db.Timestamptz
 
   @@index([tenantId])
   @@index([allotmentId])
@@ -913,53 +937,53 @@ model RoomAssignment {
 // ============================================================
 
 model VisaApplication {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String           @db.Uuid @map("tenant_id")
-  pilgrimId       String?          @db.Uuid @map("pilgrim_id")
-  bookingId       String?          @db.Uuid @map("booking_id")
-  operatorId      String?          @db.Uuid @map("operator_id")    // operator who submitted on behalf
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String  @map("tenant_id") @db.Uuid
+  pilgrimId  String? @map("pilgrim_id") @db.Uuid
+  bookingId  String? @map("booking_id") @db.Uuid
+  operatorId String? @map("operator_id") @db.Uuid // operator who submitted on behalf
 
-  status          VisaStatus       @default(NOT_STARTED)
+  status           VisaStatus       @default(NOT_STARTED)
   regulatorySystem RegulatorySystem @map("regulatory_system")
 
   // Applicant snapshot (external applicants who are not platform pilgrims)
-  applicantName       String?      @db.VarChar(200) @map("applicant_name")
-  applicantPassport   String?      @db.VarChar(50) @map("applicant_passport")
-  applicantNationality String?     @db.Char(2) @map("applicant_nationality")
+  applicantName        String? @map("applicant_name") @db.VarChar(200)
+  applicantPassport    String? @map("applicant_passport") @db.VarChar(50)
+  applicantNationality String? @map("applicant_nationality") @db.Char(2)
 
   // Visa service detail
-  visaType            String?      @db.VarChar(50) @map("visa_type")
-  destinationCountry  String?      @db.Char(2) @map("destination_country")
-  serviceCountry      String?      @db.Char(2) @map("service_country")
-  applicationNumber   String?      @db.VarChar(60) @map("application_number")
-  requiredDocuments   String[]     @map("required_documents")
-  assignedOfficer     String?      @db.VarChar(150) @map("assigned_officer")
-  expectedCompletionAt DateTime?   @db.Date @map("expected_completion_at")
+  visaType             String?   @map("visa_type") @db.VarChar(50)
+  destinationCountry   String?   @map("destination_country") @db.Char(2)
+  serviceCountry       String?   @map("service_country") @db.Char(2)
+  applicationNumber    String?   @map("application_number") @db.VarChar(60)
+  requiredDocuments    String[]  @map("required_documents")
+  assignedOfficer      String?   @map("assigned_officer") @db.VarChar(150)
+  expectedCompletionAt DateTime? @map("expected_completion_at") @db.Date
 
   // Finance
-  priceCents      BigInt           @default(0) @map("price_cents")
-  currency        String           @default("SAR") @db.VarChar(8)
-  paymentStatus   String           @db.VarChar(20) @default("UNPAID") @map("payment_status")
+  priceCents    BigInt @default(0) @map("price_cents")
+  currency      String @default("SAR") @db.VarChar(8)
+  paymentStatus String @default("UNPAID") @map("payment_status") @db.VarChar(20)
 
-  submittedAt     DateTime?        @db.Timestamptz @map("submitted_at")
-  approvedAt      DateTime?        @db.Timestamptz @map("approved_at")
-  rejectedAt      DateTime?        @db.Timestamptz @map("rejected_at")
-  expiresAt       DateTime?        @db.Date @map("expires_at")
+  submittedAt DateTime? @map("submitted_at") @db.Timestamptz
+  approvedAt  DateTime? @map("approved_at") @db.Timestamptz
+  rejectedAt  DateTime? @map("rejected_at") @db.Timestamptz
+  expiresAt   DateTime? @map("expires_at") @db.Date
 
   // Regulator response
-  externalRef     String?          @db.VarChar(100) @map("external_ref")   // Nusuk/SISKOPATUH ref
-  regulatorData   Json?            @db.JsonB @map("regulator_data")
-  rejectionCode   String?          @db.VarChar(50) @map("rejection_code")
-  rejectionReason String?          @map("rejection_reason")
-  riskScore       Int?             @map("risk_score")  // AI-computed visa rejection risk
+  externalRef     String? @map("external_ref") @db.VarChar(100) // Nusuk/SISKOPATUH ref
+  regulatorData   Json?   @map("regulator_data") @db.JsonB
+  rejectionCode   String? @map("rejection_code") @db.VarChar(50)
+  rejectionReason String? @map("rejection_reason")
+  riskScore       Int?    @map("risk_score") // AI-computed visa rejection risk
 
-  documents       Json             @default("[]") @db.JsonB
-  timeline        Json             @default("[]") @db.JsonB   // immutable event log
-  notes           String?
+  documents Json    @default("[]") @db.JsonB
+  timeline  Json    @default("[]") @db.JsonB // immutable event log
+  notes     String?
 
-  createdAt       DateTime         @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime         @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy       String?          @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -969,22 +993,22 @@ model VisaApplication {
 }
 
 model RegulatorySubmission {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String           @db.Uuid @map("tenant_id")
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String           @map("tenant_id") @db.Uuid
   regulatorySystem RegulatorySystem @map("regulatory_system")
-  batchRef        String?          @db.VarChar(100) @map("batch_ref")
-  pilgrimIds      String[]         @map("pilgrim_ids")
+  batchRef         String?          @map("batch_ref") @db.VarChar(100)
+  pilgrimIds       String[]         @map("pilgrim_ids")
 
-  submittedAt     DateTime?        @db.Timestamptz @map("submitted_at")
-  acknowledgedAt  DateTime?        @db.Timestamptz @map("acknowledged_at")
-  completedAt     DateTime?        @db.Timestamptz @map("completed_at")
-  failedAt        DateTime?        @db.Timestamptz @map("failed_at")
+  submittedAt    DateTime? @map("submitted_at") @db.Timestamptz
+  acknowledgedAt DateTime? @map("acknowledged_at") @db.Timestamptz
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz
+  failedAt       DateTime? @map("failed_at") @db.Timestamptz
 
-  requestPayload  Json?            @db.JsonB @map("request_payload")
-  responsePayload Json?            @db.JsonB @map("response_payload")
-  errorDetails    Json?            @db.JsonB @map("error_details")
+  requestPayload  Json? @map("request_payload") @db.JsonB
+  responsePayload Json? @map("response_payload") @db.JsonB
+  errorDetails    Json? @map("error_details") @db.JsonB
 
-  createdAt       DateTime         @default(now()) @db.Timestamptz @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([tenantId])
   @@index([tenantId, regulatorySystem])
@@ -1035,45 +1059,45 @@ enum VisaRequestNoteVisibility {
 }
 
 model VisaServiceRequest {
-  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId       String              @db.Uuid @map("tenant_id")
-  ticketNumber   String              @db.VarChar(30) @map("ticket_number")
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  ticketNumber String @map("ticket_number") @db.VarChar(30)
 
-  subject        String              @db.VarChar(200)
-  description    String?
-  category       VisaRequestCategory @default(OTHER)
-  priority       VisaRequestPriority @default(NORMAL)
-  status         VisaRequestStatus   @default(OPEN)
+  subject     String              @db.VarChar(200)
+  description String?
+  category    VisaRequestCategory @default(OTHER)
+  priority    VisaRequestPriority @default(NORMAL)
+  status      VisaRequestStatus   @default(OPEN)
 
   // Who raised it (pilgrim / operator contact — not necessarily a platform user)
-  requesterName  String?             @db.VarChar(150) @map("requester_name")
-  requesterEmail String?             @db.VarChar(255) @map("requester_email")
-  requesterPhone String?             @db.VarChar(30) @map("requester_phone")
-  requesterId    String?             @db.Uuid @map("requester_id")
+  requesterName  String? @map("requester_name") @db.VarChar(150)
+  requesterEmail String? @map("requester_email") @db.VarChar(255)
+  requesterPhone String? @map("requester_phone") @db.VarChar(30)
+  requesterId    String? @map("requester_id") @db.Uuid
 
   // Optional links into the visa domain
-  pilgrimId          String?         @db.Uuid @map("pilgrim_id")
-  visaApplicationId  String?         @db.Uuid @map("visa_application_id")
+  pilgrimId         String? @map("pilgrim_id") @db.Uuid
+  visaApplicationId String? @map("visa_application_id") @db.Uuid
 
-  assigneeId     String?             @db.Uuid @map("assignee_id")
-  assigneeName   String?             @db.VarChar(150) @map("assignee_name")
+  assigneeId   String? @map("assignee_id") @db.Uuid
+  assigneeName String? @map("assignee_name") @db.VarChar(150)
 
-  dueAt          DateTime?           @db.Timestamptz @map("due_at")
-  firstResponseAt DateTime?          @db.Timestamptz @map("first_response_at")
-  escalatedAt    DateTime?           @db.Timestamptz @map("escalated_at")
-  escalationReason String?           @map("escalation_reason")
-  resolvedAt     DateTime?           @db.Timestamptz @map("resolved_at")
-  resolution     String?
-  closedAt       DateTime?           @db.Timestamptz @map("closed_at")
-  reopenedAt     DateTime?           @db.Timestamptz @map("reopened_at")
-  reopenCount    Int                 @default(0) @map("reopen_count")
+  dueAt            DateTime? @map("due_at") @db.Timestamptz
+  firstResponseAt  DateTime? @map("first_response_at") @db.Timestamptz
+  escalatedAt      DateTime? @map("escalated_at") @db.Timestamptz
+  escalationReason String?   @map("escalation_reason")
+  resolvedAt       DateTime? @map("resolved_at") @db.Timestamptz
+  resolution       String?
+  closedAt         DateTime? @map("closed_at") @db.Timestamptz
+  reopenedAt       DateTime? @map("reopened_at") @db.Timestamptz
+  reopenCount      Int       @default(0) @map("reopen_count")
 
-  createdAt      DateTime            @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt      DateTime            @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy      String?             @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
-  notes          VisaServiceRequestNote[]
-  events         VisaServiceRequestEvent[]
+  notes  VisaServiceRequestNote[]
+  events VisaServiceRequestEvent[]
 
   @@unique([tenantId, ticketNumber])
   @@index([tenantId, status])
@@ -1084,16 +1108,16 @@ model VisaServiceRequest {
 }
 
 model VisaServiceRequestNote {
-  id         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  requestId  String                    @db.Uuid @map("request_id")
-  request    VisaServiceRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId String             @map("request_id") @db.Uuid
+  request   VisaServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   visibility VisaRequestNoteVisibility @default(INTERNAL)
   body       String
-  authorId   String?                   @db.Uuid @map("author_id")
-  authorName String?                   @db.VarChar(150) @map("author_name")
+  authorId   String?                   @map("author_id") @db.Uuid
+  authorName String?                   @map("author_name") @db.VarChar(150)
 
-  createdAt  DateTime                  @default(now()) @db.Timestamptz @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([requestId, createdAt])
   @@map("visa_service_request_notes")
@@ -1101,19 +1125,19 @@ model VisaServiceRequestNote {
 }
 
 model VisaServiceRequestEvent {
-  id         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  requestId  String             @db.Uuid @map("request_id")
-  request    VisaServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  id        String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requestId String             @map("request_id") @db.Uuid
+  request   VisaServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
-  type       String             @db.VarChar(40)   // CREATED | STATUS_CHANGED | ASSIGNED | ...
-  message    String             @db.VarChar(400)
-  fromValue  String?            @db.VarChar(100) @map("from_value")
-  toValue    String?            @db.VarChar(100) @map("to_value")
-  actorId    String?            @db.Uuid @map("actor_id")
-  actorEmail String?            @db.VarChar(255) @map("actor_email")
-  metadata   Json?              @db.JsonB
+  type       String  @db.VarChar(40) // CREATED | STATUS_CHANGED | ASSIGNED | ...
+  message    String  @db.VarChar(400)
+  fromValue  String? @map("from_value") @db.VarChar(100)
+  toValue    String? @map("to_value") @db.VarChar(100)
+  actorId    String? @map("actor_id") @db.Uuid
+  actorEmail String? @map("actor_email") @db.VarChar(255)
+  metadata   Json?   @db.JsonB
 
-  createdAt  DateTime           @default(now()) @db.Timestamptz @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([requestId, createdAt])
   @@map("visa_service_request_events")
@@ -1132,32 +1156,32 @@ enum VisaDocumentStatus {
 }
 
 model VisaDocument {
-  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String             @db.Uuid @map("tenant_id")
-  applicationId String             @db.Uuid @map("application_id")
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String @map("tenant_id") @db.Uuid
+  applicationId String @map("application_id") @db.Uuid
 
-  name          String             @db.VarChar(200)
-  type          String             @db.VarChar(60) @default("OTHER")
-  status        VisaDocumentStatus @default(MISSING)
+  name   String             @db.VarChar(200)
+  type   String             @default("OTHER") @db.VarChar(60)
+  status VisaDocumentStatus @default(MISSING)
 
   /// Current version's stored location, denormalised for list views.
-  url           String?
-  mimeType      String?            @db.VarChar(120) @map("mime_type")
-  sizeBytes     Int?               @map("size_bytes")
-  version       Int                @default(0)
+  url       String?
+  mimeType  String? @map("mime_type") @db.VarChar(120)
+  sizeBytes Int?    @map("size_bytes")
+  version   Int     @default(0)
 
-  expiresAt     DateTime?          @db.Date @map("expires_at")
-  verifiedAt    DateTime?          @db.Timestamptz @map("verified_at")
-  verifiedBy    String?            @db.Uuid @map("verified_by")
-  rejectedAt    DateTime?          @db.Timestamptz @map("rejected_at")
-  rejectionReason String?          @map("rejection_reason")
-  notes         String?
+  expiresAt       DateTime? @map("expires_at") @db.Date
+  verifiedAt      DateTime? @map("verified_at") @db.Timestamptz
+  verifiedBy      String?   @map("verified_by") @db.Uuid
+  rejectedAt      DateTime? @map("rejected_at") @db.Timestamptz
+  rejectionReason String?   @map("rejection_reason")
+  notes           String?
 
-  createdAt     DateTime           @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt     DateTime           @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy     String?            @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
-  versions      VisaDocumentVersion[]
+  versions VisaDocumentVersion[]
 
   @@index([tenantId, applicationId])
   @@index([tenantId, status])
@@ -1167,21 +1191,21 @@ model VisaDocument {
 }
 
 model VisaDocumentVersion {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  documentId  String       @db.Uuid @map("document_id")
-  document    VisaDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentId String       @map("document_id") @db.Uuid
+  document   VisaDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  version     Int
-  url         String
-  storageKey  String?      @map("storage_key")
-  driver      String       @db.VarChar(20) @default("local")
-  mimeType    String?      @db.VarChar(120) @map("mime_type")
-  sizeBytes   Int?         @map("size_bytes")
-  checksum    String?      @db.VarChar(64)
+  version    Int
+  url        String
+  storageKey String? @map("storage_key")
+  driver     String  @default("local") @db.VarChar(20)
+  mimeType   String? @map("mime_type") @db.VarChar(120)
+  sizeBytes  Int?    @map("size_bytes")
+  checksum   String? @db.VarChar(64)
 
-  uploadedAt  DateTime     @default(now()) @db.Timestamptz @map("uploaded_at")
-  uploadedBy  String?      @db.Uuid @map("uploaded_by")
-  replacedAt  DateTime?    @db.Timestamptz @map("replaced_at")
+  uploadedAt DateTime  @default(now()) @map("uploaded_at") @db.Timestamptz
+  uploadedBy String?   @map("uploaded_by") @db.Uuid
+  replacedAt DateTime? @map("replaced_at") @db.Timestamptz
 
   @@unique([documentId, version])
   @@index([documentId, uploadedAt])
@@ -1189,43 +1213,41 @@ model VisaDocumentVersion {
   @@schema("plugin_visa")
 }
 
-
-
 // ============================================================
 // PLUGIN: TRANSPORT
 // ============================================================
 
 model Vehicle {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String        @db.Uuid @map("tenant_id")
-  vendorId        String?       @db.Uuid @map("vendor_id")
-  type            TransportType
-  name            String?       @db.VarChar(200)              // human-readable name
-  brand           String?       @db.VarChar(100)
-  plateNumber     String        @db.VarChar(30) @map("plate_number")
-  registrationNumber String?    @db.VarChar(50) @map("registration_number")
-  capacity        Int
-  bookedSeats     Int           @default(0) @map("booked_seats")
-  luggageCapacity Int?          @map("luggage_capacity")
-  hasAc           Boolean       @default(true) @map("has_ac")
-  licensedForHajj Boolean       @default(false) @map("licensed_for_hajj")
-  saudiLicenseNo  String?       @db.VarChar(50) @map("saudi_license_no")
-  model           String?       @db.VarChar(100)
-  year            Int?
-  features        String[]
-  imageUrls       String[]      @map("image_urls")
-  documentUrls    String[]      @map("document_urls")
-  status          String        @db.VarChar(20) @default("AVAILABLE")  // AVAILABLE / BOOKED / IN_SERVICE / UNDER_MAINTENANCE / INACTIVE
-  isActive        Boolean       @default(true) @map("is_active")
-  notes           String?
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId           String        @map("tenant_id") @db.Uuid
+  vendorId           String?       @map("vendor_id") @db.Uuid
+  type               TransportType
+  name               String?       @db.VarChar(200) // human-readable name
+  brand              String?       @db.VarChar(100)
+  plateNumber        String        @map("plate_number") @db.VarChar(30)
+  registrationNumber String?       @map("registration_number") @db.VarChar(50)
+  capacity           Int
+  bookedSeats        Int           @default(0) @map("booked_seats")
+  luggageCapacity    Int?          @map("luggage_capacity")
+  hasAc              Boolean       @default(true) @map("has_ac")
+  licensedForHajj    Boolean       @default(false) @map("licensed_for_hajj")
+  saudiLicenseNo     String?       @map("saudi_license_no") @db.VarChar(50)
+  model              String?       @db.VarChar(100)
+  year               Int?
+  features           String[]
+  imageUrls          String[]      @map("image_urls")
+  documentUrls       String[]      @map("document_urls")
+  status             String        @default("AVAILABLE") @db.VarChar(20) // AVAILABLE / BOOKED / IN_SERVICE / UNDER_MAINTENANCE / INACTIVE
+  isActive           Boolean       @default(true) @map("is_active")
+  notes              String?
 
-  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  drivers         VehicleDriver[]
-  assignments     TransportAssignment[]
-  tasreehPermits  TasreehPermit[]
-  routes          TransportRoute[]
+  drivers        VehicleDriver[]
+  assignments    TransportAssignment[]
+  tasreehPermits TasreehPermit[]
+  routes         TransportRoute[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1234,30 +1256,30 @@ model Vehicle {
 }
 
 model Driver {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @db.Uuid @map("tenant_id")
-  vendorId        String?  @db.Uuid @map("vendor_id")
-  firstName       String   @db.VarChar(100) @map("first_name")
-  lastName        String   @db.VarChar(100) @map("last_name")
-  phone           String   @db.VarChar(30)
-  email           String?  @db.VarChar(255)
-  nationality     String?  @db.Char(2)
-  idNumber        String?  @db.VarChar(50) @map("id_number")
-  languages       String[]  // iso codes
-  licenseNumber   String?  @db.VarChar(50) @map("license_number")
-  licenseExpiry   DateTime? @db.Date @map("license_expiry")
-  photoUrl        String?  @map("photo_url")
-  documentUrls    String[] @map("document_urls")
-  status          String   @db.VarChar(20) @default("AVAILABLE")  // AVAILABLE / ASSIGNED / ON_TRIP / OFF_DUTY / INACTIVE
-  rating          Decimal? @db.Decimal(3,2)
-  isActive        Boolean  @default(true) @map("is_active")
-  notes           String?
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  vendorId      String?   @map("vendor_id") @db.Uuid
+  firstName     String    @map("first_name") @db.VarChar(100)
+  lastName      String    @map("last_name") @db.VarChar(100)
+  phone         String    @db.VarChar(30)
+  email         String?   @db.VarChar(255)
+  nationality   String?   @db.Char(2)
+  idNumber      String?   @map("id_number") @db.VarChar(50)
+  languages     String[] // iso codes
+  licenseNumber String?   @map("license_number") @db.VarChar(50)
+  licenseExpiry DateTime? @map("license_expiry") @db.Date
+  photoUrl      String?   @map("photo_url")
+  documentUrls  String[]  @map("document_urls")
+  status        String    @default("AVAILABLE") @db.VarChar(20) // AVAILABLE / ASSIGNED / ON_TRIP / OFF_DUTY / INACTIVE
+  rating        Decimal?  @db.Decimal(3, 2)
+  isActive      Boolean   @default(true) @map("is_active")
+  notes         String?
 
-  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  vehicles        VehicleDriver[]
-  routes          TransportRoute[]
-  assignments     TransportAssignment[]
+  vehicles    VehicleDriver[]
+  routes      TransportRoute[]
+  assignments TransportAssignment[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1266,12 +1288,12 @@ model Driver {
 }
 
 model VehicleDriver {
-  vehicleId  String   @db.Uuid @map("vehicle_id")
-  driverId   String   @db.Uuid @map("driver_id")
+  vehicleId  String   @map("vehicle_id") @db.Uuid
+  driverId   String   @map("driver_id") @db.Uuid
   vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
   driver     Driver   @relation(fields: [driverId], references: [id])
   isPrimary  Boolean  @default(false) @map("is_primary")
-  assignedAt DateTime @default(now()) @db.Timestamptz @map("assigned_at")
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz
 
   @@id([vehicleId, driverId])
   @@map("vehicle_drivers")
@@ -1279,34 +1301,34 @@ model VehicleDriver {
 }
 
 model TransportRoute {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String       @db.Uuid @map("tenant_id")
-  name         String       @db.VarChar(200)
-  movementType MovementType @map("movement_type")
-  originCity   String       @db.VarChar(100) @map("origin_city")
-  destCity     String       @db.VarChar(100) @map("dest_city")
-  pickupPoint  String?      @db.VarChar(255) @map("pickup_point")
-  dropoffPoint String?      @db.VarChar(255) @map("dropoff_point")
-  distanceKm   Int?         @map("distance_km")
-  durationMins Int?         @map("duration_mins")
-  departureAt  DateTime?    @db.Timestamptz @map("departure_at")
-  arrivalAt    DateTime?    @db.Timestamptz @map("arrival_at")
-  pricePerSeatCents BigInt? @map("price_per_seat_cents")
-  pricePerVehicleCents BigInt? @map("price_per_vehicle_cents")
-  currency     String       @default("SAR") @db.VarChar(8)
-  totalSeats   Int?         @map("total_seats")
-  bookedSeats  Int          @default(0) @map("booked_seats")
-  vehicleId    String?      @db.Uuid @map("vehicle_id")
-  vehicle      Vehicle?     @relation(fields: [vehicleId], references: [id])
-  driverId     String?      @db.Uuid @map("driver_id")
-  driver       Driver?      @relation(fields: [driverId], references: [id])
-  status       String       @db.VarChar(20) @default("ACTIVE")  // DRAFT / ACTIVE / FULLY_BOOKED / COMPLETED / CANCELLED / INACTIVE
-  notes        String?
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId             String       @map("tenant_id") @db.Uuid
+  name                 String       @db.VarChar(200)
+  movementType         MovementType @map("movement_type")
+  originCity           String       @map("origin_city") @db.VarChar(100)
+  destCity             String       @map("dest_city") @db.VarChar(100)
+  pickupPoint          String?      @map("pickup_point") @db.VarChar(255)
+  dropoffPoint         String?      @map("dropoff_point") @db.VarChar(255)
+  distanceKm           Int?         @map("distance_km")
+  durationMins         Int?         @map("duration_mins")
+  departureAt          DateTime?    @map("departure_at") @db.Timestamptz
+  arrivalAt            DateTime?    @map("arrival_at") @db.Timestamptz
+  pricePerSeatCents    BigInt?      @map("price_per_seat_cents")
+  pricePerVehicleCents BigInt?      @map("price_per_vehicle_cents")
+  currency             String       @default("SAR") @db.VarChar(8)
+  totalSeats           Int?         @map("total_seats")
+  bookedSeats          Int          @default(0) @map("booked_seats")
+  vehicleId            String?      @map("vehicle_id") @db.Uuid
+  vehicle              Vehicle?     @relation(fields: [vehicleId], references: [id])
+  driverId             String?      @map("driver_id") @db.Uuid
+  driver               Driver?      @relation(fields: [driverId], references: [id])
+  status               String       @default("ACTIVE") @db.VarChar(20) // DRAFT / ACTIVE / FULLY_BOOKED / COMPLETED / CANCELLED / INACTIVE
+  notes                String?
 
-  createdAt    DateTime     @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt    DateTime     @default(now()) @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  assignments  TransportAssignment[]
+  assignments TransportAssignment[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1315,39 +1337,39 @@ model TransportRoute {
 }
 
 model TransportAssignment {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String   @db.Uuid @map("tenant_id")
-  vehicleId     String   @db.Uuid @map("vehicle_id")
-  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id])
-  routeId       String?  @db.Uuid @map("route_id")
-  route         TransportRoute? @relation(fields: [routeId], references: [id])
-  driverId      String?  @db.Uuid @map("driver_id")
-  driver        Driver?  @relation(fields: [driverId], references: [id])
-  groupId       String?  @db.Uuid @map("group_id")
-  bookingId     String?  @db.Uuid @map("booking_id")
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String          @map("tenant_id") @db.Uuid
+  vehicleId String          @map("vehicle_id") @db.Uuid
+  vehicle   Vehicle         @relation(fields: [vehicleId], references: [id])
+  routeId   String?         @map("route_id") @db.Uuid
+  route     TransportRoute? @relation(fields: [routeId], references: [id])
+  driverId  String?         @map("driver_id") @db.Uuid
+  driver    Driver?         @relation(fields: [driverId], references: [id])
+  groupId   String?         @map("group_id") @db.Uuid
+  bookingId String?         @map("booking_id") @db.Uuid
 
-  customerType  String   @db.VarChar(20) @default("PLATFORM_USER") @map("customer_type")  // PLATFORM_USER / OPERATOR / EXTERNAL
-  customerName  String?  @db.VarChar(200) @map("customer_name")
-  customerEmail String?  @db.VarChar(255) @map("customer_email")
-  customerPhone String?  @db.VarChar(40) @map("customer_phone")
+  customerType  String  @default("PLATFORM_USER") @map("customer_type") @db.VarChar(20) // PLATFORM_USER / OPERATOR / EXTERNAL
+  customerName  String? @map("customer_name") @db.VarChar(200)
+  customerEmail String? @map("customer_email") @db.VarChar(255)
+  customerPhone String? @map("customer_phone") @db.VarChar(40)
 
-  pickupLocation  String? @db.VarChar(255) @map("pickup_location")
-  dropoffLocation String? @db.VarChar(255) @map("dropoff_location")
+  pickupLocation  String? @map("pickup_location") @db.VarChar(255)
+  dropoffLocation String? @map("dropoff_location") @db.VarChar(255)
 
-  scheduledAt   DateTime @db.Timestamptz @map("scheduled_at")
-  departedAt    DateTime? @db.Timestamptz @map("departed_at")
-  arrivedAt     DateTime? @db.Timestamptz @map("arrived_at")
-  pilgrims      Json     @default("[]") @db.JsonB
-  passengerCount Int     @default(1) @map("passenger_count")
+  scheduledAt    DateTime  @map("scheduled_at") @db.Timestamptz
+  departedAt     DateTime? @map("departed_at") @db.Timestamptz
+  arrivedAt      DateTime? @map("arrived_at") @db.Timestamptz
+  pilgrims       Json      @default("[]") @db.JsonB
+  passengerCount Int       @default(1) @map("passenger_count")
 
-  priceCents    BigInt   @default(0) @map("price_cents")
-  currency      String   @default("SAR") @db.VarChar(8)
-  paymentStatus String   @db.VarChar(20) @default("UNPAID") @map("payment_status")  // UNPAID / PARTIAL / PAID / REFUNDED
-  status        String   @db.VarChar(20) @default("SCHEDULED")  // DRAFT / SCHEDULED / CONFIRMED / IN_PROGRESS / COMPLETED / CANCELLED
+  priceCents    BigInt  @default(0) @map("price_cents")
+  currency      String  @default("SAR") @db.VarChar(8)
+  paymentStatus String  @default("UNPAID") @map("payment_status") @db.VarChar(20) // UNPAID / PARTIAL / PAID / REFUNDED
+  status        String  @default("SCHEDULED") @db.VarChar(20) // DRAFT / SCHEDULED / CONFIRMED / IN_PROGRESS / COMPLETED / CANCELLED
   notes         String?
 
-  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt     DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1356,16 +1378,16 @@ model TransportAssignment {
 }
 
 model TasreehPermit {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId     String   @db.Uuid @map("tenant_id")
-  vehicleId    String   @db.Uuid @map("vehicle_id")
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
-  permitNumber String   @db.VarChar(50) @map("permit_number")
-  permitDate   DateTime @db.Date @map("permit_date")
-  zone         String   @db.VarChar(50)  // MINA, ARAFAT, MUZDALIFAH
-  issuedAt     DateTime? @db.Timestamptz @map("issued_at")
-  expiresAt    DateTime  @db.Date @map("expires_at")
-  documentUrl  String?  @map("document_url")
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  vehicleId    String    @map("vehicle_id") @db.Uuid
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
+  permitNumber String    @map("permit_number") @db.VarChar(50)
+  permitDate   DateTime  @map("permit_date") @db.Date
+  zone         String    @db.VarChar(50) // MINA, ARAFAT, MUZDALIFAH
+  issuedAt     DateTime? @map("issued_at") @db.Timestamptz
+  expiresAt    DateTime  @map("expires_at") @db.Date
+  documentUrl  String?   @map("document_url")
 
   @@index([tenantId])
   @@map("tasreeh_permits")
@@ -1377,46 +1399,46 @@ model TasreehPermit {
 // ============================================================
 
 model Invoice {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String        @db.Uuid @map("tenant_id")
-  invoiceRef      String        @unique @map("invoice_ref")  // INV-2026-00001
-  status          InvoiceStatus @default(DRAFT)
-  type            String        @db.VarChar(30) @default("CUSTOMER")  // CUSTOMER / VENDOR / CREDIT_NOTE
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String        @map("tenant_id") @db.Uuid
+  invoiceRef String        @unique @map("invoice_ref") // INV-2026-00001
+  status     InvoiceStatus @default(DRAFT)
+  type       String        @default("CUSTOMER") @db.VarChar(30) // CUSTOMER / VENDOR / CREDIT_NOTE
 
   // Parties
-  bookingId       String?       @db.Uuid @map("booking_id")
-  pilgrimId       String?       @db.Uuid @map("pilgrim_id")
-  vendorId        String?       @db.Uuid @map("vendor_id")
-  issuedToName    String        @map("issued_to_name")
-  issuedToAddress Json?         @db.JsonB @map("issued_to_address")
+  bookingId       String? @map("booking_id") @db.Uuid
+  pilgrimId       String? @map("pilgrim_id") @db.Uuid
+  vendorId        String? @map("vendor_id") @db.Uuid
+  issuedToName    String  @map("issued_to_name")
+  issuedToAddress Json?   @map("issued_to_address") @db.JsonB
 
   // Amounts (all bigint minor units)
-  subtotalCents   BigInt        @map("subtotal_cents")
-  taxCents        BigInt        @default(0) @map("tax_cents")
-  discountCents   BigInt        @default(0) @map("discount_cents")
-  totalCents      BigInt        @map("total_cents")
-  paidCents       BigInt        @default(0) @map("paid_cents")
-  currency        String        @db.Char(3) @default("SAR")
+  subtotalCents BigInt @map("subtotal_cents")
+  taxCents      BigInt @default(0) @map("tax_cents")
+  discountCents BigInt @default(0) @map("discount_cents")
+  totalCents    BigInt @map("total_cents")
+  paidCents     BigInt @default(0) @map("paid_cents")
+  currency      String @default("SAR") @db.Char(3)
 
   // Dates
-  issuedAt        DateTime?     @db.Date @map("issued_at")
-  dueAt           DateTime?     @db.Date @map("due_at")
-  paidAt          DateTime?     @db.Timestamptz @map("paid_at")
+  issuedAt DateTime? @map("issued_at") @db.Date
+  dueAt    DateTime? @map("due_at") @db.Date
+  paidAt   DateTime? @map("paid_at") @db.Timestamptz
 
   // ZATCA fields (for KSA e-invoicing)
-  zatcaUuid       String?       @db.Uuid @map("zatca_uuid")
-  zatcaHash       String?       @map("zatca_hash")
-  zatcaQrCode     String?       @map("zatca_qr_code")
-  zatcaClearedAt  DateTime?     @db.Timestamptz @map("zatca_cleared_at")
+  zatcaUuid      String?   @map("zatca_uuid") @db.Uuid
+  zatcaHash      String?   @map("zatca_hash")
+  zatcaQrCode    String?   @map("zatca_qr_code")
+  zatcaClearedAt DateTime? @map("zatca_cleared_at") @db.Timestamptz
 
-  lineItems       Json          @default("[]") @db.JsonB @map("line_items")
-  notes           String?
+  lineItems Json    @default("[]") @map("line_items") @db.JsonB
+  notes     String?
 
-  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy       String?       @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
-  payments        Payment[]
+  payments Payment[]
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1426,86 +1448,92 @@ model Invoice {
 }
 
 model Payment {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String        @db.Uuid @map("tenant_id")
-  invoiceId       String?       @db.Uuid @map("invoice_id")
-  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
-  bookingId       String?       @db.Uuid @map("booking_id")
-  pilgrimId       String?       @db.Uuid @map("pilgrim_id")
-  status          PaymentStatus @default(PENDING)
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId         String        @map("tenant_id") @db.Uuid
+  invoiceId        String?       @map("invoice_id") @db.Uuid
+  invoice          Invoice?      @relation(fields: [invoiceId], references: [id])
+  bookingId        String?       @map("booking_id") @db.Uuid
+  pilgrimId        String?       @map("pilgrim_id") @db.Uuid
+  /// Marketplace checkout: the listing booking being paid and the traveler paying it.
+  listingBookingId String?       @map("listing_booking_id") @db.Uuid
+  payerUserId      String?       @map("payer_user_id") @db.Uuid
+  status           PaymentStatus @default(PENDING)
 
   // Amount
-  amountCents     BigInt        @map("amount_cents")
-  currency        String        @db.Char(3)
-  fxRateSar       Decimal?      @db.Decimal(15,6) @map("fx_rate_sar")  // rate to SAR at time of payment
+  amountCents BigInt   @map("amount_cents")
+  currency    String   @db.Char(3)
+  fxRateSar   Decimal? @map("fx_rate_sar") @db.Decimal(15, 6) // rate to SAR at time of payment
 
   // Gateway
-  gateway         String        @db.VarChar(50)  // stripe, hyperpay, midtrans, tabby, tamara, cash
-  gatewayRef      String?       @db.VarChar(200) @map("gateway_ref")
-  gatewayStatus   String?       @db.VarChar(50)  @map("gateway_status")
-  gatewayResponse Json?         @db.JsonB @map("gateway_response")
+  gateway         String  @db.VarChar(50) // stripe, hyperpay, midtrans, tabby, tamara, cash
+  gatewayRef      String? @map("gateway_ref") @db.VarChar(200)
+  gatewayStatus   String? @map("gateway_status") @db.VarChar(50)
+  gatewayResponse Json?   @map("gateway_response") @db.JsonB
 
   // BNPL
-  isBnpl          Boolean       @default(false) @map("is_bnpl")
-  bnplProvider    String?       @db.VarChar(50) @map("bnpl_provider")
-  installmentPlan Json?         @db.JsonB @map("installment_plan")
+  isBnpl          Boolean @default(false) @map("is_bnpl")
+  bnplProvider    String? @map("bnpl_provider") @db.VarChar(50)
+  installmentPlan Json?   @map("installment_plan") @db.JsonB
 
-  idempotencyKey  String        @unique @map("idempotency_key")
-  paidAt          DateTime?     @db.Timestamptz @map("paid_at")
-  failedAt        DateTime?     @db.Timestamptz @map("failed_at")
-  failureReason   String?       @map("failure_reason")
-  refundedCents   BigInt        @default(0) @map("refunded_cents")
-  refundedAt      DateTime?     @db.Timestamptz @map("refunded_at")
+  idempotencyKey String    @unique @map("idempotency_key")
+  paidAt         DateTime? @map("paid_at") @db.Timestamptz
+  failedAt       DateTime? @map("failed_at") @db.Timestamptz
+  failureReason  String?   @map("failure_reason")
+  refundedCents  BigInt    @default(0) @map("refunded_cents")
+  refundedAt     DateTime? @map("refunded_at") @db.Timestamptz
 
-  createdAt       DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  transactions PaymentTransaction[]
 
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([idempotencyKey])
+  @@index([gateway, gatewayRef])
+  @@index([listingBookingId])
+  @@index([payerUserId])
   @@map("payments")
-
-  transactions    PaymentTransaction[]
   @@schema("plugin_finance")
 }
 
 model BudgetPlan {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId           String   @db.Uuid @map("tenant_id")
-  planRef            String   @unique @map("plan_ref")  // BP-2026-00001
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  planRef  String @unique @map("plan_ref") // BP-2026-00001
 
   // Client
-  clientUserId       String?  @db.Uuid @map("client_user_id")
-  clientName         String   @db.VarChar(200) @map("client_name")
-  clientType         String   @db.VarChar(20) @default("TRAVELER") @map("client_type")  // TRAVELER / OPERATOR / EXTERNAL
-  requestId          String?  @db.Uuid @map("request_id")    // optional marketplace request link
+  clientUserId String? @map("client_user_id") @db.Uuid
+  clientName   String  @map("client_name") @db.VarChar(200)
+  clientType   String  @default("TRAVELER") @map("client_type") @db.VarChar(20) // TRAVELER / OPERATOR / EXTERNAL
+  requestId    String? @map("request_id") @db.Uuid // optional marketplace request link
 
   // Trip parameters
-  destination        String?  @db.VarChar(120)
-  dateFrom           DateTime? @db.Date @map("date_from")
-  dateTo             DateTime? @db.Date @map("date_to")
-  travelers          Int      @default(1)
-  currency           String   @default("SAR") @db.VarChar(8)
+  destination String?   @db.VarChar(120)
+  dateFrom    DateTime? @map("date_from") @db.Date
+  dateTo      DateTime? @map("date_to") @db.Date
+  travelers   Int       @default(1)
+  currency    String    @default("SAR") @db.VarChar(8)
 
   // Budget breakdown (minor units)
-  totalBudgetCents   BigInt   @default(0) @map("total_budget_cents")
-  hotelBudgetCents   BigInt   @default(0) @map("hotel_budget_cents")
+  totalBudgetCents     BigInt @default(0) @map("total_budget_cents")
+  hotelBudgetCents     BigInt @default(0) @map("hotel_budget_cents")
   transportBudgetCents BigInt @default(0) @map("transport_budget_cents")
-  visaBudgetCents    BigInt   @default(0) @map("visa_budget_cents")
-  packageBudgetCents BigInt   @default(0) @map("package_budget_cents")
-  otherBudgetCents   BigInt   @default(0) @map("other_budget_cents")
+  visaBudgetCents      BigInt @default(0) @map("visa_budget_cents")
+  packageBudgetCents   BigInt @default(0) @map("package_budget_cents")
+  otherBudgetCents     BigInt @default(0) @map("other_budget_cents")
 
-  commissionRate     Decimal? @db.Decimal(5,2) @map("commission_rate")  // percent
-  commissionCents    BigInt   @default(0) @map("commission_cents")
+  commissionRate  Decimal? @map("commission_rate") @db.Decimal(5, 2) // percent
+  commissionCents BigInt   @default(0) @map("commission_cents")
 
-  suggestedOptions   Json     @default("[]") @db.JsonB @map("suggested_options")
-  finalPlan          Json?    @db.JsonB @map("final_plan")
-  status             String   @db.VarChar(20) @default("DRAFT")  // DRAFT / PROPOSED / ACCEPTED / COMPLETED / CANCELLED
-  notes              String?
+  suggestedOptions Json    @default("[]") @map("suggested_options") @db.JsonB
+  finalPlan        Json?   @map("final_plan") @db.JsonB
+  status           String  @default("DRAFT") @db.VarChar(20) // DRAFT / PROPOSED / ACCEPTED / COMPLETED / CANCELLED
+  notes            String?
 
-  createdAt          DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt          DateTime @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy          String?  @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -1514,18 +1542,18 @@ model BudgetPlan {
 }
 
 model LedgerEntry {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @db.Uuid @map("tenant_id")
-  accountCode     String   @db.VarChar(20) @map("account_code")
-  type            String   @db.VarChar(10)  // DEBIT / CREDIT
-  amountCents     BigInt   @map("amount_cents")
-  currency        String   @db.Char(3)
-  fxRateSar       Decimal? @db.Decimal(15,6) @map("fx_rate_sar")
-  referenceType   String   @db.VarChar(50) @map("reference_type")   // invoice, payment, refund, fx_revaluation
-  referenceId     String   @db.Uuid @map("reference_id")
-  description     String?
-  postedAt        DateTime @default(now()) @db.Timestamptz @map("posted_at")
-  createdBy       String?  @db.Uuid @map("created_by")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  accountCode   String   @map("account_code") @db.VarChar(20)
+  type          String   @db.VarChar(10) // DEBIT / CREDIT
+  amountCents   BigInt   @map("amount_cents")
+  currency      String   @db.Char(3)
+  fxRateSar     Decimal? @map("fx_rate_sar") @db.Decimal(15, 6)
+  referenceType String   @map("reference_type") @db.VarChar(50) // invoice, payment, refund, fx_revaluation
+  referenceId   String   @map("reference_id") @db.Uuid
+  description   String?
+  postedAt      DateTime @default(now()) @map("posted_at") @db.Timestamptz
+  createdBy     String?  @map("created_by") @db.Uuid
 
   @@index([tenantId, accountCode])
   @@index([tenantId, postedAt])
@@ -1534,13 +1562,13 @@ model LedgerEntry {
 }
 
 model FxRate {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  baseCurrency String   @db.Char(3) @default("SAR") @map("base_currency")
-  quoteCurrency String  @db.Char(3) @map("quote_currency")
-  rate         Decimal  @db.Decimal(18,8)
-  source       String   @db.VarChar(50) @default("manual")
-  rateDate     DateTime @db.Date @map("rate_date")
-  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  baseCurrency  String   @default("SAR") @map("base_currency") @db.Char(3)
+  quoteCurrency String   @map("quote_currency") @db.Char(3)
+  rate          Decimal  @db.Decimal(18, 8)
+  source        String   @default("manual") @db.VarChar(50)
+  rateDate      DateTime @map("rate_date") @db.Date
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@unique([baseCurrency, quoteCurrency, rateDate])
   @@map("fx_rates")
@@ -1552,37 +1580,37 @@ model FxRate {
 // ============================================================
 
 model TripGroup {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @db.Uuid @map("tenant_id")
-  name            String   @db.VarChar(200)
-  description     String?  // Long-form description shown on detail page
-  coverUrl        String?  @map("cover_url")
-  visibility      String   @db.VarChar(20) @default("PRIVATE")  // PUBLIC / PRIVATE / UNLISTED
-  tripType        String   @db.VarChar(20) @default("UMRAH")  // UMRAH / HAJJ
-  season          String?  @db.VarChar(50)  // RAMADAN_2026, HAJJ_1446
-  departureDate   DateTime? @db.Date @map("departure_date")
-  returnDate      DateTime? @db.Date @map("return_date")
-  capacity        Int
-  enrolledCount   Int      @default(0) @map("enrolled_count")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  name          String    @db.VarChar(200)
+  description   String? // Long-form description shown on detail page
+  coverUrl      String?   @map("cover_url")
+  visibility    String    @default("PRIVATE") @db.VarChar(20) // PUBLIC / PRIVATE / UNLISTED
+  tripType      String    @default("UMRAH") @db.VarChar(20) // UMRAH / HAJJ
+  season        String?   @db.VarChar(50) // RAMADAN_2026, HAJJ_1446
+  departureDate DateTime? @map("departure_date") @db.Date
+  returnDate    DateTime? @map("return_date") @db.Date
+  capacity      Int
+  enrolledCount Int       @default(0) @map("enrolled_count")
 
-  mutawifId       String?  @db.Uuid @map("mutawif_id")
-  leadGuideId     String?  @db.Uuid @map("lead_guide_id")
-  status          String   @db.VarChar(50) @default("PLANNING")
+  mutawifId   String? @map("mutawif_id") @db.Uuid
+  leadGuideId String? @map("lead_guide_id") @db.Uuid
+  status      String  @default("PLANNING") @db.VarChar(50)
 
-  itinerary       Json     @default("[]") @db.JsonB
-  briefingNotes   String?  @map("briefing_notes")
-  emergencyContact Json?   @db.JsonB @map("emergency_contact")
+  itinerary        Json    @default("[]") @db.JsonB
+  briefingNotes    String? @map("briefing_notes")
+  emergencyContact Json?   @map("emergency_contact") @db.JsonB
 
-  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
-  createdBy       String?  @db.Uuid @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdBy String?  @map("created_by") @db.Uuid
 
-  incidents       Incident[]
-  members         GroupMember[]
-  posts           GroupPost[]
-  polls           GroupPoll[]
-  notes           GroupNote[]
-  invites         GroupInvite[]
+  incidents Incident[]
+  members   GroupMember[]
+  posts     GroupPost[]
+  polls     GroupPoll[]
+  notes     GroupNote[]
+  invites   GroupInvite[]
 
   @@index([tenantId])
   @@index([visibility])
@@ -1591,14 +1619,14 @@ model TripGroup {
 }
 
 model GroupMember {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  groupId   String   @db.Uuid @map("group_id")
-  group     TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  userId    String   @db.Uuid @map("user_id")
-  role      String   @db.VarChar(20) @default("MEMBER")  // OWNER / ADMIN / MEMBER
-  status    String   @db.VarChar(20) @default("ACTIVE")  // ACTIVE / PENDING / REMOVED
-  joinedAt  DateTime @default(now()) @db.Timestamptz @map("joined_at")
-  notes     String?
+  id       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId  String    @map("group_id") @db.Uuid
+  group    TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String    @map("user_id") @db.Uuid
+  role     String    @default("MEMBER") @db.VarChar(20) // OWNER / ADMIN / MEMBER
+  status   String    @default("ACTIVE") @db.VarChar(20) // ACTIVE / PENDING / REMOVED
+  joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamptz
+  notes    String?
 
   @@unique([groupId, userId])
   @@index([groupId])
@@ -1608,16 +1636,16 @@ model GroupMember {
 }
 
 model GroupInvite {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  groupId     String    @db.Uuid @map("group_id")
-  group       TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  inviteeUserId String? @db.Uuid @map("invitee_user_id")
-  inviteeEmail String? @db.VarChar(255) @map("invitee_email")
-  invitedBy   String    @db.Uuid @map("invited_by")
-  status      String    @db.VarChar(20) @default("PENDING")  // PENDING / ACCEPTED / DECLINED / REVOKED
-  message     String?
-  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  respondedAt DateTime? @db.Timestamptz @map("responded_at")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId       String    @map("group_id") @db.Uuid
+  group         TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  inviteeUserId String?   @map("invitee_user_id") @db.Uuid
+  inviteeEmail  String?   @map("invitee_email") @db.VarChar(255)
+  invitedBy     String    @map("invited_by") @db.Uuid
+  status        String    @default("PENDING") @db.VarChar(20) // PENDING / ACCEPTED / DECLINED / REVOKED
+  message       String?
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  respondedAt   DateTime? @map("responded_at") @db.Timestamptz
 
   @@index([groupId, status])
   @@index([inviteeUserId, status])
@@ -1626,17 +1654,17 @@ model GroupInvite {
 }
 
 model GroupPost {
-  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  groupId   String     @db.Uuid @map("group_id")
-  group     TripGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  authorId  String     @db.Uuid @map("author_id")
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId   String    @map("group_id") @db.Uuid
+  group     TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  authorId  String    @map("author_id") @db.Uuid
   body      String
-  mediaUrls String[]   @map("media_urls")
-  isPinned  Boolean    @default(false) @map("is_pinned")
-  createdAt DateTime   @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt DateTime   @updatedAt @db.Timestamptz @map("updated_at")
+  mediaUrls String[]  @map("media_urls")
+  isPinned  Boolean   @default(false) @map("is_pinned")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  comments  GroupPostComment[]
+  comments GroupPostComment[]
 
   @@index([groupId, createdAt(sort: Desc)])
   @@map("group_posts")
@@ -1645,11 +1673,11 @@ model GroupPost {
 
 model GroupPostComment {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  postId    String    @db.Uuid @map("post_id")
+  postId    String    @map("post_id") @db.Uuid
   post      GroupPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId  String    @db.Uuid @map("author_id")
+  authorId  String    @map("author_id") @db.Uuid
   body      String
-  createdAt DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([postId, createdAt])
   @@map("group_post_comments")
@@ -1658,17 +1686,17 @@ model GroupPostComment {
 
 model GroupPoll {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  groupId    String    @db.Uuid @map("group_id")
+  groupId    String    @map("group_id") @db.Uuid
   group      TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  authorId   String    @db.Uuid @map("author_id")
+  authorId   String    @map("author_id") @db.Uuid
   question   String    @db.VarChar(500)
-  options    Json      @default("[]") @db.JsonB  // [{ index, label }]
+  options    Json      @default("[]") @db.JsonB // [{ index, label }]
   isMultiple Boolean   @default(false) @map("is_multiple")
-  closesAt   DateTime? @db.Timestamptz @map("closes_at")
-  status     String    @db.VarChar(20) @default("OPEN")  // OPEN / CLOSED
-  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  closesAt   DateTime? @map("closes_at") @db.Timestamptz
+  status     String    @default("OPEN") @db.VarChar(20) // OPEN / CLOSED
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  votes      GroupPollVote[]
+  votes GroupPollVote[]
 
   @@index([groupId])
   @@map("group_polls")
@@ -1676,12 +1704,12 @@ model GroupPoll {
 }
 
 model GroupPollVote {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  pollId     String    @db.Uuid @map("poll_id")
-  poll       GroupPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  userId     String    @db.Uuid @map("user_id")
-  optionIndex Int      @map("option_index")
-  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pollId      String    @map("poll_id") @db.Uuid
+  poll        GroupPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  userId      String    @map("user_id") @db.Uuid
+  optionIndex Int       @map("option_index")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@unique([pollId, userId, optionIndex])
   @@index([pollId])
@@ -1690,16 +1718,16 @@ model GroupPollVote {
 }
 
 model GroupNote {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  groupId    String    @db.Uuid @map("group_id")
-  group      TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  authorId   String    @db.Uuid @map("author_id")
-  title      String    @db.VarChar(200)
-  body       String?
-  category   String    @db.VarChar(30) @default("GENERAL")  // GENERAL / PLANNING / ITINERARY / CHECKLIST / TRANSPORT / HOTEL
-  pinned     Boolean   @default(false)
-  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt  DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId   String    @map("group_id") @db.Uuid
+  group     TripGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  authorId  String    @map("author_id") @db.Uuid
+  title     String    @db.VarChar(200)
+  body      String?
+  category  String    @default("GENERAL") @db.VarChar(30) // GENERAL / PLANNING / ITINERARY / CHECKLIST / TRANSPORT / HOTEL
+  pinned    Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([groupId, category])
   @@map("group_notes")
@@ -1707,15 +1735,15 @@ model GroupNote {
 }
 
 model GroupDocument {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  groupId    String    @db.Uuid @map("group_id")
-  uploaderId String    @db.Uuid @map("uploader_id")
-  name       String    @db.VarChar(255)
-  url        String
-  mimeType   String?   @db.VarChar(120) @map("mime_type")
-  sizeBytes  Int?      @map("size_bytes")
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId     String   @map("group_id") @db.Uuid
+  uploaderId  String   @map("uploader_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  url         String
+  mimeType    String?  @map("mime_type") @db.VarChar(120)
+  sizeBytes   Int?     @map("size_bytes")
   description String?
-  createdAt  DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([groupId, createdAt(sort: Desc)])
   @@map("group_documents")
@@ -1723,19 +1751,19 @@ model GroupDocument {
 }
 
 model Incident {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String   @db.Uuid @map("tenant_id")
-  groupId       String   @db.Uuid @map("group_id")
-  group         TripGroup @relation(fields: [groupId], references: [id])
-  pilgrimId     String?  @db.Uuid @map("pilgrim_id")
-  type          String   @db.VarChar(50)  // MEDICAL, LOST, DELAY, COMPLAINT, OTHER
-  severity      String   @db.VarChar(20)  // LOW, MEDIUM, HIGH, CRITICAL
-  description   String
-  location      String?
-  resolvedAt    DateTime? @db.Timestamptz @map("resolved_at")
-  resolution    String?
-  reportedBy    String?  @db.Uuid @map("reported_by")
-  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  groupId     String    @map("group_id") @db.Uuid
+  group       TripGroup @relation(fields: [groupId], references: [id])
+  pilgrimId   String?   @map("pilgrim_id") @db.Uuid
+  type        String    @db.VarChar(50) // MEDICAL, LOST, DELAY, COMPLAINT, OTHER
+  severity    String    @db.VarChar(20) // LOW, MEDIUM, HIGH, CRITICAL
+  description String
+  location    String?
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
+  resolution  String?
+  reportedBy  String?   @map("reported_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([tenantId, groupId])
   @@map("incidents")
@@ -1747,36 +1775,36 @@ model Incident {
 // ============================================================
 
 model Vendor {
-  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String?      @db.Uuid @map("tenant_id")  // if linked to a tenant
-  status          VendorStatus @default(PENDING_KYC)
-  type            TenantType   // VENDOR_HOTEL / VENDOR_TRANSPORT / etc.
+  id       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId String?      @map("tenant_id") @db.Uuid // if linked to a tenant
+  status   VendorStatus @default(PENDING_KYC)
+  type     TenantType // VENDOR_HOTEL / VENDOR_TRANSPORT / etc.
 
-  name            String       @db.VarChar(255)
-  nameAr          String?      @db.VarChar(255) @map("name_ar")
-  description     String?
-  email           String       @db.VarChar(255)
-  phone           String?      @db.VarChar(30)
-  website         String?
-  country         String       @db.Char(2)
-  city            String?      @db.VarChar(100)
-  address         String?
+  name        String  @db.VarChar(255)
+  nameAr      String? @map("name_ar") @db.VarChar(255)
+  description String?
+  email       String  @db.VarChar(255)
+  phone       String? @db.VarChar(30)
+  website     String?
+  country     String  @db.Char(2)
+  city        String? @db.VarChar(100)
+  address     String?
 
-  kycDocuments    Json         @default("[]") @db.JsonB @map("kyc_documents")
-  verifiedAt      DateTime?    @db.Timestamptz @map("verified_at")
-  verifiedBy      String?      @db.Uuid @map("verified_by")
-  rating          Decimal?     @db.Decimal(3,2)
-  ratingCount     Int          @default(0) @map("rating_count")
+  kycDocuments Json      @default("[]") @map("kyc_documents") @db.JsonB
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz
+  verifiedBy   String?   @map("verified_by") @db.Uuid
+  rating       Decimal?  @db.Decimal(3, 2)
+  ratingCount  Int       @default(0) @map("rating_count")
 
-  logoUrl         String?      @map("logo_url")
-  images          String[]
+  logoUrl String?  @map("logo_url")
+  images  String[]
 
-  createdAt       DateTime     @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime     @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  listings        Listing[]
-  ratings         VendorRating[]
-  quotes          Quote[]
+  listings Listing[]
+  ratings  VendorRating[]
+  quotes   Quote[]
 
   @@index([status])
   @@index([type])
@@ -1785,26 +1813,26 @@ model Vendor {
 }
 
 model Listing {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId        String   @db.Uuid @map("vendor_id")
-  vendor          Vendor   @relation(fields: [vendorId], references: [id])
-  type            String   @db.VarChar(50)  // hotel_room, transport_service, guide, catering, visa_service
-  name            String   @db.VarChar(255)
-  nameAr          String?  @db.VarChar(255) @map("name_ar")
-  description     String?
-  priceCents      BigInt   @map("price_cents")
-  currency        String   @db.Char(3) @default("SAR")
-  pricingModel    String   @db.VarChar(30) @default("PER_PERSON")  // PER_PERSON / PER_GROUP / PER_NIGHT
-  attributes      Json     @default("{}") @db.JsonB
-  imageUrls       String[] @map("image_urls")
-  status          String   @db.VarChar(20) @default("PUBLISHED")  // DRAFT / PUBLISHED / PAUSED / ARCHIVED
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId     String   @map("vendor_id") @db.Uuid
+  vendor       Vendor   @relation(fields: [vendorId], references: [id])
+  type         String   @db.VarChar(50) // hotel_room, transport_service, guide, catering, visa_service
+  name         String   @db.VarChar(255)
+  nameAr       String?  @map("name_ar") @db.VarChar(255)
+  description  String?
+  priceCents   BigInt   @map("price_cents")
+  currency     String   @default("SAR") @db.Char(3)
+  pricingModel String   @default("PER_PERSON") @db.VarChar(30) // PER_PERSON / PER_GROUP / PER_NIGHT
+  attributes   Json     @default("{}") @db.JsonB
+  imageUrls    String[] @map("image_urls")
+  status       String   @default("PUBLISHED") @db.VarChar(20) // DRAFT / PUBLISHED / PAUSED / ARCHIVED
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  quotes          Quote[]
-  inquiries       ListingInquiry[]
-  bookings        ListingBooking[]
+  quotes    Quote[]
+  inquiries ListingInquiry[]
+  bookings  ListingBooking[]
 
   @@index([vendorId])
   @@index([type, status])
@@ -1813,21 +1841,21 @@ model Listing {
 }
 
 model ListingInquiry {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  listingId     String   @db.Uuid @map("listing_id")
-  listing       Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  fromUserId    String?  @db.Uuid @map("from_user_id")
-  fromName      String?  @db.VarChar(200) @map("from_name")
-  fromEmail     String?  @db.VarChar(255) @map("from_email")
-  fromPhone     String?  @db.VarChar(40) @map("from_phone")
-  message       String
-  partySize     Int?     @map("party_size")
-  startDate     DateTime? @db.Date @map("start_date")
-  endDate       DateTime? @db.Date @map("end_date")
-  status        String   @db.VarChar(20) @default("NEW")  // NEW / RESPONDED / CONVERTED / CLOSED
-  response      String?
-  respondedAt   DateTime? @db.Timestamptz @map("responded_at")
-  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listingId   String    @map("listing_id") @db.Uuid
+  listing     Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  fromUserId  String?   @map("from_user_id") @db.Uuid
+  fromName    String?   @map("from_name") @db.VarChar(200)
+  fromEmail   String?   @map("from_email") @db.VarChar(255)
+  fromPhone   String?   @map("from_phone") @db.VarChar(40)
+  message     String
+  partySize   Int?      @map("party_size")
+  startDate   DateTime? @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  status      String    @default("NEW") @db.VarChar(20) // NEW / RESPONDED / CONVERTED / CLOSED
+  response    String?
+  respondedAt DateTime? @map("responded_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([listingId, status])
   @@index([fromUserId])
@@ -1836,23 +1864,23 @@ model ListingInquiry {
 }
 
 model ListingBooking {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  listingId       String   @db.Uuid @map("listing_id")
-  listing         Listing  @relation(fields: [listingId], references: [id])
-  customerUserId  String?  @db.Uuid @map("customer_user_id")
-  customerName    String   @db.VarChar(200) @map("customer_name")
-  customerEmail   String?  @db.VarChar(255) @map("customer_email")
-  customerPhone   String?  @db.VarChar(40) @map("customer_phone")
-  startDate       DateTime? @db.Date @map("start_date")
-  endDate         DateTime? @db.Date @map("end_date")
-  partySize       Int      @default(1) @map("party_size")
-  totalAmountCents BigInt  @default(0) @map("total_amount_cents")
-  currency        String   @default("SAR") @db.VarChar(8)
-  status          String   @db.VarChar(20) @default("PENDING")  // PENDING / CONFIRMED / PAID / COMPLETED / CANCELLED / REFUNDED
-  paymentStatus   String   @db.VarChar(20) @default("UNPAID") @map("payment_status")  // UNPAID / PARTIAL / PAID / REFUNDED
-  notes           String?
-  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listingId        String    @map("listing_id") @db.Uuid
+  listing          Listing   @relation(fields: [listingId], references: [id])
+  customerUserId   String?   @map("customer_user_id") @db.Uuid
+  customerName     String    @map("customer_name") @db.VarChar(200)
+  customerEmail    String?   @map("customer_email") @db.VarChar(255)
+  customerPhone    String?   @map("customer_phone") @db.VarChar(40)
+  startDate        DateTime? @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+  partySize        Int       @default(1) @map("party_size")
+  totalAmountCents BigInt    @default(0) @map("total_amount_cents")
+  currency         String    @default("SAR") @db.VarChar(8)
+  status           String    @default("PENDING") @db.VarChar(20) // PENDING / CONFIRMED / PAID / COMPLETED / CANCELLED / REFUNDED
+  paymentStatus    String    @default("UNPAID") @map("payment_status") @db.VarChar(20) // UNPAID / PARTIAL / PAID / REFUNDED
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([listingId, status])
   @@index([customerUserId])
@@ -1861,24 +1889,24 @@ model ListingBooking {
 }
 
 model Quote {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId        String   @db.Uuid @map("tenant_id")  // requesting operator
-  vendorId        String   @db.Uuid @map("vendor_id")
-  vendor          Vendor   @relation(fields: [vendorId], references: [id])
-  listingId       String?  @db.Uuid @map("listing_id")
-  listing         Listing? @relation(fields: [listingId], references: [id])
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid // requesting operator
+  vendorId  String   @map("vendor_id") @db.Uuid
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  listingId String?  @map("listing_id") @db.Uuid
+  listing   Listing? @relation(fields: [listingId], references: [id])
 
-  status          String   @db.VarChar(30) @default("PENDING")  // PENDING, OFFERED, ACCEPTED, REJECTED, EXPIRED
-  requirements    Json     @default("{}") @db.JsonB
-  offeredPriceCents BigInt? @map("offered_price_cents")
-  currency        String   @db.Char(3) @default("SAR")
-  validUntil      DateTime? @db.Timestamptz @map("valid_until")
+  status            String    @default("PENDING") @db.VarChar(30) // PENDING, OFFERED, ACCEPTED, REJECTED, EXPIRED
+  requirements      Json      @default("{}") @db.JsonB
+  offeredPriceCents BigInt?   @map("offered_price_cents")
+  currency          String    @default("SAR") @db.Char(3)
+  validUntil        DateTime? @map("valid_until") @db.Timestamptz
 
-  requestedAt     DateTime @default(now()) @db.Timestamptz @map("requested_at")
-  respondedAt     DateTime? @db.Timestamptz @map("responded_at")
-  acceptedAt      DateTime? @db.Timestamptz @map("accepted_at")
-  rejectedAt      DateTime? @db.Timestamptz @map("rejected_at")
-  notes           String?
+  requestedAt DateTime  @default(now()) @map("requested_at") @db.Timestamptz
+  respondedAt DateTime? @map("responded_at") @db.Timestamptz
+  acceptedAt  DateTime? @map("accepted_at") @db.Timestamptz
+  rejectedAt  DateTime? @map("rejected_at") @db.Timestamptz
+  notes       String?
 
   @@index([tenantId])
   @@index([vendorId])
@@ -1887,15 +1915,15 @@ model Quote {
 }
 
 model VendorRating {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  vendorId    String   @db.Uuid @map("vendor_id")
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
-  tenantId    String   @db.Uuid @map("tenant_id")  // rating operator
-  bookingRef  String?  @map("booking_ref")
-  score       Int      // 1-5
-  review      String?
-  isVerified  Boolean  @default(false) @map("is_verified")  // only operators with completed bookings
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  vendorId   String   @map("vendor_id") @db.Uuid
+  vendor     Vendor   @relation(fields: [vendorId], references: [id])
+  tenantId   String   @map("tenant_id") @db.Uuid // rating operator
+  bookingRef String?  @map("booking_ref")
+  score      Int // 1-5
+  review     String?
+  isVerified Boolean  @default(false) @map("is_verified") // only operators with completed bookings
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@unique([vendorId, tenantId, bookingRef])
   @@map("vendor_ratings")
@@ -1907,56 +1935,56 @@ model VendorRating {
 // ============================================================
 
 model SocialAccount {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String            @unique @db.Uuid @map("user_id")
-  user            User              @relation(fields: [userId], references: [id])
-  type            SocialAccountType
-  displayName     String            @db.VarChar(100) @map("display_name")
-  bio             String?
-  avatarUrl       String?           @map("avatar_url")
-  isVerified      Boolean           @default(false) @map("is_verified")
-  verifiedBadge   String?           @map("verified_badge")  // operator, vendor, guide
-  privacyDefault  PostVisibility    @default(PUBLIC) @map("privacy_default")
-  coverUrl        String?           @map("cover_url")
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String            @unique @map("user_id") @db.Uuid
+  user           User              @relation(fields: [userId], references: [id])
+  type           SocialAccountType
+  displayName    String            @map("display_name") @db.VarChar(100)
+  bio            String?
+  avatarUrl      String?           @map("avatar_url")
+  isVerified     Boolean           @default(false) @map("is_verified")
+  verifiedBadge  String?           @map("verified_badge") // operator, vendor, guide
+  privacyDefault PostVisibility    @default(PUBLIC) @map("privacy_default")
+  coverUrl       String?           @map("cover_url")
 
   // Traveler profile fields
-  phone           String?           @db.VarChar(40)
-  nationality     String?           @db.Char(2)
-  city            String?           @db.VarChar(100)
-  travelInterests String[]          @map("travel_interests")  // ["UMRAH", "HAJJ", "FAMILY_TRIP", ...]
-  preferredDateFrom DateTime?       @db.Date @map("preferred_date_from")
-  preferredDateTo   DateTime?       @db.Date @map("preferred_date_to")
-  profileVisibility String          @db.VarChar(20) @default("PUBLIC") @map("profile_visibility")  // PUBLIC / CONNECTIONS / PRIVATE
-  contactVisibility String          @db.VarChar(20) @default("CONNECTIONS") @map("contact_visibility")  // PUBLIC / CONNECTIONS / PRIVATE
+  phone             String?   @db.VarChar(40)
+  nationality       String?   @db.Char(2)
+  city              String?   @db.VarChar(100)
+  travelInterests   String[]  @map("travel_interests") // ["UMRAH", "HAJJ", "FAMILY_TRIP", ...]
+  preferredDateFrom DateTime? @map("preferred_date_from") @db.Date
+  preferredDateTo   DateTime? @map("preferred_date_to") @db.Date
+  profileVisibility String    @default("PUBLIC") @map("profile_visibility") @db.VarChar(20) // PUBLIC / CONNECTIONS / PRIVATE
+  contactVisibility String    @default("CONNECTIONS") @map("contact_visibility") @db.VarChar(20) // PUBLIC / CONNECTIONS / PRIVATE
 
-  followerCount   Int               @default(0) @map("follower_count")
-  followingCount  Int               @default(0) @map("following_count")
-  postCount       Int               @default(0) @map("post_count")
-  isSuspended     Boolean           @default(false) @map("is_suspended")
-  isShadowBanned  Boolean           @default(false) @map("is_shadow_banned")
-  createdAt       DateTime          @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime          @updatedAt @db.Timestamptz @map("updated_at")
+  followerCount  Int      @default(0) @map("follower_count")
+  followingCount Int      @default(0) @map("following_count")
+  postCount      Int      @default(0) @map("post_count")
+  isSuspended    Boolean  @default(false) @map("is_suspended")
+  isShadowBanned Boolean  @default(false) @map("is_shadow_banned")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  posts           Post[]
-  comments        Comment[]
-  reactions       Reaction[]
-  followingList   Follow[]          @relation("Follower")
-  followerList    Follow[]          @relation("Followed")
-  sentMessages    Message[]
-  postReports     PostReport[]
-  savedPosts      SavedPost[]
+  posts         Post[]
+  comments      Comment[]
+  reactions     Reaction[]
+  followingList Follow[]     @relation("Follower")
+  followerList  Follow[]     @relation("Followed")
+  sentMessages  Message[]
+  postReports   PostReport[]
+  savedPosts    SavedPost[]
 
   @@map("social_accounts")
   @@schema("social")
 }
 
 model SavedPost {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId   String        @db.Uuid @map("account_id")
-  account     SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  postId      String        @db.Uuid @map("post_id")
-  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  savedAt     DateTime      @default(now()) @db.Timestamptz @map("saved_at")
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId String        @map("account_id") @db.Uuid
+  account   SocialAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  postId    String        @map("post_id") @db.Uuid
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  savedAt   DateTime      @default(now()) @map("saved_at") @db.Timestamptz
 
   @@unique([accountId, postId])
   @@index([accountId, savedAt(sort: Desc)])
@@ -1965,47 +1993,47 @@ model SavedPost {
 }
 
 model Post {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  authorId        String           @db.Uuid @map("author_id")
-  author          SocialAccount    @relation(fields: [authorId], references: [id])
-  type            PostType
-  visibility      PostVisibility   @default(PUBLIC)
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  authorId         String           @map("author_id") @db.Uuid
+  author           SocialAccount    @relation(fields: [authorId], references: [id])
+  type             PostType
+  visibility       PostVisibility   @default(PUBLIC)
   moderationStatus ModerationStatus @default(PENDING) @map("moderation_status")
 
   // Content
-  body            String?          @db.VarChar(2000)
-  structuredData  Json?            @db.JsonB @map("structured_data")  // offer/guideline/event fields
-  mediaUrls       String[]         @map("media_urls")
-  attachmentUrl   String?          @map("attachment_url")   // PDF for guidelines
-  tags            String[]
-  language        String           @default("ar") @db.VarChar(10)
+  body           String?  @db.VarChar(2000)
+  structuredData Json?    @map("structured_data") @db.JsonB // offer/guideline/event fields
+  mediaUrls      String[] @map("media_urls")
+  attachmentUrl  String?  @map("attachment_url") // PDF for guidelines
+  tags           String[]
+  language       String   @default("ar") @db.VarChar(10)
 
   // Expiry (for offers, stories)
-  expiresAt       DateTime?        @db.Timestamptz @map("expires_at")
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
 
   // Engagement counts (denormalized for perf)
-  likeCount       Int              @default(0) @map("like_count")
-  commentCount    Int              @default(0) @map("comment_count")
-  shareCount      Int              @default(0) @map("share_count")
-  saveCount       Int              @default(0) @map("save_count")
+  likeCount    Int @default(0) @map("like_count")
+  commentCount Int @default(0) @map("comment_count")
+  shareCount   Int @default(0) @map("share_count")
+  saveCount    Int @default(0) @map("save_count")
 
   // Source
-  sourceCountry   String?          @db.Char(2) @map("source_country")
-  targetRoles     String[]         @map("target_roles")  // for role-set visibility
+  sourceCountry String?  @map("source_country") @db.Char(2)
+  targetRoles   String[] @map("target_roles") // for role-set visibility
 
   // Moderation
-  moderatedAt     DateTime?        @db.Timestamptz @map("moderated_at")
-  moderatedBy     String?          @db.Uuid @map("moderated_by")
-  moderationNotes String?          @map("moderation_notes")
+  moderatedAt     DateTime? @map("moderated_at") @db.Timestamptz
+  moderatedBy     String?   @map("moderated_by") @db.Uuid
+  moderationNotes String?   @map("moderation_notes")
 
-  createdAt       DateTime         @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt       DateTime         @updatedAt @db.Timestamptz @map("updated_at")
-  deletedAt       DateTime?        @db.Timestamptz @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
-  comments        Comment[]
-  reactions       Reaction[]
-  reports         PostReport[]
-  savedBy         SavedPost[]
+  comments  Comment[]
+  reactions Reaction[]
+  reports   PostReport[]
+  savedBy   SavedPost[]
 
   @@index([authorId])
   @@index([type, moderationStatus])
@@ -2015,19 +2043,19 @@ model Post {
 }
 
 model Comment {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  postId      String        @db.Uuid @map("post_id")
-  post        Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId    String        @db.Uuid @map("author_id")
-  author      SocialAccount @relation(fields: [authorId], references: [id])
-  parentId    String?       @db.Uuid @map("parent_id")
-  body        String        @db.VarChar(1000)
-  likeCount   Int           @default(0) @map("like_count")
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId           String           @map("post_id") @db.Uuid
+  post             Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId         String           @map("author_id") @db.Uuid
+  author           SocialAccount    @relation(fields: [authorId], references: [id])
+  parentId         String?          @map("parent_id") @db.Uuid
+  body             String           @db.VarChar(1000)
+  likeCount        Int              @default(0) @map("like_count")
   moderationStatus ModerationStatus @default(APPROVED) @map("moderation_status")
-  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  deletedAt   DateTime?     @db.Timestamptz @map("deleted_at")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
 
-  reactions   Reaction[]
+  reactions Reaction[]
 
   @@index([postId])
   @@index([authorId])
@@ -2036,15 +2064,15 @@ model Comment {
 }
 
 model Reaction {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  accountId   String        @db.Uuid @map("account_id")
-  account     SocialAccount @relation(fields: [accountId], references: [id])
-  postId      String?       @db.Uuid @map("post_id")
-  post        Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  commentId   String?       @db.Uuid @map("comment_id")
-  comment     Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  type        String        @db.VarChar(20) @default("LIKE")  // LIKE, SAVE, SHARE
-  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId String        @map("account_id") @db.Uuid
+  account   SocialAccount @relation(fields: [accountId], references: [id])
+  postId    String?       @map("post_id") @db.Uuid
+  post      Post?         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId String?       @map("comment_id") @db.Uuid
+  comment   Comment?      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  type      String        @default("LIKE") @db.VarChar(20) // LIKE, SAVE, SHARE
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   @@unique([accountId, postId, type])
   @@unique([accountId, commentId, type])
@@ -2053,11 +2081,11 @@ model Reaction {
 }
 
 model Follow {
-  followerId  String        @db.Uuid @map("follower_id")
-  followedId  String        @db.Uuid @map("followed_id")
-  follower    SocialAccount @relation("Follower", fields: [followerId], references: [id])
-  followed    SocialAccount @relation("Followed", fields: [followedId], references: [id])
-  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  followerId String        @map("follower_id") @db.Uuid
+  followedId String        @map("followed_id") @db.Uuid
+  follower   SocialAccount @relation("Follower", fields: [followerId], references: [id])
+  followed   SocialAccount @relation("Followed", fields: [followedId], references: [id])
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   @@id([followerId, followedId])
   @@map("follows")
@@ -2065,15 +2093,15 @@ model Follow {
 }
 
 model Conversation {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type         String   @db.VarChar(20) @default("DM")  // DM, GROUP, BOOKING_THREAD, TRIP_THREAD
-  name         String?  @db.VarChar(200)
-  contextRef   String?  @db.VarChar(100) @map("context_ref")  // booking_id, trip_id
-  participants Json     @default("[]") @db.JsonB  // account IDs
-  lastMessageAt DateTime? @db.Timestamptz @map("last_message_at")
-  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type          String    @default("DM") @db.VarChar(20) // DM, GROUP, BOOKING_THREAD, TRIP_THREAD
+  name          String?   @db.VarChar(200)
+  contextRef    String?   @map("context_ref") @db.VarChar(100) // booking_id, trip_id
+  participants  Json      @default("[]") @db.JsonB // account IDs
+  lastMessageAt DateTime? @map("last_message_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  messages     Message[]
+  messages Message[]
 
   @@map("conversations")
   @@schema("social")
@@ -2081,15 +2109,15 @@ model Conversation {
 
 model Message {
   id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  conversationId String        @db.Uuid @map("conversation_id")
+  conversationId String        @map("conversation_id") @db.Uuid
   conversation   Conversation  @relation(fields: [conversationId], references: [id])
-  senderId       String        @db.Uuid @map("sender_id")
+  senderId       String        @map("sender_id") @db.Uuid
   sender         SocialAccount @relation(fields: [senderId], references: [id])
   body           String        @db.VarChar(4000)
   mediaUrls      String[]      @map("media_urls")
-  readBy         Json          @default("[]") @db.JsonB @map("read_by")  // [{account_id, read_at}]
-  deletedAt      DateTime?     @db.Timestamptz @map("deleted_at")
-  createdAt      DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  readBy         Json          @default("[]") @map("read_by") @db.JsonB // [{account_id, read_at}]
+  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([conversationId, createdAt])
   @@map("messages")
@@ -2097,17 +2125,17 @@ model Message {
 }
 
 model PostReport {
-  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  postId      String        @db.Uuid @map("post_id")
-  post        Post          @relation(fields: [postId], references: [id])
-  reporterId  String        @db.Uuid @map("reporter_id")
-  reporter    SocialAccount @relation(fields: [reporterId], references: [id])
-  reason      String        @db.VarChar(50)
-  details     String?
-  resolvedAt  DateTime?     @db.Timestamptz @map("resolved_at")
-  resolvedBy  String?       @db.Uuid @map("resolved_by")
-  resolution  String?       @db.VarChar(50)  // REMOVED, NO_ACTION, SHADOW_BAN, SUSPEND
-  createdAt   DateTime      @default(now()) @db.Timestamptz @map("created_at")
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId     String        @map("post_id") @db.Uuid
+  post       Post          @relation(fields: [postId], references: [id])
+  reporterId String        @map("reporter_id") @db.Uuid
+  reporter   SocialAccount @relation(fields: [reporterId], references: [id])
+  reason     String        @db.VarChar(50)
+  details    String?
+  resolvedAt DateTime?     @map("resolved_at") @db.Timestamptz
+  resolvedBy String?       @map("resolved_by") @db.Uuid
+  resolution String?       @db.VarChar(50) // REMOVED, NO_ACTION, SHADOW_BAN, SUSPEND
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("post_reports")
   @@schema("social")
@@ -2124,14 +2152,14 @@ enum ConnectionStatus {
 }
 
 model Connection {
-  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  requesterId  String           @db.Uuid @map("requester_id")
-  recipientId  String           @db.Uuid @map("recipient_id")
-  status       ConnectionStatus @default(PENDING)
-  message      String?
-  respondedAt  DateTime?        @db.Timestamptz @map("responded_at")
-  createdAt    DateTime         @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt    DateTime         @updatedAt @db.Timestamptz @map("updated_at")
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requesterId String           @map("requester_id") @db.Uuid
+  recipientId String           @map("recipient_id") @db.Uuid
+  status      ConnectionStatus @default(PENDING)
+  message     String?
+  respondedAt DateTime?        @map("responded_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([requesterId, recipientId])
   @@index([requesterId])
@@ -2165,16 +2193,16 @@ enum NotificationType {
 
 model Notification {
   id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String?          @db.Uuid @map("tenant_id")
-  recipientId String           @db.Uuid @map("recipient_id")     // user.id (not SocialAccount.id)
-  actorId     String?          @db.Uuid @map("actor_id")         // user.id who triggered it
+  tenantId    String?          @map("tenant_id") @db.Uuid
+  recipientId String           @map("recipient_id") @db.Uuid // user.id (not SocialAccount.id)
+  actorId     String?          @map("actor_id") @db.Uuid // user.id who triggered it
   type        NotificationType
   title       String           @db.VarChar(200)
   body        String?
-  link        String?                                            // /social/posts/:id, /messages/:id
+  link        String? // /social/posts/:id, /messages/:id
   data        Json?            @db.JsonB
-  readAt      DateTime?        @db.Timestamptz @map("read_at")
-  createdAt   DateTime         @default(now()) @db.Timestamptz @map("created_at")
+  readAt      DateTime?        @map("read_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([recipientId, readAt])
   @@index([recipientId, createdAt(sort: Desc)])
@@ -2213,9 +2241,9 @@ model PublicInquiry {
   company   String?       @db.VarChar(200)
   subject   String?       @db.VarChar(240)
   message   String?
-  metadata  Json?         @db.JsonB   // role interest, position applied for, source page, etc.
-  createdAt DateTime      @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt DateTime      @updatedAt @db.Timestamptz @map("updated_at")
+  metadata  Json?         @db.JsonB // role interest, position applied for, source page, etc.
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([type, status])
   @@index([createdAt(sort: Desc)])
@@ -2256,27 +2284,27 @@ enum OfferStatus {
 }
 
 model MarketplaceRequest {
-  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String              @db.Uuid @map("tenant_id")
-  travelerId    String              @db.Uuid @map("traveler_id")  // user.id
-  serviceType   RequestServiceType  @map("service_type")
-  title         String              @db.VarChar(200)
-  description   String?
-  city          String?
-  dateFrom      DateTime?           @db.Timestamptz @map("date_from")
-  dateTo        DateTime?           @db.Timestamptz @map("date_to")
-  travelers     Int                 @default(1)
-  budgetMinCents BigInt?            @map("budget_min_cents")
-  budgetMaxCents BigInt?            @map("budget_max_cents")
-  currency      String              @default("SAR") @db.VarChar(8)
-  requirements  Json?               @db.JsonB
-  status        RequestStatus       @default(OPEN)
-  acceptedOfferId String?           @db.Uuid @map("accepted_offer_id")
-  expiresAt     DateTime?           @db.Timestamptz @map("expires_at")
-  createdAt     DateTime            @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt     DateTime            @updatedAt @db.Timestamptz @map("updated_at")
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId        String             @map("tenant_id") @db.Uuid
+  travelerId      String             @map("traveler_id") @db.Uuid // user.id
+  serviceType     RequestServiceType @map("service_type")
+  title           String             @db.VarChar(200)
+  description     String?
+  city            String?
+  dateFrom        DateTime?          @map("date_from") @db.Timestamptz
+  dateTo          DateTime?          @map("date_to") @db.Timestamptz
+  travelers       Int                @default(1)
+  budgetMinCents  BigInt?            @map("budget_min_cents")
+  budgetMaxCents  BigInt?            @map("budget_max_cents")
+  currency        String             @default("SAR") @db.VarChar(8)
+  requirements    Json?              @db.JsonB
+  status          RequestStatus      @default(OPEN)
+  acceptedOfferId String?            @map("accepted_offer_id") @db.Uuid
+  expiresAt       DateTime?          @map("expires_at") @db.Timestamptz
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz
 
-  offers        RequestOffer[]
+  offers RequestOffer[]
 
   @@index([tenantId, status])
   @@index([travelerId, status])
@@ -2287,19 +2315,19 @@ model MarketplaceRequest {
 
 model RequestOffer {
   id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  requestId   String             @db.Uuid @map("request_id")
+  requestId   String             @map("request_id") @db.Uuid
   request     MarketplaceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  providerId  String             @db.Uuid @map("provider_id")    // user.id of provider
-  vendorId    String?            @db.Uuid @map("vendor_id")      // optional link to marketplace.Vendor
+  providerId  String             @map("provider_id") @db.Uuid // user.id of provider
+  vendorId    String?            @map("vendor_id") @db.Uuid // optional link to marketplace.Vendor
   title       String             @db.VarChar(200)
   description String?
   priceCents  BigInt             @map("price_cents")
   currency    String             @default("SAR") @db.VarChar(8)
-  validUntil  DateTime?          @db.Timestamptz @map("valid_until")
+  validUntil  DateTime?          @map("valid_until") @db.Timestamptz
   status      OfferStatus        @default(PENDING)
-  respondedAt DateTime?          @db.Timestamptz @map("responded_at")
-  createdAt   DateTime           @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime           @updatedAt @db.Timestamptz @map("updated_at")
+  respondedAt DateTime?          @map("responded_at") @db.Timestamptz
+  createdAt   DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime           @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([requestId, status])
   @@index([providerId, status])
@@ -2313,20 +2341,20 @@ model RequestOffer {
 
 model AuditLog {
   id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId    String?     @db.Uuid @map("tenant_id")
-  actorId     String?     @db.Uuid @map("actor_id")
+  tenantId    String?     @map("tenant_id") @db.Uuid
+  actorId     String?     @map("actor_id") @db.Uuid
   actorEmail  String?     @map("actor_email")
   action      AuditAction
-  namespace   String      @db.VarChar(50)   // plugin namespace
+  namespace   String      @db.VarChar(50) // plugin namespace
   resource    String      @db.VarChar(100)
   resourceId  String?     @map("resource_id")
-  beforeState Json?       @db.JsonB @map("before_state")
-  afterState  Json?       @db.JsonB @map("after_state")
+  beforeState Json?       @map("before_state") @db.JsonB
+  afterState  Json?       @map("after_state") @db.JsonB
   metadata    Json?       @db.JsonB
   ipAddress   String?     @map("ip_address")
   userAgent   String?     @map("user_agent")
   requestId   String?     @map("request_id")
-  occurredAt  DateTime    @default(now()) @db.Timestamptz @map("occurred_at")
+  occurredAt  DateTime    @default(now()) @map("occurred_at") @db.Timestamptz
 
   @@index([tenantId, occurredAt])
   @@index([actorId])
@@ -2337,23 +2365,23 @@ model AuditLog {
 
 // ─── Payment gateway plumbing ───────────────────────────────────────────
 model PaymentTransaction {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenantId      String   @db.Uuid @map("tenant_id")
-  paymentId     String   @db.Uuid @map("payment_id")
-  payment       Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  paymentId String  @map("payment_id") @db.Uuid
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   /// INTENT_CREATED | AUTHORIZED | CAPTURED | FAILED | REFUNDED | WEBHOOK_RECEIVED
-  type          String   @db.VarChar(40)
-  provider      String   @db.VarChar(40)
-  amountCents   BigInt   @default(0) @map("amount_cents")
-  currency      String   @db.Char(3) @default("SAR")
-  providerRef   String?  @db.VarChar(200) @map("provider_ref")
-  status        String?  @db.VarChar(40)
-  message       String?  @db.VarChar(400)
-  payload       Json?    @db.JsonB
+  type        String  @db.VarChar(40)
+  provider    String  @db.VarChar(40)
+  amountCents BigInt  @default(0) @map("amount_cents")
+  currency    String  @default("SAR") @db.Char(3)
+  providerRef String? @map("provider_ref") @db.VarChar(200)
+  status      String? @db.VarChar(40)
+  message     String? @db.VarChar(400)
+  payload     Json?   @db.JsonB
 
-  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
-  actorId       String?  @db.Uuid @map("actor_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  actorId   String?  @map("actor_id") @db.Uuid
 
   @@index([tenantId, paymentId])
   @@index([paymentId, createdAt])
@@ -2362,18 +2390,32 @@ model PaymentTransaction {
 }
 
 /// Every webhook delivery, stored so a replay is recognised and ignored.
+/// A payer's customer record at a payment provider (e.g. Stripe customer id).
+model PaymentCustomer {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String   @map("user_id") @db.Uuid
+  provider           String   @db.VarChar(40)
+  providerCustomerId String   @map("provider_customer_id") @db.VarChar(200)
+  livemode           Boolean  @default(false)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([userId, provider, livemode])
+  @@map("payment_customers")
+  @@schema("plugin_finance")
+}
+
 model PaymentWebhookEvent {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  provider     String    @db.VarChar(40)
-  eventId      String    @db.VarChar(200) @map("event_id")
-  type         String    @db.VarChar(80)
-  paymentId    String?   @db.Uuid @map("payment_id")
-  tenantId     String?   @db.Uuid @map("tenant_id")
-  signature    String?   @db.VarChar(400)
-  payload      Json?     @db.JsonB
-  processedAt  DateTime? @db.Timestamptz @map("processed_at")
-  result       String?   @db.VarChar(200)
-  createdAt    DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider    String    @db.VarChar(40)
+  eventId     String    @map("event_id") @db.VarChar(200)
+  type        String    @db.VarChar(80)
+  paymentId   String?   @map("payment_id") @db.Uuid
+  tenantId    String?   @map("tenant_id") @db.Uuid
+  signature   String?   @db.VarChar(400)
+  payload     Json?     @db.JsonB
+  processedAt DateTime? @map("processed_at") @db.Timestamptz
+  result      String?   @db.VarChar(200)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@unique([provider, eventId])
   @@index([paymentId])

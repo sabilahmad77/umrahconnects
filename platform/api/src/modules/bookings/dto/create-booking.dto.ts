@@ -6,8 +6,15 @@ import {
   IsUUID,
   IsNumber,
   IsArray,
+  IsInt,
+  IsDateString,
+  IsIn,
+  Length,
+  MaxLength,
+  ArrayMaxSize,
   ValidateNested,
   Min,
+  Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -25,6 +32,11 @@ export enum BookingStatus {
   COMPLETED = 'COMPLETED',
 }
 
+/** Statuses a booking may be created in (matches the web "New booking" form). */
+export const INITIAL_BOOKING_STATUSES = [
+  'DRAFT', 'ENQUIRY', 'INQUIRY', 'CONFIRMED', 'PARTIALLY_PAID', 'FULLY_PAID', 'VISA_PROCESSING',
+] as const;
+
 export class BookingPilgrimAssignmentDto {
   @ApiProperty()
   @IsUUID()
@@ -32,17 +44,20 @@ export class BookingPilgrimAssignmentDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
   priceOverride?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   mealPreference?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   seatNumber?: string;
 }
 
@@ -66,35 +81,50 @@ export class CreateBookingDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(500)
   @IsUUID(undefined, { each: true })
   pilgrimIds?: string[];
 
-  @ApiPropertyOptional()
+  /** Accepted for client compatibility; ignored by the service. */
+  @ApiPropertyOptional({ description: 'Ignored (accepted for client compatibility)' })
   @IsOptional()
   @IsUUID()
   agentUserId?: string;
 
-  @ApiPropertyOptional({ enum: BookingStatus })
+  /**
+   * Initial status. Only statuses a new booking can legitimately start in are
+   * accepted; later lifecycle states go through PUT /bookings/:id/status.
+   */
+  @ApiPropertyOptional({ enum: INITIAL_BOOKING_STATUSES })
   @IsOptional()
-  @IsEnum(BookingStatus)
-  status?: BookingStatus;
+  @IsIn(INITIAL_BOOKING_STATUSES as unknown as string[], {
+    message: `status must be one of: ${INITIAL_BOOKING_STATUSES.join(', ')}`,
+  })
+  status?: string;
 
   @ApiPropertyOptional({ description: 'Total in major units (SAR)' })
   @IsOptional()
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000_000)
   totalAmount?: number;
 
   @ApiPropertyOptional({ description: 'Total in cents — alternative to totalAmount' })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
+  @Max(100_000_000_000)
   totalAmountCents?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Deposit already paid, major units (SAR); must not exceed the total' })
   @IsOptional()
-  @IsNumber()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(1_000_000_000)
   depositAmount?: number;
 
-  @ApiPropertyOptional()
+  /** Accepted for client compatibility; ignored (balance is derived server-side). */
+  @ApiPropertyOptional({ description: 'Ignored — derived server-side' })
   @IsOptional()
   @IsNumber()
   balanceDue?: number;
@@ -102,34 +132,50 @@ export class CreateBookingDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @Length(3, 3)
   currency?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
+  @IsDateString()
+  departureDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  returnDate?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
   @Min(0)
+  @Max(500)
   paxAdult?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
+  @Max(500)
   paxChild?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
+  @Max(500)
   paxInfant?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   notes?: string;
 
   @ApiPropertyOptional({ type: [BookingPilgrimAssignmentDto] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(500)
   @ValidateNested({ each: true })
   @Type(() => BookingPilgrimAssignmentDto)
   pilgrims?: BookingPilgrimAssignmentDto[];

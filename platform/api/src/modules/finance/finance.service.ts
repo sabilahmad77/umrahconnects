@@ -1,6 +1,22 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
+
+/** Gateways driven by the payments module — refunds/edits must go through it. */
+const PROVIDER_GATEWAYS = new Set(['sandbox', 'stripe']);
+const SETTLED_PAYMENT_STATUSES = new Set(['COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED']);
+/** Invoice statuses reachable through the generic PUT /finance/invoices/:id. */
+const INVOICE_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['ISSUED', 'SENT', 'CANCELLED', 'VOID'],
+  ISSUED: ['DRAFT', 'SENT', 'OVERDUE', 'CANCELLED', 'VOID'],
+  SENT: ['DRAFT', 'ISSUED', 'OVERDUE', 'CANCELLED', 'VOID'],
+  OVERDUE: ['ISSUED', 'SENT', 'CANCELLED', 'VOID'],
+  PARTIALLY_PAID: ['OVERDUE', 'CANCELLED', 'VOID'],
+  PAID: [],
+  CANCELLED: [],
+  VOID: [],
+};
 
 @Injectable()
 export class FinanceService {
@@ -40,11 +56,40 @@ export class FinanceService {
     return this.normalizeInvoice(inv);
   }
 
+  /**
+   * Every party id on an invoice must resolve for the caller: bookings and
+   * pilgrims inside the tenant; vendors either owned by the tenant or a
+   * VERIFIED marketplace vendor (a read-only business link — never mutated).
+   */
+  private async assertInvoiceParties(tenantId: string, dto: any) {
+    await assertOwnedIfPresent(this.prisma.booking, dto.bookingId, tenantId, 'Booking');
+    await assertOwnedIfPresent(this.prisma.pilgrim, dto.pilgrimId, tenantId, 'Pilgrim', { deletedAt: null });
+    if (dto.vendorId !== undefined && dto.vendorId !== null && dto.vendorId !== '') {
+      const vendorId = requireId(dto.vendorId, 'Vendor');
+      const vendor = await this.prisma.vendor.findFirst({
+        where: { id: vendorId, OR: [{ tenantId }, { status: 'VERIFIED' as any }] },
+        select: { id: true },
+      });
+      if (!vendor) throw new NotFoundException('Vendor not found');
+    }
+  }
+
   async createInvoice(tenantId: string, dto: any, createdBy?: string) {
+    await this.assertInvoiceParties(tenantId, dto);
     const invoiceRef = `INV-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
     const subtotalCents = BigInt(Math.round((dto.subtotal ?? dto.subtotalCents ?? 0) * (dto.subtotal ? 100 : 1)));
     const taxCents = BigInt(Math.round((dto.tax ?? dto.taxCents ?? 0) * (dto.tax ? 100 : 1)));
-    const totalCents = subtotalCents + taxCents;
+    const discountCents = BigInt(Math.round(Number(dto.discountCents ?? 0)));
+    if (subtotalCents < BigInt(0) || taxCents < BigInt(0) || discountCents < BigInt(0)) {
+      throw new BadRequestException('Amounts must not be negative');
+    }
+    if (discountCents > subtotalCents + taxCents) {
+      throw new BadRequestException('Discount must not exceed the invoice subtotal plus tax');
+    }
+    // Server-computed total; client-sent total/totalCents are ignored.
+    const totalCents = subtotalCents + taxCents - discountCents;
+    const dueAt = dto.dueAt ?? dto.dueDate;
+    const issuedAt = dto.issuedAt ?? dto.issueDate;
 
     return this.normalizeInvoice(await this.prisma.invoice.create({
       data: {
@@ -54,15 +99,16 @@ export class FinanceService {
         bookingId: dto.bookingId,
         pilgrimId: dto.pilgrimId,
         vendorId: dto.vendorId,
-        issuedToName: dto.issuedToName ?? dto.counterpartyName ?? 'Unknown',
-        issuedToAddress: dto.issuedToAddress ?? null,
+        issuedToName: dto.issuedToName ?? dto.counterpartyName ?? dto.clientName ?? 'Unknown',
+        issuedToAddress: dto.issuedToAddress ?? undefined,
         subtotalCents,
         taxCents,
-        discountCents: BigInt(Math.round((dto.discountCents ?? 0))),
+        discountCents,
         totalCents,
         currency: dto.currency ?? 'SAR',
-        issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : new Date(),
-        dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,
+        // status is server-owned: a new invoice always starts as DRAFT (schema default)
+        issuedAt: issuedAt ? new Date(issuedAt) : new Date(),
+        dueAt: dueAt ? new Date(dueAt) : undefined,
         lineItems: dto.lineItems ?? [],
         notes: dto.notes,
         createdBy,
@@ -175,8 +221,12 @@ export class FinanceService {
 
   // ── Invoice edit / status / delete ─────────────────────────────────────
   async updateInvoice(tenantId: string, id: string, dto: any) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    await this.assertInvoiceParties(tenantId, { bookingId: dto.bookingId, pilgrimId: dto.pilgrimId, vendorId: dto.vendorId });
     const data: any = {};
+    if (dto.clientName !== undefined && dto.issuedToName === undefined && dto.counterpartyName === undefined) {
+      data.issuedToName = dto.clientName;
+    }
     if (dto.issuedToName !== undefined) data.issuedToName = dto.issuedToName;
     if (dto.counterpartyName !== undefined) data.issuedToName = dto.counterpartyName;
     if (dto.type !== undefined) data.type = dto.type;
@@ -184,19 +234,79 @@ export class FinanceService {
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.lineItems !== undefined) data.lineItems = dto.lineItems;
     if (dto.bookingId !== undefined) data.bookingId = dto.bookingId || null;
-    if (dto.dueAt !== undefined) data.dueAt = dto.dueAt ? new Date(dto.dueAt) : null;
-    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.pilgrimId !== undefined) data.pilgrimId = dto.pilgrimId || null;
+    if (dto.vendorId !== undefined) data.vendorId = dto.vendorId || null;
+    if (dto.issuedToAddress !== undefined) data.issuedToAddress = dto.issuedToAddress;
+    const dueAt = dto.dueAt !== undefined ? dto.dueAt : dto.dueDate;
+    if (dueAt !== undefined) data.dueAt = dueAt ? new Date(dueAt) : null;
+    if (dto.status !== undefined && dto.status !== null && dto.status !== current.status) {
+      this.assertInvoiceTransition(current, String(dto.status));
+      data.status = dto.status;
+      if (dto.status === 'ISSUED' && !current.issuedAt) data.issuedAt = new Date();
+    }
     if (dto.subtotal !== undefined) data.subtotalCents = BigInt(Math.round(Number(dto.subtotal) * 100));
     if (dto.subtotalCents !== undefined) data.subtotalCents = BigInt(Math.round(Number(dto.subtotalCents)));
     if (dto.tax !== undefined) data.taxCents = BigInt(Math.round(Number(dto.tax) * 100));
     if (dto.taxCents !== undefined) data.taxCents = BigInt(Math.round(Number(dto.taxCents)));
-    if (data.subtotalCents !== undefined || data.taxCents !== undefined) {
-      const current = await this.prisma.invoice.findUnique({ where: { id } });
-      const sub = data.subtotalCents ?? current!.subtotalCents;
-      const tax = data.taxCents ?? current!.taxCents;
-      data.totalCents = BigInt(sub) + BigInt(tax);
+    if (dto.discountCents !== undefined) data.discountCents = BigInt(Math.round(Number(dto.discountCents)));
+    if (data.subtotalCents !== undefined || data.taxCents !== undefined || data.discountCents !== undefined) {
+      if (['PAID', 'CANCELLED', 'VOID'].includes(current.status)) {
+        throw new BadRequestException(`Amounts of a ${current.status} invoice cannot be changed`);
+      }
+      const sub = BigInt(data.subtotalCents ?? current.subtotalCents);
+      const tax = BigInt(data.taxCents ?? current.taxCents);
+      const discount = BigInt(data.discountCents ?? current.discountCents ?? 0);
+      if (sub < BigInt(0) || tax < BigInt(0) || discount < BigInt(0)) {
+        throw new BadRequestException('Amounts must not be negative');
+      }
+      if (discount > sub + tax) throw new BadRequestException('Discount must not exceed the invoice subtotal plus tax');
+      const total = sub + tax - discount;
+      if (total < BigInt(current.paidCents ?? 0)) {
+        throw new BadRequestException('Invoice total cannot be lower than the amount already paid');
+      }
+      data.totalCents = total;
     }
     return this.normalizeInvoice(await this.prisma.invoice.update({ where: { id }, data }));
+  }
+
+  /**
+   * Generic-update status changes: only valid lifecycle moves. PAID and
+   * PARTIALLY_PAID are derived from recorded payments, never set by hand here.
+   */
+  private assertInvoiceTransition(current: any, next: string) {
+    if (next === 'PAID' || next === 'PARTIALLY_PAID') {
+      throw new BadRequestException('Invoice payment status is derived from recorded payments — record a payment instead');
+    }
+    const allowed = INVOICE_TRANSITIONS[current.status] ?? [];
+    if (!allowed.includes(next)) {
+      throw new BadRequestException(`Invoice cannot move from ${current.status} to ${next}`);
+    }
+    if (next === 'DRAFT' && BigInt(current.paidCents ?? 0) > BigInt(0)) {
+      throw new BadRequestException('An invoice with recorded payments cannot return to DRAFT');
+    }
+  }
+
+  /** Apply a paid-amount delta to an invoice and re-derive its payment status. */
+  private async adjustInvoicePaid(invoiceId: string, tenantId: string, deltaCents: bigint) {
+    const inv = await this.prisma.invoice.findFirst({ where: { id: invoiceId, tenantId } });
+    if (!inv) return;
+    let newPaid = BigInt(inv.paidCents) + deltaCents;
+    if (newPaid < BigInt(0)) newPaid = BigInt(0);
+    const total = BigInt(inv.totalCents);
+    const terminal = ['CANCELLED', 'VOID'].includes(inv.status);
+    const status = terminal
+      ? inv.status
+      : newPaid <= BigInt(0)
+        ? (inv.status === 'DRAFT' ? 'DRAFT' : 'ISSUED')
+        : newPaid >= total ? 'PAID' : 'PARTIALLY_PAID';
+    await this.prisma.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        paidCents: newPaid,
+        status: status as any,
+        paidAt: status === 'PAID' ? (inv.paidAt ?? new Date()) : null,
+      },
+    });
   }
 
   async setInvoiceStatus(tenantId: string, id: string, status: string) {
@@ -221,45 +331,117 @@ export class FinanceService {
     return { ...p, amountCents: Number(p.amountCents), refundedCents: Number(p.refundedCents) };
   }
 
+  /**
+   * Manual payment bookkeeping. Provider-driven payments (sandbox/stripe) are
+   * read-only here; amounts change only while a manual payment is unsettled;
+   * status moves keep the linked invoice's paid total consistent.
+   */
   async updatePayment(tenantId: string, id: string, dto: any) {
-    await this.findOnePayment(tenantId, id);
+    const p0 = await this.findOnePayment(tenantId, id);
+    const isProvider = PROVIDER_GATEWAYS.has(String(p0.gateway).toLowerCase());
+    const touchesMoney = dto.status !== undefined || dto.amount !== undefined || dto.amountCents !== undefined
+      || dto.gateway !== undefined || dto.method !== undefined;
+    if (isProvider && touchesMoney) {
+      throw new BadRequestException('Gateway payments are managed by the payment provider — use /payments endpoints');
+    }
+    const newGateway = dto.method ?? dto.gateway;
+    if (newGateway !== undefined && PROVIDER_GATEWAYS.has(String(newGateway).toLowerCase())) {
+      throw new BadRequestException('A manual payment cannot be re-labelled as a provider payment');
+    }
+
     const data: any = {};
     if (dto.gateway !== undefined) data.gateway = dto.gateway;
     if (dto.method !== undefined) data.gateway = dto.method;
     if (dto.gatewayRef !== undefined) data.gatewayRef = dto.gatewayRef;
     if (dto.referenceNumber !== undefined) data.gatewayRef = dto.referenceNumber;
-    if (dto.status !== undefined) data.status = dto.status;
-    if (dto.amount !== undefined) data.amountCents = BigInt(Math.round(Number(dto.amount) * 100));
-    if (dto.amountCents !== undefined) data.amountCents = BigInt(Math.round(Number(dto.amountCents)));
     if (dto.paidAt !== undefined) data.paidAt = dto.paidAt ? new Date(dto.paidAt) : null;
+
+    let amount = BigInt(p0.amountCents);
+    if (dto.amount !== undefined || dto.amountCents !== undefined) {
+      if (SETTLED_PAYMENT_STATUSES.has(p0.status)) {
+        throw new BadRequestException(`The amount of a ${p0.status} payment cannot be changed`);
+      }
+      amount = dto.amountCents !== undefined
+        ? BigInt(Math.round(Number(dto.amountCents)))
+        : BigInt(Math.round(Number(dto.amount) * 100));
+      if (amount <= BigInt(0)) throw new BadRequestException('Payment amount must be greater than zero');
+      data.amountCents = amount;
+    }
+
+    const prevStatus = p0.status as string;
+    const nextStatus = dto.status !== undefined && dto.status !== null ? String(dto.status) : prevStatus;
+    let invoiceDelta = BigInt(0);
+    if (nextStatus !== prevStatus) {
+      if (nextStatus === 'REFUNDED' || nextStatus === 'PARTIALLY_REFUNDED') {
+        throw new BadRequestException('Use POST /finance/payments/:id/refund to refund a payment');
+      }
+      if (prevStatus === 'REFUNDED' || prevStatus === 'PARTIALLY_REFUNDED') {
+        throw new BadRequestException(`A ${prevStatus} payment cannot change status`);
+      }
+      if (nextStatus === 'COMPLETED') {
+        // Settling a payment: it must fit the invoice's outstanding balance.
+        if (p0.invoiceId) {
+          const inv = await this.prisma.invoice.findFirst({ where: { id: p0.invoiceId, tenantId } });
+          if (inv) {
+            const outstanding = BigInt(inv.totalCents) - BigInt(inv.paidCents);
+            if (amount > outstanding) {
+              throw new BadRequestException('Payment amount exceeds the invoice outstanding balance');
+            }
+          }
+        }
+        invoiceDelta = amount;
+        if (data.paidAt === undefined && !p0.paidAt) data.paidAt = new Date();
+      } else if (prevStatus === 'COMPLETED') {
+        // Un-settling a manual payment removes it from the invoice paid total.
+        invoiceDelta = -(amount - BigInt(p0.refundedCents ?? 0));
+      }
+      data.status = nextStatus;
+      if (nextStatus === 'FAILED') data.failedAt = new Date();
+    }
+
     const p = await this.prisma.payment.update({ where: { id }, data });
+    if (p0.invoiceId && invoiceDelta !== BigInt(0)) {
+      await this.adjustInvoicePaid(p0.invoiceId, tenantId, invoiceDelta);
+    }
     return { ...p, amountCents: Number(p.amountCents), refundedCents: Number(p.refundedCents) };
   }
 
+  /**
+   * Refund a manual (non-provider) payment. Capped at the refundable balance
+   * (amount − already refunded); partial refunds accumulate.
+   */
   async refundPayment(tenantId: string, id: string, amount?: number) {
     const p = await this.findOnePayment(tenantId, id);
-    const refundCents = amount != null ? BigInt(Math.round(Number(amount) * 100)) : BigInt(p.amountCents);
+    if (PROVIDER_GATEWAYS.has(String(p.gateway).toLowerCase())) {
+      throw new BadRequestException('Gateway payments must be refunded through POST /payments/:id/refund');
+    }
+    if (p.status !== 'COMPLETED' && p.status !== 'PARTIALLY_REFUNDED') {
+      throw new BadRequestException('Only a completed payment can be refunded');
+    }
+    const already = BigInt(p.refundedCents ?? 0);
+    const remaining = BigInt(p.amountCents) - already;
+    if (remaining <= BigInt(0)) throw new BadRequestException('Payment is already fully refunded');
+    const refundCents = amount != null ? BigInt(Math.round(Number(amount) * 100)) : remaining;
+    if (refundCents <= BigInt(0)) throw new BadRequestException('Refund amount must be greater than zero');
+    if (refundCents > remaining) {
+      throw new BadRequestException(
+        `Refund exceeds the refundable balance (${Number(remaining) / 100} ${p.currency})`,
+      );
+    }
+    const totalRefunded = already + refundCents;
     const updated = await this.prisma.payment.update({
       where: { id },
-      data: { status: 'REFUNDED' as any, refundedCents: refundCents, refundedAt: new Date() },
+      data: {
+        status: (totalRefunded >= BigInt(p.amountCents) ? 'REFUNDED' : 'PARTIALLY_REFUNDED') as any,
+        refundedCents: totalRefunded,
+        refundedAt: new Date(),
+      },
     });
-    // Roll back the invoice paid amount + status
-    if (p.invoiceId) {
-      const inv = await this.prisma.invoice.findUnique({ where: { id: p.invoiceId } });
-      if (inv) {
-        const newPaid = BigInt(inv.paidCents) - refundCents;
-        await this.prisma.invoice.update({
-          where: { id: p.invoiceId },
-          data: {
-            paidCents: newPaid < BigInt(0) ? BigInt(0) : newPaid,
-            status: newPaid <= BigInt(0) ? 'ISSUED' : 'PARTIALLY_PAID',
-          },
-        });
-      }
-    }
+    // Roll back the invoice paid amount + status by the refunded delta only
+    if (p.invoiceId) await this.adjustInvoicePaid(p.invoiceId, tenantId, -refundCents);
     // Notification engine: refund event for the invoice creator
     if (p.invoiceId) {
-      const inv2 = await this.prisma.invoice.findUnique({ where: { id: p.invoiceId } });
+      const inv2 = await this.prisma.invoice.findFirst({ where: { id: p.invoiceId, tenantId } });
       if (inv2 && (inv2 as any).createdBy) {
         this.notifications.fire({
           tenantId,

@@ -23,7 +23,7 @@ export class EventsService implements OnModuleInit, OnModuleDestroy {
   private readonly kafkaEnabled: boolean;
 
   constructor(private config: ConfigService) {
-    this.kafkaEnabled = config.get<string>('KAFKA_ENABLED', 'true') === 'true';
+    this.kafkaEnabled = config.get<string>('KAFKA_ENABLED', 'false') === 'true';
 
     if (this.kafkaEnabled) {
       this.kafka = new Kafka({

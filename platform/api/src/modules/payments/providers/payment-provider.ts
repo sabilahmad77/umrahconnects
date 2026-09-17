@@ -2,8 +2,9 @@
 export interface CreateIntentInput {
   amountCents: bigint;
   currency: string;
+  /** Stable internal reference; also used as the provider idempotency key. */
   reference: string;
-  /** Sandbox uses this to make outcomes deterministic in tests. */
+  /** Sandbox only: makes outcomes deterministic in tests. */
   scenario?: string;
   metadata?: Record<string, unknown>;
 }
@@ -17,7 +18,11 @@ export interface IntentResult {
 
 export interface CaptureResult {
   providerRef: string;
-  status: 'CAPTURED' | 'FAILED';
+  /** PENDING: the customer has not completed the payment yet (e.g. Stripe.js still pending). */
+  status: 'CAPTURED' | 'FAILED' | 'PENDING';
+  /** Amount the provider reports as received — checked against the payment record. */
+  amountCents?: bigint;
+  currency?: string;
   failureReason?: string;
   raw: Record<string, unknown>;
 }
@@ -32,8 +37,13 @@ export interface WebhookVerification {
   valid: boolean;
   reason?: string;
   eventId: string;
+  /** Normalised: payment.captured | payment.failed | payment.refunded | payment.disputed | <provider-specific> */
   type: string;
   providerRef?: string;
+  amountCents?: bigint;
+  currency?: string;
+  livemode?: boolean;
+  failureReason?: string;
   raw: Record<string, unknown>;
 }
 
@@ -44,7 +54,7 @@ export interface PaymentProvider {
   missingConfig(): string[];
   createIntent(input: CreateIntentInput): Promise<IntentResult>;
   confirm(providerRef: string, scenario?: string): Promise<CaptureResult>;
-  refund(providerRef: string, amountCents: bigint): Promise<RefundResult>;
+  refund(providerRef: string, amountCents: bigint, reference?: string): Promise<RefundResult>;
   /** Verify a webhook signature and normalise the event. */
   verifyWebhook(rawBody: string, signature: string | undefined): WebhookVerification;
 }

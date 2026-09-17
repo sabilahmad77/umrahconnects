@@ -16,7 +16,16 @@ import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator'
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
-import { UpdateBookingDto, UpdateBookingStatusDto } from './dto/update-booking.dto';
+import {
+  UpdateBookingDto,
+  UpdateBookingStatusDto,
+  AssignBookingGroupDto,
+  AssignBookingPackageDto,
+  SetBookingPaymentDto,
+  CancelBookingDto,
+  AddBookingPilgrimDto,
+} from './dto/update-booking.dto';
+import type { Principal } from '../auth/principal';
 import { QueryBookingDto } from './dto/query-booking.dto';
 import { CreatePackageDto } from './dto/create-package.dto';
 import { UpdatePackageDto } from './dto/update-package.dto';
@@ -48,7 +57,7 @@ export class BookingsController {
   @Post('bookings')
   @RequirePermissions('booking:booking:create')
   @ApiOperation({ summary: 'Create a new booking with pilgrim assignments' })
-  async create(@TenantId() tenantId: string, @CurrentUser() user: any, @Body() dto: CreateBookingDto) {
+  async create(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Body() dto: CreateBookingDto) {
     const data = await this.bookingsService.create(tenantId, user?.sub ?? null, dto);
     return { success: true, data };
   }
@@ -91,28 +100,28 @@ export class BookingsController {
   @Put('bookings/:id/assign-group')
   @RequirePermissions('booking:booking:update')
   @ApiOperation({ summary: 'Assign or unassign booking to a group' })
-  async assignGroup(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { groupId: string | null }) {
-    return { success: true, data: await this.bookingsService.assignGroup(tenantId, id, body.groupId) };
+  async assignGroup(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: AssignBookingGroupDto) {
+    return { success: true, data: await this.bookingsService.assignGroup(tenantId, id, body.groupId ?? null) };
   }
 
   @Put('bookings/:id/assign-package')
   @RequirePermissions('booking:booking:update')
   @ApiOperation({ summary: 'Assign booking to a different package' })
-  async assignPackage(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { packageId: string }) {
+  async assignPackage(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: AssignBookingPackageDto) {
     return { success: true, data: await this.bookingsService.assignPackage(tenantId, id, body.packageId) };
   }
 
   @Put('bookings/:id/payment')
   @RequirePermissions('booking:booking:update')
   @ApiOperation({ summary: 'Update booking payment + status' })
-  async setPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: any) {
+  async setPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: SetBookingPaymentDto) {
     return { success: true, data: await this.bookingsService.setPayment(tenantId, id, body) };
   }
 
   @Post('bookings/:id/cancel')
   @RequirePermissions('booking:booking:update')
   @ApiOperation({ summary: 'Cancel a booking with optional reason' })
-  async cancel(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { reason?: string }) {
+  async cancel(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: CancelBookingDto) {
     return { success: true, data: await this.bookingsService.cancel(tenantId, id, body.reason) };
   }
 
@@ -126,7 +135,7 @@ export class BookingsController {
   @Post('bookings/:id/pilgrims')
   @RequirePermissions('booking:booking:update')
   @ApiOperation({ summary: 'Add a pilgrim to a booking' })
-  async addPilgrim(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { pilgrimId: string }) {
+  async addPilgrim(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: AddBookingPilgrimDto) {
     return { success: true, data: await this.bookingsService.addPilgrim(tenantId, id, body.pilgrimId) };
   }
 

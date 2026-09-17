@@ -1,4 +1,6 @@
-import { IsString, IsOptional, IsEnum, IsNumber, IsArray, IsBoolean, IsDateString } from 'class-validator';
+import { RawJson } from '../../../common/decorators/raw-json.decorator';
+import { IsString, IsOptional, IsEnum, IsNumber, IsArray, IsDateString, IsUUID, IsObject, MaxLength, Min, Max, ArrayMaxSize } from 'class-validator';
+import { TenantType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -21,21 +23,25 @@ export enum PriceUnit {
 export class CreateListingDto {
   @ApiProperty()
   @IsString()
+  @MaxLength(255)
   title: string;
 
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  @MaxLength(255)
   titleAr?: string;
 
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  @MaxLength(10000)
   description?: string;
 
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  @MaxLength(10000)
   descriptionAr?: string;
 
   @ApiProperty({ enum: ListingCategory })
@@ -44,12 +50,16 @@ export class CreateListingDto {
 
   @ApiPropertyOptional()
   @IsNumber()
+  @Min(0)
+  @Max(100_000_000)
   @IsOptional()
   @Type(() => Number)
   priceFrom?: number;
 
   @ApiPropertyOptional()
   @IsNumber()
+  @Min(0)
+  @Max(100_000_000)
   @IsOptional()
   @Type(() => Number)
   priceTo?: number;
@@ -57,6 +67,7 @@ export class CreateListingDto {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  @MaxLength(3)
   currency?: string;
 
   @ApiPropertyOptional({ enum: PriceUnit })
@@ -67,18 +78,23 @@ export class CreateListingDto {
   @ApiPropertyOptional()
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(2048, { each: true })
+  @ArrayMaxSize(50)
   @IsOptional()
   images?: string[];
 
   @ApiPropertyOptional()
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(2048, { each: true })
+  @ArrayMaxSize(50)
   @IsOptional()
   tags?: string[];
 
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  @MaxLength(100)
   city?: string;
 
   @ApiPropertyOptional()
@@ -93,32 +109,38 @@ export class CreateListingDto {
 
   @ApiPropertyOptional()
   @IsNumber()
+  @Min(1)
+  @Max(100_000)
   @IsOptional()
   @Type(() => Number)
   maxCapacity?: number;
 
   @ApiPropertyOptional({ description: 'If omitted, resolved from the requesting tenant' })
-  @IsString()
+  @IsUUID()
   @IsOptional()
   vendorId?: string;
 
   @ApiPropertyOptional()
-  @IsString()
+  @IsEnum(TenantType)
   @IsOptional()
-  vendorType?: string;
+  vendorType?: TenantType;
 
   @ApiPropertyOptional()
   @IsArray()
   @IsString({ each: true })
+  @MaxLength(2048, { each: true })
+  @ArrayMaxSize(50)
   @IsOptional()
   imageUrls?: string[];
 
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
+  @MaxLength(20)
   status?: string;
 
   @ApiPropertyOptional({ description: 'Category-specific structured data (roomType, vehicleType, etc.)' })
+  @IsObject() @RawJson()
   @IsOptional()
   attributes?: Record<string, any>;
 }

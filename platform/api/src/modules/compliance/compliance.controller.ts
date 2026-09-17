@@ -8,6 +8,19 @@ import { ComplianceService } from './compliance.service';
 import { VisaDocumentsService } from './visa-documents.service';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { RbacService } from '../rbac/rbac.service';
+import type { Principal } from '../auth/principal';
+import {
+  ApproveVisaDto,
+  CreateSubmissionDto,
+  CreateVisaDocumentDto,
+  CreateVisaDto,
+  RejectVisaDocumentDto,
+  RejectVisaDto,
+  UpdateVisaDocumentDto,
+  UpdateVisaDto,
+  VISA_DECISION_STATUSES,
+} from './dto/compliance.dto';
 
 @ApiTags('compliance')
 @Controller({ path: 'compliance', version: '1' })
@@ -16,6 +29,7 @@ export class ComplianceController {
   constructor(
     private readonly service: ComplianceService,
     private readonly docs: VisaDocumentsService,
+    private readonly rbac: RbacService,
   ) {}
 
   @Get('visas')
@@ -26,7 +40,7 @@ export class ComplianceController {
 
   @Post('visas')
   @RequirePermissions('visa:application:submit')
-  async createVisa(@TenantId() tenantId: string, @CurrentUser() user: any, @Body() dto: any) {
+  async createVisa(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Body() dto: CreateVisaDto) {
     return { success: true, data: await this.service.createVisa(tenantId, dto, user?.sub) };
   }
 
@@ -73,8 +87,16 @@ export class ComplianceController {
 
   @Put('visas/:id')
   @RequirePermissions('visa:application:submit')
-  async updateVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
-    return { success: true, data: await this.service.updateVisa(tenantId, id, dto) };
+  async updateVisa(
+    @TenantId() tenantId: string, @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateVisaDto,
+  ) {
+    // Moving an application to APPROVED/REJECTED is a decision: it needs the
+    // same capability as the dedicated approve/reject routes.
+    const canDecide = dto.status && VISA_DECISION_STATUSES.includes(dto.status)
+      ? await this.rbac.userHasPermissions(user.sub, tenantId, ['visa:application:manage'])
+      : false;
+    return { success: true, data: await this.service.updateVisa(tenantId, id, dto, { canDecide, actorId: user?.sub }) };
   }
 
   @Delete('visas/:id')
@@ -91,13 +113,13 @@ export class ComplianceController {
 
   @Put('visas/:id/approve')
   @RequirePermissions('visa:application:manage')
-  async approveVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { visaNumber?: string }) {
+  async approveVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: ApproveVisaDto) {
     return { success: true, data: await this.service.approveVisa(tenantId, id, body?.visaNumber) };
   }
 
   @Put('visas/:id/reject')
   @RequirePermissions('visa:application:manage')
-  async rejectVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { reason: string }) {
+  async rejectVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: RejectVisaDto) {
     return { success: true, data: await this.service.rejectVisa(tenantId, id, body?.reason ?? '') };
   }
 
@@ -112,7 +134,7 @@ export class ComplianceController {
   @RequirePermissions('visa:application:submit')
   async addDocument(
     @TenantId() tenantId: string, @CurrentUser() user: any,
-    @Param('id', ParseUUIDPipe) id: string, @Body() body: any,
+    @Param('id', ParseUUIDPipe) id: string, @Body() body: CreateVisaDocumentDto,
   ) {
     return { success: true, data: await this.docs.create(tenantId, id, body, user) };
   }
@@ -156,7 +178,7 @@ export class ComplianceController {
   async updateDocument(
     @TenantId() tenantId: string, @CurrentUser() user: any,
     @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
-    @Body() body: { status?: string; url?: string; expiresAt?: string; notes?: string },
+    @Body() body: UpdateVisaDocumentDto,
   ) {
     return { success: true, data: await this.docs.updateStatus(tenantId, id, docId, body, user) };
   }
@@ -175,7 +197,7 @@ export class ComplianceController {
   async rejectDocument(
     @TenantId() tenantId: string, @CurrentUser() user: any,
     @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
-    @Body() body: { reason: string },
+    @Body() body: RejectVisaDocumentDto,
   ) {
     return { success: true, data: await this.docs.reject(tenantId, id, docId, body?.reason ?? '', user) };
   }
@@ -197,7 +219,7 @@ export class ComplianceController {
 
   @Post('submissions')
   @RequirePermissions('visa:application:manage')
-  async createSubmission(@TenantId() tenantId: string, @Body() dto: any) {
+  async createSubmission(@TenantId() tenantId: string, @Body() dto: CreateSubmissionDto) {
     return { success: true, data: await this.service.createSubmission(tenantId, dto) };
   }
 }

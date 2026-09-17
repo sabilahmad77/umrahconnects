@@ -3,6 +3,17 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FinanceService } from './finance.service';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import type { Principal } from '../auth/principal';
+import {
+  CreateBudgetPlanDto,
+  CreateInvoiceDto,
+  RecordPaymentDto,
+  RefundPaymentDto,
+  SetInvoiceStatusDto,
+  UpdateBudgetPlanDto,
+  UpdateInvoiceDto,
+  UpdatePaymentDto,
+} from './dto/finance.dto';
 
 @ApiTags('finance')
 @Controller({ path: 'finance', version: '1' })
@@ -19,7 +30,7 @@ export class FinanceController {
 
   @Post('invoices')
   @RequirePermissions('finance:invoice:create')
-  async createInvoice(@TenantId() tenantId: string, @CurrentUser() user: any, @Body() dto: any) {
+  async createInvoice(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Body() dto: CreateInvoiceDto) {
     return { success: true, data: await this.service.createInvoice(tenantId, dto, user?.sub) };
   }
 
@@ -31,13 +42,13 @@ export class FinanceController {
 
   @Put('invoices/:id')
   @RequirePermissions('finance:invoice:create')
-  async updateInvoice(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async updateInvoice(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInvoiceDto) {
     return { success: true, data: await this.service.updateInvoice(tenantId, id, dto) };
   }
 
   @Put('invoices/:id/status')
   @RequirePermissions('finance:invoice:create')
-  async setStatus(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { status: string }) {
+  async setStatus(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: SetInvoiceStatusDto) {
     return { success: true, data: await this.service.setInvoiceStatus(tenantId, id, body.status) };
   }
 
@@ -61,7 +72,7 @@ export class FinanceController {
 
   @Post('invoices/:id/payments')
   @RequirePermissions('finance:payment:process')
-  async recordPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async recordPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: RecordPaymentDto) {
     return { success: true, data: await this.service.recordPayment(tenantId, id, dto) };
   }
 
@@ -80,13 +91,13 @@ export class FinanceController {
 
   @Put('payments/:id')
   @RequirePermissions('finance:payment:process')
-  async updatePayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async updatePayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePaymentDto) {
     return { success: true, data: await this.service.updatePayment(tenantId, id, dto) };
   }
 
   @Post('payments/:id/refund')
-  @RequirePermissions('finance:payment:process')
-  async refundPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { amount?: number }) {
+  @RequirePermissions('finance:payment:refund')
+  async refundPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: RefundPaymentDto) {
     return { success: true, data: await this.service.refundPayment(tenantId, id, body?.amount) };
   }
 
@@ -118,7 +129,7 @@ export class FinanceController {
 
   @Post('budget-plans')
   @RequirePermissions('finance:invoice:create')
-  async createBudgetPlan(@TenantId() tenantId: string, @CurrentUser() user: any, @Body() dto: any) {
+  async createBudgetPlan(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Body() dto: CreateBudgetPlanDto) {
     return { success: true, data: await this.service.createBudgetPlan(tenantId, dto, user?.sub) };
   }
 
@@ -130,7 +141,7 @@ export class FinanceController {
 
   @Put('budget-plans/:id')
   @RequirePermissions('finance:invoice:create')
-  async updateBudgetPlan(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: any) {
+  async updateBudgetPlan(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBudgetPlanDto) {
     return { success: true, data: await this.service.updateBudgetPlan(tenantId, id, dto) };
   }
 

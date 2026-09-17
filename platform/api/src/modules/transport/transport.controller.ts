@@ -1,7 +1,10 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TransportService } from './transport.service';
-import { CreateVehicleDto, UpdateVehicleDto, CreateDriverDto, CreateRouteDto, CreateAssignmentDto, CreateTasreehDto, QueryTransportDto } from './dto/transport.dto';
+import {
+  AssignDriverDto, CreateVehicleDto, UpdateVehicleDto, CreateDriverDto, UpdateDriverDto, CreateRouteDto, UpdateRouteDto,
+  CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryTransportDto,
+} from './dto/transport.dto';
 import { TenantId } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 
@@ -44,7 +47,7 @@ export class TransportController {
 
   @Post('vehicles/:id/drivers')
   @RequirePermissions('transport:vehicle:manage')
-  async assignDriver(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: { driverId: string; isPrimary?: boolean }) {
+  async assignDriver(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: AssignDriverDto) {
     return { success: true, data: await this.service.assignDriver(tenantId, id, body.driverId, body.isPrimary) };
   }
 
@@ -75,7 +78,7 @@ export class TransportController {
 
   @Put('drivers/:id')
   @RequirePermissions('transport:vehicle:manage')
-  async updateDriver(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: any) {
+  async updateDriver(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: UpdateDriverDto) {
     return { success: true, data: await this.service.updateDriver(tenantId, id, body) };
   }
 
@@ -106,7 +109,7 @@ export class TransportController {
 
   @Put('routes/:id')
   @RequirePermissions('transport:vehicle:manage')
-  async updateRoute(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: any) {
+  async updateRoute(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: UpdateRouteDto) {
     return { success: true, data: await this.service.updateRoute(tenantId, id, body) };
   }
 
@@ -137,7 +140,7 @@ export class TransportController {
 
   @Put('assignments/:id')
   @RequirePermissions('transport:assignment:manage')
-  async updateAssignment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: any) {
+  async updateAssignment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: UpdateAssignmentDto) {
     return { success: true, data: await this.service.updateAssignment(tenantId, id, body) };
   }
 
@@ -162,13 +165,13 @@ export class TransportController {
 
   // ── Tasreeh ─────────────────────────────────────────────────────────
   @Get('tasreeh')
-  @RequirePermissions('transport:vehicle:manage')
+  @RequirePermissions('transport:tasreeh:manage')
   async findTasreeh(@TenantId() tenantId: string) {
     return { success: true, data: await this.service.findTasreeh(tenantId) };
   }
 
   @Post('tasreeh')
-  @RequirePermissions('transport:vehicle:manage')
+  @RequirePermissions('transport:tasreeh:manage')
   async createTasreeh(@TenantId() tenantId: string, @Body() dto: CreateTasreehDto) {
     return { success: true, data: await this.service.createTasreeh(tenantId, dto) };
   }

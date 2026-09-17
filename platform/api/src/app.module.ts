@@ -1,7 +1,7 @@
-import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantModule } from './modules/tenant/tenant.module';
@@ -29,7 +29,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { HealthModule } from './modules/health/health.module';
-import { TenantContextMiddleware } from './common/middleware/tenant-context.middleware';
+import { MailModule } from './modules/mail/mail.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -41,32 +41,34 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // Rate limiting
+    // Rate limiting. `default` is per client IP (see TRUST_PROXY); `account`
+    // is keyed by IP + submitted email and only bites where a route sets it.
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => [
-        {
-          name: 'short',
-          ttl: 1000,
-          limit: config.get<number>('THROTTLE_SHORT_LIMIT', 10),
-        },
-        {
-          name: 'medium',
-          ttl: 10000,
-          limit: config.get<number>('THROTTLE_MEDIUM_LIMIT', 50),
-        },
-        {
-          name: 'long',
-          ttl: 60000,
-          limit: config.get<number>('THROTTLE_LONG_LIMIT', 200),
-        },
-      ],
+      useFactory: (config: ConfigService) => ({
+        throttlers: [
+          {
+            name: 'default',
+            ttl: Number(config.get<string>('THROTTLE_TTL_MS', '60000')),
+            limit: Number(config.get<string>('THROTTLE_LIMIT', '600')),
+          },
+          {
+            name: 'account',
+            ttl: 60_000,
+            limit: Number.MAX_SAFE_INTEGER,
+            getTracker: (req: Record<string, any>) =>
+              `${req.ip}|${String(req.body?.email ?? '').trim().toLowerCase().slice(0, 255)}`,
+          },
+        ],
+        skipIf: () => config.get<string>('THROTTLE_DISABLED') === 'true',
+      }),
     }),
 
     // Core infrastructure
     PrismaModule,
     AuditModule,
     EventsModule,
+    MailModule,
 
     // Platform modules
     AuthModule,
@@ -97,19 +99,10 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     HealthModule,
   ],
   providers: [
-    // Register guards globally so every controller has them without re-importing
+    // Order matters: rate limit → authenticate → authorize (deny-by-default).
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(TenantContextMiddleware)
-      .exclude(
-        { path: 'api/v1/auth/(.*)', method: RequestMethod.ALL },
-        { path: 'api/health', method: RequestMethod.GET },
-      )
-      .forRoutes('*');
-  }
-}
+export class AppModule {}

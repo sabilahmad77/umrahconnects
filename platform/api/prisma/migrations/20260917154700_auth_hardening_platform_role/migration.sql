@@ -1,0 +1,30 @@
+-- AlterEnum
+ALTER TYPE "core"."TenantType" ADD VALUE 'PLATFORM';
+
+-- AlterTable
+ALTER TABLE "core"."users" ADD COLUMN     "failed_login_count" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "locked_until" TIMESTAMPTZ,
+ADD COLUMN     "sessions_revoked_at" TIMESTAMPTZ;
+
+-- CreateTable
+CREATE TABLE "core"."user_identities" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "user_id" UUID NOT NULL,
+    "provider" VARCHAR(30) NOT NULL,
+    "provider_subject" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255),
+    "email_verified" BOOLEAN NOT NULL DEFAULT false,
+    "last_used_at" TIMESTAMPTZ,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_identities_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "user_identities_user_id_idx" ON "core"."user_identities"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_identities_provider_provider_subject_key" ON "core"."user_identities"("provider", "provider_subject");
+
+-- AddForeignKey
+ALTER TABLE "core"."user_identities" ADD CONSTRAINT "user_identities_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "core"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

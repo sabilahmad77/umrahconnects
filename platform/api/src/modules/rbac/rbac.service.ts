@@ -1,203 +1,252 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  ALL_PERMISSIONS,
+  ASSIGNABLE_ROLES_BY_TENANT_TYPE,
+  PERMISSION_CATALOG,
+  RoleCode,
+  ROLE_CODES,
+  SYSTEM_ROLES,
+  isKnownPermission,
+  isPlatformPermission,
+} from './catalog';
 
-// Full permission catalog — namespaced by plugin
-// Format: plugin_id:resource:action
-export const PERMISSION_CATALOG: Record<string, string> = {
-  // Core
-  'core:tenant:read': 'View tenant details',
-  'core:tenant:update': 'Update tenant profile',
-  'core:tenant:admin': 'Platform-level tenant administration',
-  'core:user:read': 'View users',
-  'core:user:create': 'Create users',
-  'core:user:update': 'Update users',
-  'core:user:delete': 'Delete users',
-  'core:role:read': 'View roles',
-  'core:role:manage': 'Create/update/delete roles',
-  'core:sub-agent:read': 'View sub-agents',
-  'core:sub-agent:manage': 'Manage sub-agents',
+// Re-exported for existing imports.
+export { PERMISSION_CATALOG, SYSTEM_ROLES } from './catalog';
 
-  // CRM
-  'crm:pilgrim:read': 'View pilgrim profiles',
-  'crm:pilgrim:create': 'Create pilgrim profiles',
-  'crm:pilgrim:update': 'Update pilgrim profiles',
-  'crm:pilgrim:delete': 'Delete pilgrim profiles',
-  'crm:pilgrim:export': 'Export pilgrim data',
-  'crm:family-group:manage': 'Manage family groups',
-  'crm:document:upload': 'Upload pilgrim documents',
-  'crm:document:delete': 'Delete pilgrim documents',
+const REQUEST_CACHE = Symbol('uc.permissions');
 
-  // Booking
-  'booking:package:read': 'View packages',
-  'booking:package:manage': 'Create/update packages',
-  'booking:booking:read': 'View bookings',
-  'booking:booking:create': 'Create bookings',
-  'booking:booking:update': 'Update bookings',
-  'booking:booking:cancel': 'Cancel bookings',
-
-  // Hotel
-  'hotel:allotment:read': 'View hotel allotments',
-  'hotel:allotment:manage': 'Manage hotel allotments',
-  'hotel:room:assign': 'Assign rooms to pilgrims',
-
-  // Visa
-  'visa:application:read': 'View visa applications',
-  'visa:application:submit': 'Submit visa applications',
-  'visa:application:manage': 'Full visa application management',
-
-  // Transport
-  'transport:vehicle:read': 'View vehicles',
-  'transport:vehicle:manage': 'Manage vehicles',
-  'transport:assignment:manage': 'Manage transport assignments',
-  'transport:tasreeh:manage': 'Manage Tasreeh permits',
-
-  // Finance
-  'finance:invoice:read': 'View invoices',
-  'finance:invoice:create': 'Create invoices',
-  'finance:invoice:approve': 'Approve invoices',
-  'finance:payment:read': 'View payments',
-  'finance:payment:process': 'Process payments',
-  'finance:report:read': 'View financial reports',
-
-  // Group ops
-  'ops:group:read': 'View trip groups',
-  'ops:group:manage': 'Manage trip groups',
-  'ops:incident:report': 'Report incidents',
-  'ops:incident:manage': 'Manage incident resolution',
-
-  // Marketplace
-  'marketplace:vendor:read': 'View marketplace vendors',
-  'marketplace:quote:request': 'Request quotes from vendors',
-  'marketplace:quote:manage': 'Manage vendor quotes',
-
-  // Social
-  'social:post:create': 'Create social posts',
-  'social:post:moderate': 'Moderate social content',
-
-  // Reporting
-  'reporting:read': 'View reports',
-  'reporting:export': 'Export reports',
-  'reporting:custom': 'Build custom reports',
-};
-
-// System roles with their default permissions
-export const SYSTEM_ROLES: Record<string, string[]> = {
-  operator_admin: Object.keys(PERMISSION_CATALOG),
-  operator_ops: [
-    'crm:pilgrim:read', 'crm:pilgrim:create', 'crm:pilgrim:update',
-    'crm:document:upload', 'crm:family-group:manage',
-    'booking:package:read', 'booking:booking:read', 'booking:booking:create', 'booking:booking:update',
-    'hotel:allotment:read', 'hotel:room:assign',
-    'visa:application:read', 'visa:application:submit',
-    'transport:vehicle:read', 'transport:assignment:manage',
-    'ops:group:read', 'ops:group:manage', 'ops:incident:report',
-    'reporting:read',
-  ],
-  operator_finance: [
-    'finance:invoice:read', 'finance:invoice:create', 'finance:invoice:approve',
-    'finance:payment:read', 'finance:payment:process', 'finance:report:read',
-    'booking:booking:read', 'reporting:read', 'reporting:export',
-  ],
-  sub_agent: [
-    'crm:pilgrim:read', 'crm:pilgrim:create', 'crm:pilgrim:update',
-    'crm:document:upload',
-    'booking:package:read', 'booking:booking:read', 'booking:booking:create',
-  ],
-  pilgrim: [
-    // Pilgrims only see their own data — enforced at service layer
-  ],
-};
+type RoleRow = { roleName: string; roleTenantId: string | null; perm: string | null };
+type Actor = { sub: string; tenantId: string };
 
 @Injectable()
 export class RbacService {
+  private readonly logger = new Logger(RbacService.name);
+
   constructor(private prisma: PrismaService) {}
 
-  async seedSystemRoles(): Promise<void> {
-    for (const [roleName, permissions] of Object.entries(SYSTEM_ROLES)) {
-      let role = await this.prisma.role.findFirst({ where: { name: roleName, tenantId: null } });
-      if (!role) {
-        role = await this.prisma.role.create({
-          data: { name: roleName, isSystem: true },
-        });
-      }
+  // ── Catalogue sync ─────────────────────────────────────────────────────
 
-      for (const perm of permissions) {
-        const [namespace, resource, action] = perm.split(':');
-        const permission = await this.prisma.permission.upsert({
-          where: { namespace_resource_action: { namespace, resource, action } },
-          create: { namespace, resource, action, description: PERMISSION_CATALOG[perm] },
-          update: {},
-        });
-        await this.prisma.rolePermission.upsert({
-          where: { roleId_permissionId: { roleId: role.id, permissionId: permission.id } },
-          create: { roleId: role.id, permissionId: permission.id },
-          update: {},
+  /**
+   * Idempotently writes the capability catalogue and the global system roles to
+   * the database so code and data cannot drift. System role permission sets are
+   * made to match the catalogue exactly (extra grants are removed), and platform
+   * capabilities are stripped from every role other than SUPER_ADMIN.
+   */
+  async syncCatalog(): Promise<{ permissions: number; roles: number }> {
+    const idByKey = new Map<string, string>();
+    for (const key of ALL_PERMISSIONS) {
+      const [namespace, resource, action] = key.split(':');
+      const row = await this.prisma.permission.upsert({
+        where: { namespace_resource_action: { namespace, resource, action } },
+        create: { namespace, resource, action, description: PERMISSION_CATALOG[key] },
+        update: { description: PERMISSION_CATALOG[key] },
+      });
+      idByKey.set(key, row.id);
+    }
+
+    for (const code of ROLE_CODES) {
+      const def = SYSTEM_ROLES[code];
+      const description = `${def.displayName} — ${def.description}`;
+      const found = await this.prisma.role.findFirst({ where: { tenantId: null, name: code } });
+      const role = found
+        ? await this.prisma.role.update({ where: { id: found.id }, data: { isSystem: true, description } })
+        : await this.prisma.role.create({ data: { name: code, isSystem: true, description } });
+
+      const wanted = new Set(def.permissions.map((p) => idByKey.get(p)!));
+      const current = await this.prisma.rolePermission.findMany({ where: { roleId: role.id } });
+      const stale = current.filter((rp) => !wanted.has(rp.permissionId)).map((rp) => rp.permissionId);
+      if (stale.length) {
+        await this.prisma.rolePermission.deleteMany({ where: { roleId: role.id, permissionId: { in: stale } } });
+      }
+      const have = new Set(current.map((rp) => rp.permissionId));
+      const add = [...wanted].filter((id) => !have.has(id));
+      if (add.length) {
+        await this.prisma.rolePermission.createMany({
+          data: add.map((permissionId) => ({ roleId: role.id, permissionId })),
+          skipDuplicates: true,
         });
       }
     }
+
+    const platformPermIds = [...idByKey.entries()].filter(([k]) => isPlatformPermission(k)).map(([, id]) => id);
+    const superAdmin = await this.prisma.role.findFirst({ where: { tenantId: null, name: 'SUPER_ADMIN' } });
+    const removed = await this.prisma.rolePermission.deleteMany({
+      where: { permissionId: { in: platformPermIds }, roleId: { not: superAdmin!.id } },
+    });
+    if (removed.count) this.logger.warn(`Removed ${removed.count} platform grant(s) from non-platform roles`);
+
+    return { permissions: idByKey.size, roles: ROLE_CODES.length };
   }
 
-  async userHasPermissions(userId: string, tenantId: string, permissions: string[]): Promise<boolean> {
-    for (const perm of permissions) {
-      const [namespace, resource, action] = perm.split(':');
-      const result = await this.prisma.$queryRaw<{ count: number }[]>`
-        SELECT COUNT(*)::int as count
-        FROM core.user_roles ur
-        JOIN core.role_permissions rp ON rp.role_id = ur.role_id
-        JOIN core.permissions p ON p.id = rp.permission_id
-        JOIN core.roles r ON r.id = ur.role_id
-        WHERE ur.user_id = ${userId}::uuid
-          AND (r.tenant_id = ${tenantId}::uuid OR r.tenant_id IS NULL)
-          AND p.namespace = ${namespace}
-          AND p.resource = ${resource}
-          AND p.action = ${action}
-          AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
-      `;
-      if ((result[0]?.count ?? 0) === 0) return false;
-    }
-    return true;
+  async systemRoleId(code: RoleCode): Promise<string> {
+    const role = await this.prisma.role.findFirst({ where: { tenantId: null, name: code }, select: { id: true } });
+    if (!role) throw new NotFoundException(`System role ${code} is missing — catalogue not synced`);
+    return role.id;
   }
 
+  // ── Resolution ─────────────────────────────────────────────────────────
+
+  /**
+   * Effective capabilities of a user inside the given tenant.
+   *  - tenant roles count only inside their own tenant;
+   *  - global system roles grant their tenant capabilities inside the holder's own tenant;
+   *  - platform capabilities count only via SUPER_ADMIN for users of the PLATFORM tenant,
+   *    and platform accounts hold no tenant capabilities.
+   */
   async getUserPermissions(userId: string, tenantId: string): Promise<string[]> {
-    const result = await this.prisma.$queryRaw<{ perm: string }[]>`
-      SELECT DISTINCT (p.namespace || ':' || p.resource || ':' || p.action) as perm
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { tenantId: true, deletedAt: true, tenant: { select: { type: true } } },
+    });
+    if (!user || user.deletedAt || user.tenantId !== tenantId) return [];
+    const platformTenant = user.tenant?.type === 'PLATFORM';
+
+    const rows = await this.prisma.$queryRaw<RoleRow[]>`
+      SELECT r.name AS "roleName", r.tenant_id AS "roleTenantId",
+             (p.namespace || ':' || p.resource || ':' || p.action) AS perm
       FROM core.user_roles ur
-      JOIN core.role_permissions rp ON rp.role_id = ur.role_id
-      JOIN core.permissions p ON p.id = rp.permission_id
       JOIN core.roles r ON r.id = ur.role_id
+      LEFT JOIN core.role_permissions rp ON rp.role_id = r.id
+      LEFT JOIN core.permissions p ON p.id = rp.permission_id
       WHERE ur.user_id = ${userId}::uuid
         AND (r.tenant_id = ${tenantId}::uuid OR r.tenant_id IS NULL)
         AND (ur.expires_at IS NULL OR ur.expires_at > NOW())
     `;
-    return result.map((r) => r.perm);
+
+    const granted = new Set<string>();
+    for (const row of rows) {
+      if (!row.perm || !isKnownPermission(row.perm)) continue;
+      if (isPlatformPermission(row.perm)) {
+        if (platformTenant && row.roleTenantId === null && row.roleName === 'SUPER_ADMIN') granted.add(row.perm);
+      } else if (!platformTenant) {
+        granted.add(row.perm);
+      }
+    }
+    return [...granted].sort();
   }
 
-  async assignRoleToUser(userId: string, roleId: string, grantedBy: string, expiresAt?: Date) {
-    return this.prisma.userRole.upsert({
-      where: { userId_roleId: { userId, roleId } },
-      create: { userId, roleId, grantedBy, expiresAt },
-      update: { grantedBy, expiresAt },
+  async userHasPermissions(userId: string, tenantId: string, permissions: string[]): Promise<boolean> {
+    const granted = new Set(await this.getUserPermissions(userId, tenantId));
+    return permissions.every((p) => granted.has(p));
+  }
+
+  /** Per-request memoized capability set for the authenticated principal. */
+  permissionsFor(request: any): Promise<Set<string>> {
+    if (!request[REQUEST_CACHE]) {
+      const user = request.user;
+      request[REQUEST_CACHE] = this.getUserPermissions(user.sub, user.tenantId).then((p) => new Set(p));
+    }
+    return request[REQUEST_CACHE];
+  }
+
+  // ── Organization-scoped role management ────────────────────────────────
+
+  /** Roles an organization administrator may grant inside their own organization. */
+  async assignableRoles(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { type: true } });
+    const codes = ASSIGNABLE_ROLES_BY_TENANT_TYPE[tenant?.type ?? ''] ?? [];
+    return this.prisma.role.findMany({
+      where: { OR: [{ tenantId: null, name: { in: codes } }, { tenantId }] },
+      select: { id: true, name: true, description: true, tenantId: true, isSystem: true },
+      orderBy: { name: 'asc' },
     });
   }
 
-  async createTenantRole(tenantId: string, name: string, description: string, permissions: string[]) {
-    const existing = await this.prisma.role.findFirst({ where: { tenantId, name } });
-    if (existing) throw new ConflictException(`Role '${name}' already exists`);
+  /**
+   * Grant a role to a user of the caller's own organization. Only assignable
+   * roles are accepted, and a caller can never grant a capability they do not hold.
+   */
+  async assignRoleInTenant(actor: Actor, userId: string, roleId: string, expiresAt?: Date) {
+    const target = await this.prisma.user.findFirst({ where: { id: userId, tenantId: actor.tenantId, deletedAt: null } });
+    if (!target) throw new NotFoundException('User not found in your organization');
 
-    const role = await this.prisma.role.create({ data: { tenantId, name, description } });
-
-    for (const perm of permissions) {
-      const [namespace, resource, action] = perm.split(':');
-      const permission = await this.prisma.permission.findFirst({
-        where: { namespace, resource, action },
-      });
-      if (permission) {
-        await this.prisma.rolePermission.create({
-          data: { roleId: role.id, permissionId: permission.id },
-        });
-      }
+    const assignable = await this.assignableRoles(actor.tenantId);
+    if (!assignable.some((r) => r.id === roleId)) {
+      throw new ForbiddenException('This role cannot be granted in your organization');
     }
+    await this.assertCallerCovers(actor, roleId);
 
-    return role;
+    return this.prisma.userRole.upsert({
+      where: { userId_roleId: { userId, roleId } },
+      create: { userId, roleId, grantedBy: actor.sub, expiresAt },
+      update: { grantedBy: actor.sub, expiresAt },
+    });
+  }
+
+  async revokeRoleInTenant(actor: Actor, userId: string, roleId: string) {
+    const target = await this.prisma.user.findFirst({ where: { id: userId, tenantId: actor.tenantId, deletedAt: null } });
+    if (!target) throw new NotFoundException('User not found in your organization');
+    if (userId === actor.sub) throw new BadRequestException('You cannot remove your own roles');
+    const assignable = await this.assignableRoles(actor.tenantId);
+    if (!assignable.some((r) => r.id === roleId)) {
+      throw new ForbiddenException('This role cannot be managed in your organization');
+    }
+    const res = await this.prisma.userRole.deleteMany({ where: { userId, roleId } });
+    if (!res.count) throw new NotFoundException('This user does not have that role');
+    return { revoked: roleId };
+  }
+
+  async createTenantRole(actor: Actor, name: string, description: string | undefined, permissions: string[]) {
+    const trimmed = (name ?? '').trim();
+    if (!trimmed) throw new BadRequestException('Role name is required');
+    if ((ROLE_CODES as string[]).includes(trimmed.toUpperCase().replace(/\s+/g, '_'))) {
+      throw new BadRequestException('Role name is reserved for a system role');
+    }
+    const unknown = permissions.filter((p) => !isKnownPermission(p));
+    if (unknown.length) throw new BadRequestException(`Unknown permissions: ${unknown.join(', ')}`);
+    if (permissions.some(isPlatformPermission)) {
+      throw new ForbiddenException('Platform capabilities cannot be granted to organization roles');
+    }
+    const held = new Set(await this.getUserPermissions(actor.sub, actor.tenantId));
+    const beyond = permissions.filter((p) => !held.has(p));
+    if (beyond.length) throw new ForbiddenException(`You cannot grant capabilities you do not hold: ${beyond.join(', ')}`);
+
+    const existing = await this.prisma.role.findFirst({ where: { tenantId: actor.tenantId, name: trimmed } });
+    if (existing) throw new ConflictException(`Role '${trimmed}' already exists`);
+
+    const perms = permissions.length
+      ? await this.prisma.permission.findMany({
+          where: {
+            OR: permissions.map((p) => {
+              const [namespace, resource, action] = p.split(':');
+              return { namespace, resource, action };
+            }),
+          },
+          select: { id: true },
+        })
+      : [];
+    return this.prisma.role.create({
+      data: {
+        tenantId: actor.tenantId,
+        name: trimmed,
+        description,
+        permissions: { create: perms.map((p) => ({ permissionId: p.id, grantedBy: actor.sub })) },
+      },
+    });
+  }
+
+  private async assertCallerCovers(actor: Actor, roleId: string) {
+    const rolePerms = await this.prisma.rolePermission.findMany({
+      where: { roleId },
+      select: { permission: { select: { namespace: true, resource: true, action: true } } },
+    });
+    const held = new Set(await this.getUserPermissions(actor.sub, actor.tenantId));
+    const beyond = rolePerms
+      .map((rp) => `${rp.permission.namespace}:${rp.permission.resource}:${rp.permission.action}`)
+      .filter((p) => isPlatformPermission(p) || !held.has(p));
+    if (beyond.length) {
+      throw new ForbiddenException(`You cannot grant capabilities you do not hold: ${beyond.join(', ')}`);
+    }
+  }
+
+  /** Server-side grant of a system role (signup, onboarding, bootstrap). */
+  async grantSystemRole(userId: string, code: RoleCode, grantedBy?: string) {
+    const roleId = await this.systemRoleId(code);
+    return this.prisma.userRole.upsert({
+      where: { userId_roleId: { userId, roleId } },
+      create: { userId, roleId, grantedBy },
+      update: {},
+    });
   }
 }

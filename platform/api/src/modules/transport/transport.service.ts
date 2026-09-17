@@ -1,6 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateVehicleDto, UpdateVehicleDto, CreateDriverDto, CreateRouteDto, CreateAssignmentDto, CreateTasreehDto, QueryTransportDto } from './dto/transport.dto';
+import { assertAllOwned, assertOwnedIfPresent, findOwned, requireId } from '../../common/tenant-scope';
+import {
+  CreateVehicleDto, UpdateVehicleDto, CreateDriverDto, UpdateDriverDto, CreateRouteDto, UpdateRouteDto,
+  CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryTransportDto,
+} from './dto/transport.dto';
 
 // Prisma TransportType enum + common client aliases. Unknown values → 400, not 500.
 const VEHICLE_TYPES = ['BUS_SMALL', 'BUS_MEDIUM', 'BUS_LARGE', 'PRIVATE_CAR', 'VAN'] as const;
@@ -16,6 +21,32 @@ function normalizeVehicleType(raw?: string): string {
     `Invalid vehicle type '${raw}'. Allowed: ${VEHICLE_TYPES.join(', ')} (aliases: ${Object.keys(VEHICLE_TYPE_ALIASES).join(', ')})`,
   );
 }
+
+/** Money in: explicit cents win, else major units ×100. null clears; undefined = not provided. */
+function toCents(major?: number | null, cents?: number | null): bigint | null | undefined {
+  if (cents != null) return BigInt(Math.round(cents));
+  if (major != null) return BigInt(Math.round(major * 100));
+  if (cents === null || major === null) return null;
+  return undefined;
+}
+
+/** Parses an optional date field: '' / null clear it, an unparsable value is a 400. */
+function optionalDate(value: string | null | undefined, field: string): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) throw new BadRequestException(`${field} must be a valid date`);
+  return d;
+}
+
+/** Drops a to-one relation that (through legacy data) points at another tenant's row. */
+function scrubForeign<T extends Record<string, any>>(row: T, tenantId: string, keys: string[]): T {
+  const out: any = { ...row };
+  for (const k of keys) if (out[k] && out[k].tenantId !== tenantId) out[k] = null;
+  return out;
+}
+
+const ACTIVE_ASSIGNMENT = (status: string) => status !== 'CANCELLED';
 
 const serializeBigInt = <T extends Record<string, any>>(o: T): T => {
   const out: any = { ...o };
@@ -57,16 +88,20 @@ export class TransportService {
 
   async findVehicleById(tenantId: string, id: string) {
     const vehicle = await this.prisma.vehicle.findFirst({
-      where: { id, tenantId },
+      where: { id: requireId(id, 'Vehicle'), tenantId },
       include: {
-        drivers: { include: { driver: true } },
-        assignments: { orderBy: { scheduledAt: 'desc' }, take: 10, include: { route: true, driver: true } },
-        routes: { orderBy: { createdAt: 'desc' }, take: 10 },
-        tasreehPermits: { orderBy: { permitDate: 'desc' }, take: 5 },
+        drivers: { where: { driver: { tenantId } }, include: { driver: true } },
+        assignments: { where: { tenantId }, orderBy: { scheduledAt: 'desc' }, take: 10, include: { route: true, driver: true } },
+        routes: { where: { tenantId }, orderBy: { createdAt: 'desc' }, take: 10 },
+        tasreehPermits: { where: { tenantId }, orderBy: { permitDate: 'desc' }, take: 5 },
       },
     });
     if (!vehicle) throw new NotFoundException('Vehicle not found');
-    return vehicle;
+    return {
+      ...vehicle,
+      assignments: vehicle.assignments.map((a: any) => serializeBigInt(scrubForeign(a, tenantId, ['route', 'driver']))),
+      routes: vehicle.routes.map((r: any) => serializeBigInt(r)),
+    };
   }
 
   async createVehicle(tenantId: string, dto: CreateVehicleDto) {
@@ -74,47 +109,44 @@ export class TransportService {
       data: {
         tenantId,
         type: normalizeVehicleType(dto.type) as any,
-        name: (dto as any).name,
-        brand: (dto as any).brand,
+        name: dto.name,
+        brand: dto.brand ?? dto.make,
         plateNumber: dto.plateNumber,
-        registrationNumber: (dto as any).registrationNumber,
+        registrationNumber: dto.registrationNumber,
         capacity: dto.capacity,
-        luggageCapacity: (dto as any).luggageCapacity,
-        hasAc: (dto as any).hasAc ?? true,
+        luggageCapacity: dto.luggageCapacity,
+        hasAc: dto.hasAc ?? true,
         model: dto.model,
         year: dto.year,
-        features: (dto as any).features ?? (dto as any).amenities ?? [],
-        imageUrls: (dto as any).imageUrls ?? [],
-        documentUrls: (dto as any).documentUrls ?? [],
-        licensedForHajj: (dto as any).licensedForHajj ?? false,
-        status: ((dto as any).status ?? 'AVAILABLE').toUpperCase(),
+        features: dto.features ?? dto.amenities ?? [],
+        imageUrls: dto.imageUrls ?? [],
+        documentUrls: dto.documentUrls ?? [],
+        licensedForHajj: dto.licensedForHajj ?? false,
+        saudiLicenseNo: dto.saudiLicenseNo,
+        status: dto.status ?? 'AVAILABLE',
         isActive: true,
-        notes: (dto as any).notes,
+        notes: dto.notes,
       },
     });
   }
 
-  async updateVehicle(tenantId: string, id: string, dto: any) {
-    await this.findVehicleById(tenantId, id);
+  async updateVehicle(tenantId: string, id: string, dto: UpdateVehicleDto) {
+    const vehicle = await this.findVehicleById(tenantId, id);
     const data: any = {};
-    if (dto.name !== undefined) data.name = dto.name;
-    if (dto.brand !== undefined) data.brand = dto.brand;
-    if (dto.plateNumber !== undefined) data.plateNumber = dto.plateNumber;
-    if (dto.registrationNumber !== undefined) data.registrationNumber = dto.registrationNumber;
-    if (dto.capacity !== undefined) data.capacity = dto.capacity;
-    if (dto.bookedSeats !== undefined) data.bookedSeats = dto.bookedSeats;
-    if (dto.luggageCapacity !== undefined) data.luggageCapacity = dto.luggageCapacity;
-    if (dto.hasAc !== undefined) data.hasAc = dto.hasAc;
-    if (dto.model !== undefined) data.model = dto.model;
-    if (dto.year !== undefined) data.year = dto.year;
-    if (dto.features !== undefined) data.features = dto.features;
-    if (dto.imageUrls !== undefined) data.imageUrls = dto.imageUrls;
-    if (dto.documentUrls !== undefined) data.documentUrls = dto.documentUrls;
-    if (dto.type !== undefined) data.type = dto.type;
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    if (dto.isActive !== undefined) data.isActive = dto.isActive;
-    if (dto.notes !== undefined) data.notes = dto.notes;
-    return this.prisma.vehicle.update({ where: { id }, data });
+    for (const k of ['name', 'brand', 'registrationNumber', 'luggageCapacity', 'hasAc', 'model', 'year', 'features', 'imageUrls', 'documentUrls', 'status', 'isActive', 'notes'] as const) {
+      if (dto[k] !== undefined) data[k] = dto[k];
+    }
+    if (dto.make !== undefined && dto.brand === undefined) data.brand = dto.make;
+    if (dto.plateNumber) data.plateNumber = dto.plateNumber;
+    if (dto.type !== undefined) data.type = normalizeVehicleType(dto.type);
+    if (dto.capacity !== undefined) {
+      if (dto.capacity < vehicle.bookedSeats) {
+        throw new BadRequestException(`capacity cannot be lower than the ${vehicle.bookedSeats} seats already booked`);
+      }
+      data.capacity = dto.capacity;
+    }
+    // bookedSeats / currentDriverId are server-owned and ignored if sent.
+    return this.prisma.vehicle.update({ where: { id: vehicle.id }, data });
   }
 
   async deleteVehicle(tenantId: string, id: string) {
@@ -134,6 +166,7 @@ export class TransportService {
 
   async unassignDriver(tenantId: string, vehicleId: string, driverId: string) {
     await this.findVehicleById(tenantId, vehicleId);
+    requireId(driverId, 'Driver');
     await this.prisma.vehicleDriver.delete({ where: { vehicleId_driverId: { vehicleId, driverId } } }).catch(() => undefined);
     return { success: true };
   }
@@ -165,11 +198,11 @@ export class TransportService {
 
   async findDriverById(tenantId: string, id: string) {
     const driver = await this.prisma.driver.findFirst({
-      where: { id, tenantId },
+      where: { id: requireId(id, 'Driver'), tenantId },
       include: {
-        vehicles: { include: { vehicle: true } },
-        assignments: { orderBy: { scheduledAt: 'desc' }, take: 10, include: { route: true, vehicle: true } },
-        routes: { orderBy: { createdAt: 'desc' }, take: 10 },
+        vehicles: { where: { vehicle: { tenantId } }, include: { vehicle: true } },
+        assignments: { where: { tenantId }, orderBy: { scheduledAt: 'desc' }, take: 10, include: { route: true, vehicle: true } },
+        routes: { where: { tenantId }, orderBy: { createdAt: 'desc' }, take: 10 },
       },
     });
     if (!driver) throw new NotFoundException('Driver not found');
@@ -183,30 +216,33 @@ export class TransportService {
         firstName: dto.firstName,
         lastName: dto.lastName,
         phone: dto.phone,
-        email: (dto as any).email,
-        nationality: (dto as any).nationality,
-        idNumber: (dto as any).idNumber,
-        licenseNumber: (dto as any).licenseNumber,
-        licenseExpiry: (dto as any).licenseExpiry ? new Date((dto as any).licenseExpiry) : undefined,
-        languages: (dto as any).languages ?? [],
-        photoUrl: (dto as any).photoUrl,
-        documentUrls: (dto as any).documentUrls ?? [],
-        status: ((dto as any).status ?? 'AVAILABLE').toUpperCase(),
+        email: dto.email,
+        nationality: dto.nationality,
+        idNumber: dto.idNumber,
+        licenseNumber: dto.licenseNumber,
+        licenseExpiry: optionalDate(dto.licenseExpiry, 'licenseExpiry') ?? undefined,
+        languages: dto.languages ?? [],
+        photoUrl: dto.photoUrl,
+        documentUrls: dto.documentUrls ?? [],
+        status: dto.status ?? 'AVAILABLE',
         isActive: true,
-        notes: (dto as any).notes,
+        notes: dto.notes,
       },
     });
   }
 
-  async updateDriver(tenantId: string, id: string, dto: any) {
-    await this.findDriverById(tenantId, id);
+  async updateDriver(tenantId: string, id: string, dto: UpdateDriverDto) {
+    const driver = await this.findDriverById(tenantId, id);
     const data: any = {};
-    for (const k of ['firstName', 'lastName', 'phone', 'email', 'nationality', 'idNumber', 'licenseNumber', 'languages', 'photoUrl', 'documentUrls', 'isActive', 'notes']) {
+    for (const k of ['email', 'nationality', 'idNumber', 'licenseNumber', 'languages', 'photoUrl', 'documentUrls', 'isActive', 'notes', 'status'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    if (dto.licenseExpiry !== undefined) data.licenseExpiry = dto.licenseExpiry ? new Date(dto.licenseExpiry) : null;
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    return this.prisma.driver.update({ where: { id }, data });
+    // Required columns: a cleared form field ('') leaves the stored value unchanged.
+    for (const k of ['firstName', 'lastName', 'phone'] as const) {
+      if (dto[k]) data[k] = dto[k];
+    }
+    if (dto.licenseExpiry !== undefined) data.licenseExpiry = optionalDate(dto.licenseExpiry, 'licenseExpiry');
+    return this.prisma.driver.update({ where: { id: driver.id }, data });
   }
 
   async deleteDriver(tenantId: string, id: string) {
@@ -244,60 +280,86 @@ export class TransportService {
 
   async findRouteById(tenantId: string, id: string) {
     const route = await this.prisma.transportRoute.findFirst({
-      where: { id, tenantId },
+      where: { id: requireId(id, 'Route'), tenantId },
       include: {
         vehicle: true,
         driver: true,
-        assignments: { orderBy: { scheduledAt: 'desc' }, take: 20, include: { vehicle: true } },
+        assignments: { where: { tenantId }, orderBy: { scheduledAt: 'desc' }, take: 20, include: { vehicle: true } },
       },
     });
     if (!route) throw new NotFoundException('Route not found');
-    return serializeBigInt(route as any);
+    return serializeBigInt({
+      ...scrubForeign(route as any, tenantId, ['vehicle', 'driver']),
+      assignments: route.assignments.map((a: any) => serializeBigInt(scrubForeign(a, tenantId, ['vehicle']))),
+    });
   }
 
   async createRoute(tenantId: string, dto: CreateRouteDto) {
-    const data: any = {
+    await assertOwnedIfPresent(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle');
+    await assertOwnedIfPresent(this.prisma.driver, dto.driverId, tenantId, 'Driver');
+    const data: Prisma.TransportRouteUncheckedCreateInput = {
       tenantId,
       name: dto.name,
-      movementType: ((dto as any).movementType ?? (dto as any).type ?? 'AIRPORT_PICKUP'),
-      originCity: (dto as any).originCity ?? (dto as any).origin ?? '',
-      destCity: (dto as any).destCity ?? (dto as any).destination ?? '',
-      pickupPoint: (dto as any).pickupPoint,
-      dropoffPoint: (dto as any).dropoffPoint,
-      distanceKm: dto.distanceKm,
-      durationMins: (dto as any).durationMins ?? (dto as any).estimatedDuration,
-      departureAt: (dto as any).departureAt ? new Date((dto as any).departureAt) : undefined,
-      arrivalAt: (dto as any).arrivalAt ? new Date((dto as any).arrivalAt) : undefined,
-      currency: (dto as any).currency ?? 'SAR',
-      totalSeats: (dto as any).totalSeats,
-      status: ((dto as any).status ?? 'ACTIVE').toUpperCase(),
-      vehicleId: (dto as any).vehicleId || undefined,
-      driverId: (dto as any).driverId || undefined,
-      notes: (dto as any).notes,
+      movementType: dto.movementType ?? dto.type ?? 'AIRPORT_PICKUP',
+      originCity: dto.originCity ?? dto.origin ?? '',
+      destCity: dto.destCity ?? dto.destination ?? '',
+      pickupPoint: dto.pickupPoint || undefined,
+      dropoffPoint: dto.dropoffPoint || undefined,
+      distanceKm: dto.distanceKm ?? undefined,
+      durationMins: dto.durationMins ?? dto.estimatedDuration ?? undefined,
+      departureAt: optionalDate(dto.departureAt, 'departureAt') ?? undefined,
+      arrivalAt: optionalDate(dto.arrivalAt, 'arrivalAt') ?? undefined,
+      currency: dto.currency ?? 'SAR',
+      totalSeats: dto.totalSeats ?? undefined,
+      bookedSeats: 0,
+      status: dto.status ?? 'ACTIVE',
+      vehicleId: dto.vehicleId || undefined,
+      driverId: dto.driverId || undefined,
+      notes: dto.notes,
+      pricePerSeatCents: toCents(dto.pricePerSeat ?? dto.pricePerPax, dto.pricePerSeatCents) ?? undefined,
+      pricePerVehicleCents: toCents(dto.pricePerVehicle, dto.pricePerVehicleCents) ?? undefined,
     };
-    if ((dto as any).pricePerSeat != null) data.pricePerSeatCents = BigInt(Math.round(Number((dto as any).pricePerSeat) * 100));
-    if ((dto as any).pricePerSeatCents != null) data.pricePerSeatCents = BigInt((dto as any).pricePerSeatCents);
-    if ((dto as any).pricePerVehicle != null) data.pricePerVehicleCents = BigInt(Math.round(Number((dto as any).pricePerVehicle) * 100));
-    if ((dto as any).pricePerVehicleCents != null) data.pricePerVehicleCents = BigInt((dto as any).pricePerVehicleCents);
+    if (data.departureAt && data.arrivalAt && (data.arrivalAt as Date) < (data.departureAt as Date)) {
+      throw new BadRequestException('arrivalAt must be after departureAt');
+    }
     const route = await this.prisma.transportRoute.create({ data });
     return serializeBigInt(route as any);
   }
 
-  async updateRoute(tenantId: string, id: string, dto: any) {
-    await this.findRouteById(tenantId, id);
+  async updateRoute(tenantId: string, id: string, dto: UpdateRouteDto) {
+    const existing = await this.findRouteById(tenantId, id);
     const data: any = {};
-    for (const k of ['name', 'originCity', 'destCity', 'pickupPoint', 'dropoffPoint', 'distanceKm', 'durationMins', 'totalSeats', 'bookedSeats', 'vehicleId', 'driverId', 'notes', 'currency']) {
+    for (const k of ['pickupPoint', 'dropoffPoint', 'distanceKm', 'durationMins', 'notes', 'currency', 'movementType', 'status'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    if (dto.movementType !== undefined) data.movementType = dto.movementType;
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    if (dto.departureAt !== undefined) data.departureAt = dto.departureAt ? new Date(dto.departureAt) : null;
-    if (dto.arrivalAt !== undefined) data.arrivalAt = dto.arrivalAt ? new Date(dto.arrivalAt) : null;
-    if (dto.pricePerSeat != null) data.pricePerSeatCents = BigInt(Math.round(Number(dto.pricePerSeat) * 100));
-    if (dto.pricePerSeatCents != null) data.pricePerSeatCents = BigInt(dto.pricePerSeatCents);
-    if (dto.pricePerVehicle != null) data.pricePerVehicleCents = BigInt(Math.round(Number(dto.pricePerVehicle) * 100));
-    if (dto.pricePerVehicleCents != null) data.pricePerVehicleCents = BigInt(dto.pricePerVehicleCents);
-    const route = await this.prisma.transportRoute.update({ where: { id }, data });
+    // Required columns: a cleared form field ('') leaves the stored value unchanged.
+    for (const k of ['name', 'originCity', 'destCity'] as const) {
+      if (dto[k]) data[k] = dto[k];
+    }
+    if (dto.vehicleId !== undefined) {
+      await assertOwnedIfPresent(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle');
+      data.vehicleId = dto.vehicleId || null;
+    }
+    if (dto.driverId !== undefined) {
+      await assertOwnedIfPresent(this.prisma.driver, dto.driverId, tenantId, 'Driver');
+      data.driverId = dto.driverId || null;
+    }
+    if (dto.totalSeats !== undefined) {
+      if (dto.totalSeats != null && dto.totalSeats < existing.bookedSeats) {
+        throw new BadRequestException(`totalSeats cannot be lower than the ${existing.bookedSeats} seats already booked`);
+      }
+      data.totalSeats = dto.totalSeats;
+    }
+    if (dto.departureAt !== undefined) data.departureAt = optionalDate(dto.departureAt, 'departureAt');
+    if (dto.arrivalAt !== undefined) data.arrivalAt = optionalDate(dto.arrivalAt, 'arrivalAt');
+    if (dto.pricePerSeat !== undefined || dto.pricePerSeatCents !== undefined) {
+      data.pricePerSeatCents = toCents(dto.pricePerSeat, dto.pricePerSeatCents);
+    }
+    if (dto.pricePerVehicle !== undefined || dto.pricePerVehicleCents !== undefined) {
+      data.pricePerVehicleCents = toCents(dto.pricePerVehicle, dto.pricePerVehicleCents);
+    }
+    // bookedSeats is server-owned (maintained by assignments) and ignored if sent.
+    const route = await this.prisma.transportRoute.update({ where: { id: existing.id }, data });
     return serializeBigInt(route as any);
   }
 
@@ -338,94 +400,154 @@ export class TransportService {
 
   async findAssignmentById(tenantId: string, id: string) {
     const a = await this.prisma.transportAssignment.findFirst({
-      where: { id, tenantId },
+      where: { id: requireId(id, 'Assignment'), tenantId },
       include: { vehicle: true, route: true, driver: true },
     });
     if (!a) throw new NotFoundException('Assignment not found');
-    return serializeBigInt(a as any);
+    const out: any = scrubForeign(a as any, tenantId, ['vehicle', 'route', 'driver']);
+    if (out.route) out.route = serializeBigInt(out.route);
+    return serializeBigInt(out);
+  }
+
+  /** Validates every foreign id an assignment may reference against the caller's tenant. */
+  private async assertAssignmentRefs(
+    tenantId: string,
+    refs: { vehicleId?: string | null; routeId?: string | null; driverId?: string | null; bookingId?: string | null; groupId?: string | null },
+  ) {
+    await assertOwnedIfPresent(this.prisma.vehicle, refs.vehicleId, tenantId, 'Vehicle');
+    await assertOwnedIfPresent(this.prisma.transportRoute, refs.routeId, tenantId, 'Route');
+    await assertOwnedIfPresent(this.prisma.driver, refs.driverId, tenantId, 'Driver');
+    await assertOwnedIfPresent(this.prisma.booking, refs.bookingId, tenantId, 'Booking');
+    await assertOwnedIfPresent(this.prisma.tripGroup, refs.groupId, tenantId, 'Group');
+  }
+
+  /**
+   * Moves seats between vehicles/routes inside a transaction. Claims are conditional on
+   * remaining capacity so concurrent requests cannot overbook; releases never go below 0.
+   */
+  private async claimSeats(tx: Prisma.TransactionClient, tenantId: string, vehicleId: string, routeId: string | null, seats: number) {
+    const vehicle = await tx.vehicle.findFirst({ where: { id: vehicleId, tenantId }, select: { capacity: true } });
+    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    if (seats > vehicle.capacity) {
+      throw new ConflictException(`Passenger count ${seats} exceeds the vehicle capacity of ${vehicle.capacity}`);
+    }
+    if (routeId) {
+      const route = await tx.transportRoute.findFirst({ where: { id: routeId, tenantId }, select: { totalSeats: true } });
+      if (!route) throw new NotFoundException('Route not found');
+      const claimed = await tx.transportRoute.updateMany({
+        where: { id: routeId, tenantId, ...(route.totalSeats != null ? { bookedSeats: { lte: route.totalSeats - seats } } : {}) },
+        data: { bookedSeats: { increment: seats } },
+      });
+      if (claimed.count !== 1) throw new ConflictException('Not enough seats left on this route');
+    }
+    await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId }, data: { bookedSeats: { increment: seats } } });
+  }
+
+  private async releaseSeats(tx: Prisma.TransactionClient, tenantId: string, vehicleId: string, routeId: string | null, seats: number) {
+    if (routeId) {
+      await tx.transportRoute.updateMany({ where: { id: routeId, tenantId, bookedSeats: { gte: seats } }, data: { bookedSeats: { decrement: seats } } });
+    }
+    await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId, bookedSeats: { gte: seats } }, data: { bookedSeats: { decrement: seats } } });
   }
 
   async createAssignment(tenantId: string, dto: CreateAssignmentDto) {
-    const data: any = {
-      tenantId,
-      vehicleId: dto.vehicleId,
-      routeId: (dto as any).routeId,
-      driverId: (dto as any).driverId,
-      bookingId: (dto as any).bookingId,
-      groupId: (dto as any).groupId ?? (dto as any).tripGroupId,
-      customerType: ((dto as any).customerType ?? 'PLATFORM_USER').toUpperCase(),
-      customerName: (dto as any).customerName,
-      customerEmail: (dto as any).customerEmail,
-      customerPhone: (dto as any).customerPhone,
-      pickupLocation: (dto as any).pickupLocation,
-      dropoffLocation: (dto as any).dropoffLocation,
-      scheduledAt: new Date((dto as any).scheduledAt),
-      pilgrims: (dto as any).pilgrims ?? [],
-      passengerCount: (dto as any).passengerCount ?? (dto as any).passengers ?? 1,
-      currency: (dto as any).currency ?? 'SAR',
-      paymentStatus: ((dto as any).paymentStatus ?? 'UNPAID').toUpperCase(),
-      status: ((dto as any).status ?? 'SCHEDULED').toUpperCase(),
-      notes: (dto as any).notes,
-    };
-    const priceCents = (dto as any).priceCents != null
-      ? Number((dto as any).priceCents)
-      : (dto as any).price != null
-        ? Number((dto as any).price) * 100
-        : 0;
-    data.priceCents = BigInt(Math.round(priceCents));
+    const vehicle = await findOwned<{ id: string }>(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle', {}, { id: true });
+    const groupId = dto.groupId ?? dto.tripGroupId;
+    await this.assertAssignmentRefs(tenantId, { routeId: dto.routeId, driverId: dto.driverId, bookingId: dto.bookingId, groupId });
+    await assertAllOwned(this.prisma.pilgrim, dto.pilgrims, tenantId, 'Pilgrim');
+    const scheduledAt = optionalDate(dto.scheduledAt, 'scheduledAt');
+    if (!scheduledAt) throw new BadRequestException('scheduledAt is required');
+    const passengerCount = dto.passengerCount ?? dto.passengers ?? 1;
+    const status = dto.status ?? 'SCHEDULED';
 
-    const assignment = await this.prisma.transportAssignment.create({ data });
-    // Update bookedSeats on the route if applicable
-    if (data.routeId) {
-      await this.prisma.transportRoute.update({
-        where: { id: data.routeId },
-        data: { bookedSeats: { increment: data.passengerCount ?? 1 } },
-      }).catch(() => undefined);
-    }
-    // Increment vehicle bookedSeats too
-    await this.prisma.vehicle.update({
-      where: { id: data.vehicleId },
-      data: { bookedSeats: { increment: data.passengerCount ?? 1 } },
-    }).catch(() => undefined);
+    const data: Prisma.TransportAssignmentUncheckedCreateInput = {
+      tenantId,
+      vehicleId: vehicle.id,
+      routeId: dto.routeId || undefined,
+      driverId: dto.driverId || undefined,
+      bookingId: dto.bookingId || undefined,
+      groupId: groupId || undefined,
+      customerType: dto.customerType ?? 'PLATFORM_USER',
+      customerName: dto.customerName,
+      customerEmail: dto.customerEmail || undefined,
+      customerPhone: dto.customerPhone,
+      pickupLocation: dto.pickupLocation,
+      dropoffLocation: dto.dropoffLocation,
+      scheduledAt,
+      pilgrims: dto.pilgrims ?? [],
+      passengerCount,
+      priceCents: toCents(dto.price, dto.priceCents) ?? BigInt(0),
+      currency: dto.currency ?? 'SAR',
+      paymentStatus: dto.paymentStatus ?? 'UNPAID',
+      status,
+      notes: dto.notes,
+    };
+
+    const assignment = await this.prisma.$transaction(async (tx) => {
+      if (ACTIVE_ASSIGNMENT(status)) await this.claimSeats(tx, tenantId, vehicle.id, dto.routeId || null, passengerCount);
+      return tx.transportAssignment.create({ data });
+    });
     return serializeBigInt(assignment as any);
   }
 
-  async updateAssignment(tenantId: string, id: string, dto: any) {
-    await this.findAssignmentById(tenantId, id);
+  async updateAssignment(tenantId: string, id: string, dto: UpdateAssignmentDto) {
+    const existing: any = await this.findAssignmentById(tenantId, id);
+    await this.assertAssignmentRefs(tenantId, {
+      vehicleId: dto.vehicleId, routeId: dto.routeId, driverId: dto.driverId, bookingId: dto.bookingId, groupId: dto.groupId,
+    });
+    await assertAllOwned(this.prisma.pilgrim, dto.pilgrims, tenantId, 'Pilgrim');
     const data: any = {};
-    for (const k of ['vehicleId', 'routeId', 'driverId', 'customerName', 'customerEmail', 'customerPhone', 'pickupLocation', 'dropoffLocation', 'pilgrims', 'passengerCount', 'currency', 'notes', 'bookingId', 'groupId']) {
+    for (const k of ['customerName', 'customerPhone', 'pickupLocation', 'dropoffLocation', 'pilgrims', 'passengerCount', 'currency', 'notes', 'customerType', 'status', 'paymentStatus'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    if (dto.scheduledAt) data.scheduledAt = new Date(dto.scheduledAt);
-    if (dto.departedAt !== undefined) data.departedAt = dto.departedAt ? new Date(dto.departedAt) : null;
-    if (dto.arrivedAt !== undefined) data.arrivedAt = dto.arrivedAt ? new Date(dto.arrivedAt) : null;
-    if (dto.customerType !== undefined) data.customerType = String(dto.customerType).toUpperCase();
-    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
-    if (dto.paymentStatus !== undefined) data.paymentStatus = String(dto.paymentStatus).toUpperCase();
-    if (dto.priceCents != null) data.priceCents = BigInt(dto.priceCents);
-    if (dto.price != null) data.priceCents = BigInt(Math.round(Number(dto.price) * 100));
+    if (dto.customerEmail !== undefined) data.customerEmail = dto.customerEmail || null;
+    if (dto.vehicleId) data.vehicleId = dto.vehicleId; // vehicle is mandatory — cannot be cleared
+    for (const k of ['routeId', 'driverId', 'bookingId', 'groupId'] as const) {
+      if (dto[k] !== undefined) data[k] = dto[k] || null;
+    }
+    if (dto.scheduledAt) data.scheduledAt = optionalDate(dto.scheduledAt, 'scheduledAt');
+    if (dto.departedAt !== undefined) data.departedAt = optionalDate(dto.departedAt, 'departedAt');
+    if (dto.arrivedAt !== undefined) data.arrivedAt = optionalDate(dto.arrivedAt, 'arrivedAt');
+    if (dto.priceCents !== undefined || dto.price !== undefined) {
+      data.priceCents = toCents(dto.price, dto.priceCents) ?? BigInt(0);
+    }
 
-    const a = await this.prisma.transportAssignment.update({ where: { id }, data });
+    const before = {
+      active: ACTIVE_ASSIGNMENT(existing.status),
+      vehicleId: existing.vehicleId as string,
+      routeId: (existing.routeId ?? null) as string | null,
+      seats: existing.passengerCount as number,
+    };
+    const after = {
+      active: ACTIVE_ASSIGNMENT(data.status ?? existing.status),
+      vehicleId: (data.vehicleId ?? existing.vehicleId) as string,
+      routeId: (data.routeId !== undefined ? data.routeId : existing.routeId ?? null) as string | null,
+      seats: (data.passengerCount ?? existing.passengerCount) as number,
+    };
+    const seatsChanged =
+      before.active !== after.active || before.vehicleId !== after.vehicleId ||
+      before.routeId !== after.routeId || before.seats !== after.seats;
+
+    const a = await this.prisma.$transaction(async (tx) => {
+      if (seatsChanged) {
+        if (before.active) await this.releaseSeats(tx, tenantId, before.vehicleId, before.routeId, before.seats);
+        if (after.active) await this.claimSeats(tx, tenantId, after.vehicleId, after.routeId, after.seats);
+      }
+      return tx.transportAssignment.update({ where: { id: existing.id }, data });
+    });
     return serializeBigInt(a as any);
   }
 
   async cancelAssignment(tenantId: string, id: string) {
-    const a = await this.findAssignmentById(tenantId, id);
-    const passengers = (a as any).passengerCount ?? 1;
-    const updated = await this.prisma.transportAssignment.update({
-      where: { id },
-      data: { status: 'CANCELLED' },
-    });
-    if ((a as any).routeId) {
-      await this.prisma.transportRoute.update({
-        where: { id: (a as any).routeId },
-        data: { bookedSeats: { decrement: passengers } },
-      }).catch(() => undefined);
+    const a: any = await this.findAssignmentById(tenantId, id);
+    if (a.status === 'CANCELLED') {
+      const { vehicle: _v, route: _r, driver: _d, ...plain } = a;
+      return plain; // already cancelled — never release the seats twice
     }
-    await this.prisma.vehicle.update({
-      where: { id: (a as any).vehicleId },
-      data: { bookedSeats: { decrement: passengers } },
-    }).catch(() => undefined);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await this.releaseSeats(tx, tenantId, a.vehicleId, a.routeId ?? null, a.passengerCount ?? 1);
+      return tx.transportAssignment.update({ where: { id: a.id }, data: { status: 'CANCELLED' } });
+    });
     return serializeBigInt(updated as any);
   }
 
@@ -438,14 +560,20 @@ export class TransportService {
   }
 
   async createTasreeh(tenantId: string, dto: CreateTasreehDto) {
+    const vehicle = await findOwned<{ id: string }>(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle', {}, { id: true });
+    const permitDate = optionalDate(dto.issueDate ?? dto.permitDate, 'issueDate') ?? new Date();
+    const expiresAt = optionalDate(dto.expiryDate ?? dto.expiresAt, 'expiryDate');
+    if (!expiresAt) throw new BadRequestException('expiryDate is required');
+    if (expiresAt < permitDate) throw new BadRequestException('expiryDate must be after issueDate');
     return this.prisma.tasreehPermit.create({
       data: {
         tenantId,
-        vehicleId: dto.vehicleId,
+        vehicleId: vehicle.id,
         permitNumber: dto.permitNumber,
-        permitDate: new Date((dto as any).issueDate ?? (dto as any).permitDate ?? Date.now()),
-        expiresAt: new Date((dto as any).expiryDate ?? (dto as any).expiresAt),
-        zone: (dto as any).zone ?? ((dto as any).zones?.[0]) ?? 'MAKKAH',
+        permitDate,
+        expiresAt,
+        zone: dto.zone ?? dto.zones?.[0] ?? 'MAKKAH',
+        documentUrl: dto.documentUrl,
       },
     });
   }

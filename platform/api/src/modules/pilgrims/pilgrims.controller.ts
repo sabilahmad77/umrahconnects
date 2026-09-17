@@ -19,6 +19,8 @@ import { CreatePilgrimDto } from './dto/create-pilgrim.dto';
 import { UpdatePilgrimDto } from './dto/update-pilgrim.dto';
 import { QueryPilgrimDto } from './dto/query-pilgrim.dto';
 import { AddDocumentDto } from './dto/add-document.dto';
+import { AssignFamilyGroupDto, AssignPilgrimToBookingDto } from './dto/pilgrim-assignment.dto';
+import type { Principal } from '../auth/principal';
 
 @ApiTags('pilgrims')
 @Controller({ path: 'pilgrims', version: '1' })
@@ -55,10 +57,10 @@ export class PilgrimsController {
   @ApiOperation({ summary: 'Create a new pilgrim' })
   async create(
     @TenantId() tenantId: string,
-    @CurrentUser() user: any,
+    @CurrentUser() user: Principal,
     @Body() dto: CreatePilgrimDto,
   ) {
-    const data = await this.pilgrimsService.create(tenantId, dto, user.id);
+    const data = await this.pilgrimsService.create(tenantId, dto, user?.sub ?? null);
     return { success: true, data };
   }
 
@@ -115,9 +117,9 @@ export class PilgrimsController {
   async assignToFamilyGroup(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { familyGroupId: string | null },
+    @Body() body: AssignFamilyGroupDto,
   ) {
-    const data = await this.pilgrimsService.assignToFamilyGroup(tenantId, id, body.familyGroupId);
+    const data = await this.pilgrimsService.assignToFamilyGroup(tenantId, id, body.familyGroupId ?? null);
     return { success: true, data };
   }
 
@@ -127,7 +129,7 @@ export class PilgrimsController {
   async assignToBooking(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { bookingId: string },
+    @Body() body: AssignPilgrimToBookingDto,
   ) {
     const data = await this.pilgrimsService.assignToBooking(tenantId, id, body.bookingId);
     return { success: true, data };

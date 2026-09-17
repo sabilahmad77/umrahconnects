@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
+import { assertOwnedIfPresent } from '../../common/tenant-scope';
 import {
   CreateVisaRequestDto, UpdateVisaRequestDto, QueryVisaRequestDto,
   AddNoteDto, EscalateDto, ResolveDto, CloseDto, ReopenDto, ChangeStatusDto,
@@ -328,6 +329,9 @@ export class VisaRequestsService {
   async create(tenantId: string, dto: CreateVisaRequestDto, actor: Actor) {
     if (!tenantId) throw new BadRequestException('Missing tenant context');
     const assignee = await this.resolveAssignee(tenantId, dto.assigneeId);
+    // Optional domain links must resolve inside the caller's tenant.
+    await assertOwnedIfPresent(this.prisma.pilgrim, dto.pilgrimId, tenantId, 'Pilgrim', { deletedAt: null });
+    await assertOwnedIfPresent(this.prisma.visaApplication, dto.visaApplicationId, tenantId, 'Visa application');
 
     let ticket: Awaited<ReturnType<typeof this.prisma.visaServiceRequest.create>> | null = null;
     for (let attempt = 0; attempt < 5 && !ticket; attempt++) {
@@ -346,8 +350,8 @@ export class VisaRequestsService {
             requesterEmail: dto.requesterEmail,
             requesterPhone: dto.requesterPhone,
             requesterId: actor?.sub,
-            pilgrimId: dto.pilgrimId,
-            visaApplicationId: dto.visaApplicationId,
+            pilgrimId: dto.pilgrimId || undefined,
+            visaApplicationId: dto.visaApplicationId || undefined,
             assigneeId: assignee?.id,
             assigneeName: assignee ? VisaRequestsService.fullName(assignee) : undefined,
             dueAt: dto.dueAt ? new Date(dto.dueAt) : undefined,

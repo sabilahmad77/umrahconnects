@@ -68,10 +68,11 @@ export class PluginHostService {
 
   async disableForTenant(tenantId: string, pluginId: string) {
     const plugin = this.registry.get(pluginId);
-    await this.prisma.tenantPlugin.update({
-      where: { tenantId_pluginId: { tenantId, pluginId } },
+    const res = await this.prisma.tenantPlugin.updateMany({
+      where: { tenantId, pluginId },
       data: { enabled: false },
     });
+    if (res.count === 0) throw new NotFoundException(`Plugin '${pluginId}' is not installed`);
     if (plugin?.hooks?.onDisable) {
       await plugin.hooks.onDisable(tenantId);
     }

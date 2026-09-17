@@ -1,102 +1,88 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Body,
-  Param,
-  UseGuards,
-  ParseUUIDPipe,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, ParseUUIDPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { AllowPendingTenant } from '../../common/decorators/access.decorator';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { TenantKycSubmissionDto } from '../admin/dto/admin.dto';
+import type { Principal } from '../auth/principal';
 
 @ApiTags('tenants')
+@ApiBearerAuth()
 @Controller({ path: 'tenants', version: '1' })
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
 
-  @Public()
+  /** Platform administrators create organizations directly; everyone else uses /onboarding/organization. */
   @Post()
-  @ApiOperation({ summary: 'Register a new operator tenant' })
-  async create(@Body() dto: CreateTenantDto) {
-    const tenant = await this.tenantService.create(dto);
-    return { success: true, data: tenant };
+  @RequirePermissions('platform:tenant:manage')
+  @ApiOperation({ summary: '[Platform] Create an organization' })
+  async create(@CurrentUser() user: Principal, @Body() dto: CreateTenantDto) {
+    return { success: true, data: await this.tenantService.create(dto, user) };
   }
 
   @Public()
   @Get('slug/:slug')
-  @ApiOperation({ summary: 'Resolve tenant by slug (public — used at login)' })
+  @ApiOperation({ summary: 'Resolve an active organization by slug (public, minimal)' })
   async getBySlug(@Param('slug') slug: string) {
-    const tenant = await this.tenantService.findBySlug(slug);
-    return { success: true, data: { id: tenant.id, name: tenant.name, slug: tenant.slug, status: tenant.status } };
+    const tenant = await this.tenantService.findActiveBySlug(slug);
+    return { success: true, data: { id: tenant.id, name: tenant.name, slug: tenant.slug } };
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Get('me')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current tenant details' })
+  @RequirePermissions('core:tenant:read')
+  @AllowPendingTenant()
+  @ApiOperation({ summary: 'Current organization' })
   async getMyTenant(@TenantId() tenantId: string) {
-    const tenant = await this.tenantService.findById(tenantId);
-    return { success: true, data: tenant };
+    return { success: true, data: await this.tenantService.findById(tenantId) };
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Put('me')
-  @ApiBearerAuth()
   @RequirePermissions('core:tenant:update')
-  @ApiOperation({ summary: 'Update tenant profile' })
+  @AllowPendingTenant()
+  @ApiOperation({ summary: 'Update the current organization profile' })
   async updateMyTenant(@TenantId() tenantId: string, @Body() dto: UpdateTenantDto) {
-    const tenant = await this.tenantService.update(tenantId, dto);
-    return { success: true, data: tenant };
+    return { success: true, data: await this.tenantService.update(tenantId, dto) };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('me/kyc')
-  @ApiBearerAuth()
+  @RequirePermissions('core:tenant:update')
+  @AllowPendingTenant()
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Submit KYC documents for verification' })
-  async submitKyc(@TenantId() tenantId: string, @Body() body: any) {
-    const result = await this.tenantService.submitKyc(tenantId, body);
-    return { success: true, data: result };
+  @ApiOperation({ summary: 'Submit KYC for platform review' })
+  async submitKyc(@CurrentUser() user: Principal, @Body() body: TenantKycSubmissionDto) {
+    return { success: true, data: await this.tenantService.submitKyc(user, body) };
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Get('me/kyc')
+  @RequirePermissions('core:tenant:read')
+  @AllowPendingTenant()
+  @ApiOperation({ summary: 'KYC submissions of the current organization' })
+  async myKyc(@TenantId() tenantId: string) {
+    return { success: true, data: await this.tenantService.kycHistory(tenantId) };
+  }
+
   @Get('me/sub-agents')
-  @ApiBearerAuth()
   @RequirePermissions('core:sub-agent:read')
-  @ApiOperation({ summary: 'List sub-agents under this tenant' })
+  @ApiOperation({ summary: 'Sub-agents under the current organization' })
   async getSubAgents(@TenantId() tenantId: string) {
-    const subAgents = await this.tenantService.getSubAgents(tenantId);
-    return { success: true, data: subAgents };
+    return { success: true, data: await this.tenantService.getSubAgents(tenantId) };
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me/plugins')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'List installed plugins for this tenant' })
+  @RequirePermissions('core:tenant:read')
+  @ApiOperation({ summary: 'Installed plugins for the current organization' })
   async getPlugins(@TenantId() tenantId: string) {
-    const plugins = await this.tenantService.getInstalledPlugins(tenantId);
-    return { success: true, data: plugins };
+    return { success: true, data: await this.tenantService.getInstalledPlugins(tenantId) };
   }
 
-  // Admin-only: get any tenant by ID
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Get(':id')
-  @ApiBearerAuth()
-  @RequirePermissions('core:tenant:admin')
-  @ApiOperation({ summary: '[Admin] Get tenant by ID' })
+  @RequirePermissions('platform:tenant:read')
+  @ApiOperation({ summary: '[Platform] Organization by id' })
   async getTenant(@Param('id', ParseUUIDPipe) id: string) {
-    const tenant = await this.tenantService.findById(id);
-    return { success: true, data: tenant };
+    return { success: true, data: await this.tenantService.findById(id) };
   }
 }

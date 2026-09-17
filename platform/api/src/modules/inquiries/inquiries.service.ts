@@ -1,46 +1,40 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InquiryStatus, InquiryType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-
-const VALID_TYPES = ['CONTACT', 'PARTNER', 'CAREERS', 'NEWSLETTER', 'DEMO', 'SUPPORT'];
+import { CreatePublicInquiryDto, ListPublicInquiriesQueryDto } from './dto/inquiries.dto';
 
 @Injectable()
 export class InquiriesService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Public — store a website form submission (contact / partner / careers / newsletter / demo). */
-  async create(dto: any) {
-    const type = String(dto.type ?? 'CONTACT').toUpperCase();
-    if (!VALID_TYPES.includes(type)) {
-      throw new BadRequestException(`Invalid inquiry type "${dto.type}". Allowed: ${VALID_TYPES.join(', ')}`);
-    }
-    const email = String(dto.email ?? '').trim();
-    if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      throw new BadRequestException('A valid email address is required.');
-    }
+  async create(dto: CreatePublicInquiryDto) {
     const created = await this.prisma.publicInquiry.create({
       data: {
-        type: type as any,
-        name: dto.name?.toString().slice(0, 160) || null,
-        email: email.slice(0, 200),
-        phone: dto.phone?.toString().slice(0, 40) || null,
-        company: dto.company?.toString().slice(0, 200) || null,
-        subject: dto.subject?.toString().slice(0, 240) || null,
-        message: dto.message?.toString() || null,
-        metadata: dto.metadata ?? undefined,
+        type: dto.type ?? InquiryType.CONTACT,
+        name: dto.name?.slice(0, 160) || null,
+        email: dto.email.slice(0, 200),
+        phone: dto.phone?.slice(0, 40) || null,
+        company: dto.company?.slice(0, 200) || null,
+        subject: dto.subject?.slice(0, 240) || null,
+        message: dto.message || null,
+        metadata: (dto.metadata as Prisma.InputJsonValue) ?? undefined,
       },
     });
     return { id: created.id, type: created.type, status: created.status };
   }
 
-  /** Admin — list submissions, optionally filtered by type/status. */
-  async findAll(query: any = {}) {
-    const { type, status, page = 1, limit = 50 } = query;
-    const where: any = {};
-    if (type) where.type = String(type).toUpperCase();
-    if (status) where.status = String(status).toUpperCase();
-    const skip = (Number(page) - 1) * Number(limit);
+  /** Platform — list submissions, optionally filtered by type/status. */
+  async findAll(query: ListPublicInquiriesQueryDto = {}) {
+    const { type, status } = query;
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+    const where: Prisma.PublicInquiryWhereInput = {};
+    if (type) where.type = type;
+    if (status) where.status = status;
+    const skip = (page - 1) * limit;
     const [items, total, counts] = await Promise.all([
-      this.prisma.publicInquiry.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: Number(limit) }),
+      this.prisma.publicInquiry.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
       this.prisma.publicInquiry.count({ where }),
       this.prisma.publicInquiry.groupBy({ by: ['type'], _count: { _all: true } }),
     ]);
@@ -49,13 +43,9 @@ export class InquiriesService {
     return { items, total, byType, newCount };
   }
 
-  async updateStatus(id: string, status: string) {
-    const S = String(status).toUpperCase();
-    if (!['NEW', 'IN_REVIEW', 'RESOLVED', 'ARCHIVED'].includes(S)) {
-      throw new BadRequestException(`Invalid status "${status}"`);
-    }
+  async updateStatus(id: string, status: InquiryStatus) {
     const found = await this.prisma.publicInquiry.findUnique({ where: { id } });
     if (!found) throw new NotFoundException('Inquiry not found');
-    return this.prisma.publicInquiry.update({ where: { id }, data: { status: S as any } });
+    return this.prisma.publicInquiry.update({ where: { id }, data: { status } });
   }
 }

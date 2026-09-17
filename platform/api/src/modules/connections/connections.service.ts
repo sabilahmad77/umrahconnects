@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { requireId } from '../../common/tenant-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -11,9 +12,16 @@ export class ConnectionsService {
 
   /** Send a connection request from `requester` to `recipientUserId`. */
   async request(requesterUserId: string, recipientUserId: string, message?: string) {
+    recipientUserId = requireId(recipientUserId, 'Recipient');
     if (requesterUserId === recipientUserId) {
       throw new BadRequestException('Cannot connect with yourself');
     }
+    // The recipient must be an existing, usable account.
+    const recipient = await this.prisma.user.findFirst({
+      where: { id: recipientUserId, deletedAt: null, status: { notIn: ['INACTIVE', 'LOCKED'] } },
+      select: { id: true },
+    });
+    if (!recipient) throw new NotFoundException('User not found');
     // Look for either-direction existing record
     const existing = await this.prisma.connection.findFirst({
       where: {
@@ -26,7 +34,12 @@ export class ConnectionsService {
     if (existing) {
       if (existing.status === 'ACCEPTED') return existing;
       if (existing.status === 'PENDING') return existing;
-      // RE-OPEN a previously rejected/blocked one only if user re-requests
+      // A block is never lifted by a new request (from either party); the caller
+      // learns only that no request can be sent.
+      if (existing.status === 'BLOCKED') {
+        throw new ConflictException('A connection request cannot be sent to this user');
+      }
+      // RE-OPEN a previously rejected one only if user re-requests
       return this.prisma.connection.update({
         where: { id: existing.id },
         data: {

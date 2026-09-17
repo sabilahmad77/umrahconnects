@@ -1,4 +1,4 @@
-import { IsString, IsUUID, Matches, Length } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Matches, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class OtpLoginDto {
@@ -11,9 +11,10 @@ export class OtpLoginDto {
   @Length(6, 6)
   code: string;
 
-  @ApiProperty()
+  /** Ignored: the organization is never taken from the client. */
+  @IsOptional()
   @IsUUID()
-  tenantId: string;
+  tenantId?: string;
 }
 
 export class SendOtpDto {

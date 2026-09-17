@@ -1,16 +1,54 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { OfferStatus, Prisma, RequestServiceType, RequestStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { RbacService } from '../rbac/rbac.service';
+import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
+import { findOwned } from '../../common/tenant-scope';
+import type { Principal } from '../auth/principal';
+import { ConvertOfferDto, CreateMarketplaceRequestDto, CreateOfferDto } from './dto/marketplace-requests.dto';
+
+/** Request states in which providers may browse and make offers. */
+const ACCEPTING_OFFERS: RequestStatus[] = ['OPEN', 'IN_NEGOTIATION'];
+
+/** Provider organization type → the service type it serves (operators see every type). */
+const SERVICE_TYPE_BY_TENANT_TYPE: Record<string, RequestServiceType> = {
+  VENDOR_HOTEL: 'HOTEL',
+  VENDOR_TRANSPORT: 'TRANSPORT',
+  VENDOR_VISA: 'VISA',
+  VENDOR_GUIDE: 'GUIDE',
+  VENDOR_CATERING: 'CATERING',
+};
+
+/** Key inside `requirements` that records a completed conversion (guards against double conversion). */
+const CONVERSION_KEY = '_conversion';
+
+const asObject = (v: unknown): Record<string, any> =>
+  v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, any>) : {};
+
+function parseEnum<T extends string>(values: Record<string, T>, v: string | undefined, label: string): T | undefined {
+  if (v === undefined || v === '') return undefined;
+  const up = String(v).toUpperCase() as T;
+  if (!Object.values(values).includes(up)) throw new BadRequestException(`Invalid ${label} "${v}"`);
+  return up;
+}
 
 @Injectable()
 export class MarketplaceRequestsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private rbac: RbacService,
   ) {}
 
   // ─── Traveler-side: create a request ────────────────────────────────────
-  async create(tenantId: string, travelerUserId: string, dto: any) {
+  async create(tenantId: string, travelerUserId: string, dto: CreateMarketplaceRequestDto) {
     // Accept either `serviceType` (Prisma field) or `category` (legacy/UI form field)
     const serviceType = dto.serviceType ?? dto.category;
     if (!serviceType) {
@@ -30,7 +68,7 @@ export class MarketplaceRequestsService {
         budgetMinCents: dto.budgetMinCents != null ? BigInt(dto.budgetMinCents) : null,
         budgetMaxCents: dto.budgetMaxCents != null ? BigInt(dto.budgetMaxCents) : null,
         currency: dto.currency ?? 'SAR',
-        requirements: dto.requirements ?? {},
+        requirements: (dto.requirements ?? {}) as Prisma.InputJsonValue,
       },
     });
     return this.normalize(created);
@@ -40,7 +78,8 @@ export class MarketplaceRequestsService {
     const page = Math.max(1, Number(params.page ?? 1));
     const limit = Math.min(50, Math.max(1, Number(params.limit ?? 20)));
     const where: any = { travelerId: travelerUserId };
-    if (params.status) where.status = params.status;
+    const status = parseEnum(RequestStatus, params.status, 'status');
+    if (status) where.status = status;
     const [items, total] = await Promise.all([
       this.prisma.marketplaceRequest.findMany({
         where,
@@ -54,32 +93,64 @@ export class MarketplaceRequestsService {
     return { items: items.map((i) => this.normalize(i)), total, page, limit };
   }
 
-  // ─── Provider-side: browse open requests in the tenant ──────────────────
-  async listOpen(tenantId: string, params: { page?: number; limit?: number; serviceType?: string }) {
-    const page = Math.max(1, Number(params.page ?? 1));
-    const limit = Math.min(50, Math.max(1, Number(params.limit ?? 20)));
-    const where: any = { tenantId, status: { in: ['OPEN', 'IN_NEGOTIATION'] } as any };
-    if (params.serviceType) where.serviceType = params.serviceType;
+  // ─── Provider-side: browse open requests of OTHER organizations ─────────
+  async listOpen(provider: Principal, params: { page?: number; limit?: number; serviceType?: string }) {
+    const page = Math.max(1, Number(params.page ?? 1) || 1);
+    const limit = Math.min(50, Math.max(1, Number(params.limit ?? 20) || 20));
+    const serviceType =
+      parseEnum(RequestServiceType, params.serviceType, 'serviceType') ??
+      SERVICE_TYPE_BY_TENANT_TYPE[provider.tenantType];
+    const where: Prisma.MarketplaceRequestWhereInput = {
+      tenantId: { not: provider.tenantId },
+      status: { in: ACCEPTING_OFFERS },
+      ...(serviceType ? { serviceType } : {}),
+    };
     const [items, total] = await Promise.all([
       this.prisma.marketplaceRequest.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
-        include: { offers: { select: { id: true, status: true, providerId: true } } },
+        // Only the caller's own offers — never other providers' offers.
+        include: {
+          offers: { where: { providerId: provider.sub }, select: { id: true, status: true, providerId: true } },
+          _count: { select: { offers: true } },
+        },
       }),
       this.prisma.marketplaceRequest.count({ where }),
     ]);
     return { items: items.map((i) => this.normalize(i)), total, page, limit };
   }
 
-  async findOne(id: string) {
+  /**
+   * Visible to: the requester; staff of the requester's organization unless it is the shared
+   * traveler community; providers who made an offer (their own offers only); and providers
+   * holding marketplace:listing:manage while the request accepts offers (no offers shown).
+   */
+  async findOne(id: string, user: Principal) {
     const r = await this.prisma.marketplaceRequest.findUnique({
       where: { id },
       include: { offers: { orderBy: { createdAt: 'desc' } } },
     });
     if (!r) throw new NotFoundException('Request not found');
-    return this.normalize(r);
+    if (r.travelerId === user.sub) return this.normalize(r);
+
+    if (r.tenantId === user.tenantId) {
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: r.tenantId }, select: { slug: true } });
+      if (tenant && tenant.slug !== COMMUNITY_TENANT_SLUG) return this.normalize(r);
+      throw new NotFoundException('Request not found');
+    }
+
+    const ownOffers = r.offers.filter((o) => o.providerId === user.sub);
+    if (ownOffers.length) return this.normalize({ ...r, offers: ownOffers });
+
+    if (
+      ACCEPTING_OFFERS.includes(r.status) &&
+      (await this.rbac.userHasPermissions(user.sub, user.tenantId, ['marketplace:listing:manage']))
+    ) {
+      return this.normalize({ ...r, offers: [] });
+    }
+    throw new NotFoundException('Request not found');
   }
 
   async close(travelerUserId: string, id: string) {
@@ -92,11 +163,22 @@ export class MarketplaceRequestsService {
   }
 
   // ─── Provider sends an offer ─────────────────────────────────────────────
-  async createOffer(providerUserId: string, requestId: string, dto: any) {
+  async createOffer(provider: Principal, requestId: string, dto: CreateOfferDto) {
+    const providerUserId = provider.sub;
     const req = await this.prisma.marketplaceRequest.findUnique({ where: { id: requestId } });
     if (!req) throw new NotFoundException('Request not found');
-    if (!['OPEN', 'IN_NEGOTIATION'].includes(req.status as any)) {
+    if (req.tenantId === provider.tenantId || req.travelerId === providerUserId) {
+      throw new ForbiddenException("You cannot make an offer on your own organization's request");
+    }
+    if (!ACCEPTING_OFFERS.includes(req.status)) {
       throw new BadRequestException('This request is no longer accepting offers');
+    }
+    // The optional vendor link must be one of the caller organization's vendors.
+    const vendorId = dto.vendorId
+      ? (await findOwned<{ id: string }>(this.prisma.vendor, dto.vendorId, provider.tenantId, 'Vendor', {}, { id: true })).id
+      : null;
+    if (dto.validUntil && new Date(dto.validUntil).getTime() <= Date.now()) {
+      throw new BadRequestException('validUntil must be in the future');
     }
     // FIX-05: validate/normalize so a missing title can't crash Prisma (500).
     const priceCents = Number(dto.priceCents ?? 0);
@@ -107,7 +189,7 @@ export class MarketplaceRequestsService {
       data: {
         requestId,
         providerId: providerUserId,
-        vendorId: dto.vendorId ?? null,
+        vendorId,
         title: dto.title?.trim() || `Offer for ${req.title}`,
         description: dto.description,
         priceCents: BigInt(Math.round(priceCents)),
@@ -129,7 +211,7 @@ export class MarketplaceRequestsService {
       actorUserId: providerUserId,
       type: 'REQUEST_OFFER',
       title: 'New offer on your request',
-      body: `${dto.title} — ${dto.currency ?? 'SAR'} ${(Number(offer.priceCents) / 100).toLocaleString()}`,
+      body: `${offer.title} — ${offer.currency} ${(Number(offer.priceCents) / 100).toLocaleString()}`,
       link: `/requests/${requestId}`,
       data: { requestId, offerId: offer.id },
     });
@@ -181,11 +263,14 @@ export class MarketplaceRequestsService {
     if (req.travelerId !== travelerUserId) throw new BadRequestException('Not your request');
     const offer = await this.prisma.requestOffer.findUnique({ where: { id: offerId } });
     if (!offer || offer.requestId !== requestId) throw new NotFoundException('Offer not found');
+    if (offer.status !== 'PENDING') throw new BadRequestException(`Offer is already ${offer.status.toLowerCase()}`);
 
-    const updated = await this.prisma.requestOffer.update({
-      where: { id: offerId },
-      data: { status: 'REJECTED' as any, respondedAt: new Date() },
+    const res = await this.prisma.requestOffer.updateMany({
+      where: { id: offerId, status: OfferStatus.PENDING },
+      data: { status: OfferStatus.REJECTED, respondedAt: new Date() },
     });
+    if (res.count !== 1) throw new ConflictException('Offer is no longer pending');
+    const updated = await this.prisma.requestOffer.findUnique({ where: { id: offerId } });
     await this.notifications.fire({
       tenantId: req.tenantId,
       recipientUserId: offer.providerId,
@@ -200,142 +285,181 @@ export class MarketplaceRequestsService {
   }
 
   /**
-   * Convert an accepted offer into a concrete booking record.
-   * - HOTEL / OTHER → creates a ListingBooking against the offer's vendor (uses first listing as anchor)
-   * - TRANSPORT → creates a TransportAssignment (requires vehicleId in offer.requirements)
-   * - VISA → creates a VisaApplication if the offer.providerId is in the same tenant
-   * - PACKAGE → creates a Booking (requires packageId in dto)
-   *
-   * Idempotent: if a booking is already linked, returns the existing one.
+   * Convert an accepted offer into a concrete booking record. Only the requester may convert,
+   * only the ACCEPTED offer of the request, and only once. Everything is created inside the
+   * PROVIDER's organization, from the provider's own vehicles / routes / listings.
+   * - HOTEL / OTHER / PACKAGE → ListingBooking against the provider's vendor listing
+   * - TRANSPORT → TransportAssignment (requires a vehicle of the provider)
+   * - VISA → VisaApplication in the provider's organization
    */
-  async convertOfferToBooking(
-    requestId: string,
-    offerId: string,
-    actorUserId: string,
-    dto: { vehicleId?: string; routeId?: string; scheduledAt?: string; passengerCount?: number; notes?: string; listingId?: string } = {},
-  ) {
+  async convertOfferToBooking(requestId: string, offerId: string, actorUserId: string, dto: ConvertOfferDto = {}) {
     const req = await this.prisma.marketplaceRequest.findUnique({ where: { id: requestId }, include: { offers: true } });
-    if (!req) throw new NotFoundException('Request not found');
+    if (!req || req.travelerId !== actorUserId) throw new NotFoundException('Request not found');
     const offer = req.offers.find((o) => o.id === offerId);
     if (!offer) throw new NotFoundException('Offer not found');
-    if (offer.status !== 'ACCEPTED') throw new BadRequestException('Offer must be accepted before conversion');
-
-    // Find or auto-resolve provider's vendor (for hotel/other listings)
-    let vendor = offer.vendorId
-      ? await this.prisma.vendor.findUnique({ where: { id: offer.vendorId } })
-      : null;
-    // Auto-resolve from the provider user's tenant if no vendor record yet
-    if (!vendor) {
-      const providerUser = await this.prisma.user.findUnique({ where: { id: offer.providerId } });
-      if (providerUser?.tenantId) {
-        vendor = await this.prisma.vendor.findFirst({ where: { tenantId: providerUser.tenantId } });
-        if (!vendor) {
-          const tenant = await this.prisma.tenant.findUnique({ where: { id: providerUser.tenantId } });
-          vendor = await this.prisma.vendor.create({
-            data: {
-              tenantId: providerUser.tenantId,
-              type: (tenant?.type as any) ?? 'OPERATOR',
-              name: tenant?.name ?? 'Provider',
-              email: tenant?.email ?? `vendor+${providerUser.tenantId.slice(0, 8)}@umrahconnects.com`,
-              country: tenant?.country ?? 'SA',
-              status: 'PENDING_KYC',
-              kycDocuments: [],
-              images: [],
-            },
-          });
-        }
-      }
+    if (offer.status !== 'ACCEPTED' || (req.acceptedOfferId && req.acceptedOfferId !== offerId)) {
+      throw new BadRequestException('Offer must be accepted before conversion');
+    }
+    if (asObject(req.requirements)[CONVERSION_KEY]) {
+      throw new ConflictException('This offer has already been converted');
     }
 
-    let result: any;
-    if (req.serviceType === 'TRANSPORT') {
-      if (!dto.vehicleId) throw new BadRequestException('vehicleId required to convert transport offer');
-      result = await this.prisma.transportAssignment.create({
-        data: {
-          tenantId: req.tenantId,
-          vehicleId: dto.vehicleId,
-          routeId: dto.routeId,
-          customerType: 'PLATFORM_USER',
-          customerName: 'Traveler',
-          scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : (req.dateFrom ?? new Date()),
-          passengerCount: dto.passengerCount ?? req.travelers ?? 1,
-          priceCents: BigInt(offer.priceCents),
-          currency: offer.currency,
-          paymentStatus: 'UNPAID',
-          status: 'CONFIRMED',
-          notes: dto.notes ?? offer.description,
-        },
-      });
-    } else if ((req.serviceType === 'HOTEL' || req.serviceType === 'OTHER' || req.serviceType === 'PACKAGE') && vendor) {
-      // Find or create a listing for this vendor + service-type
-      let listing = dto.listingId
-        ? await this.prisma.listing.findUnique({ where: { id: dto.listingId } })
-        : null;
-      if (!listing) {
-        listing = await this.prisma.listing.findFirst({
-          where: { vendorId: vendor.id, isActive: true },
-          orderBy: { createdAt: 'desc' },
-        });
-      }
-      if (!listing) {
-        // Spin up a quick listing record so the booking has a parent
-        listing = await this.prisma.listing.create({
-          data: {
-            vendorId: vendor.id,
-            type: req.serviceType === 'HOTEL' ? 'hotel_room' : req.serviceType === 'PACKAGE' ? 'other' : 'other',
-            name: offer.title,
-            description: offer.description,
-            priceCents: BigInt(offer.priceCents),
-            currency: offer.currency,
-            pricingModel: 'PER_PERSON',
-            attributes: {},
-            status: 'PUBLISHED',
-          },
-        });
-      }
-      result = await this.prisma.listingBooking.create({
-        data: {
-          listingId: listing.id,
-          customerUserId: req.travelerId,
-          customerName: 'Traveler',
-          partySize: req.travelers ?? 1,
-          totalAmountCents: BigInt(offer.priceCents),
-          currency: offer.currency,
-          startDate: req.dateFrom ?? undefined,
-          endDate: req.dateTo ?? undefined,
-          status: 'CONFIRMED',
-          paymentStatus: 'UNPAID',
-          notes: dto.notes ?? offer.description,
-        },
-      });
-      result = { ...result, totalAmountCents: Number((result as any).totalAmountCents) };
-    } else if (req.serviceType === 'VISA') {
-      // Convert a visa service request into a visa application
-      const appNo = `VISA-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
-      const visa = await this.prisma.visaApplication.create({
-        data: {
-          tenantId: req.tenantId,
-          regulatorySystem: 'NUSUK_MASAR' as any,
-          status: 'NOT_STARTED' as any,
-          applicantName: 'Traveler',
-          visaType: req.title,
-          destinationCountry: 'SA',
-          applicationNumber: appNo,
-          requiredDocuments: ['PASSPORT', 'PHOTO'],
-          priceCents: BigInt(offer.priceCents),
-          currency: offer.currency,
-          paymentStatus: 'UNPAID',
-          notes: dto.notes ?? offer.description,
-          documents: [],
-          timeline: [{ at: new Date().toISOString(), event: 'CREATED_FROM_REQUEST', requestId }],
-        },
-      });
-      result = { ...visa, priceCents: Number((visa as any).priceCents) };
-    } else {
+    // The provider's organization is the one that fulfils the booking.
+    const providerUser = await this.prisma.user.findUnique({ where: { id: offer.providerId }, select: { tenantId: true } });
+    if (!providerUser?.tenantId) throw new ConflictException('The provider of this offer is no longer available');
+    const providerTenantId = providerUser.tenantId;
+
+    // Resolve the provider's vendor: the offer's vendor only if it belongs to the provider organization.
+    let vendor = offer.vendorId
+      ? await this.prisma.vendor.findFirst({ where: { id: offer.vendorId, tenantId: providerTenantId } })
+      : null;
+    if (!vendor) vendor = await this.prisma.vendor.findFirst({ where: { tenantId: providerTenantId } });
+
+    const isListingType = req.serviceType === 'HOTEL' || req.serviceType === 'OTHER' || req.serviceType === 'PACKAGE';
+    if (!isListingType && req.serviceType !== 'TRANSPORT' && req.serviceType !== 'VISA') {
       throw new BadRequestException(`Conversion not yet supported for serviceType=${req.serviceType}`);
     }
 
-    // Notify both parties
+    // Validate client-supplied references against the provider organization before writing anything.
+    if (req.serviceType === 'TRANSPORT') {
+      if (!dto.vehicleId) throw new BadRequestException('vehicleId required to convert transport offer');
+      await findOwned(this.prisma.vehicle, dto.vehicleId, providerTenantId, 'Vehicle', {}, { id: true });
+      if (dto.routeId) await findOwned(this.prisma.transportRoute, dto.routeId, providerTenantId, 'Route', {}, { id: true });
+    }
+    let chosenListing: { id: string } | null = null;
+    if (isListingType && dto.listingId) {
+      if (!vendor) throw new NotFoundException('Listing not found');
+      chosenListing = await this.prisma.listing.findFirst({
+        where: { id: dto.listingId, vendor: { tenantId: providerTenantId } },
+        select: { id: true },
+      });
+      if (!chosenListing) throw new NotFoundException('Listing not found');
+    }
+
+    if (isListingType && !vendor) {
+      // Auto-create the provider's vendor record so the booking has a parent.
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: providerTenantId } });
+      vendor = await this.prisma.vendor.create({
+        data: {
+          tenantId: providerTenantId,
+          type: (tenant?.type as any) ?? 'OPERATOR',
+          name: tenant?.name ?? 'Provider',
+          email: tenant?.email ?? `vendor+${providerTenantId.slice(0, 8)}@umrahconnects.com`,
+          country: tenant?.country ?? 'SA',
+          status: 'PENDING_KYC',
+          kycDocuments: [],
+          images: [],
+        },
+      });
+    }
+
+    const result: any = await this.prisma.$transaction(async (tx) => {
+      // Serialize conversions of the same request and re-check the one-time marker under the lock.
+      await tx.$queryRaw`SELECT id FROM marketplace.marketplace_requests WHERE id = ${requestId}::uuid FOR UPDATE`;
+      const fresh = await tx.marketplaceRequest.findUnique({ where: { id: requestId }, select: { requirements: true } });
+      const requirements = asObject(fresh?.requirements);
+      if (requirements[CONVERSION_KEY]) throw new ConflictException('This offer has already been converted');
+
+      let created: any;
+      let kind: string;
+      if (req.serviceType === 'TRANSPORT') {
+        kind = 'TRANSPORT_ASSIGNMENT';
+        created = await tx.transportAssignment.create({
+          data: {
+            tenantId: providerTenantId,
+            vehicleId: dto.vehicleId!,
+            routeId: dto.routeId,
+            customerType: 'PLATFORM_USER',
+            customerName: 'Traveler',
+            scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : (req.dateFrom ?? new Date()),
+            passengerCount: dto.passengerCount ?? req.travelers ?? 1,
+            priceCents: BigInt(offer.priceCents),
+            currency: offer.currency,
+            paymentStatus: 'UNPAID',
+            status: 'CONFIRMED',
+            notes: dto.notes ?? offer.description,
+          },
+        });
+      } else if (isListingType) {
+        kind = 'LISTING_BOOKING';
+        let listing: { id: string } | null = chosenListing;
+        if (!listing) {
+          listing = await tx.listing.findFirst({
+            where: { vendorId: vendor!.id, isActive: true },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true },
+          });
+        }
+        if (!listing) {
+          // Spin up a quick listing record so the booking has a parent
+          listing = await tx.listing.create({
+            data: {
+              vendorId: vendor!.id,
+              type: req.serviceType === 'HOTEL' ? 'hotel_room' : 'other',
+              name: offer.title,
+              description: offer.description,
+              priceCents: BigInt(offer.priceCents),
+              currency: offer.currency,
+              pricingModel: 'PER_PERSON',
+              attributes: {},
+              status: 'PUBLISHED',
+            },
+            select: { id: true },
+          });
+        }
+        const booking = await tx.listingBooking.create({
+          data: {
+            listingId: listing.id,
+            customerUserId: req.travelerId,
+            customerName: 'Traveler',
+            partySize: req.travelers ?? 1,
+            totalAmountCents: BigInt(offer.priceCents),
+            currency: offer.currency,
+            startDate: req.dateFrom ?? undefined,
+            endDate: req.dateTo ?? undefined,
+            status: 'CONFIRMED',
+            paymentStatus: 'UNPAID',
+            notes: dto.notes ?? offer.description,
+          },
+        });
+        created = { ...booking, totalAmountCents: Number(booking.totalAmountCents) };
+      } else {
+        kind = 'VISA_APPLICATION';
+        const appNo = `VISA-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+        const visa = await tx.visaApplication.create({
+          data: {
+            tenantId: providerTenantId,
+            regulatorySystem: 'NUSUK_MASAR' as any,
+            status: 'NOT_STARTED' as any,
+            applicantName: 'Traveler',
+            visaType: req.title,
+            destinationCountry: 'SA',
+            applicationNumber: appNo,
+            requiredDocuments: ['PASSPORT', 'PHOTO'],
+            priceCents: BigInt(offer.priceCents),
+            currency: offer.currency,
+            paymentStatus: 'UNPAID',
+            notes: dto.notes ?? offer.description,
+            documents: [],
+            timeline: [{ at: new Date().toISOString(), event: 'CREATED_FROM_REQUEST', requestId }],
+          },
+        });
+        created = { ...visa, priceCents: Number((visa as any).priceCents) };
+      }
+
+      await tx.marketplaceRequest.update({
+        where: { id: requestId },
+        data: {
+          requirements: {
+            ...requirements,
+            [CONVERSION_KEY]: { offerId, kind, resultId: created.id, at: new Date().toISOString() },
+          } as Prisma.InputJsonValue,
+        },
+      });
+      return created;
+    });
+
+    // Notify the provider
     await this.notifications.fire({
       tenantId: req.tenantId,
       recipientUserId: offer.providerId,
@@ -354,7 +478,8 @@ export class MarketplaceRequestsService {
     const page = Math.max(1, Number(params.page ?? 1));
     const limit = Math.min(50, Math.max(1, Number(params.limit ?? 20)));
     const where: any = { providerId: providerUserId };
-    if (params.status) where.status = params.status;
+    const status = parseEnum(OfferStatus, params.status, 'status');
+    if (status) where.status = status;
     const [items, total] = await Promise.all([
       this.prisma.requestOffer.findMany({
         where,

@@ -1,17 +1,22 @@
-import { IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { normalizeEmail } from './register.dto';
 
 export class LoginDto {
   @ApiProperty({ example: 'admin@maktour.com' })
+  @Transform(normalizeEmail)
   @IsEmail()
-  email: string;
+  @MaxLength(255)
+  email!: string;
 
-  @ApiProperty({ example: 'SecurePass123!' })
+  @ApiProperty()
   @IsString()
-  @MinLength(8)
-  password: string;
+  @MinLength(1)
+  @MaxLength(128)
+  password!: string;
 
-  @ApiPropertyOptional({ example: 'uuid-of-tenant', description: 'Optional — only needed to disambiguate an email registered in multiple workspaces.' })
+  @ApiPropertyOptional({ description: 'Only needed to disambiguate an email registered in multiple workspaces.' })
   @IsOptional()
   @IsUUID()
   tenantId?: string;

@@ -1,145 +1,241 @@
-import { Injectable, Logger, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ServiceUnavailableException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createHash, randomBytes } from 'crypto';
-import { mkdirSync, writeFileSync, existsSync, unlinkSync } from 'fs';
-import { extname, join } from 'path';
+import { createReadStream, existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
+import { join, normalize, sep } from 'path';
+import type { Readable } from 'stream';
+import { sniffFile, SniffedType } from './file-sniff';
+
+export type StorageDriver = 'local' | 'r2' | 's3';
+export type Visibility = 'public' | 'private';
 
 export interface StoredObject {
+  /** Public objects: a permanent URL. Private objects: an opaque `private:` reference (use a signed URL to read). */
   url: string;
   storageKey: string;
   driver: StorageDriver;
-  mimeType?: string;
+  visibility: Visibility;
+  mimeType: string;
   sizeBytes: number;
   checksum: string;
 }
 
-export type StorageDriver = 'local' | 's3' | 'cloudinary';
-
 export interface PutFileInput {
   buffer: Buffer;
   originalName: string;
+  /** Client-declared type; informational only — the stored type comes from content sniffing. */
   mimeType?: string;
   /** Logical folder, e.g. `visa-documents/<applicationId>`. */
   prefix: string;
 }
 
-/** Documents are evidence, so the allow-list is wider than image uploads. */
-const ALLOWED_EXT = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.tif', '.tiff'];
-const MAX_BYTES = 15 * 1024 * 1024; // 15 MB
+const DOCUMENT_TYPES: SniffedType[] = ['pdf', 'jpeg', 'png', 'webp', 'heic', 'tiff'];
+const IMAGE_TYPES: SniffedType[] = ['jpeg', 'png', 'webp', 'gif'];
+const DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
+const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
 /**
  * One seam for every binary the platform stores.
  *
- * `local` writes to disk and is correct for development only — the container
- * filesystem on Render is ephemeral, so anything written there is lost on the
- * next deploy. `s3` and `cloudinary` are selected with STORAGE_DRIVER and
- * refuse to start work until their credentials are present, which keeps the
- * failure loud and configuration-shaped instead of silently losing files.
+ * Drivers:
+ *  - `local`: disk under ./uploads. Public media are flat files served at
+ *    /uploads/<file>; private documents live under ./uploads/private and are
+ *    never served statically. Production use requires a persistent volume.
+ *  - `r2` / `s3`: S3-compatible object storage (Cloudflare R2 via S3_ENDPOINT).
+ *    Private documents go to S3_BUCKET (must not be public) and are read through
+ *    short-lived presigned URLs; public media go to S3_PUBLIC_BUCKET and are
+ *    addressed through S3_PUBLIC_BASE_URL.
+ *
+ * File types are decided by content (magic bytes), never by the file name or
+ * the client-declared MIME type.
  */
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly localDir = join(process.cwd(), 'uploads');
+  private s3?: S3Client;
 
   constructor(private config: ConfigService) {
-    mkdirSync(this.localDir, { recursive: true });
-    if (this.driver === 'local' && this.config.get('NODE_ENV') === 'production') {
-      this.logger.warn(
-        'STORAGE_DRIVER=local in production — uploads live on an ephemeral disk ' +
-        'and will be lost on redeploy. Set STORAGE_DRIVER=s3 or cloudinary.',
-      );
+    if (this.driver === 'local') {
+      mkdirSync(join(this.localDir, 'private'), { recursive: true });
+      if (this.config.get('NODE_ENV') === 'production' && this.config.get('STORAGE_LOCAL_PERSISTENT') !== 'true') {
+        this.logger.warn('STORAGE_DRIVER=local in production without a persistent volume — uploads will be lost on redeploy.');
+      }
     }
   }
 
   get driver(): StorageDriver {
-    return (this.config.get<string>('STORAGE_DRIVER') ?? 'local') as StorageDriver;
+    const d = (this.config.get<string>('STORAGE_DRIVER') ?? 'local').toLowerCase();
+    return (d === 'r2' || d === 's3' ? d : 'local') as StorageDriver;
   }
 
   /** Whether the configured driver has everything it needs to run. */
-  get status(): { driver: StorageDriver; configured: boolean; missing: string[]; ephemeral: boolean } {
+  get status() {
     const missing = this.missingConfig();
     return {
       driver: this.driver,
       configured: missing.length === 0,
       missing,
-      ephemeral: this.driver === 'local',
+      ephemeral: this.driver === 'local' && this.config.get('STORAGE_LOCAL_PERSISTENT') !== 'true',
+      publicMedia: this.driver === 'local' || !!this.config.get('S3_PUBLIC_BUCKET'),
     };
   }
 
   private missingConfig(): string[] {
     const need = (keys: string[]) => keys.filter((k) => !this.config.get(k));
-    switch (this.driver) {
-      case 's3':
-        return need(['S3_BUCKET', 'S3_REGION', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']);
-      case 'cloudinary':
-        return need(['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']);
-      default:
-        return [];
-    }
+    if (this.driver === 'r2') return need(['S3_ENDPOINT', 'S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']);
+    if (this.driver === 's3') return need(['S3_REGION', 'S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY']);
+    return [];
   }
 
-  private validate(input: PutFileInput) {
-    const ext = extname(input.originalName || '').toLowerCase();
-    if (!ALLOWED_EXT.includes(ext)) {
-      throw new BadRequestException(
-        `File type ${ext || '(none)'} is not accepted. Allowed: ${ALLOWED_EXT.join(', ')}`,
-      );
-    }
-    if (!input.buffer?.length) throw new BadRequestException('Uploaded file is empty');
-    if (input.buffer.length > MAX_BYTES) {
-      throw new BadRequestException(`File is larger than ${MAX_BYTES / 1024 / 1024} MB`);
-    }
-    return ext;
-  }
-
-  async put(input: PutFileInput): Promise<StoredObject> {
-    const ext = this.validate(input);
-    const checksum = createHash('sha256').update(input.buffer).digest('hex');
-    const key = `${input.prefix}/${Date.now()}-${randomBytes(6).toString('hex')}${ext}`;
-
+  private requireReady() {
     const missing = this.missingConfig();
     if (missing.length) {
-      // Configuration problem, not a client problem — 503, and say exactly what is absent.
-      throw new ServiceUnavailableException(
-        `Storage driver "${this.driver}" is not configured. Missing: ${missing.join(', ')}`,
-      );
-    }
-
-    switch (this.driver) {
-      case 'local':
-        return this.putLocal(key, input, checksum);
-      case 's3':
-      case 'cloudinary':
-        // Credentials are present but the SDK integration is deliberately not
-        // wired yet — fail loudly rather than pretend the file was stored.
-        throw new ServiceUnavailableException(
-          `Storage driver "${this.driver}" is configured but its client is not enabled in this build.`,
-        );
-      default:
-        throw new ServiceUnavailableException(`Unknown STORAGE_DRIVER "${this.driver}"`);
+      throw new ServiceUnavailableException(`File storage is not configured. Missing: ${missing.join(', ')}`);
     }
   }
 
-  private putLocal(key: string, input: PutFileInput, checksum: string): StoredObject {
-    const full = join(this.localDir, key);
-    mkdirSync(join(full, '..'), { recursive: true });
-    writeFileSync(full, input.buffer);
+  private client(): S3Client {
+    if (!this.s3) {
+      this.s3 = new S3Client({
+        region: this.driver === 'r2' ? 'auto' : this.config.get<string>('S3_REGION'),
+        endpoint: this.config.get<string>('S3_ENDPOINT') || undefined,
+        forcePathStyle: this.driver === 'r2' ? false : this.config.get('S3_FORCE_PATH_STYLE') === 'true',
+        credentials: {
+          accessKeyId: this.config.get<string>('S3_ACCESS_KEY_ID')!,
+          secretAccessKey: this.config.get<string>('S3_SECRET_ACCESS_KEY')!,
+        },
+      });
+    }
+    return this.s3;
+  }
+
+  private validate(input: PutFileInput, allowed: SniffedType[], maxBytes: number) {
+    if (!input.buffer?.length) throw new BadRequestException('Uploaded file is empty');
+    if (input.buffer.length > maxBytes) throw new BadRequestException(`File is larger than ${maxBytes / 1024 / 1024} MB`);
+    const sniffed = sniffFile(input.buffer);
+    if (!sniffed || !allowed.includes(sniffed.type)) {
+      throw new BadRequestException(
+        `File content is not an accepted type. Allowed: ${allowed.join(', ')}`,
+      );
+    }
+    return sniffed;
+  }
+
+  private static safePrefix(prefix: string) {
+    const clean = prefix.replace(/[^A-Za-z0-9/_-]/g, '').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+    if (!clean || clean.split('/').some((s) => s === '' || s === '.' || s === '..')) {
+      throw new BadRequestException('Invalid storage location');
+    }
+    return clean;
+  }
+
+  /** Private document (visa, KYC, traveler documents). Never publicly addressable. */
+  async put(input: PutFileInput): Promise<StoredObject> {
+    this.requireReady();
+    const sniffed = this.validate(input, DOCUMENT_TYPES, DOCUMENT_MAX_BYTES);
+    const checksum = createHash('sha256').update(input.buffer).digest('hex');
+    const key = `${StorageService.safePrefix(input.prefix)}/${Date.now()}-${randomBytes(12).toString('hex')}.${sniffed.ext}`;
+
+    if (this.driver === 'local') {
+      const full = this.localPath(key);
+      mkdirSync(join(full, '..'), { recursive: true });
+      writeFileSync(full, input.buffer, { mode: 0o640 });
+    } else {
+      await this.client().send(
+        new PutObjectCommand({
+          Bucket: this.config.get<string>('S3_BUCKET'),
+          Key: key,
+          Body: input.buffer,
+          ContentType: sniffed.mime,
+          ContentDisposition: 'attachment',
+          ChecksumSHA256: Buffer.from(checksum, 'hex').toString('base64'),
+          Metadata: { sha256: checksum },
+        }),
+      );
+    }
     return {
-      url: `/uploads/${key}`,
+      url: `private:${key}`,
       storageKey: key,
-      driver: 'local',
-      mimeType: input.mimeType,
+      driver: this.driver,
+      visibility: 'private',
+      mimeType: sniffed.mime,
       sizeBytes: input.buffer.length,
       checksum,
     };
   }
 
+  /** Public media (avatars, post and listing images). */
+  async putPublicImage(input: Omit<PutFileInput, 'prefix'>): Promise<StoredObject> {
+    this.requireReady();
+    const sniffed = this.validate({ ...input, prefix: 'media' }, IMAGE_TYPES, IMAGE_MAX_BYTES);
+    const checksum = createHash('sha256').update(input.buffer).digest('hex');
+    const name = `${Date.now()}-${randomBytes(12).toString('hex')}.${sniffed.ext}`;
+
+    let url: string;
+    if (this.driver === 'local') {
+      writeFileSync(join(this.localDir, name), input.buffer, { mode: 0o644 });
+      url = `/uploads/${name}`;
+    } else {
+      const bucket = this.config.get<string>('S3_PUBLIC_BUCKET');
+      const base = this.config.get<string>('S3_PUBLIC_BASE_URL')?.replace(/\/+$/, '');
+      if (!bucket || !base) {
+        throw new ServiceUnavailableException('Public media storage is not configured. Missing: S3_PUBLIC_BUCKET, S3_PUBLIC_BASE_URL');
+      }
+      await this.client().send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: `media/${name}`,
+          Body: input.buffer,
+          ContentType: sniffed.mime,
+          CacheControl: 'public, max-age=31536000, immutable',
+        }),
+      );
+      url = `${base}/media/${name}`;
+    }
+    return { url, storageKey: `media/${name}`, driver: this.driver, visibility: 'public', mimeType: sniffed.mime, sizeBytes: input.buffer.length, checksum };
+  }
+
+  private localPath(key: string) {
+    const root = join(this.localDir, 'private');
+    const full = normalize(join(root, key));
+    if (!full.startsWith(root + sep)) throw new BadRequestException('Invalid storage key');
+    return full;
+  }
+
+  /** Short-lived URL for a private object (R2/S3). Local objects use the API's signed route instead. */
+  async presignedUrl(storageKey: string, opts: { filename?: string; expiresInSeconds?: number } = {}): Promise<string> {
+    const disposition = `attachment; filename="${(opts.filename ?? 'document').replace(/[^\w.\- ]/g, '_')}"`;
+    return getSignedUrl(
+      this.client(),
+      new GetObjectCommand({
+        Bucket: this.config.get<string>('S3_BUCKET'),
+        Key: storageKey,
+        ResponseContentDisposition: disposition,
+      }),
+      { expiresIn: Math.min(opts.expiresInSeconds ?? 300, 900) },
+    );
+  }
+
+  /** Streams a private object stored on local disk. */
+  openLocal(storageKey: string): { stream: Readable; size: number } {
+    const full = this.localPath(storageKey);
+    if (!existsSync(full)) throw new NotFoundException('File not found');
+    return { stream: createReadStream(full), size: statSync(full).size };
+  }
+
   /** Best-effort removal of a superseded object; never throws. */
   async remove(storageKey?: string | null, driver: StorageDriver = 'local') {
-    if (!storageKey || driver !== 'local') return;
+    if (!storageKey) return;
     try {
-      const full = join(this.localDir, storageKey);
-      if (existsSync(full)) unlinkSync(full);
+      if (driver === 'local') {
+        const full = this.localPath(storageKey);
+        if (existsSync(full)) unlinkSync(full);
+      } else if (driver === this.driver) {
+        await this.client().send(new DeleteObjectCommand({ Bucket: this.config.get<string>('S3_BUCKET'), Key: storageKey }));
+      }
     } catch (err) {
       this.logger.warn(`Could not remove ${storageKey}: ${(err as Error).message}`);
     }
