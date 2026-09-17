@@ -8,7 +8,9 @@ import {
   CalendarClock, HardDrive, FileText, Clock, Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useAllVisaDocuments, useVisaDocumentStats } from '@/hooks/use-visa';
+import { openVisaDocument } from '@/lib/private-documents';
 import {
   VISA_DOCUMENT_STATUSES, VISA_DOCUMENT_STATUS_META, humanizeStatus,
 } from '@/lib/statuses';
@@ -157,9 +159,13 @@ export function VisaDocumentsView() {
                       </td>
                       <td className="p-3 text-right">
                         {d.url ? (
-                          <a href={d.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline">
+                          <Button variant="quiet" type="button"
+                            onClick={() => openVisaDocument(d.id, undefined, (m) => toast.error(m))}
+                            aria-label={`Open ${d.name ?? 'document'}`}
+                            className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                          >
                             <Download className="h-3 w-3" /> Open
-                          </a>
+                          </Button>
                         ) : (
                           <Link href={`/compliance/${d.applicationId}`} className="text-xs text-gray-600 hover:underline">Attach →</Link>
                         )}

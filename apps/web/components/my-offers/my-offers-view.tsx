@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Button , QueryFailure } from '@/components/ui/system';
 
 import Link from 'next/link';
@@ -93,7 +94,7 @@ export function MyOffersView() {
                                   toast.success('Offer accepted');
                                   refetch();
                                 } catch (e: any) {
-                                  toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                                  toast.error(apiErrorMessage(e, 'Failed'));
                                 }
                               }}
                               className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700"
@@ -107,7 +108,7 @@ export function MyOffersView() {
                                   toast.success('Offer rejected');
                                   refetch();
                                 } catch (e: any) {
-                                  toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                                  toast.error(apiErrorMessage(e, 'Failed'));
                                 }
                               }}
                               className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
@@ -123,7 +124,7 @@ export function MyOffersView() {
                                 await convert.mutateAsync({ requestId: r.id, offerId: o.id });
                                 toast.success('Booking created from offer');
                               } catch (e: any) {
-                                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                                toast.error(apiErrorMessage(e, 'Failed'));
                               }
                             }}
                             className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-brand-500 hover:bg-brand-600 text-white"

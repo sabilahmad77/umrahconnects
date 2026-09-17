@@ -72,7 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    try { const refreshToken = localStorage.getItem('refreshToken'); if (refreshToken) void apiClient.post('/auth/logout', { refreshToken }).catch(() => {}); } catch {}
+    // Empty body — the httpOnly refresh cookie identifies the session to revoke.
+    void apiClient.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
     clearAuth();
     setUserState(null);
     redirected.current = false;
@@ -119,8 +120,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // FIX-02: access token expired/missing but a refresh token + user exist →
     // try a silent refresh BEFORE bouncing (this is the 15-min hard-nav bounce).
-    const refreshToken = (() => { try { return localStorage.getItem('refreshToken'); } catch { return null; } })();
-    if (storedUser && refreshToken && !refreshToken.startsWith('demo.')) {
+    // The refresh token is an httpOnly cookie now, so the page cannot inspect it.
+    // A stored user is the signal that a session may be resumable; the refresh
+    // call itself decides, and returns null when there is nothing to resume.
+    if (storedUser) {
       setIsLoaded(false);
       (async () => {
         const accessToken = await refreshAccessToken(); // shared/coalesced with apiClient

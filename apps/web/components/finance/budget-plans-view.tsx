@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { FieldInput as PlanInput } from '@/components/ui/system';
 import { Input, Select, ModalSurface, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
@@ -97,7 +98,7 @@ export function BudgetPlansView() {
                   <div className="flex items-center gap-2 shrink-0">
                     <Select disabled={update.isPending} aria-label={`Status for ${p.id ?? 'record'}`}
                       value={p.status}
-                      onChange={async (e) => { try { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      onChange={async (e) => { try { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className={cn('text-xs border rounded-lg px-2 py-1',
                         p.status === 'ACCEPTED' || p.status === 'COMPLETED' ? 'border-green-200 bg-green-50 text-green-700' :
                         p.status === 'PROPOSED' ? 'border-blue-200 bg-blue-50 text-blue-700' :
@@ -110,7 +111,7 @@ export function BudgetPlansView() {
                       {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                     <Button busy={del.isPending} variant="quiet" type="button" aria-label="Delete record"
-                      onClick={async () => { try { if (!confirm('Cancel this budget plan?')) return; await del.mutateAsync(p.id); toast.success('Cancelled'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      onClick={async () => { try { if (!confirm('Cancel this budget plan?')) return; await del.mutateAsync(p.id); toast.success('Cancelled'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="p-1.5 rounded hover:bg-red-50 text-red-700"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -200,7 +201,7 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
       toast.success('Budget plan created');
       onCreated();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 

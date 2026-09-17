@@ -98,7 +98,9 @@ export default function MarketplacePreviewPage() {
                       <p className="font-heading font-bold text-gray-900 leading-snug">{l.name ?? 'Umrah service'}</p>
                       {l.rating != null && Number(l.reviewCount) > 0 && <span className="text-xs font-semibold text-gray-700">{Number(l.rating).toFixed(1)} ({l.reviewCount} reviews)</span>}
                     </div>
-                    {l.vendor?.displayName && <p className="text-[12px] text-gray-600 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {l.vendor.displayName}</p>}
+                    {/* The API returns `vendor.name`; `displayName` is not on the payload,
+                        so the provider line silently never rendered. */}
+                    {l.vendor?.name && <p className="text-[12px] text-gray-600 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {l.vendor.name}</p>}
                     <p className="text-[13px] text-gray-600 mt-2 line-clamp-2 flex-1">{l.description ?? 'Review the service details with its provider.'}</p>
                     <div className="mt-3 pt-3 border-t border-sandstone/50 flex items-center justify-between">
                       <p className="font-heading font-bold text-brand-600">{fmt(l.priceCents, l.currency)}</p>

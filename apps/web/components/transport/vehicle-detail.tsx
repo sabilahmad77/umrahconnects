@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Select, Input, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -15,7 +16,11 @@ import { cn } from '@/lib/utils';
 import { useVehicle, useUpdateVehicle, useDeleteVehicle, useAssignDriverToVehicle, useUnassignDriverFromVehicle } from '@/hooks/use-transport';
 import { useTransportDrivers } from '@/hooks/use-api';
 
-const VEHICLE_TYPES = ['BUS_LARGE', 'BUS_MEDIUM', 'VAN', 'SEDAN', 'SUV', 'COACH'];
+// The canonical TransportType enum. SEDAN/SUV/COACH were accepted only as
+// aliases the service rewrote (SEDAN/SUV -> PRIVATE_CAR, COACH -> BUS_LARGE),
+// so a stored PRIVATE_CAR or BUS_SMALL matched no option and the field rendered
+// blank on the way back.
+const VEHICLE_TYPES = ['BUS_SMALL', 'BUS_MEDIUM', 'BUS_LARGE', 'VAN', 'PRIVATE_CAR'];
 const VEHICLE_STATUSES = ['AVAILABLE', 'BOOKED', 'IN_SERVICE', 'UNDER_MAINTENANCE', 'INACTIVE'];
 
 type TabKey = 'overview' | 'edit' | 'drivers' | 'assignments';
@@ -206,7 +211,7 @@ function DriversTab({ vehicle, refetch }: { vehicle: any; refetch: () => void })
                 setSelected('');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             className="flex items-center gap-2 px-4 py-2.5 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50"
@@ -243,7 +248,7 @@ function DriversTab({ vehicle, refetch }: { vehicle: any; refetch: () => void })
                       await unassign.mutateAsync({ vehicleId: vehicle.id, driverId: ad.driverId });
                       toast.success('Driver unassigned');
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="p-1.5 rounded hover:bg-red-50 text-red-700"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -324,7 +329,7 @@ function EditTab({ vehicle, refetch }: { vehicle: any; refetch: () => void }) {
       toast.success('Vehicle saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 

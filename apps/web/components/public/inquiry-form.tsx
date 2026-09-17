@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Textarea, Input , Button } from '@/components/ui/system';
 
 
@@ -40,7 +41,7 @@ export function InquiryForm({
       await apiClient.post('/inquiries', { type, ...form, metadata });
       setDone(true);
     } catch (e: any) {
-      setError(e?.response?.data?.error?.message ?? 'Something went wrong. Please try again.');
+      setError(apiErrorMessage(e, 'Something went wrong. Please try again.'));
     } finally {
       setBusy(false);
     }

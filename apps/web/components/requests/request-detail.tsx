@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { ModalSurface, Input, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -92,7 +93,7 @@ export function RequestDetail({ id }: { id: string }) {
       await closeRequest.mutateAsync(r.id);
       toast.success('Request closed');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to close');
+      toast.error(apiErrorMessage(e, 'Failed to close'));
     }
   };
 
@@ -297,7 +298,7 @@ function OfferCard({
       await acceptOffer.mutateAsync({ requestId: request.id, offerId: offer.id });
       toast.success('Offer accepted');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to accept');
+      toast.error(apiErrorMessage(e, 'Failed to accept'));
     }
   };
 
@@ -306,7 +307,7 @@ function OfferCard({
       await rejectOffer.mutateAsync({ requestId: request.id, offerId: offer.id });
       toast('Offer rejected');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to reject');
+      toast.error(apiErrorMessage(e, 'Failed to reject'));
     }
   };
 
@@ -424,7 +425,7 @@ function ConvertOfferModal({
       toast.success(isTransport ? 'Assignment created' : 'Booking created');
       onClose();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to convert');
+      toast.error(apiErrorMessage(e, 'Failed to convert'));
     }
   };
 
@@ -566,7 +567,7 @@ function CreateOfferModal({
       toast.success('Offer sent');
       onClose();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to send offer');
+      toast.error(apiErrorMessage(e, 'Failed to send offer'));
     }
   };
 

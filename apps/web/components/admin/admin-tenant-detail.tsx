@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -16,8 +17,8 @@ import {
 import { TENANT_STATUSES, TENANT_STATUS_META, USER_STATUS_META, humanizeStatus } from '@/lib/statuses';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 
-const apiError = (e: any) =>
-  e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Action failed';
+/** Uses the shared helper so validation arrays render as a sentence. */
+const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 export function AdminTenantDetail({ id }: { id: string }) {
   const { data: t, isLoading, error, refetch } = useAdminTenant(id);
@@ -98,7 +99,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
                   tone: blocking ? 'danger' : 'default',
                   onConfirm: () => run(() => setStatus.mutateAsync({ id, status: next }), 'Status updated'),
                 });
-              } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+              } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
               className="text-sm px-3 py-2 border border-gray-200 rounded-xl bg-white outline-none"
             >
               {TENANT_STATUSES.map((s) => <option key={s} value={s}>{TENANT_STATUS_META[s].label}</option>)}

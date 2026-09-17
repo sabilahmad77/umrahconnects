@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -254,7 +255,7 @@ export function PilgrimList() {
                                 await deletePilgrim.mutateAsync(pilgrim.id);
                                 toast.success('Pilgrim archived');
                               } catch (e: any) {
-                                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                                toast.error(apiErrorMessage(e, 'Failed'));
                               }
                             }}
                             title="Archive"
@@ -294,7 +295,7 @@ export function PilgrimList() {
               setShowCreate(false);
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           pending={createPilgrim.isPending}
@@ -313,7 +314,7 @@ export function PilgrimList() {
               setEditPilgrim(null);
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           pending={updatePilgrim.isPending}

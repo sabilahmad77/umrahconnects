@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -224,7 +225,7 @@ export function ComplianceList() {
           onClose={() => setShowCreate(false)}
           onCreate={async (dto) => {
             try { await createVisa.mutateAsync(dto); toast.success('Visa application created'); setShowCreate(false); refetch(); }
-            catch (e: any) { toast.error(e?.response?.data?.error?.message ?? 'Failed'); }
+            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
           }}
           pending={createVisa.isPending}
         />
@@ -287,9 +288,16 @@ function NewVisaModal({
               </label>
               <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">System *</span>
                 <Select  value={regulatorySystem} onChange={(e) => setRegulatorySystem(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+                  {/* RegulatorySystem enum members only — "OTHER" is not one and
+                      was rejected on submit; "MANUAL" is the catch-all. */}
                   <option value="NUSUK_MASAR">Nusuk / Masar</option>
                   <option value="SISKOPATUH">SISKOPATUH</option>
-                  <option value="OTHER">Other</option>
+                  <option value="NAHCON">NAHCON (Nigeria)</option>
+                  <option value="DIYANET">Diyanet (Türkiye)</option>
+                  <option value="TABUNG_HAJI">Tabung Haji (Malaysia)</option>
+                  <option value="MOTAC">MOTAC (Malaysia)</option>
+                  <option value="IBA_DGRP">IBA / DGRP</option>
+                  <option value="MANUAL">Manual / other</option>
                 </Select>
               </label>
             </div>

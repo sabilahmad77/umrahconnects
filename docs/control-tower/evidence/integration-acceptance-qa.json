@@ -1,0 +1,1334 @@
+{
+  "base": "http://localhost:3300",
+  "timestamp": "2026-09-17T21:45:49Z",
+  "passed": 210,
+  "total": 210,
+  "sections": {
+    "identities": {
+      "passed": 15,
+      "total": 15
+    },
+    "SUPER ADMIN ISOLATION (direct API, not navigation)": {
+      "passed": 74,
+      "total": 74
+    },
+    "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B": {
+      "passed": 7,
+      "total": 7
+    },
+    "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B": {
+      "passed": 9,
+      "total": 9
+    },
+    "TENANT ISOLATION \u2014 VISA A vs VISA B": {
+      "passed": 11,
+      "total": 11
+    },
+    "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B": {
+      "passed": 14,
+      "total": 14
+    },
+    "TENANT ISOLATION \u2014 TRAVELER A vs TRAVELER B": {
+      "passed": 5,
+      "total": 5
+    },
+    "BOOKING / PRICING CONTRACT (server-authoritative)": {
+      "passed": 13,
+      "total": 13
+    },
+    "MASS ASSIGNMENT \u2014 server-owned fields refused": {
+      "passed": 5,
+      "total": 5
+    },
+    "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)": {
+      "passed": 8,
+      "total": 8
+    },
+    "DATABASE PERSISTENCE": {
+      "passed": 10,
+      "total": 10
+    },
+    "STATUS / TRACKING CONTRACT": {
+      "passed": 4,
+      "total": 4
+    },
+    "PAYMENTS \u2014 amounts, capture, refund authority": {
+      "passed": 15,
+      "total": 15
+    },
+    "DOCUMENT / STORAGE AUTHORIZATION": {
+      "passed": 12,
+      "total": 12
+    },
+    "SESSION / TOKEN INTEGRITY": {
+      "passed": 4,
+      "total": 4
+    },
+    "ERROR HANDLING / LEAKAGE": {
+      "passed": 4,
+      "total": 4
+    }
+  },
+  "results": [
+    {
+      "section": "identities",
+      "check": "super_admin authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "operator_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "operator_a_staff authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "finance_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "visa_officer_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "operator_b authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "operator_c authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "hotel_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "hotel_b authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "transport_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "transport_b authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "visa_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "visa_b authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "traveler_a authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "identities",
+      "check": "traveler_b authenticates",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_a_staff GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "finance_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_officer_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "hotel_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "transport_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "visa_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "traveler_a GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator_b GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /admin/users denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /admin/tenants denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /admin/stats denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /admin/finance denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /admin/audit-logs denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /admin/users/export denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "anonymous GET /inquiries denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "super_admin GET /admin/users allowed",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "super_admin has NO tenant business access (/pilgrims)",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "operator cannot create a role holding a platform capability",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SUPER ADMIN ISOLATION (direct API, not navigation)",
+      "check": "SUPER_ADMIN is not offered as an assignable role",
+      "result": "PASS",
+      "detail": "['FINANCE_MANAGER', 'HOTEL_MANAGER', 'Operator Admin', 'OPERATOR_ADMIN', 'OPERATOR_STAFF', 'TRANSPORT_MANAGER', 'VISA_OFFICER']"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "hotel_a creates its own hotel",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "hotel_b READ hotel A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "hotel_b UPDATE hotel A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "hotel_b DELETE hotel A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "operator_b READ hotel A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "traveler_a READ hotel A denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 HOTEL A vs HOTEL B",
+      "check": "hotel A record unchanged after hostile writes",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "transport_a creates its own vehicle",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "transport_b READ vehicle A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "operator_b READ vehicle A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "hotel_a READ vehicle A denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "traveler_a READ vehicle A denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "transport_b UPDATE vehicle A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "transport_b DELETE vehicle A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "vehicle A unchanged after hostile writes",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRANSPORT A vs TRANSPORT B",
+      "check": "transport_b vehicle list excludes vehicle A",
+      "result": "PASS",
+      "detail": "n=0"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_a creates its own visa application",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_b READ visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "operator_b READ visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "hotel_a READ visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "traveler_a READ visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_b UPDATE visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_b APPROVE visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_b REJECT visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_b DELETE visa A denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa_b READ visa A documents denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 VISA A vs VISA B",
+      "check": "visa A unchanged after hostile writes",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b READ operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_c READ operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "hotel_a READ operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "transport_a READ operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "visa_a READ operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "traveler_a READ operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b UPDATE operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b DELETE operator A pilgrim denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b pilgrim list excludes operator A records",
+      "result": "PASS",
+      "detail": "n=5"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b READ operator A invoice denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_c READ operator A invoice denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b VOID operator A invoice denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "operator_b READ operator A group denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 OPERATOR A vs OPERATOR B",
+      "check": "traveler_b READ operator A group denied",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRAVELER A vs TRAVELER B",
+      "check": "traveler_a creates a marketplace request",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRAVELER A vs TRAVELER B",
+      "check": "traveler_b READ traveler A request denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRAVELER A vs TRAVELER B",
+      "check": "traveler_b CLOSE traveler A request denied",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRAVELER A vs TRAVELER B",
+      "check": "traveler_b 'my requests' excludes traveler A request",
+      "result": "PASS",
+      "detail": "n=0"
+    },
+    {
+      "section": "TENANT ISOLATION \u2014 TRAVELER A vs TRAVELER B",
+      "check": "traveler A request still open and owned",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "client-tampered totalAmountCents (1 cent) rejected",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "booking without a client total is accepted",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "server total == PER_PERSON price x party (90000)",
+      "result": "PASS",
+      "detail": "server=90000 expected=90000"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "server sets booking status itself (not client)",
+      "result": "PASS",
+      "detail": "status=PENDING"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "new booking is not marked paid",
+      "result": "PASS",
+      "detail": "paymentStatus=UNPAID"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "booking create rejects client 'status'",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "booking create rejects client 'paymentStatus'",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "booking create rejects client 'currency'",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "operator_a cannot set paymentStatus on a booking",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "operator_a cannot rewrite totalAmountCents on a booking",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "checkout amount equals the server booking total",
+      "result": "PASS",
+      "detail": "checkout=90000 expected=90000"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "traveler_b cannot check out traveler A's booking",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "BOOKING / PRICING CONTRACT (server-authoritative)",
+      "check": "unsupported pricing model (PER_TRIP) refuses instead of inventing a total",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "MASS ASSIGNMENT \u2014 server-owned fields refused",
+      "check": "tenantId on hotel create rejected",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "MASS ASSIGNMENT \u2014 server-owned fields refused",
+      "check": "tenantId on vehicle create rejected",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "MASS ASSIGNMENT \u2014 server-owned fields refused",
+      "check": "tenantId on visa create rejected",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "MASS ASSIGNMENT \u2014 server-owned fields refused",
+      "check": "signup cannot request its own roles",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "MASS ASSIGNMENT \u2014 server-owned fields refused",
+      "check": "signup cannot choose its own organization",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "signup -> 201",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "new account has a real server role (not empty)",
+      "result": "PASS",
+      "detail": "roles=['PILGRIM']"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "new account is a PILGRIM/Traveler",
+      "result": "PASS",
+      "detail": "roles=['PILGRIM']"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "new account exposes server-resolved permissions",
+      "result": "PASS",
+      "detail": "type=list"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "new traveler can read the marketplace",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "new traveler is denied /admin/users",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "new traveler is denied /pilgrims",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "SIGNUP PROVISIONS A REAL, USABLE ROLE (XT-001)",
+      "check": "refresh token delivered as an httpOnly cookie",
+      "result": "PASS",
+      "detail": "set-cookie present"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "update accepted",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "update readable immediately",
+      "result": "PASS",
+      "detail": "Persisted 6fbdac"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "status change persisted",
+      "result": "PASS",
+      "detail": "MAINTENANCE"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "survives a fresh login / new session",
+      "result": "PASS",
+      "detail": "Persisted 6fbdac"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "appears in the owner's list query",
+      "result": "PASS",
+      "detail": "n=3"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "delete accepted",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "delete is a persisted soft delete (status INACTIVE)",
+      "result": "PASS",
+      "detail": "HTTP 200 status=INACTIVE"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "soft-deleted record stays invisible to other tenants",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "visa update accepted",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "DATABASE PERSISTENCE",
+      "check": "visa update persisted",
+      "result": "PASS",
+      "detail": "Acceptance Officer"
+    },
+    {
+      "section": "STATUS / TRACKING CONTRACT",
+      "check": "visa status transition is server-driven and observable",
+      "result": "PASS",
+      "detail": "NOT_STARTED -> SUBMITTED (HTTP 200)"
+    },
+    {
+      "section": "STATUS / TRACKING CONTRACT",
+      "check": "a submit-only identity cannot approve a visa",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "STATUS / TRACKING CONTRACT",
+      "check": "the application was not approved by that attempt",
+      "result": "PASS",
+      "detail": "status=SUBMITTED"
+    },
+    {
+      "section": "STATUS / TRACKING CONTRACT",
+      "check": "visa statistics come from the API, not the client",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "GET /payments/providers requires auth and answers",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "anonymous GET /payments/providers denied",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "a DRAFT invoice cannot be paid before it is issued",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "intent above the outstanding balance -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "negative payment amount -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "intent without an invoice or booking -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "sandbox intent created",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "another operator cannot confirm this payment",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "another operator cannot read this payment",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "sandbox capture -> COMPLETED",
+      "result": "PASS",
+      "detail": "HTTP 201 status=COMPLETED"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "operator staff without finance:payment:refund cannot refund",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "finance manager refund -> REFUNDED",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "refund is persisted on the payment record",
+      "result": "PASS",
+      "detail": "REFUNDED"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "forged webhook signature -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "PAYMENTS \u2014 amounts, capture, refund authority",
+      "check": "unsigned stripe webhook refused",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "/uploads/visa-documents/x/y.png is not publicly served",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "/uploads/private/kyc/a.pdf is not publicly served",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "/uploads/../.env is not publicly served",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "an invalid signed-document token is refused",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "a visa document file uploads",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "the stored reference is private, not a guessable path",
+      "result": "PASS",
+      "detail": "url=private:visa-documents/cb4d30b2-76ef-4a58-a627-2e235304be5e/1789681548736-dc849d5a3b426c645085ca5c.png"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "the owner can mint a signed URL",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "the signed URL actually serves the file",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "a tampered signature is refused",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "visa_b cannot mint a signed URL for visa A's document",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "traveler cannot mint a signed URL for an organization document",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "section": "DOCUMENT / STORAGE AUTHORIZATION",
+      "check": "random document id is refused, not leaked",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "SESSION / TOKEN INTEGRITY",
+      "check": "tampered signature rejected",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SESSION / TOKEN INTEGRITY",
+      "check": "alg:none token rejected",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SESSION / TOKEN INTEGRITY",
+      "check": "empty bearer rejected",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "SESSION / TOKEN INTEGRITY",
+      "check": "no credentials rejected",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "section": "ERROR HANDLING / LEAKAGE",
+      "check": "unknown id returns 404 without a stack trace",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "section": "ERROR HANDLING / LEAKAGE",
+      "check": "malformed id is a 4xx, not a 500",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "section": "ERROR HANDLING / LEAKAGE",
+      "check": "error body carries a request id",
+      "result": "PASS",
+      "detail": "requestId present"
+    },
+    {
+      "section": "ERROR HANDLING / LEAKAGE",
+      "check": "unknown email and wrong password are indistinguishable",
+      "result": "PASS",
+      "detail": "(401, 'UNAUTHORIZED', 'Invalid credentials') vs (401, 'UNAUTHORIZED', 'Invalid credentials')"
+    }
+  ]
+}

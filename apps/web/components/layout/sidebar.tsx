@@ -307,7 +307,9 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white truncate">{user.displayName}</p>
-              <p className="text-xs text-white/70 truncate">{user.email || 'Demo mode'}</p>
+              {/* The account's own identity, or nothing. "Demo mode" was a leftover
+                  placeholder that any account without an email on its token saw. */}
+              {user.email && <p className="text-xs text-white/70 truncate">{user.email}</p>}
             </div>
           </div>
         )}

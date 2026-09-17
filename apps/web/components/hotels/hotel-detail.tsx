@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { FieldInput as LabeledInput } from '@/components/ui/system';
 import { ModalSurface, Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
@@ -248,7 +249,7 @@ function RoomTypeModal({ hotelId, onClose, onCreated, create }: { hotelId: strin
                 toast.success('Room type added');
                 onCreated();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={create.isPending || !form.name.trim()}
@@ -312,7 +313,6 @@ function EditTab({ h, refetch }: { h: any; refetch: () => void }) {
     country: h.country ?? 'SA',
     starRating: h.starRating ?? 4,
     distanceToHaram: h.distanceToHaram ?? '',
-    totalRooms: h.totalRooms ?? 0,
     address: h.address ?? '',
     phone: h.phone ?? '',
     email: h.email ?? '',
@@ -327,13 +327,12 @@ function EditTab({ h, refetch }: { h: any; refetch: () => void }) {
         ...form,
         starRating: Number(form.starRating),
         distanceToHaram: form.distanceToHaram ? Number(form.distanceToHaram) : null,
-        totalRooms: Number(form.totalRooms),
         amenities: form.amenities.split(',').map((s: string) => s.trim()).filter(Boolean),
       });
       toast.success('Hotel saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -354,7 +353,9 @@ function EditTab({ h, refetch }: { h: any; refetch: () => void }) {
           <LabeledInput label="Country (ISO-2)" value={form.country} onChange={(v) => setForm({ ...form, country: v.toUpperCase().slice(0, 2) })} />
           <LabeledInput label="Star rating" value={String(form.starRating)} onChange={(v) => setForm({ ...form, starRating: v as any })} type="number" />
           <LabeledInput label="Distance to Haram (m)" value={String(form.distanceToHaram)} onChange={(v) => setForm({ ...form, distanceToHaram: v as any })} type="number" />
-          <LabeledInput label="Total rooms" value={String(form.totalRooms)} onChange={(v) => setForm({ ...form, totalRooms: v as any })} type="number" />
+          {/* Room count is derived from the hotel's actual rooms, so the server
+              ignores any value sent here. It is shown read-only on the overview
+              rather than offered as an input that silently reverts. */}
           <LabeledInput label="Address" value={form.address} onChange={(v) => setForm({ ...form, address: v })} full />
           <LabeledInput label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
           <LabeledInput label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
@@ -427,7 +428,7 @@ function IndividualRoomsTab({ hotelId }: { hotelId: string }) {
                   <td className="p-3">
                     <Select disabled={update.isPending} aria-label={`Status for ${r.id ?? 'record'}`}
                       value={r.status}
-                      onChange={async (e) => { try { await update.mutateAsync({ roomId: r.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      onChange={async (e) => { try { await update.mutateAsync({ roomId: r.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {ROOM_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -435,7 +436,7 @@ function IndividualRoomsTab({ hotelId }: { hotelId: string }) {
                   </td>
                   <td className="p-3 text-right">
                     <Button busy={del.isPending} variant="quiet" type="button" aria-label="Delete record"
-                      onClick={async () => { try { if (!confirm('Archive this room?')) return; await del.mutateAsync(r.id); toast.success('Archived'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      onClick={async () => { try { if (!confirm('Archive this room?')) return; await del.mutateAsync(r.id); toast.success('Archived'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="p-1.5 rounded hover:bg-red-50 text-red-700"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -528,7 +529,7 @@ function AddRoomModal({ hotelId, roomTypes, create, onClose, onCreated }: { hote
                 toast.success('Room added');
                 onCreated();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={create.isPending}
@@ -583,7 +584,7 @@ function HotelBookingsTab({ hotelId }: { hotelId: string }) {
                 <td className="p-3">
                   <Select disabled={update.isPending} aria-label={`Status for ${b.id ?? 'record'}`}
                     value={b.status}
-                    onChange={async (e) => { try { await update.mutateAsync({ id: b.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    onChange={async (e) => { try { await update.mutateAsync({ id: b.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                   >
                     {['PENDING', 'CONFIRMED', 'CHECKED_IN', 'CHECKED_OUT', 'COMPLETED', 'CANCELLED'].map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -592,7 +593,7 @@ function HotelBookingsTab({ hotelId }: { hotelId: string }) {
                 <td className="p-3">
                   <Select disabled={update.isPending} aria-label={`Payment Status for ${b.id ?? 'record'}`}
                     value={b.paymentStatus}
-                    onChange={async (e) => { try { await update.mutateAsync({ id: b.id, paymentStatus: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    onChange={async (e) => { try { await update.mutateAsync({ id: b.id, paymentStatus: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                   >
                     {['UNPAID', 'PARTIAL', 'PAID', 'REFUNDED'].map((s) => <option key={s} value={s}>{s}</option>)}

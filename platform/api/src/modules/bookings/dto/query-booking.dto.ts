@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsEnum, IsUUID, IsInt, Min, IsDateString } from 'class-validator';
+import { IsOptional, IsEnum, IsUUID, IsInt, Min, IsDateString, IsString, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BookingStatus } from './create-booking.dto';
 
@@ -17,6 +17,12 @@ export class QueryBookingDto {
   @IsInt()
   @Min(1)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ description: 'Matches the booking reference or the package name' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  search?: string;
 
   @ApiPropertyOptional({ enum: BookingStatus })
   @IsOptional()

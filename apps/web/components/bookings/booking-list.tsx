@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -15,15 +16,21 @@ import {
 } from '@/hooks/use-api';
 import { cn } from '@/lib/utils';
 
+// The real BookingStatus enum (prisma/schema.prisma). There is no PENDING state —
+// filtering on it returned 400 and the "Pending" tile always read 0.
 const STATUS: Record<string, { label: string; color: string; dot: string }> = {
-  DRAFT:      { label: 'Draft',      color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
-  PENDING:    { label: 'Pending',    color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  CONFIRMED:  { label: 'Confirmed',  color: 'bg-green-100 text-green-700',  dot: 'bg-green-500' },
-  CANCELLED:  { label: 'Cancelled',  color: 'bg-red-100 text-red-600',      dot: 'bg-red-500' },
-  COMPLETED:  { label: 'Completed',  color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
+  DRAFT:           { label: 'Draft',           color: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400' },
+  CONFIRMED:       { label: 'Confirmed',       color: 'bg-green-100 text-green-700',   dot: 'bg-green-500' },
+  PARTIALLY_PAID:  { label: 'Partially paid',  color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
+  FULLY_PAID:      { label: 'Fully paid',      color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' },
+  VISA_PROCESSING: { label: 'Visa processing', color: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-500' },
+  TRAVELING:       { label: 'Traveling',       color: 'bg-sky-100 text-sky-700',       dot: 'bg-sky-500' },
+  COMPLETED:       { label: 'Completed',       color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
+  CANCELLED:       { label: 'Cancelled',       color: 'bg-red-100 text-red-600',       dot: 'bg-red-500' },
+  REFUNDED:        { label: 'Refunded',        color: 'bg-rose-100 text-rose-700',     dot: 'bg-rose-500' },
 };
 
-const FILTERS = ['ALL', 'CONFIRMED', 'PENDING', 'DRAFT', 'CANCELLED', 'COMPLETED'];
+const FILTERS = ['ALL', 'DRAFT', 'CONFIRMED', 'PARTIALLY_PAID', 'FULLY_PAID', 'VISA_PROCESSING', 'TRAVELING', 'COMPLETED', 'CANCELLED', 'REFUNDED'];
 
 function StatCard({ label, value, color, Icon }: { label: string; value: number; color: string; Icon?: any }) {
   return (
@@ -111,7 +118,7 @@ export function BookingList() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label="Confirmed" Icon={CheckCircle2} value={stats.byStatus?.CONFIRMED ?? 0} color="text-green-800" />
-          <StatCard label="Pending"   Icon={Clock}        value={stats.byStatus?.PENDING ?? 0}   color="text-yellow-800" />
+          <StatCard label="Partially paid" Icon={Clock}   value={stats.byStatus?.PARTIALLY_PAID ?? 0} color="text-yellow-800" />
           <StatCard label="Draft"     Icon={FileEdit}     value={stats.byStatus?.DRAFT ?? 0}     color="text-gray-600" />
           <StatCard label="Cancelled" Icon={XCircle}      value={stats.byStatus?.CANCELLED ?? 0} color="text-red-700" />
         </div>
@@ -256,7 +263,7 @@ export function BookingList() {
               setShowCreate(false);
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed to create booking');
+              toast.error(apiErrorMessage(e, 'Failed to create booking'));
             }
           }}
           pending={createBooking.isPending}

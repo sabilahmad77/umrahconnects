@@ -142,6 +142,9 @@ export class SocialService {
           },
           // viewer's own reactions so the client can restore liked state after reload
           ...(account ? { reactions: { where: { accountId: account.id }, select: { type: true } } } : {}),
+          // ...and their own save, for the same reason: without it the bookmark
+          // always rendered empty and the first click un-saved the post.
+          ...(account ? { savedBy: { where: { accountId: account.id }, select: { id: true } } } : {}),
         },
       }),
       this.prisma.post.count({ where }),

@@ -13,6 +13,12 @@ process.env.SANDBOX_WEBHOOK_SECRET = 'test-sandbox-webhook-secret';
 process.env.STORAGE_DRIVER = 'local';
 process.env.KAFKA_ENABLED = 'false';
 process.env.THROTTLE_DISABLED = process.env.THROTTLE_DISABLED ?? 'true';
+// Pinned so the suite does not inherit a developer's .env. The API supports both
+// refresh paths: the httpOnly cookie (what the web client now uses, covered by
+// "accepts the refresh token from the httpOnly cookie") and the response body,
+// which stays available for non-browser clients during the migration and is what
+// the rotation/replay test drives. Deployments set this to 'false'.
+process.env.AUTH_REFRESH_TOKEN_IN_BODY = 'true';
 process.env.SWAGGER_ENABLED = 'false';
 process.env.ONBOARDING_REQUIRE_VERIFIED_EMAIL = 'true';
 delete process.env.GOOGLE_CLIENT_ID;

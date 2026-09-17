@@ -13,14 +13,16 @@ export function refreshAccessToken(): Promise<string | null> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
-      const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-      if (!refreshToken || refreshToken.startsWith('demo.')) return null;
-      const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+      // The refresh token lives in an httpOnly cookie the API sets (`uc_rt`, or
+      // `__Host-uc_rt` in production). Page scripts cannot read it, which is the
+      // point: it used to sit in localStorage where any XSS could lift it. The
+      // browser talks to the API same-origin through /proxy-api, so the cookie
+      // rides along on its own and the body stays empty.
+      const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
       const accessToken = data?.data?.accessToken ?? data?.accessToken;
       if (!accessToken) return null;
-      setToken(accessToken); // writes cookie (getToken reads cookie first) + localStorage
+      setToken(accessToken);
       try { sessionStorage.setItem('accessToken', accessToken); } catch {}
-      if (data?.data?.refreshToken) { try { localStorage.setItem('refreshToken', data.data.refreshToken); } catch {} }
       return accessToken;
     } catch {
       return null;

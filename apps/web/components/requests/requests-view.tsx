@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { ModalSurface, Input, Textarea , Button } from '@/components/ui/system';
 
 
@@ -103,7 +104,7 @@ export function RequestsView() {
               toast.success('Request created — providers can now send offers');
               setShowCreate(false);
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed to create');
+              toast.error(apiErrorMessage(e, 'Failed to create'));
             }
           }}
           pending={create.isPending}
@@ -197,7 +198,7 @@ function RequestCard({ request: r }: { request: any }) {
                             await acceptOffer.mutateAsync({ requestId: r.id, offerId: o.id });
                             toast.success('Offer accepted');
                           } catch (e: any) {
-                            toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                            toast.error(apiErrorMessage(e, 'Failed'));
                           }
                         }}
                         className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-saudi-500 text-white rounded-lg hover:bg-saudi-600"
@@ -210,7 +211,7 @@ function RequestCard({ request: r }: { request: any }) {
                             await rejectOffer.mutateAsync({ requestId: r.id, offerId: o.id });
                             toast('Offer rejected');
                           } catch (e: any) {
-                            toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                            toast.error(apiErrorMessage(e, 'Failed'));
                           }
                         }}
                         className="inline-flex items-center gap-1 text-xs px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg hover:bg-white"

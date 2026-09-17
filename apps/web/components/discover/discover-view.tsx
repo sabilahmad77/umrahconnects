@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -98,7 +99,7 @@ function People({ search }: { search: string }) {
                     const res = await toggleFollow.mutateAsync(p.id);
                     toast.success(res.following ? `Following ${p.displayName}` : `Unfollowed ${p.displayName}`);
                   } catch (e: any) {
-                    toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                    toast.error(apiErrorMessage(e, 'Failed'));
                   }
                 }}
                 className={cn(
@@ -116,7 +117,7 @@ function People({ search }: { search: string }) {
                     await requestConn.mutateAsync({ recipientId: p.userId });
                     toast.success('Connection request sent');
                   } catch (e: any) {
-                    toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                    toast.error(apiErrorMessage(e, 'Failed'));
                   }
                 }}
                 className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100"

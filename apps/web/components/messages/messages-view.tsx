@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { ModalSurface, Input , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -110,7 +111,7 @@ function NewMessageModal({ onClose, onOpened }: { onClose: () => void; onOpened:
       if (conv?.id) onOpened(conv.id);
       else { toast.error('Could not open conversation'); }
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Could not open conversation');
+      toast.error(apiErrorMessage(e, 'Could not open conversation'));
     }
   };
 
@@ -172,7 +173,7 @@ function ChatPane({ conversationId }: { conversationId: string }) {
       await send.mutateAsync(text.trim());
       setText('');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to send');
+      toast.error(apiErrorMessage(e, 'Failed to send'));
     }
   };
 

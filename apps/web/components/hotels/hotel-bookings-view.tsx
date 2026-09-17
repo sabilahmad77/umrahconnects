@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select, ModalSurface, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -128,7 +129,7 @@ export function HotelBookingsView() {
                   <td className="p-3">
                     <Select disabled={update.isPending} aria-label={`Status for ${b.id ?? 'record'}`}
                       value={b.status}
-                      onChange={async (e) => { try { await update.mutateAsync({ id: b.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      onChange={async (e) => { try { await update.mutateAsync({ id: b.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -137,7 +138,7 @@ export function HotelBookingsView() {
                   <td className="p-3">
                     <Select disabled={update.isPending} aria-label={`Payment Status for ${b.id ?? 'record'}`}
                       value={b.paymentStatus}
-                      onChange={async (e) => { try { await update.mutateAsync({ id: b.id, paymentStatus: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      onChange={async (e) => { try { await update.mutateAsync({ id: b.id, paymentStatus: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -201,7 +202,7 @@ function CreateHotelBookingModal({ onClose, onCreated }: { onClose: () => void; 
       toast.success('Booking created');
       onCreated();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 

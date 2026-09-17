@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Textarea, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -83,7 +84,7 @@ export function ProfileView() {
       toast.success('Profile saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to save profile');
+      toast.error(apiErrorMessage(e, 'Failed to save profile'));
     }
   };
 

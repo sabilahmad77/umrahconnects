@@ -103,6 +103,8 @@ export function clearAuth() {
   deleteCookie('accessToken');
   deleteCookie('currentUser');
   try { localStorage.removeItem('accessToken'); } catch {}
+  // The refresh token is an httpOnly cookie the API clears on logout; this only
+  // sweeps up values older builds left behind in localStorage.
   try { localStorage.removeItem('refreshToken'); } catch {}
   try { localStorage.removeItem('currentUser'); } catch {}
   try { sessionStorage.removeItem('accessToken'); } catch {}

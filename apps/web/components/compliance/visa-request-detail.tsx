@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Textarea, Select, Input, ModalSurface , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -20,8 +21,8 @@ import {
   VISA_REQUEST_WORKFLOW_STATUSES, humanizeStatus,
 } from '@/lib/statuses';
 
-const apiError = (e: any) =>
-  e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Action failed';
+/** Uses the shared helper so validation arrays render as a sentence. */
+const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 export function VisaRequestDetail({ id }: { id: string }) {
   const { data: t, isLoading, error, refetch } = useVisaRequest(id);

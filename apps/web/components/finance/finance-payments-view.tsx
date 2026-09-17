@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -8,12 +9,20 @@ import { CreditCard, RefreshCw, AlertCircle, Loader2, Download, Undo2, Search } 
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useFinancePayments, useUpdatePayment, useRefundPayment } from '@/hooks/use-finance';
+import { useRefundPayment as useRefundGatewayPayment } from '@/hooks/use-payments';
 
-const PAYMENT_STATUSES = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED'];
+// Manual bookkeeping states only. REFUNDED is reached by refunding, not by
+// picking it here — the server rejects it as a manual status move.
+const PAYMENT_STATUSES = ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'];
+
+/** Gateways owned by the payments module — mirrors PROVIDER_GATEWAYS server-side. */
+const PROVIDER_GATEWAYS = ['sandbox', 'stripe'];
+const isGatewayPayment = (p: any) => PROVIDER_GATEWAYS.includes(String(p?.gateway ?? '').toLowerCase());
 
 export function FinancePaymentsView() {
   const { data, isLoading, error, refetch } = useFinancePayments({ limit: 100 });
   const update = useUpdatePayment();
+  const gatewayRefund = useRefundGatewayPayment();
   const refund = useRefundPayment();
   const [search, setSearch] = useState('');
 
@@ -116,23 +125,32 @@ export function FinancePaymentsView() {
                   </td>
                   <td className="p-3 text-xs text-gray-600">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
                   <td className="p-3">
-                    <Select disabled={update.isPending} aria-label={`Status for ${p.id ?? 'record'}`}
-                      value={p.status}
-                      onChange={async (e) => { try { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                    >
-                      {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </Select>
+                    {/* A gateway payment's state belongs to the provider; the server
+                        refuses any manual move, so it is shown read-only. */}
+                    {isGatewayPayment(p) ? (
+                      <span className="text-xs font-medium text-gray-700">{p.status}</span>
+                    ) : (
+                      <Select disabled={update.isPending} aria-label={`Status for ${p.id ?? 'record'}`}
+                        value={p.status}
+                        onChange={async (e) => { try { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
+                        className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                      >
+                        {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </Select>
+                    )}
                   </td>
                   <td className="p-3 text-right">
                     {p.status !== 'REFUNDED' && (
-                      <Button busy={refund.isPending} variant="quiet" type="button"
+                      <Button busy={refund.isPending || gatewayRefund.isPending} variant="quiet" type="button"
                         onClick={async () => { try {
                           if (!confirm('Refund this payment? The linked invoice balance will be adjusted.')) return;
-                          await refund.mutateAsync({ id: p.id });
+                          // A gateway payment has to be reversed at the provider
+                          // (POST /payments/:id/refund); the finance endpoint
+                          // refuses it outright.
+                          await (isGatewayPayment(p) ? gatewayRefund : refund).mutateAsync({ id: p.id });
                           toast.success('Payment refunded');
                           refetch();
-                        } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                        } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                         className="inline-flex items-center gap-1 text-xs text-red-700 hover:underline"
                       >
                         <Undo2 className="h-3 w-3" /> Refund

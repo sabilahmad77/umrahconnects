@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select, Textarea, ModalSurface , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -35,6 +36,17 @@ const TYPE_ICON: Record<string, any> = {
   catering: BedDouble,
   guide_service: BadgeCheck,
   other: Building2,
+};
+
+// Mirrors BOOKING_TRANSITIONS in the marketplace service: the server refuses any
+// other move, so the UI must not offer one.
+const BOOKING_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['COMPLETED', 'CANCELLED'],
+  PAID: ['COMPLETED'],
+  COMPLETED: [],
+  CANCELLED: [],
+  REFUNDED: [],
 };
 
 export function ListingDetail({ id }: { id: string }) {
@@ -152,7 +164,7 @@ function PublishToggle({ listing, refetch }: { listing: any; refetch: () => void
           toast.success(isPublished ? 'Listing unpublished' : 'Listing published');
           refetch();
         } catch (e: any) {
-          toast.error(e?.response?.data?.error?.message ?? 'Failed');
+          toast.error(apiErrorMessage(e, 'Failed'));
         }
       }}
       className={cn(
@@ -302,7 +314,7 @@ function InquiriesTab({ listingId }: { listingId: string }) {
                     toast.success('Response sent');
                     setText(''); setActive(null);
                     refetch();
-                  } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                  } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                   className="text-sm px-3 py-2 bg-brand-500 text-white rounded-lg disabled:opacity-50"
                   disabled={respond.isPending}
                 >
@@ -360,23 +372,22 @@ function BookingsTab({ listingId }: { listingId: string }) {
                     onChange={async (e) => { try {
                       await update.mutateAsync({ id: b.id, status: e.target.value });
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                   >
-                    {['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELLED', 'REFUNDED'].map((s) => <option key={s} value={s}>{s}</option>)}
+                    {/* Only the transitions the server will actually accept from the
+                        current state. PAID and REFUNDED are owned by the payments
+                        module and are rejected here, so they are never offered. */}
+                    {[b.status, ...(BOOKING_TRANSITIONS[String(b.status).toUpperCase()] ?? [])]
+                      .filter((s, i, a) => s && a.indexOf(s) === i)
+                      .map((s: string) => <option key={s} value={s}>{s}</option>)}
                   </Select>
                 </td>
                 <td className="p-3">
-                  <Select disabled={update.isPending} aria-label={`Payment Status for ${b.id ?? 'record'}`}
-                    value={b.paymentStatus}
-                    onChange={async (e) => { try {
-                      await update.mutateAsync({ id: b.id, paymentStatus: e.target.value });
-                      refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                  >
-                    {['UNPAID', 'PARTIAL', 'PAID', 'REFUNDED'].map((s) => <option key={s} value={s}>{s}</option>)}
-                  </Select>
+                  {/* Read-only: payment state is set by the payments module from a
+                      settled transaction. Offering it as an editable control here
+                      only ever produced a 400. */}
+                  <span className="text-xs font-medium text-gray-700">{b.paymentStatus ?? '—'}</span>
                 </td>
                 <td className="p-3 text-right">
                 </td>
@@ -416,7 +427,7 @@ function EditTab({ listing, refetch }: { listing: any; refetch: () => void }) {
       toast.success('Listing saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -427,7 +438,7 @@ function EditTab({ listing, refetch }: { listing: any; refetch: () => void }) {
       toast.success('Listing archived');
       router.push('/marketplace');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -526,7 +537,7 @@ function InquireModal({ listingId, onClose }: { listingId: string; onClose: () =
                 toast.success('Inquiry sent');
                 onClose();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={createInquiry.isPending || !message.trim()}
@@ -604,7 +615,7 @@ function BookModal({ listing, onClose }: { listing: any; onClose: () => void }) 
                 toast.success('Booking created');
                 onClose();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={createBooking.isPending || !customerName.trim() || !validPartySize || !validDates || !canPrice}

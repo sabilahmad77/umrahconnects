@@ -387,6 +387,29 @@ export function useMarketplaceVendors() {
   });
 }
 
+/**
+ * The caller's OWN vendor record (the server gets-or-creates it per organization).
+ *
+ * `useMarketplaceVendors` above is the public directory of every vendor on the
+ * platform, which is right for browsing but wrong for authoring: a listing may
+ * only be created against the caller's own vendor, and the server 404s any
+ * other `vendorId`. Anything that builds a listing has to use this hook.
+ */
+export function useMyMarketplaceVendor(enabled = true) {
+  return useQuery({
+    queryKey: ['marketplace', 'vendors', 'mine'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/marketplace/vendors/mine');
+      return data.data as any;
+    },
+    // Only an account that can author listings may read this; a platform-scope
+    // account (Super Admin) has no marketplace capability and would just take a
+    // 403. Callers enable it when the authoring UI is actually in use.
+    enabled,
+    retry: false,
+  });
+}
+
 // ─── Reports ─────────────────────────────────────────────────────────────────
 
 export function useReportsOverview() {

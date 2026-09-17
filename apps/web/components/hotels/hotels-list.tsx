@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -209,7 +210,7 @@ export function HotelsList() {
               setShowCreate(false);
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           pending={createHotel.isPending}
@@ -228,7 +229,7 @@ function AddHotelModal({
 }) {
   const [f, setF] = useState({
     name: '', city: 'MAKKAH', country: 'SA', area: '', address: '', postalCode: '',
-    starRating: '5', distanceToHaram: '', totalRooms: '', description: '',
+    starRating: '5', distanceToHaram: '', description: '',
     amenitiesText: '', images: '', contactPerson: '', phone: '', email: '',
     checkInTime: '15:00', checkOutTime: '12:00', cancellationPolicy: '', status: 'ACTIVE', notes: '',
   });
@@ -245,7 +246,6 @@ function AddHotelModal({
       postalCode: f.postalCode || undefined,
       starRating: Number(f.starRating),
       distanceToHaram: f.distanceToHaram ? Number(f.distanceToHaram) : undefined,
-      totalRooms: f.totalRooms ? Number(f.totalRooms) : undefined,
       description: f.description || undefined,
       contactPerson: f.contactPerson || undefined,
       phone: f.phone || undefined,
@@ -293,7 +293,6 @@ function AddHotelModal({
             </Select>
           </label>
           <FieldInput label="Distance to Haram (m)" k="distanceToHaram" type="number" placeholder="200" />
-          <FieldInput label="Total rooms" k="totalRooms" type="number" placeholder="120" />
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
             <Select  value={f.status} onChange={(e) => set('status', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">

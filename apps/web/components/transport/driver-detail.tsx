@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { FieldInput as LabeledInput } from '@/components/ui/system';
 import { Select, Textarea, Input , Button , QueryFailure } from '@/components/ui/system';
 
@@ -184,7 +185,7 @@ function EditTab({ d, refetch }: { d: any; refetch: () => void }) {
       toast.success('Driver saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 

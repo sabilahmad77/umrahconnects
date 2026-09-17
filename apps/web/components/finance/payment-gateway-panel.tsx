@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -14,8 +15,8 @@ import {
 } from '@/hooks/use-payments';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 
-const apiError = (e: any) =>
-  e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Action failed';
+/** Uses the shared helper so validation arrays render as a sentence. */
+const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 const money = (cents: number, currency = 'SAR') =>
   `${currency} ${(Number(cents) / 100).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;

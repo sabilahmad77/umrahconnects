@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -208,7 +209,7 @@ export function GroupsList() {
                       onClick={async (e) => {
                         e.preventDefault();
                         try { await joinGroup.mutateAsync(g.id); toast.success(`Joined ${g.name}`); }
-                        catch (err: any) { toast.error(err?.response?.data?.error?.message ?? 'Could not join'); }
+                        catch (err: any) { toast.error(apiErrorMessage(err, 'Could not join')); }
                       }}
                       disabled={joinGroup.isPending}
                       className="text-xs font-semibold px-3 py-1 rounded-full bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50"
@@ -281,7 +282,7 @@ export function GroupsList() {
               setShowCreate(false);
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed to create group');
+              toast.error(apiErrorMessage(e, 'Failed to create group'));
             }
           }}
           pending={createGroup.isPending}

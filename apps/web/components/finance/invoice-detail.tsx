@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -15,7 +16,22 @@ import { cn } from '@/lib/utils';
 import { useInvoice, useUpdateInvoice, useDeleteInvoice, useMarkInvoicePaid } from '@/hooks/use-finance';
 import { PaymentGatewayPanel } from './payment-gateway-panel';
 
-const INVOICE_STATUSES = ['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED', 'VOID'];
+// Mirrors INVOICE_TRANSITIONS in the finance service. PAID and PARTIALLY_PAID are
+// derived from recorded payments and are refused as manual moves, so they are
+// never offered here.
+const INVOICE_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['ISSUED', 'SENT', 'CANCELLED', 'VOID'],
+  ISSUED: ['DRAFT', 'SENT', 'OVERDUE', 'CANCELLED', 'VOID'],
+  SENT: ['DRAFT', 'ISSUED', 'OVERDUE', 'CANCELLED', 'VOID'],
+  OVERDUE: ['ISSUED', 'SENT', 'CANCELLED', 'VOID'],
+  PARTIALLY_PAID: ['OVERDUE', 'CANCELLED', 'VOID'],
+  PAID: [],
+  CANCELLED: [],
+  VOID: [],
+};
+
+/** An invoice only accepts a card payment once it has been issued. */
+const PAYABLE_INVOICE_STATUSES = ['ISSUED', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'];
 
 type TabKey = 'overview' | 'payments' | 'edit';
 
@@ -260,20 +276,31 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       toast.success('Payment recorded');
       setAmount(''); setReference('');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Could not record payment');
+      toast.error(apiErrorMessage(e, 'Could not record payment'));
     }
   };
 
   return (
     <div className="space-y-4">
       {/* Gateway payments — sits above manual recording, which stays for
-          cash and bank transfers. */}
-      <PaymentGatewayPanel
-        invoiceId={inv.id}
-        currency={currency}
-        outstandingCents={outstandingCents}
-        onChanged={refetch}
-      />
+          cash and bank transfers. The server refuses a payment intent against a
+          DRAFT, VOID, CANCELLED or already-PAID invoice, so the panel is only
+          offered once the invoice is actually payable. */}
+      {PAYABLE_INVOICE_STATUSES.includes(String(inv.status).toUpperCase()) ? (
+        <PaymentGatewayPanel
+          invoiceId={inv.id}
+          currency={currency}
+          outstandingCents={outstandingCents}
+          onChanged={refetch}
+        />
+      ) : String(inv.status).toUpperCase() === 'DRAFT' ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><CreditCard className="h-4 w-4" /> Card payment</h3>
+          <p className="text-xs text-gray-600 mt-1">
+            This invoice is still a draft. Issue it before taking a card payment.
+          </p>
+        </div>
+      ) : null}
 
       {/* Record payment form */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
@@ -409,7 +436,7 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       toast.success('Invoice saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -428,7 +455,7 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       toast.success('Invoice marked paid');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -439,7 +466,7 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       toast.success('Invoice cancelled');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -450,7 +477,7 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       toast.success('Invoice archived');
       router.push('/finance');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -485,7 +512,10 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
             <Select aria-label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
-              {INVOICE_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+              {/* Current status plus only the moves the server accepts from it. */}
+              {[inv.status, ...(INVOICE_TRANSITIONS[String(inv.status).toUpperCase()] ?? [])]
+                .filter((s: string, i: number, a: string[]) => s && a.indexOf(s) === i)
+                .map((s: string) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
             </Select>
           </FormField>
           <FormField label="Due date">

@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select, ModalSurface, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -143,7 +144,7 @@ export function AssignmentsList() {
                       onChange={async (e) => { try {
                         await update.mutateAsync({ id: a.id, status: e.target.value });
                         refetch();
-                      } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {ASSIGNMENT_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -155,7 +156,7 @@ export function AssignmentsList() {
                       onChange={async (e) => { try {
                         await update.mutateAsync({ id: a.id, paymentStatus: e.target.value });
                         refetch();
-                      } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -169,7 +170,7 @@ export function AssignmentsList() {
                           await cancel.mutateAsync(a.id);
                           toast.success('Cancelled');
                           refetch();
-                        } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                        } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                         className="text-xs text-red-700 hover:underline"
                       >
                         Cancel
@@ -244,7 +245,7 @@ function CreateAssignmentModal({ onClose, onCreated }: { onClose: () => void; on
       toast.success('Assignment created');
       onCreated();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 

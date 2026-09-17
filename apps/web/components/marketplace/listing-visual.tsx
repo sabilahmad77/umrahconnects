@@ -10,7 +10,6 @@ type Meta = {
   Icon: any;
   label: string;
   gradient: string;
-  photo: string; // curated category default photo
 };
 
 export function normalizeCategory(raw?: string): keyof typeof CATEGORY_META {
@@ -24,16 +23,19 @@ export function normalizeCategory(raw?: string): keyof typeof CATEGORY_META {
   return 'OTHER';
 }
 
-// Curated, premium category photography (Unsplash CDN). Falls back to the
-// branded gradient panel automatically if an image fails to load.
+// Category identity only — icon, label and brand gradient. There is deliberately
+// no stock photograph here: a listing shows its own `imageUrls`, and when the
+// provider has not uploaded any it gets the branded panel below. Standing in a
+// curated Unsplash photo made every listing look like it had real photography
+// of a property or vehicle that nobody had actually supplied.
 export const CATEGORY_META: Record<string, Meta> = {
-  HOTEL:     { Icon: BedDouble,       label: 'Hotel',     gradient: 'from-[#0F3D37] to-[#1c5a4f]', photo: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80&auto=format&fit=crop' },
-  TRANSPORT: { Icon: Bus,             label: 'Transport', gradient: 'from-[#2A7A6B] to-[#37998a]', photo: 'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=80&auto=format&fit=crop' },
-  VISA:      { Icon: Stamp,           label: 'Visa',      gradient: 'from-[#112234] to-[#1e3a57]', photo: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80&auto=format&fit=crop' },
-  CATERING:  { Icon: UtensilsCrossed, label: 'Catering',  gradient: 'from-[#C8A96B] to-[#dabd86]', photo: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80&auto=format&fit=crop' },
-  GUIDE:     { Icon: Compass,         label: 'Guide',     gradient: 'from-[#216154] to-[#2A7A6B]', photo: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&q=80&auto=format&fit=crop' },
-  PACKAGE:   { Icon: Package,         label: 'Package',   gradient: 'from-[#A8894B] to-[#C8A96B]', photo: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80&auto=format&fit=crop' },
-  OTHER:     { Icon: Store,           label: 'Listing',   gradient: 'from-[#0F3D37] to-[#2A7A6B]', photo: 'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?w=800&q=80&auto=format&fit=crop' },
+  HOTEL:     { Icon: BedDouble,       label: 'Hotel',     gradient: 'from-[#0F3D37] to-[#1c5a4f]' },
+  TRANSPORT: { Icon: Bus,             label: 'Transport', gradient: 'from-[#2A7A6B] to-[#37998a]' },
+  VISA:      { Icon: Stamp,           label: 'Visa',      gradient: 'from-[#112234] to-[#1e3a57]' },
+  CATERING:  { Icon: UtensilsCrossed, label: 'Catering',  gradient: 'from-[#C8A96B] to-[#dabd86]' },
+  GUIDE:     { Icon: Compass,         label: 'Guide',     gradient: 'from-[#216154] to-[#2A7A6B]' },
+  PACKAGE:   { Icon: Package,         label: 'Package',   gradient: 'from-[#A8894B] to-[#C8A96B]' },
+  OTHER:     { Icon: Store,           label: 'Listing',   gradient: 'from-[#0F3D37] to-[#2A7A6B]' },
 };
 
 export function ListingMedia({
@@ -42,7 +44,7 @@ export function ListingMedia({
   const key = normalizeCategory(category);
   const m = CATEGORY_META[key];
   const [errored, setErrored] = useState(false);
-  const src = image || m.photo;
+  const src = image;
   const showImg = src && !errored;
 
   return (

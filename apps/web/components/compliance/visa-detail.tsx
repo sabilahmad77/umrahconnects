@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Select, Input, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -11,21 +12,25 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { useVisa, useUpdateVisa, useDeleteVisa } from '@/hooks/use-visa';
+import { useVisa, useUpdateVisa, useDeleteVisa, useSubmitVisa, useApproveVisa, useRejectVisa } from '@/hooks/use-visa';
 import { VisaDocumentPanel } from './visa-document-panel';
 
+// Statuses that are an ordinary edit. Submitting, approving and rejecting are
+// decisions, not field changes: they each have their own endpoint that records
+// the timestamp, the visa number or the reason, and notifies the applicant.
+// Pushing them through the generic update silently dropped all of that.
 const VISA_STATUSES = [
   'NOT_STARTED',
   'DOCUMENTS_COLLECTING',
-  'SUBMITTED',
   'UNDER_REVIEW',
-  'APPROVED',
-  'REJECTED',
   'EXPIRED',
 ];
 
 const VISA_TYPES = ['UMRAH', 'HAJJ', 'VISIT'];
-const REGULATORY_SYSTEMS = ['NUSUK_MASAR', 'SISKOPATUH', 'MOH_SAUDI', 'EVISA_PORTAL', 'OTHER'];
+// The real RegulatorySystem enum (prisma/schema.prisma). MOH_SAUDI, EVISA_PORTAL
+// and OTHER are not members: because this field is sent on every save, any record
+// already holding one of them could not be edited at all.
+const REGULATORY_SYSTEMS = ['NUSUK_MASAR', 'SISKOPATUH', 'NAHCON', 'DIYANET', 'TABUNG_HAJI', 'MOTAC', 'IBA_DGRP', 'MANUAL'];
 
 type TabKey = 'overview' | 'documents' | 'timeline' | 'edit';
 
@@ -282,6 +287,19 @@ function EditTab({ v, refetch }: { v: any; refetch: () => void }) {
   const router = useRouter();
   const update = useUpdateVisa();
   const remove = useDeleteVisa();
+  const submit = useSubmitVisa();
+  const approve = useApproveVisa();
+  const reject = useRejectVisa();
+
+  const decide = async (run: () => Promise<unknown>, done: string) => {
+    try {
+      await run();
+      toast.success(done);
+      refetch();
+    } catch (e: any) {
+      toast.error(apiErrorMessage(e, 'That decision could not be recorded.'));
+    }
+  };
 
   const [form, setForm] = useState({
     status: v.status ?? 'NOT_STARTED',
@@ -319,7 +337,7 @@ function EditTab({ v, refetch }: { v: any; refetch: () => void }) {
       toast.success('Visa application saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -330,12 +348,44 @@ function EditTab({ v, refetch }: { v: any; refetch: () => void }) {
       toast.success('Visa application archived');
       router.push('/compliance');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
   return (
     <div className="space-y-4 max-w-3xl">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+        <h3 className="text-sm font-bold text-gray-900">Decision</h3>
+        <p className="text-xs text-gray-600">
+          Each decision is recorded against this application with its own timestamp and
+          notifies whoever filed it. Approving and rejecting need the manage permission.
+        </p>
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button variant="quiet" type="button" busy={submit.isPending}
+            disabled={submit.isPending || ['SUBMITTED', 'APPROVED', 'REJECTED'].includes(String(v.status))}
+            onClick={() => decide(() => submit.mutateAsync(v.id), 'Application submitted')}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          >Submit</Button>
+          <Button variant="quiet" type="button" busy={approve.isPending}
+            disabled={approve.isPending || String(v.status) === 'APPROVED'}
+            onClick={() => {
+              const visaNumber = window.prompt('Visa number (optional)') ?? undefined;
+              return decide(() => approve.mutateAsync({ id: v.id, visaNumber: visaNumber || undefined }), 'Application approved');
+            }}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-40"
+          >Approve</Button>
+          <Button variant="quiet" type="button" busy={reject.isPending}
+            disabled={reject.isPending || String(v.status) === 'REJECTED'}
+            onClick={() => {
+              const reason = window.prompt('Reason for rejection');
+              if (!reason) return;
+              return decide(() => reject.mutateAsync({ id: v.id, reason }), 'Application rejected');
+            }}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40"
+          >Reject</Button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Edit application
@@ -418,9 +468,12 @@ function formatSystem(system?: string): string {
   const map: Record<string, string> = {
     NUSUK_MASAR: 'Nusuk / Masar',
     SISKOPATUH: 'SISKOPATUH',
-    MOH_SAUDI: 'MOH Saudi',
-    EVISA_PORTAL: 'eVisa Portal',
-    OTHER: 'Other',
+    NAHCON: 'NAHCON (Nigeria)',
+    DIYANET: 'Diyanet (Türkiye)',
+    TABUNG_HAJI: 'Tabung Haji (Malaysia)',
+    MOTAC: 'MOTAC (Malaysia)',
+    IBA_DGRP: 'IBA / DGRP',
+    MANUAL: 'Manual / other',
   };
   return map[system] ?? system.replace(/_/g, ' ');
 }

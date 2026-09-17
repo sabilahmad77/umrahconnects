@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -96,7 +97,7 @@ export function AdminListingsView() {
                     <div className="flex items-center justify-end gap-1.5">
                       {l.status !== 'PUBLISHED' ? (
                         <Button busy={approve.isPending} variant="quiet" type="button"
-                          onClick={async () => { try { await approve.mutateAsync(l.id); toast.success('Listing approved + published'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                          onClick={async () => { try { await approve.mutateAsync(l.id); toast.success('Listing approved + published'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                           className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700"
                         >
                           <CheckCircle2 className="h-3 w-3" /> Approve
@@ -109,7 +110,7 @@ export function AdminListingsView() {
                       <Button busy={remove.isPending} variant="quiet" type="button"
                         aria-label="Remove listing"
                         title="Archive (remove) this listing"
-                        onClick={async () => { try { if (!confirm('Archive (remove) this listing?')) return; await remove.mutateAsync(l.id); toast.success('Removed'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                        onClick={async () => { try { if (!confirm('Archive (remove) this listing?')) return; await remove.mutateAsync(l.id); toast.success('Removed'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                         className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
                       >
                         <Trash2 className="h-3 w-3" /> Remove

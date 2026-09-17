@@ -128,8 +128,10 @@ function PostCard({ post }: { post: any }) {
   const serverLiked = Array.isArray(post.reactions) && post.reactions.some((r: any) => r.type === 'LIKE');
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState('');
+  // Same server truth for the bookmark: the feed returns the viewer's own save.
+  const serverSaved = Array.isArray(post.savedBy) && post.savedBy.length > 0;
   const [liked, setLiked] = useState(serverLiked);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(serverSaved);
   const { mutateAsync: toggleReaction } = useToggleReaction();
   const { mutateAsync: addComment, isPending: commentPending } = useAddComment();
   const { mutateAsync: toggleSave } = useToggleSavePost();
@@ -307,7 +309,8 @@ function ProfilePanel() {
   const { data: account , error: socialAccountError, refetch: retrySocialAccount} = useSocialAccount();
 
   const displayName = account?.displayName ?? user?.displayName ?? 'Community Member';
-  const bio = account?.bio ?? 'Umrah operator & community member';
+  // No invented bio: an account that has not written one shows nothing.
+  const bio = account?.bio ?? '';
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 
   if (socialAccountError) return <QueryFailure error={socialAccountError} onRetry={() => { retrySocialAccount(); }} />;
@@ -321,7 +324,7 @@ function ProfilePanel() {
           {initials}
         </div>
         <p className="font-bold text-gray-900 text-sm">{displayName}</p>
-        <p className="text-xs text-gray-600 mt-0.5">{bio}</p>
+        {bio && <p className="text-xs text-gray-600 mt-0.5">{bio}</p>}
         {user?.tenantName && (
           <p className="text-xs text-brand-600 font-medium mt-1">🏢 {user.tenantName}</p>
         )}

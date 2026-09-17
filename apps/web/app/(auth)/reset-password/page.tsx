@@ -1,4 +1,6 @@
 'use client';
+import { PASSWORD_HINT, passwordProblem } from '@/lib/password-policy';
+import { apiErrorMessage } from '@/lib/api-error';
 import Link from 'next/link';
 import { Input, LoadingState , Button } from '@/components/ui/system';
 
@@ -18,7 +20,8 @@ function ResetForm() {
   const [done, setDone] = useState(false);
 
   const submit = async () => {
-    if (password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
+    const problem = passwordProblem(password);
+    if (problem) { toast.error(problem); return; }
     if (password !== confirm) { toast.error('Passwords do not match'); return; }
     setBusy(true);
     try {
@@ -26,7 +29,7 @@ function ResetForm() {
       setDone(true);
       toast.success('Password updated');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Reset link is invalid or expired');
+      toast.error(apiErrorMessage(e, 'Reset link is invalid or expired'));
     } finally { setBusy(false); }
   };
 
@@ -45,11 +48,14 @@ function ResetForm() {
           <p className="text-sm text-red-700">Missing reset token. Use the link from your reset email.</p>
         ) : (
           <div className="space-y-4">
-            <Input aria-label="Password"
-              autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="New password (min 8 chars)"
-              className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
-            />
+            <div>
+              <Input aria-label="Password" aria-describedby="reset-password-hint"
+                autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="New password"
+                className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
+              />
+              <p id="reset-password-hint" className="text-xs text-gray-600 mt-1">{PASSWORD_HINT}</p>
+            </div>
             <Input aria-label="Confirm"
               autoComplete="new-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
               placeholder="Confirm new password"

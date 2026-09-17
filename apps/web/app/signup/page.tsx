@@ -1,4 +1,6 @@
 'use client';
+import { PASSWORD_HINT, passwordProblem } from '@/lib/password-policy';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input , Button } from '@/components/ui/system';
 
 
@@ -38,7 +40,7 @@ export default function SignupPage() {
   const fieldErrors: Record<string, string> = {
     firstName: form.firstName.trim() ? '' : 'First name is required.',
     email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email) ? '' : 'Enter a valid email address.',
-    password: form.password.length >= 8 ? '' : 'Password must be at least 8 characters.',
+    password: passwordProblem(form.password),
   };
   const fieldErr = (k: string) => (touched[k] ? fieldErrors[k] : '');
   const roleMeta = ROLES.find((r) => r.id === role);
@@ -59,7 +61,7 @@ export default function SignupPage() {
       toast.success('Account created. Sign in to check your account setup.');
       router.push(`/login?email=${encodeURIComponent(form.email.trim())}`);
     } catch (e: any) {
-      setErr(e?.response?.data?.error?.message ?? 'Could not create your account. This email may already be registered.');
+      setErr(apiErrorMessage(e, 'Could not create your account. This email may already be registered.'));
     } finally {
       setBusy(false);
     }
@@ -140,7 +142,8 @@ export default function SignupPage() {
                     {fieldErr('email') && <p id="signup-email-error" className="text-sm text-red-700 mt-1">{fieldErr('email')}</p>}
                   </div>
                   <div>
-                    <label htmlFor="signup-password" className="mb-2 block text-sm font-medium">Password</label><Input id="signup-password" name="password" autoComplete="new-password" aria-describedby="signup-password-error" value={form.password} onChange={(e) => set('password', e.target.value)} onBlur={() => touch('password')} type="password" aria-invalid={!!fieldErr('password')} placeholder="Password (min 8 characters)" className={`w-full text-sm px-3.5 py-2.5 border rounded-xl outline-none focus:border-brand-400 ${fieldErr('password') ? 'border-red-300' : 'border-sandstone'}`} />
+                    <label htmlFor="signup-password" className="mb-2 block text-sm font-medium">Password</label><Input id="signup-password" name="password" autoComplete="new-password" aria-describedby="signup-password-hint signup-password-error" value={form.password} onChange={(e) => set('password', e.target.value)} onBlur={() => touch('password')} type="password" aria-invalid={!!fieldErr('password')} placeholder="Password" title={PASSWORD_HINT} className={`w-full text-sm px-3.5 py-2.5 border rounded-xl outline-none focus:border-brand-400 ${fieldErr('password') ? 'border-red-300' : 'border-sandstone'}`} />
+                    <p id="signup-password-hint" className="text-xs text-gray-600 mt-1">{PASSWORD_HINT}</p>
                     {fieldErr('password') && <p id="signup-password-error" className="text-sm text-red-700 mt-1">{fieldErr('password')}</p>}
                   </div>
                   {err && <p role="alert" className="text-[13px] text-red-600">{err}</p>}

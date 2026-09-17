@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -11,16 +12,15 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
   useAdminUsers, useSetUserStatus, useForceLogout, useAssignUserRole,
-  useRemoveUserRole, useAdminRoles, useAdminTenants, useAdminExport,
-} from '@/hooks/use-admin';
+  useRemoveUserRole, useAdminRoles, useAdminTenants, useAdminExport, useAdminStats } from '@/hooks/use-admin';
 import { USER_STATUSES, USER_STATUS_META } from '@/lib/statuses';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 
 const FILTERS = ['ALL', ...USER_STATUSES] as const;
 const PAGE_SIZE = 20;
 
-const apiError = (e: any) =>
-  e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Action failed';
+/** Uses the shared helper so validation arrays render as a sentence. */
+const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 export function AdminUsersView() {
   const [status, setStatus] = useState<string>('ALL');
@@ -45,17 +45,20 @@ export function AdminUsersView() {
   const removeRole = useRemoveUserRole();
   const exportCsv = useAdminExport();
 
+  const { data: stats } = useAdminStats();
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
   const tenants = tenantsData?.items ?? [];
 
-  const counts = (s: string) => items.filter((u: any) => u.status === s).length;
+  // Platform-wide counts from /admin/stats, for the same reason as the tenants
+  // tiles: a page-scoped count next to a platform-wide total misleads.
+  const byStatus: Record<string, number> = stats?.usersByStatus ?? {};
   const tiles = [
-    { label: 'Total users', value: total,                          color: 'text-gray-700',   Icon: Users },
-    { label: 'Active',      value: counts('ACTIVE'),               color: 'text-green-800',  Icon: CheckCircle2 },
-    { label: 'Locked',      value: counts('LOCKED'),               color: 'text-red-700',    Icon: Lock },
-    { label: 'Pending',     value: counts('PENDING_VERIFICATION'), color: 'text-yellow-800', Icon: Clock },
+    { label: 'Total users', value: total,                                color: 'text-gray-700',   Icon: Users },
+    { label: 'Active',      value: byStatus.ACTIVE ?? 0,                 color: 'text-green-800',  Icon: CheckCircle2 },
+    { label: 'Locked',      value: byStatus.LOCKED ?? 0,                 color: 'text-red-700',    Icon: Lock },
+    { label: 'Pending',     value: byStatus.PENDING_VERIFICATION ?? 0,   color: 'text-yellow-800', Icon: Clock },
   ];
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
@@ -204,7 +207,7 @@ export function AdminUsersView() {
                                   () => assignRole.mutateAsync({ userId: u.id, roleId }),
                                   `${role?.name} granted`),
                               });
-                            } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                            } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                             className="text-xs border border-gray-200 rounded-lg px-1.5 py-0.5 bg-white"
                           >
                             <option value="">+ Add role</option>
@@ -235,7 +238,7 @@ export function AdminUsersView() {
                                   () => setUserStatus.mutateAsync({ id: u.id, status: next }),
                                   `${nameOf(u)} → ${USER_STATUS_META[next]?.label ?? next}`),
                               });
-                            } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                            } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                             className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                           >
                             {USER_STATUSES.map((s) => <option key={s} value={s}>{USER_STATUS_META[s].label}</option>)}

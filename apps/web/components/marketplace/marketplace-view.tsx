@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -8,7 +9,7 @@ import {
   Store, Star, RefreshCw, Search, Plus, Package, AlertCircle, BadgeCheck, X, Loader2,
   MapPin, ShoppingBag, Building2, CheckCircle2,
 } from 'lucide-react';
-import { useMarketplaceListings, useMarketplaceVendors, useCreateListing } from '@/hooks/use-api';
+import { useMarketplaceListings, useMarketplaceVendors, useMyMarketplaceVendor, useCreateListing } from '@/hooks/use-api';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ListingMedia, CategoryIcon, CATEGORY_META, normalizeCategory } from './listing-visual';
@@ -38,6 +39,10 @@ export function MarketplaceView() {
     category: categoryFilter !== 'ALL' ? CATEGORY_TO_TYPE[categoryFilter] : undefined,
   });
   const { data: vendors, isLoading: vl , error: marketplaceVendorsError, refetch: retryMarketplaceVendors} = useMarketplaceVendors();
+  // Authoring a listing is scoped to the caller's own vendor record; the public
+  // directory above would offer other organizations' vendors, which the server
+  // rejects with 404 "Vendor not found".
+  const { data: myVendor } = useMyMarketplaceVendor(showCreate);
   const createListing = useCreateListing();
 
   const listings = listingsData?.items ?? [];
@@ -143,7 +148,10 @@ export function MarketplaceView() {
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
                 {listings.map((l: any) => {
                   const cat = l.type ?? l.category ?? '';
-                  const img = l.imageUrl ?? l.coverUrl ?? l.image ?? (Array.isArray(l.images) ? l.images[0] : undefined);
+                  // `imageUrls` is what the API returns (schema.prisma `Listing.imageUrls`).
+                  // The older imageUrl/coverUrl/image/images names never existed on the
+                  // payload, so this always fell through to a stock category photo.
+                  const img = Array.isArray(l.imageUrls) ? l.imageUrls[0] : undefined;
                   const priceLabel =
                     l.pricePerNightCents != null
                       ? `SAR ${(l.pricePerNightCents / 100).toLocaleString('en-SA', { maximumFractionDigits: 0 })} /night`
@@ -151,7 +159,10 @@ export function MarketplaceView() {
                         ? `SAR ${(l.priceCents / 100).toLocaleString('en-SA', { maximumFractionDigits: 0 })}`
                         : undefined;
                   const city = l.attributes?.city ?? l.city;
-                  const provider = l.vendor?.companyName ?? l.providerName ?? l.tenant?.name;
+                  // The API selects `vendor: { name, ... }`; companyName/providerName/tenant
+                  // are not on the payload, so this used to be undefined every time and the
+                  // card invented a "<Category> provider" label in place of the real seller.
+                  const provider = l.vendor?.name;
                   return (
                     <Link
                       key={l.id}
@@ -181,10 +192,16 @@ export function MarketplaceView() {
                         {/* footer: provider + location */}
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
-                              <CategoryIcon category={cat} className="text-brand-600 h-3 w-3" />
-                            </div>
-                            <span className="text-xs text-gray-600 truncate">{provider ?? CATEGORY_META[normalizeCategory(cat)].label + ' provider'}</span>
+                            {/* Only the real seller's name. When the payload has no vendor
+                                we show nothing rather than a manufactured provider label. */}
+                            {provider && (
+                              <>
+                                <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
+                                  <CategoryIcon category={cat} className="text-brand-600 h-3 w-3" />
+                                </div>
+                                <span className="text-xs text-gray-600 truncate">{provider}</span>
+                              </>
+                            )}
                           </div>
                           {city && (
                             <span className="flex items-center gap-1 text-xs text-gray-600 shrink-0">
@@ -255,7 +272,7 @@ export function MarketplaceView() {
 
       {showCreate && (
         <CreateListingModal
-          vendors={Array.isArray(vendors) ? vendors : (vendors as any)?.items ?? []}
+          vendors={myVendor ? [myVendor] : []}
           onClose={() => setShowCreate(false)}
           onCreate={async (dto) => {
             try {
@@ -264,7 +281,7 @@ export function MarketplaceView() {
               setShowCreate(false);
               rl();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.message ?? 'Failed to create listing');
+              toast.error(apiErrorMessage(e, 'Failed to create listing'));
             }
           }}
           pending={createListing.isPending}
@@ -352,7 +369,10 @@ function CreateListingModal({
       category,
       vendorId,
       description: description || undefined,
-      priceFrom: priceFrom ? Number(priceFrom) * 100 : undefined,
+      // Major units — the field is labelled "Price from (SAR)" and the server
+      // converts to cents itself, so multiplying here listed everything at
+      // 100x. The edit form in listing-detail.tsx already sends major units.
+      priceFrom: priceFrom ? Number(priceFrom) : undefined,
       currency: 'SAR',
       city: city || undefined,
       attributes,

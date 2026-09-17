@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -11,16 +12,15 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
-  useAdminTenants, useSetTenantStatus, useArchiveTenant, useAdminExport,
-} from '@/hooks/use-admin';
+  useAdminTenants, useSetTenantStatus, useArchiveTenant, useAdminExport, useAdminStats } from '@/hooks/use-admin';
 import { TENANT_STATUSES, TENANT_STATUS_META } from '@/lib/statuses';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 
 const FILTERS = ['ALL', ...TENANT_STATUSES] as const;
 const PAGE_SIZE = 20;
 
-const apiError = (e: any) =>
-  e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Action failed';
+/** Uses the shared helper so validation arrays render as a sentence. */
+const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 export function AdminTenantsView() {
   const [status, setStatus] = useState<string>('ALL');
@@ -39,16 +39,20 @@ export function AdminTenantsView() {
   const archive = useArchiveTenant();
   const exportCsv = useAdminExport();
 
+  const { data: stats } = useAdminStats();
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data?.totalPages ?? 1;
 
-  const counts = (s: string) => items.filter((t: any) => t.status === s).length;
+  // Platform-wide counts from /admin/stats. These previously counted only the
+  // rows on the current page while sitting beside a platform-wide total, which
+  // read as platform-wide figures.
+  const byStatus: Record<string, number> = stats?.tenants?.byStatus ?? {};
   const tiles = [
-    { label: 'Total tenants', value: total,                 color: 'text-gray-700',  Icon: Building2 },
-    { label: 'Active',        value: counts('ACTIVE'),      color: 'text-green-800', Icon: CheckCircle2 },
-    { label: 'Suspended',     value: counts('SUSPENDED'),   color: 'text-red-700',   Icon: Ban },
-    { label: 'Pending KYC',   value: counts('PENDING_KYC'), color: 'text-yellow-800', Icon: Clock },
+    { label: 'Total tenants', value: total,                      color: 'text-gray-700',  Icon: Building2 },
+    { label: 'Active',        value: byStatus.ACTIVE ?? 0,       color: 'text-green-800', Icon: CheckCircle2 },
+    { label: 'Suspended',     value: byStatus.SUSPENDED ?? 0,    color: 'text-red-700',   Icon: Ban },
+    { label: 'Pending KYC',   value: stats?.kyc?.pending ?? 0,   color: 'text-yellow-800', Icon: Clock },
   ];
 
   const run = async (fn: () => Promise<unknown>, okMsg: string) => {
@@ -179,7 +183,7 @@ export function AdminTenantsView() {
                                   `${t.name} → ${TENANT_STATUS_META[next]?.label ?? next}`,
                                 ),
                               });
-                            } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                            } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                             className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                           >
                             {TENANT_STATUSES.map((s) => (

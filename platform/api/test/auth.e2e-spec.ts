@@ -172,6 +172,26 @@ describe('authentication & sessions', () => {
       expect((await ctx.http().get(api('/auth/me')).set(bearer(w.financeA))).status).toBe(200);
     });
 
+    it('logout-all revokes a token issued in the same second, and a sign-in right after still works', async () => {
+      // Regression: `iat` has one-second resolution. While the revocation
+      // instant rounded DOWN, a token minted earlier in the same second was
+      // not "older than" the cut-off, so sign-out-everywhere left it usable
+      // for its full 15-minute life. No sleeps here on purpose — the delays
+      // in the test above are what hid this.
+      const login = await ctx.http().post(api('/auth/login')).send({ email: w.financeA.email, password: PASSWORD });
+      const token = login.body.data.accessToken;
+      expect((await ctx.http().get(api('/auth/me')).set('Authorization', `Bearer ${token}`)).status).toBe(200);
+
+      expect((await ctx.http().post(api('/auth/logout-all')).set('Authorization', `Bearer ${token}`)).status).toBe(200);
+      expect((await ctx.http().get(api('/auth/me')).set('Authorization', `Bearer ${token}`)).status).toBe(401);
+
+      // The cut-off must not swallow the session the user opens straight after.
+      const back = await ctx.http().post(api('/auth/login')).send({ email: w.financeA.email, password: PASSWORD });
+      expect(back.status).toBe(200);
+      w.financeA.token = back.body.data.accessToken;
+      expect((await ctx.http().get(api('/auth/me')).set(bearer(w.financeA))).status).toBe(200);
+    });
+
     it('locking a user invalidates their live access token immediately', async () => {
       const email = `victim.${uniq()}@people.test`;
       const reg = await signup(email);

@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Textarea, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -233,7 +234,7 @@ export function VisaRequestQueue() {
               setShowCreate(false);
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to create request');
+              toast.error(apiErrorMessage(e, 'Failed to create request'));
             }
           }}
         />

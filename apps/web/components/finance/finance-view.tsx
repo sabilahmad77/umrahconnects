@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -289,7 +290,7 @@ function CreateInvoiceModal({ onClose, onCreated }: { onClose: () => void; onCre
       onCreated(created?.id);
       if (created?.id) router.push(`/finance/invoices/${created.id}`);
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Failed to create invoice');
+      toast.error(apiErrorMessage(e, 'Failed to create invoice'));
     }
   };
 

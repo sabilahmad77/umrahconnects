@@ -52,7 +52,8 @@ export class AdminService {
   async getStats() {
     const [
       totalTenants, totalUsers, totalPilgrims, totalHotels, totalVehicles, totalBookings,
-      tenantByType, paidInvoices, outstandingInvoices, pendingKyc, activeListings, openInquiries,
+      tenantByType, tenantByStatus, userByStatus,
+      paidInvoices, outstandingInvoices, pendingKyc, activeListings, openInquiries,
     ] = await Promise.all([
       this.prisma.tenant.count(),
       this.prisma.user.count({ where: { deletedAt: null } }),
@@ -61,6 +62,11 @@ export class AdminService {
       this.prisma.vehicle.count(),
       this.prisma.booking.count(),
       this.prisma.tenant.groupBy({ by: ['type'], _count: true }),
+      // Platform-wide status breakdowns. Without these the admin tiles counted
+      // only the rows on the current page while sitting next to a platform-wide
+      // total, which read as a platform-wide figure.
+      this.prisma.tenant.groupBy({ by: ['status'], _count: true }),
+      this.prisma.user.groupBy({ by: ['status'], where: { deletedAt: null }, _count: true }),
       this.prisma.invoice.aggregate({ where: { status: 'PAID' as any }, _sum: { paidCents: true } }),
       this.prisma.invoice.aggregate({ where: { status: { in: ['ISSUED', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'] as any } }, _sum: { totalCents: true } }),
       this.prisma.tenantKyc.count({ where: { verifiedAt: null, rejectionReason: null } }),
@@ -70,6 +76,10 @@ export class AdminService {
 
     const byType: Record<string, number> = {};
     for (const t of tenantByType) byType[t.type as string] = (t._count as any) ?? 0;
+    const tenantStatus: Record<string, number> = {};
+    for (const t of tenantByStatus) tenantStatus[t.status as string] = (t._count as any) ?? 0;
+    const userStatus: Record<string, number> = {};
+    for (const u of userByStatus) userStatus[u.status as string] = (u._count as any) ?? 0;
 
     const recentActivity = await this.prisma.auditLog.findMany({
       orderBy: { occurredAt: 'desc' }, take: 8,
@@ -77,8 +87,9 @@ export class AdminService {
     });
 
     return {
-      tenants: { total: totalTenants, byType },
+      tenants: { total: totalTenants, byType, byStatus: tenantStatus },
       users: totalUsers,
+      usersByStatus: userStatus,
       pilgrims: totalPilgrims,
       hotels: totalHotels,
       vehicles: totalVehicles,

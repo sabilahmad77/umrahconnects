@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { ModalSurface, Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -68,7 +69,7 @@ export function PackagesView() {
 
       {open && <PackageModal onClose={() => setOpen(false)} onCreate={async (dto) => {
         try { await create.mutateAsync(dto); toast.success('Package created'); setOpen(false); }
-        catch (e: any) { toast.error(e?.response?.data?.error?.message ?? 'Could not create package'); }
+        catch (e: any) { toast.error(apiErrorMessage(e, 'Could not create package')); }
       }} pending={create.isPending} />}
     </div>
   );

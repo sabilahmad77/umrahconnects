@@ -100,8 +100,19 @@ export class AuthService {
     return Number(this.config.get<string>('AUTH_LOCKOUT_MINUTES', '15'));
   }
 
+  /**
+   * The instant at which every existing session stops being valid.
+   *
+   * A JWT `iat` only has one-second resolution, so a revocation recorded part
+   * way through second T has to round UP to T+1. Rounding down left every
+   * token minted earlier in that same second comparing as "not older than the
+   * revocation", so it survived a sign-out-everywhere (or a password change)
+   * for the rest of its 15-minute life. `generateTokens` mints `iat` at or
+   * after this instant, so signing in straight after a revocation is not
+   * caught by it.
+   */
   static revocationInstant() {
-    return new Date(Math.floor(Date.now() / 1000) * 1000);
+    return new Date(Math.ceil(Date.now() / 1000) * 1000);
   }
 
   /** Shared organization for self-registered travelers (find-or-create). */
@@ -262,6 +273,14 @@ export class AuthService {
         .filter((ur) => !ur.expiresAt || ur.expiresAt > new Date())
         .map((ur) => ur.role.name),
       typ: ACCESS_TOKEN_TYPE,
+      // Never mint a token that the user's own revocation cut-off would reject.
+      // Signing in immediately after a sign-out-everywhere lands in the same
+      // one-second bucket as the revocation, so the issue time is pushed past
+      // it rather than letting the new session be born already invalid.
+      iat: Math.max(
+        Math.floor(Date.now() / 1000),
+        user.sessionsRevokedAt ? Math.ceil(user.sessionsRevokedAt.getTime() / 1000) : 0,
+      ),
     };
     const accessToken = this.jwtService.sign(payload, { expiresIn: this.accessTtlSeconds });
 

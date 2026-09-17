@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Select, Input, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -76,7 +77,7 @@ export function BookingDetail({ id }: { id: string }) {
                 toast.success('Booking cancelled');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-xl"
@@ -203,7 +204,7 @@ function PilgrimsTab({ b, refetch }: { b: any; refetch: () => void }) {
                 setSelectedId('');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={!selectedId || add.isPending}
@@ -242,7 +243,7 @@ function PilgrimsTab({ b, refetch }: { b: any; refetch: () => void }) {
                       await remove.mutateAsync({ bookingId: b.id, pilgrimId: bp.pilgrimId });
                       toast.success('Removed');
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="p-1.5 rounded hover:bg-red-50 text-red-700"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -284,7 +285,7 @@ function AssignmentsTab({ b, refetch }: { b: any; refetch: () => void }) {
                 toast.success('Group updated');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             className="px-4 py-2.5 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50"
@@ -307,7 +308,7 @@ function AssignmentsTab({ b, refetch }: { b: any; refetch: () => void }) {
                 toast.success('Package updated');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             className="px-4 py-2.5 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50"
@@ -345,7 +346,7 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
       toast.success('Payment saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -387,7 +388,7 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
               toast.success('Invoice generated');
               if (inv?.id) router.push(`/finance/invoices/${inv.id}`);
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           disabled={generate.isPending}
@@ -431,7 +432,7 @@ function NotesTab({ b, refetch }: { b: any; refetch: () => void }) {
               toast.success('Saved');
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           disabled={update.isPending}

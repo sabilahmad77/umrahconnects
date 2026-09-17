@@ -28,7 +28,7 @@ export function useAuth() {
       setIsLoading(true);
       try {
         const { data } = await apiClient.post('/auth/login', { email, password, ...(tenantId ? { tenantId } : {}) });
-        const { accessToken, refreshToken } = data.data;
+        const { accessToken } = data.data;
 
         const decoded = decodeJwt(accessToken);
         const roles = decoded?.roles ?? [];
@@ -41,16 +41,17 @@ export function useAuth() {
           tenantId: decoded?.tenantId ?? tenantId ?? '',
           tenantName: '',
           tenantSlug: '',
-          tenantType: decoded?.tenantType ?? 'OPERATOR',
+          // No default: claiming OPERATOR for an unclassified workspace showed a
+          // made-up "Workspace type" in Settings. Empty renders "Not provided".
+          tenantType: decoded?.tenantType ?? '',
           roles,
           dashboardType,
           displayName: decoded?.email?.split('@')[0] ?? email.split('@')[0],
         };
 
         setToken(accessToken);
-        if (refreshToken) {
-          try { localStorage.setItem('refreshToken', refreshToken); } catch {}
-        }
+        // The refresh token is never stored by the page: the API returns it as an
+        // httpOnly cookie that scripts cannot read.
         setStoredUser(user);
         return user;
       } finally {
@@ -61,10 +62,9 @@ export function useAuth() {
   );
 
   const logout = useCallback(async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (refreshToken && !refreshToken.startsWith('demo.')) {
-      await apiClient.post('/auth/logout', { refreshToken }).catch(() => {});
-    }
+    // Empty body: the API revokes whichever refresh token the httpOnly cookie
+    // carries, and clears the cookie.
+    await apiClient.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
     clearAuth();
     window.location.href = '/login';
   }, []);

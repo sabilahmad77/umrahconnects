@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -17,9 +18,10 @@ import {
   VISA_DOCUMENT_STATUS_META, VISA_DOCUMENT_TYPES, humanizeStatus,
 } from '@/lib/statuses';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
+import { openVisaDocument } from '@/lib/private-documents';
 
-const apiError = (e: any) =>
-  e?.response?.data?.error?.message ?? e?.response?.data?.message ?? 'Action failed';
+/** Uses the shared helper so validation arrays render as a sentence. */
+const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 /**
  * The document workflow for one visa application: record what is required,
@@ -198,15 +200,13 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                         {d.url ? 'Replace' : 'Upload'}
                       </Button>
                       {d.url && (
-                        <a
-                          href={d.url}
-                          target="_blank"
-                          rel="noreferrer"
+                        <Button variant="quiet" type="button"
+                          onClick={() => openVisaDocument(d.id, undefined, (m) => toast.error(m))}
                           aria-label={`Open ${d.name}`}
                           className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
                         >
                           <Download className="h-3.5 w-3.5" /> Open
-                        </a>
+                        </Button>
                       )}
                       <Button variant="quiet" type="button"
                         aria-label={`Verify ${d.name}`}
@@ -290,7 +290,11 @@ function VersionHistory({ visaId, docId }: { visaId: string; docId: string }) {
                 {v.replacedAt ? ' · superseded' : ' · current'}
                 {v.sizeBytes ? ` · ${Math.max(1, Math.round(v.sizeBytes / 1024))} KB` : ''}
               </span>
-              <a href={v.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">open</a>
+              <Button variant="quiet" type="button"
+                onClick={() => openVisaDocument(docId, v.version, (m) => toast.error(m))}
+                aria-label={`Open version ${v.version}`}
+                className="text-brand-600 hover:underline"
+              >open</Button>
             </li>
           ))}
         </ol>

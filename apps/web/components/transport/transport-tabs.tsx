@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { ModalSurface, Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -359,7 +360,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           onClose={() => setShowCreate(false)}
           onCreate={async (dto) => {
             try { await createVehicle.mutateAsync(dto); toast.success('Vehicle added'); setShowCreate(false); rv(); }
-            catch (e: any) { toast.error(e?.response?.data?.error?.message ?? 'Failed'); }
+            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
           }}
           pending={createVehicle.isPending}
         />
@@ -369,7 +370,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           onClose={() => setShowCreate(false)}
           onCreate={async (dto) => {
             try { await createDriver.mutateAsync(dto); toast.success('Driver added'); setShowCreate(false); rd(); }
-            catch (e: any) { toast.error(e?.response?.data?.error?.message ?? 'Failed'); }
+            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
           }}
           pending={createDriver.isPending}
         />
@@ -379,7 +380,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           onClose={() => setShowCreate(false)}
           onCreate={async (dto) => {
             try { await createRoute.mutateAsync(dto); toast.success('Route added'); setShowCreate(false); rr(); }
-            catch (e: any) { toast.error(e?.response?.data?.error?.message ?? 'Failed'); }
+            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
           }}
           pending={createRoute.isPending}
         />
@@ -389,7 +390,11 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
 }
 
 // ─── Add-modals ────────────────────────────────────────────────────────────
-const VEHICLE_TYPES = ['BUS_LARGE', 'BUS_MEDIUM', 'VAN', 'SEDAN', 'SUV', 'COACH'];
+// The canonical TransportType enum. SEDAN/SUV/COACH were accepted only as
+// aliases the service rewrote (SEDAN/SUV -> PRIVATE_CAR, COACH -> BUS_LARGE),
+// so a stored PRIVATE_CAR or BUS_SMALL matched no option and the field rendered
+// blank on the way back.
+const VEHICLE_TYPES = ['BUS_SMALL', 'BUS_MEDIUM', 'BUS_LARGE', 'VAN', 'PRIVATE_CAR'];
 const MOVEMENT_TYPES = ['AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'MAKKAH_MADINAH', 'MADINAH_MAKKAH', 'ZIYARAT', 'LOCAL', 'MASHAER_MINA', 'MASHAER_ARAFAT', 'MASHAER_MUZDALIFAH'];
 const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none bg-white';
 

@@ -96,3 +96,7 @@ uploads/
 # KVM production secrets and local backups — never committed
 infrastructure/kvm/.env.production
 infrastructure/kvm/backups/
+
+# Claude Code local settings — machine-specific, and has historically captured
+# approved shell commands verbatim (including their credentials). Never tracked.
+.claude/settings.local.json

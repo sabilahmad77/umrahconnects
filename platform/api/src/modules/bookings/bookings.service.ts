@@ -41,11 +41,17 @@ export class BookingsService {
   // ── Bookings ──────────────────────────────────────────────────────────────────
 
   async findAll(tenantId: string, query: any) {
-    const { status, packageId, page = 1, limit = 20 } = query;
+    const { status, packageId, search, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;
     const where: any = { tenantId };
     if (status) where.status = status;
     if (packageId) where.packageId = packageId;
+    if (search) {
+      where.OR = [
+        { bookingRef: { contains: search, mode: 'insensitive' } },
+        { package: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
     const [items, total] = await Promise.all([
       this.prisma.booking.findMany({
         where, skip, take: +limit, orderBy: { createdAt: 'desc' },

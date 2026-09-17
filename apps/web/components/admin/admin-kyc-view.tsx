@@ -1,9 +1,11 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Button , QueryFailure } from '@/components/ui/system';
 
 import { useState } from 'react';
 import { ShieldCheck, RefreshCw, Loader2, AlertCircle, CheckCircle2, XCircle, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { openKycDocument } from '@/lib/private-documents';
 import { cn } from '@/lib/utils';
 import { useAdminKyc, useApproveKyc, useRejectKyc } from '@/hooks/use-admin';
 
@@ -76,8 +78,17 @@ export function AdminKycView() {
                   <div className="mt-3 pt-3 border-t border-gray-50">
                     <p className="text-xs font-semibold text-gray-600 mb-1">Documents ({k.documents.length})</p>
                     <div className="flex flex-wrap gap-1">
+                      {/* KYC files are private objects; the server mints a short-lived
+                          signed URL after checking the reviewer may see them. Listing
+                          the names alone left reviewers approving documents sight unseen. */}
                       {k.documents.map((d: any, i: number) => (
-                        <span key={i} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{d.name ?? d.type ?? `Document ${i + 1}`}</span>
+                        <Button key={i} variant="quiet" type="button"
+                          onClick={() => openKycDocument(k.id, i, (m) => toast.error(m))}
+                          aria-label={`Open ${d.name ?? d.type ?? `document ${i + 1}`}`}
+                          className="text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-0.5 rounded-full underline-offset-2 hover:underline"
+                        >
+                          {d.name ?? d.type ?? `Document ${i + 1}`}
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -94,7 +105,7 @@ export function AdminKycView() {
                         await reject.mutateAsync({ id: k.id, reason });
                         toast.success('Rejected');
                         refetch();
-                      } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
                     >
                       <XCircle className="h-3 w-3" /> Reject
@@ -104,7 +115,7 @@ export function AdminKycView() {
                         await approve.mutateAsync({ id: k.id });
                         toast.success('Approved + tenant activated');
                         refetch();
-                      } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                      } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white"
                     >
                       <CheckCircle2 className="h-3 w-3" /> Approve

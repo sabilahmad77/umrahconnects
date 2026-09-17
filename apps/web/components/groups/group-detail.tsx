@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Textarea, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -160,7 +161,7 @@ function DocumentsTab({ groupId }: { groupId: string }) {
                 setName(''); setUrl(''); setDescription('');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={add.isPending || !name.trim() || !url.trim()}
@@ -196,7 +197,7 @@ function DocumentsTab({ groupId }: { groupId: string }) {
                       if (!confirm('Delete this document?')) return;
                       await del.mutateAsync(d.id);
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="p-1.5 rounded hover:bg-red-50 text-red-700"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -346,7 +347,7 @@ function MembersTab({ groupId }: { groupId: string }) {
       toast.success('Invite created');
       setEmail(''); setMessage('');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to invite');
+      toast.error(apiErrorMessage(e, 'Failed to invite'));
     }
   };
 
@@ -409,7 +410,7 @@ function MembersTab({ groupId }: { groupId: string }) {
                       await removeMember.mutateAsync({ groupId, userId: m.userId });
                       toast.success('Removed');
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="p-1.5 rounded hover:bg-red-50 text-red-700"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -437,7 +438,7 @@ function DiscussionTab({ groupId }: { groupId: string }) {
       setBody('');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to post');
+      toast.error(apiErrorMessage(e, 'Failed to post'));
     }
   };
 
@@ -481,7 +482,7 @@ function DiscussionTab({ groupId }: { groupId: string }) {
                     if (!confirm('Delete this post?')) return;
                     await deletePost.mutateAsync({ groupId, postId: p.id });
                     refetch();
-                  } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                  } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                   className="p-1.5 rounded hover:bg-red-50 text-red-700"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -534,7 +535,7 @@ function CommentsThread({ postId }: { postId: string }) {
                 await createComment.mutateAsync({ postId, body: body.trim() });
                 setBody('');
                 refetch();
-              } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+              } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
               className="text-xs px-3 py-2 bg-brand-500 text-white rounded-lg disabled:opacity-50"
               disabled={createComment.isPending || !body.trim()}
             >
@@ -565,7 +566,7 @@ function PollsTab({ groupId }: { groupId: string }) {
       setQuestion(''); setOptionsText('');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to create poll');
+      toast.error(apiErrorMessage(e, 'Failed to create poll'));
     }
   };
 
@@ -617,7 +618,7 @@ function PollsTab({ groupId }: { groupId: string }) {
                           onClick={async () => { try {
                             if (p.status === 'CLOSED') return;
                             await vote.mutateAsync({ groupId, pollId: p.id, optionIndices: [opt.index] });
-                          } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                          } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                           disabled={p.status === 'CLOSED'}
                           className="w-full text-left rounded-lg border border-gray-200 px-3 py-2 hover:border-brand-300 transition-colors relative overflow-hidden disabled:opacity-50"
                         >
@@ -662,7 +663,7 @@ function NotesTab({ groupId }: { groupId: string }) {
       setTitle(''); setBody('');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -725,7 +726,7 @@ function NotesTab({ groupId }: { groupId: string }) {
                     onClick={async () => { try {
                       await updateNote.mutateAsync({ noteId: n.id, pinned: !n.pinned });
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="p-1.5 rounded hover:bg-gray-100"
                     title="Toggle pin"
                   >
@@ -736,7 +737,7 @@ function NotesTab({ groupId }: { groupId: string }) {
                       if (!confirm('Delete this note?')) return;
                       await deleteNote.mutateAsync(n.id);
                       refetch();
-                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                    } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                     className="p-1.5 rounded hover:bg-red-50 text-red-700"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -781,7 +782,7 @@ function SettingsTab({ group, refetch }: { group: any; refetch: () => void }) {
       toast.success('Group saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to save');
+      toast.error(apiErrorMessage(e, 'Failed to save'));
     }
   };
 
@@ -792,7 +793,7 @@ function SettingsTab({ group, refetch }: { group: any; refetch: () => void }) {
       toast.success('Group deleted');
       router.push('/groups');
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed to delete');
+      toast.error(apiErrorMessage(e, 'Failed to delete'));
     }
   };
 

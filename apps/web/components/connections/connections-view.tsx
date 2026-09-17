@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { Avatar, Button } from '@/components/ui/system';
 
 import { Users, UserPlus, Check, X, Mail } from 'lucide-react';
@@ -47,7 +48,7 @@ export function ConnectionsView() {
                 </div>
                 <div className="flex gap-1.5 shrink-0">
                   <Button busy={acceptM.isPending} variant="quiet" type="button"
-                    onClick={async () => { try { await acceptM.mutateAsync(r.connectionId); toast.success('Connected'); } catch (e: any) { toast.error(e?.response?.data?.error?.message ?? 'Failed'); } }}
+                    onClick={async () => { try { await acceptM.mutateAsync(r.connectionId); toast.success('Connected'); } catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); } }}
                     className="flex items-center gap-1 text-xs px-3 py-1.5 bg-saudi-500 text-white rounded-lg hover:bg-saudi-600"
                   >
                     <Check className="h-3 w-3" /> Accept

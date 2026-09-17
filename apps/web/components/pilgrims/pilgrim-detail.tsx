@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { FieldInput as LabeledInput } from '@/components/ui/system';
 import { Select, Input, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
@@ -17,10 +18,13 @@ import { useUpdatePilgrim, useDeletePilgrim, useBookings } from '@/hooks/use-api
 import {
   usePilgrim, useAddPilgrimDocument, useAssignPilgrimToBooking,
 } from '@/hooks/use-pilgrims';
+import { PILGRIM_STATUSES } from '@/lib/statuses';
 
 type TabKey = 'overview' | 'documents' | 'bookings' | 'edit';
 
-const DOC_TYPES = ['PASSPORT', 'ID_CARD', 'PHOTO', 'VACCINATION', 'YELLOW_FEVER', 'VISA', 'OTHER'];
+// Mirrors DocumentType in platform/api/src/modules/pilgrims/dto/add-document.dto.ts.
+// ID_CARD and YELLOW_FEVER are not members and were rejected on submit.
+const DOC_TYPES = ['PASSPORT', 'VISA', 'VACCINATION', 'MEDICAL', 'PHOTO', 'MAHRAM_CERT', 'NISNOMORCARD', 'OTHER'];
 
 export function PilgrimDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -76,7 +80,7 @@ export function PilgrimDetail({ id }: { id: string }) {
               toast.success('Pilgrim archived');
               router.push('/pilgrims');
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-xl"
@@ -215,7 +219,7 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
                 setForm({ type: 'PASSPORT', fileUrl: '', fileName: '', expiresAt: '' });
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={add.isPending}
@@ -281,7 +285,7 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
                 setSelected('');
                 refetch();
               } catch (e: any) {
-                toast.error(e?.response?.data?.error?.message ?? 'Failed');
+                toast.error(apiErrorMessage(e, 'Failed'));
               }
             }}
             disabled={!selected || assign.isPending}
@@ -355,7 +359,10 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
         <label className="block">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
           <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
-            {['PROSPECT', 'LEAD', 'CONFIRMED', 'DOCUMENTS_COLLECTING', 'VISA_PROCESSING', 'PRE_DEPARTURE', 'IN_KSA', 'COMPLETED', 'CANCELLED'].map((s) => (
+            {/* The real PilgrimStatus enum. Six of the values that used to be here
+                (CONFIRMED, DOCUMENTS_COLLECTING, VISA_PROCESSING, PRE_DEPARTURE,
+                IN_KSA, COMPLETED) do not exist and were rejected on save. */}
+            {PILGRIM_STATUSES.map((s) => (
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </Select>
@@ -372,13 +379,16 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
               await update.mutateAsync({
                 id: p.id,
                 ...form,
+                // An empty string is not a valid email; the validator only skips
+                // null/undefined, so a pilgrim with no email could never be saved.
+                email: form.email || undefined,
                 passportExpiry: form.passportExpiry || null,
                 dateOfBirth: form.dateOfBirth || null,
               });
               toast.success('Pilgrim saved');
               refetch();
             } catch (e: any) {
-              toast.error(e?.response?.data?.error?.message ?? 'Failed');
+              toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
           disabled={update.isPending}

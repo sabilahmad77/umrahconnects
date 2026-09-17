@@ -9,7 +9,10 @@ export function useNotifications(params: { unreadOnly?: boolean; page?: number; 
     queryKey: ['notifications', params],
     queryFn: async () => {
       const { data } = await apiClient.get('/notifications', { params });
-      return data as { items: any[]; total: number; unread: number; page: number; limit: number };
+      // The controller wraps the payload as { success, data }. Returning the
+      // envelope left `items` undefined, so the bell always showed "No
+      // notifications yet" and an unread count of zero.
+      return data.data as { items: any[]; total: number; unread: number; page: number; limit: number };
     },
     refetchInterval: 30_000, // poll every 30s
   });

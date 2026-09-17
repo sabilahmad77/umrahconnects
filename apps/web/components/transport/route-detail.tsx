@@ -1,4 +1,5 @@
 'use client';
+import { apiErrorMessage } from '@/lib/api-error';
 import { FieldInput as LabeledInput } from '@/components/ui/system';
 import { Select, Textarea, Input , Button , QueryFailure } from '@/components/ui/system';
 
@@ -172,7 +173,6 @@ function EditTab({ r, refetch }: { r: any; refetch: () => void }) {
     pricePerVehicle: r.pricePerVehicleCents != null ? String(Number(r.pricePerVehicleCents) / 100) : '',
     currency: r.currency ?? 'SAR',
     totalSeats: r.totalSeats ?? '',
-    bookedSeats: r.bookedSeats ?? 0,
     vehicleId: r.vehicleId ?? '',
     driverId: r.driverId ?? '',
     status: r.status ?? 'ACTIVE',
@@ -187,7 +187,6 @@ function EditTab({ r, refetch }: { r: any; refetch: () => void }) {
         distanceKm: form.distanceKm ? Number(form.distanceKm) : null,
         durationMins: form.durationMins ? Number(form.durationMins) : null,
         totalSeats: form.totalSeats ? Number(form.totalSeats) : null,
-        bookedSeats: Number(form.bookedSeats || 0),
         pricePerSeat: form.pricePerSeat ? Number(form.pricePerSeat) : null,
         pricePerVehicle: form.pricePerVehicle ? Number(form.pricePerVehicle) : null,
         vehicleId: form.vehicleId || null,
@@ -196,7 +195,7 @@ function EditTab({ r, refetch }: { r: any; refetch: () => void }) {
       toast.success('Route saved');
       refetch();
     } catch (e: any) {
-      toast.error(e?.response?.data?.error?.message ?? 'Failed');
+      toast.error(apiErrorMessage(e, 'Failed'));
     }
   };
 
@@ -226,7 +225,8 @@ function EditTab({ r, refetch }: { r: any; refetch: () => void }) {
           <LabeledInput label="Distance (km)" value={String(form.distanceKm)} onChange={(v) => setForm({ ...form, distanceKm: v as any })} type="number" />
           <LabeledInput label="Duration (min)" value={String(form.durationMins)} onChange={(v) => setForm({ ...form, durationMins: v as any })} type="number" />
           <LabeledInput label="Total seats" value={String(form.totalSeats)} onChange={(v) => setForm({ ...form, totalSeats: v as any })} type="number" />
-          <LabeledInput label="Booked seats" value={String(form.bookedSeats)} onChange={(v) => setForm({ ...form, bookedSeats: v as any })} type="number" />
+          {/* Booked seats is a server-owned counter maintained by bookings; a
+              value sent here is ignored, so it is not offered as an input. */}
           <LabeledInput label={`Price per seat (${form.currency})`} value={form.pricePerSeat} onChange={(v) => setForm({ ...form, pricePerSeat: v })} type="number" />
           <LabeledInput label={`Price per vehicle (${form.currency})`} value={form.pricePerVehicle} onChange={(v) => setForm({ ...form, pricePerVehicle: v })} type="number" />
           <label className="block">
