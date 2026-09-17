@@ -125,6 +125,9 @@ export class StorageService {
   }
 
   private static safePrefix(prefix: string) {
+    if (typeof prefix !== 'string' || /\.\.|^[/\\]|\\/.test(prefix)) {
+      throw new BadRequestException('Invalid storage location');
+    }
     const clean = prefix.replace(/[^A-Za-z0-9/_-]/g, '').replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
     if (!clean || clean.split('/').some((s) => s === '' || s === '.' || s === '..')) {
       throw new BadRequestException('Invalid storage location');

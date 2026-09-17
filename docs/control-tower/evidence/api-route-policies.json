@@ -1,0 +1,2806 @@
+{
+  "generatedAt": "2026-09-17T16:53:19.591Z",
+  "total": 325,
+  "summary": {
+    "permissions": 260,
+    "authenticated": 40,
+    "public": 25
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/admin/audit-logs",
+      "handler": "AdminController.listAuditLogs",
+      "policy": "permissions",
+      "permissions": [
+        "platform:audit:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/bookings",
+      "handler": "AdminController.listAllBookings",
+      "policy": "permissions",
+      "permissions": [
+        "platform:booking:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/finance",
+      "handler": "AdminController.getFinanceSummary",
+      "policy": "permissions",
+      "permissions": [
+        "platform:finance:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/kyc",
+      "handler": "AdminController.listKyc",
+      "policy": "permissions",
+      "permissions": [
+        "platform:kyc:review"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/kyc",
+      "handler": "AdminController.createKyc",
+      "policy": "permissions",
+      "permissions": [
+        "platform:kyc:review"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/kyc/:id",
+      "handler": "AdminController.findKyc",
+      "policy": "permissions",
+      "permissions": [
+        "platform:kyc:review"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/kyc/:id/approve",
+      "handler": "AdminController.approveKyc",
+      "policy": "permissions",
+      "permissions": [
+        "platform:kyc:review"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/kyc/:id/reject",
+      "handler": "AdminController.rejectKyc",
+      "policy": "permissions",
+      "permissions": [
+        "platform:kyc:review"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/listings",
+      "handler": "AdminController.listAllListings",
+      "policy": "permissions",
+      "permissions": [
+        "platform:marketplace:moderate"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/listings/:id",
+      "handler": "AdminController.removeListing",
+      "policy": "permissions",
+      "permissions": [
+        "platform:marketplace:moderate"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/listings/:id/approve",
+      "handler": "AdminController.approveListing",
+      "policy": "permissions",
+      "permissions": [
+        "platform:marketplace:moderate"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/permissions",
+      "handler": "AdminController.listPermissions",
+      "policy": "permissions",
+      "permissions": [
+        "platform:role:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/roles",
+      "handler": "AdminController.listRoles",
+      "policy": "permissions",
+      "permissions": [
+        "platform:role:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/roles/:id",
+      "handler": "AdminController.findRole",
+      "policy": "permissions",
+      "permissions": [
+        "platform:role:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/settings",
+      "handler": "AdminController.getSettings",
+      "policy": "permissions",
+      "permissions": [
+        "platform:settings:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/stats",
+      "handler": "AdminController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/tenants",
+      "handler": "AdminController.listTenants",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:read"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/tenants/:id",
+      "handler": "AdminController.archiveTenant",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/tenants/:id",
+      "handler": "AdminController.findTenant",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/tenants/:id/status",
+      "handler": "AdminController.setTenantStatus",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/tenants/export",
+      "handler": "AdminController.exportTenants",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users",
+      "handler": "AdminController.listUsers",
+      "policy": "permissions",
+      "permissions": [
+        "platform:user:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/:id/force-logout",
+      "handler": "AdminController.forceLogout",
+      "policy": "permissions",
+      "permissions": [
+        "platform:user:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/:id/roles",
+      "handler": "AdminController.assignRole",
+      "policy": "permissions",
+      "permissions": [
+        "platform:role:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/admin/users/:id/roles/:roleId",
+      "handler": "AdminController.removeRole",
+      "policy": "permissions",
+      "permissions": [
+        "platform:role:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/admin/users/:id/status",
+      "handler": "AdminController.setUserStatus",
+      "policy": "permissions",
+      "permissions": [
+        "platform:user:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/admin/users/export",
+      "handler": "AdminController.exportUsers",
+      "policy": "permissions",
+      "permissions": [
+        "platform:user:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/auth/change-password",
+      "handler": "AuthController.changePassword",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "handler": "AuthController.forgotPassword",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/auth/google/callback",
+      "handler": "AuthController.googleCallback",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/google/exchange",
+      "handler": "AuthController.googleExchange",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/google/link-intent",
+      "handler": "AuthController.googleLinkIntent",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/auth/google/start",
+      "handler": "AuthController.googleStart",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/auth/google/status",
+      "handler": "AuthController.googleStatus",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/login",
+      "handler": "AuthController.login",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout",
+      "handler": "AuthController.logout",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/logout-all",
+      "handler": "AuthController.logoutAll",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/auth/me",
+      "handler": "AuthController.me",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/otp/send",
+      "handler": "AuthController.sendOtp",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/otp/verify",
+      "handler": "AuthController.verifyOtp",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/refresh",
+      "handler": "AuthController.refresh",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/register",
+      "handler": "AuthController.register",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "handler": "AuthController.resetPassword",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/verify-email/confirm",
+      "handler": "AuthController.confirmVerification",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/auth/verify-email/request",
+      "handler": "AuthController.requestVerification",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/bookings",
+      "handler": "BookingsController.findAll",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/bookings",
+      "handler": "BookingsController.create",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/:id",
+      "handler": "BookingsController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/bookings/:id",
+      "handler": "BookingsController.update",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/bookings/:id/assign-group",
+      "handler": "BookingsController.assignGroup",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/bookings/:id/assign-package",
+      "handler": "BookingsController.assignPackage",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/:id/cancel",
+      "handler": "BookingsController.cancel",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/:id/generate-invoice",
+      "handler": "BookingsController.generateInvoice",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/bookings/:id/payment",
+      "handler": "BookingsController.setPayment",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/bookings/:id/pilgrims",
+      "handler": "BookingsController.addPilgrim",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/bookings/:id/pilgrims/:pilgrimId",
+      "handler": "BookingsController.removePilgrim",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/bookings/:id/status",
+      "handler": "BookingsController.updateStatus",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bookings/stats",
+      "handler": "BookingsController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "booking:booking:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/submissions",
+      "handler": "ComplianceController.findSubmissions",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/submissions",
+      "handler": "ComplianceController.createSubmission",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas",
+      "handler": "ComplianceController.findVisas",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/visas",
+      "handler": "ComplianceController.createVisa",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/compliance/visas/:id",
+      "handler": "ComplianceController.deleteVisa",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/:id",
+      "handler": "ComplianceController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id",
+      "handler": "ComplianceController.updateVisa",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id/approve",
+      "handler": "ComplianceController.approveVisa",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/:id/documents",
+      "handler": "ComplianceController.listDocuments",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/visas/:id/documents",
+      "handler": "ComplianceController.addDocument",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/compliance/visas/:id/documents/:docId",
+      "handler": "ComplianceController.removeDocument",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/:id/documents/:docId",
+      "handler": "ComplianceController.findDocument",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id/documents/:docId",
+      "handler": "ComplianceController.updateDocument",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id/documents/:docId/reject",
+      "handler": "ComplianceController.rejectDocument",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id/documents/:docId/verify",
+      "handler": "ComplianceController.verifyDocument",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/:id/documents/:docId/versions",
+      "handler": "ComplianceController.documentVersions",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/compliance/visas/:id/documents/:docId/versions",
+      "handler": "ComplianceController.uploadDocumentVersion",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id/reject",
+      "handler": "ComplianceController.rejectVisa",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/compliance/visas/:id/submit",
+      "handler": "ComplianceController.submitVisa",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/dashboard-stats",
+      "handler": "ComplianceController.getDashboardStats",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/documents",
+      "handler": "ComplianceController.allDocuments",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/documents/stats",
+      "handler": "ComplianceController.documentStats",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/compliance/visas/stats",
+      "handler": "ComplianceController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/connections/",
+      "handler": "ConnectionsController.list",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/connections/:id/accept",
+      "handler": "ConnectionsController.accept",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/connections/:id/reject",
+      "handler": "ConnectionsController.reject",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/connections/pending",
+      "handler": "ConnectionsController.pending",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/connections/request",
+      "handler": "ConnectionsController.request",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/connections/status/:userId",
+      "handler": "ConnectionsController.status",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/connections/with/:userId",
+      "handler": "ConnectionsController.remove",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/documents/kyc",
+      "handler": "DocumentsController.uploadKyc",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/documents/kyc/:kycId/:index/url",
+      "handler": "DocumentsController.kycUrl",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/documents/signed/:token",
+      "handler": "DocumentsController.signed",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/documents/visa/:docId/url",
+      "handler": "DocumentsController.visaDocumentUrl",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/budget-plans",
+      "handler": "FinanceController.findBudgetPlans",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/finance/budget-plans",
+      "handler": "FinanceController.createBudgetPlan",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:create"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/finance/budget-plans/:id",
+      "handler": "FinanceController.deleteBudgetPlan",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/budget-plans/:id",
+      "handler": "FinanceController.findBudgetPlan",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/finance/budget-plans/:id",
+      "handler": "FinanceController.updateBudgetPlan",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/dashboard-stats",
+      "handler": "FinanceController.getDashboardStats",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/invoices",
+      "handler": "FinanceController.findInvoices",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/finance/invoices",
+      "handler": "FinanceController.createInvoice",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:create"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/finance/invoices/:id",
+      "handler": "FinanceController.deleteInvoice",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/invoices/:id",
+      "handler": "FinanceController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/finance/invoices/:id",
+      "handler": "FinanceController.updateInvoice",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:create"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/finance/invoices/:id/issue",
+      "handler": "FinanceController.issue",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:approve"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/finance/invoices/:id/payments",
+      "handler": "FinanceController.recordPayment",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:process"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/finance/invoices/:id/status",
+      "handler": "FinanceController.setStatus",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:approve"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/finance/invoices/:id/void",
+      "handler": "FinanceController.void",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:approve"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/payments",
+      "handler": "FinanceController.findPayments",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/payments/:id",
+      "handler": "FinanceController.findPayment",
+      "policy": "permissions",
+      "permissions": [
+        "finance:invoice:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/finance/payments/:id",
+      "handler": "FinanceController.updatePayment",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:process"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/finance/payments/:id/refund",
+      "handler": "FinanceController.refundPayment",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:refund"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/stats",
+      "handler": "FinanceController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/finance/summary",
+      "handler": "FinanceController.getSummary",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/",
+      "handler": "GroupsController.findAll",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/",
+      "handler": "GroupsController.create",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/groups/:id",
+      "handler": "GroupsController.remove",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id",
+      "handler": "GroupsController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/groups/:id",
+      "handler": "GroupsController.update",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/documents",
+      "handler": "GroupsController.listDocuments",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/documents",
+      "handler": "GroupsController.addDocument",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/incidents",
+      "handler": "GroupsController.getIncidents",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/incidents",
+      "handler": "GroupsController.createIncident",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/groups/:id/incidents/:incidentId",
+      "handler": "GroupsController.updateIncident",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/invites",
+      "handler": "GroupsController.listInvites",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/invites",
+      "handler": "GroupsController.createInvite",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/join",
+      "handler": "GroupsController.joinGroup",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/leave",
+      "handler": "GroupsController.leaveGroup",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/members",
+      "handler": "GroupsController.listMembers",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/members",
+      "handler": "GroupsController.addMember",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/groups/:id/members/:userId",
+      "handler": "GroupsController.removeMember",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/notes",
+      "handler": "GroupsController.listNotes",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/notes",
+      "handler": "GroupsController.createNote",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/pilgrims",
+      "handler": "GroupsController.addPilgrim",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/polls",
+      "handler": "GroupsController.listPolls",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/polls",
+      "handler": "GroupsController.createPoll",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/posts",
+      "handler": "GroupsController.listPosts",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/:id/posts",
+      "handler": "GroupsController.createPost",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/:id/related",
+      "handler": "GroupsController.getRelated",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/groups/documents/:documentId",
+      "handler": "GroupsController.deleteDocument",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/invites/:inviteId/respond",
+      "handler": "GroupsController.respondInvite",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/groups/mine",
+      "handler": "GroupsController.findMine",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/groups/notes/:noteId",
+      "handler": "GroupsController.deleteNote",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/groups/notes/:noteId",
+      "handler": "GroupsController.updateNote",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/polls/:pollId/close",
+      "handler": "GroupsController.closePoll",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/polls/:pollId/vote",
+      "handler": "GroupsController.vote",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/groups/posts/:postId",
+      "handler": "GroupsController.deletePost",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/posts/:postId/comments",
+      "handler": "GroupsController.listComments",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/groups/posts/:postId/comments",
+      "handler": "GroupsController.createComment",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/public",
+      "handler": "GroupsController.findPublic",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/groups/stats",
+      "handler": "GroupsController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health/",
+      "handler": "HealthController.health",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/health/ready",
+      "handler": "HealthController.ready",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/",
+      "handler": "HotelsController.findAll",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/hotels/",
+      "handler": "HotelsController.create",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/hotels/:id",
+      "handler": "HotelsController.remove",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/:id",
+      "handler": "HotelsController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/hotels/:id",
+      "handler": "HotelsController.update",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/:id/allotments",
+      "handler": "HotelsController.getAllotments",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/hotels/:id/allotments",
+      "handler": "HotelsController.createAllotment",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/:id/assignments",
+      "handler": "HotelsController.getAssignments",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:assignment:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/hotels/:id/assignments",
+      "handler": "HotelsController.createAssignment",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:assignment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/:id/room-types",
+      "handler": "HotelsController.getRoomTypes",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/hotels/:id/room-types",
+      "handler": "HotelsController.addRoomType",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/:id/rooms",
+      "handler": "HotelsController.getRooms",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/hotels/:id/rooms",
+      "handler": "HotelsController.createRoom",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/availability",
+      "handler": "HotelsController.checkAvailability",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/bookings",
+      "handler": "HotelsController.getHotelBookings",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/hotels/bookings",
+      "handler": "HotelsController.createHotelBooking",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/bookings/:bookingId",
+      "handler": "HotelsController.findHotelBooking",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/hotels/bookings/:bookingId",
+      "handler": "HotelsController.updateHotelBooking",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/hotels/room-types/:roomTypeId",
+      "handler": "HotelsController.updateRoomType",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/hotels/rooms/:roomId",
+      "handler": "HotelsController.deleteRoom",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/hotels/rooms/:roomId",
+      "handler": "HotelsController.updateRoom",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/stats",
+      "handler": "HotelsController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/inquiries/",
+      "handler": "InquiriesController.findAll",
+      "policy": "permissions",
+      "permissions": [
+        "platform:inquiry:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/inquiries/",
+      "handler": "InquiriesController.create",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/inquiries/:id/status",
+      "handler": "InquiriesController.updateStatus",
+      "policy": "permissions",
+      "permissions": [
+        "platform:inquiry:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/bookings",
+      "handler": "MarketplaceController.listMyBookings",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/marketplace/bookings/:id",
+      "handler": "MarketplaceController.updateBooking",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/bookings/mine",
+      "handler": "MarketplaceController.listMyTravelerBookings",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/inquiries",
+      "handler": "MarketplaceController.listMyInquiries",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/marketplace/inquiries/:id",
+      "handler": "MarketplaceController.respondInquiry",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/listings",
+      "handler": "MarketplaceController.findAllListings",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/listings",
+      "handler": "MarketplaceController.createListing",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/marketplace/listings/:id",
+      "handler": "MarketplaceController.deactivateListing",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/listings/:id",
+      "handler": "MarketplaceController.findOneListing",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/marketplace/listings/:id",
+      "handler": "MarketplaceController.updateListing",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/listings/:id/bookings",
+      "handler": "MarketplaceController.listListingBookings",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/listings/:id/bookings",
+      "handler": "MarketplaceController.createBooking",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/listings/:id/inquiries",
+      "handler": "MarketplaceController.listInquiries",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/listings/:id/inquiries",
+      "handler": "MarketplaceController.createInquiry",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/listings/mine",
+      "handler": "MarketplaceController.findMyListings",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/quotes",
+      "handler": "MarketplaceController.findMyQuotes",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/quotes",
+      "handler": "MarketplaceController.createQuote",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/marketplace/quotes/:id",
+      "handler": "MarketplaceController.respondToQuote",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/marketplace/quotes/:id/accept",
+      "handler": "MarketplaceController.acceptQuote",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/requests/",
+      "handler": "MarketplaceRequestsController.create",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/requests/:id",
+      "handler": "MarketplaceRequestsController.findOne",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/requests/:id/close",
+      "handler": "MarketplaceRequestsController.close",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/requests/:id/offers",
+      "handler": "MarketplaceRequestsController.createOffer",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/requests/:id/offers/:offerId/accept",
+      "handler": "MarketplaceRequestsController.acceptOffer",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/requests/:id/offers/:offerId/convert-to-booking",
+      "handler": "MarketplaceRequestsController.convertOfferToBooking",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/requests/:id/offers/:offerId/reject",
+      "handler": "MarketplaceRequestsController.rejectOffer",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/requests/mine",
+      "handler": "MarketplaceRequestsController.mine",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/requests/offers/mine",
+      "handler": "MarketplaceRequestsController.myOffers",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/requests/open",
+      "handler": "MarketplaceRequestsController.open",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/vendors",
+      "handler": "MarketplaceController.findAllVendors",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/vendors",
+      "handler": "MarketplaceController.createVendor",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/vendors/:id",
+      "handler": "MarketplaceController.findOneVendor",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/marketplace/vendors/:id/ratings",
+      "handler": "MarketplaceController.rateVendor",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/vendors/mine",
+      "handler": "MarketplaceController.findMyVendor",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/",
+      "handler": "NotificationsController.list",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "PATCH",
+      "path": "/notifications/read",
+      "handler": "NotificationsController.markRead",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/read-all",
+      "handler": "NotificationsController.markAllRead",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/onboarding/organization",
+      "handler": "OnboardingController.create",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/packages",
+      "handler": "BookingsController.findAllPackages",
+      "policy": "permissions",
+      "permissions": [
+        "booking:package:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/packages",
+      "handler": "BookingsController.createPackage",
+      "policy": "permissions",
+      "permissions": [
+        "booking:package:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/packages/:id",
+      "handler": "BookingsController.findOnePackage",
+      "policy": "permissions",
+      "permissions": [
+        "booking:package:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/packages/:id",
+      "handler": "BookingsController.updatePackage",
+      "policy": "permissions",
+      "permissions": [
+        "booking:package:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/:id",
+      "handler": "PaymentsController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/:id/refund",
+      "handler": "PaymentsController.refund",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:refund"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/:id/transactions",
+      "handler": "PaymentsController.transactions",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/checkout",
+      "handler": "PaymentsController.checkout",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/payments/checkout/:id",
+      "handler": "PaymentsController.checkoutStatus",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/payments/checkout/:id/sandbox-complete",
+      "handler": "PaymentsController.sandboxComplete",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/payments/intents",
+      "handler": "PaymentsController.createIntent",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:process"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/intents/:id/confirm",
+      "handler": "PaymentsController.confirmIntent",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:process"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/providers",
+      "handler": "PaymentsController.providers",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/payments/webhook/:provider",
+      "handler": "PaymentsController.webhook",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/pilgrims/",
+      "handler": "PilgrimsController.findAll",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pilgrims/",
+      "handler": "PilgrimsController.create",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:create"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/pilgrims/:id",
+      "handler": "PilgrimsController.remove",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:delete"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/pilgrims/:id",
+      "handler": "PilgrimsController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/pilgrims/:id",
+      "handler": "PilgrimsController.update",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pilgrims/:id/bookings",
+      "handler": "PilgrimsController.assignToBooking",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pilgrims/:id/documents",
+      "handler": "PilgrimsController.addDocument",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/pilgrims/:id/family-group",
+      "handler": "PilgrimsController.assignToFamilyGroup",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/pilgrims/export",
+      "handler": "PilgrimsController.export",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/pilgrims/stats",
+      "handler": "PilgrimsController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/plugins/",
+      "handler": "PluginHostController.list",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:read"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/plugins/:pluginId",
+      "handler": "PluginHostController.disable",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/plugins/:pluginId/install",
+      "handler": "PluginHostController.install",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/rbac/assign",
+      "handler": "RbacController.assignRole",
+      "policy": "permissions",
+      "permissions": [
+        "core:role:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/rbac/assign/:userId/:roleId",
+      "handler": "RbacController.revokeRole",
+      "policy": "permissions",
+      "permissions": [
+        "core:role:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/rbac/my-permissions",
+      "handler": "RbacController.myPermissions",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/rbac/roles",
+      "handler": "RbacController.roles",
+      "policy": "permissions",
+      "permissions": [
+        "core:role:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/rbac/roles",
+      "handler": "RbacController.createRole",
+      "policy": "permissions",
+      "permissions": [
+        "core:role:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/bookings",
+      "handler": "ReportsController.getBookingAnalytics",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/finance",
+      "handler": "ReportsController.getFinanceAnalytics",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/hotels",
+      "handler": "ReportsController.getHotelAnalytics",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/overview",
+      "handler": "ReportsController.getOverview",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/pilgrims",
+      "handler": "ReportsController.getPilgrimAnalytics",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/visa",
+      "handler": "ReportsController.getVisaAnalytics",
+      "policy": "permissions",
+      "permissions": [
+        "finance:report:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/social/accounts/:id/follow",
+      "handler": "SocialController.toggleFollow",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/accounts/me",
+      "handler": "SocialController.getMyAccount",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/social/accounts/me",
+      "handler": "SocialController.updateMyAccount",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/conversations",
+      "handler": "SocialController.listConversations",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/social/conversations/:id/messages",
+      "handler": "SocialController.listMessages",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/social/conversations/:id/messages",
+      "handler": "SocialController.sendMessage",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/social/conversations/open",
+      "handler": "SocialController.openConversation",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/social/discover/groups",
+      "handler": "SocialController.discoverGroups",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/discover/people",
+      "handler": "SocialController.discoverPeople",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/discover/trending",
+      "handler": "SocialController.discoverTrending",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/feed",
+      "handler": "SocialController.getFeed",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/social/posts",
+      "handler": "SocialController.createPost",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/social/posts/:id",
+      "handler": "SocialController.deletePost",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/posts/:id",
+      "handler": "SocialController.getPost",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/social/posts/:id",
+      "handler": "SocialController.updatePost",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/social/posts/:id/comments",
+      "handler": "SocialController.addComment",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/social/posts/:id/comments/:commentId",
+      "handler": "SocialController.deleteComment",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/social/posts/:id/react",
+      "handler": "SocialController.react",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/social/posts/:id/save",
+      "handler": "SocialController.toggleSavePost",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/social/saved-posts",
+      "handler": "SocialController.listSavedPosts",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/",
+      "handler": "TenantController.create",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/:id",
+      "handler": "TenantController.getTenant",
+      "policy": "permissions",
+      "permissions": [
+        "platform:tenant:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/me",
+      "handler": "TenantController.getMyTenant",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/tenants/me",
+      "handler": "TenantController.updateMyTenant",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/me/kyc",
+      "handler": "TenantController.myKyc",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/tenants/me/kyc",
+      "handler": "TenantController.submitKyc",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/me/plugins",
+      "handler": "TenantController.getPlugins",
+      "policy": "permissions",
+      "permissions": [
+        "core:tenant:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/me/sub-agents",
+      "handler": "TenantController.getSubAgents",
+      "policy": "permissions",
+      "permissions": [
+        "core:sub-agent:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/tenants/slug/:slug",
+      "handler": "TenantController.getBySlug",
+      "policy": "public",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/transport/assignments",
+      "handler": "TransportController.findAssignments",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/assignments",
+      "handler": "TransportController.createAssignment",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/assignments/:id",
+      "handler": "TransportController.findAssignmentById",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/transport/assignments/:id",
+      "handler": "TransportController.updateAssignment",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/assignments/:id/cancel",
+      "handler": "TransportController.cancelAssignment",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/bookings",
+      "handler": "TransportController.findBookings",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/bookings",
+      "handler": "TransportController.createBooking",
+      "policy": "permissions",
+      "permissions": [
+        "transport:assignment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/drivers",
+      "handler": "TransportController.findDrivers",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/drivers",
+      "handler": "TransportController.createDriver",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/transport/drivers/:id",
+      "handler": "TransportController.deleteDriver",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/drivers/:id",
+      "handler": "TransportController.findDriverById",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/transport/drivers/:id",
+      "handler": "TransportController.updateDriver",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/routes",
+      "handler": "TransportController.findRoutes",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/routes",
+      "handler": "TransportController.createRoute",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/transport/routes/:id",
+      "handler": "TransportController.deleteRoute",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/routes/:id",
+      "handler": "TransportController.findRouteById",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/transport/routes/:id",
+      "handler": "TransportController.updateRoute",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/stats",
+      "handler": "TransportController.getStats",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/tasreeh",
+      "handler": "TransportController.findTasreeh",
+      "policy": "permissions",
+      "permissions": [
+        "transport:tasreeh:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/tasreeh",
+      "handler": "TransportController.createTasreeh",
+      "policy": "permissions",
+      "permissions": [
+        "transport:tasreeh:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/vehicles",
+      "handler": "TransportController.findVehicles",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/vehicles",
+      "handler": "TransportController.createVehicle",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/transport/vehicles/:id",
+      "handler": "TransportController.deleteVehicle",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/transport/vehicles/:id",
+      "handler": "TransportController.findVehicleById",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/transport/vehicles/:id",
+      "handler": "TransportController.updateVehicle",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/transport/vehicles/:id/drivers",
+      "handler": "TransportController.assignDriver",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/transport/vehicles/:id/drivers/:driverId",
+      "handler": "TransportController.unassignDriver",
+      "policy": "permissions",
+      "permissions": [
+        "transport:vehicle:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/uploads/",
+      "handler": "UploadsController.upload",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/visa-requests/",
+      "handler": "VisaRequestsController.findAll",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/visa-requests/",
+      "handler": "VisaRequestsController.create",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/visa-requests/:id",
+      "handler": "VisaRequestsController.remove",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/visa-requests/:id",
+      "handler": "VisaRequestsController.findOne",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/visa-requests/:id",
+      "handler": "VisaRequestsController.update",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/visa-requests/:id/assign",
+      "handler": "VisaRequestsController.assign",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/visa-requests/:id/close",
+      "handler": "VisaRequestsController.close",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/visa-requests/:id/escalate",
+      "handler": "VisaRequestsController.escalate",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/visa-requests/:id/notes",
+      "handler": "VisaRequestsController.addNote",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/visa-requests/:id/public-thread",
+      "handler": "VisaRequestsController.publicThread",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/visa-requests/:id/reopen",
+      "handler": "VisaRequestsController.reopen",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/visa-requests/:id/resolve",
+      "handler": "VisaRequestsController.resolve",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/visa-requests/:id/status",
+      "handler": "VisaRequestsController.changeStatus",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:submit"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/visa-requests/assignees",
+      "handler": "VisaRequestsController.assignees",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/visa-requests/stats",
+      "handler": "VisaRequestsController.stats",
+      "policy": "permissions",
+      "permissions": [
+        "visa:application:read"
+      ]
+    }
+  ]
+}

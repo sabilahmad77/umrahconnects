@@ -1,0 +1,13 @@
+ ✓ test/providers/storage-s3.int-spec.ts > StorageService S3-compatible driver (R2 code path) against MinIO > stores private documents with the sniffed content type and a checksum
+ ✓ test/providers/storage-s3.int-spec.ts > StorageService S3-compatible driver (R2 code path) against MinIO > private objects are readable only through short-lived presigned URLs 2535ms
+ ✓ test/providers/storage-s3.int-spec.ts > StorageService S3-compatible driver (R2 code path) against MinIO > rejects disguised content and path traversal before anything is stored
+ ✓ test/providers/storage-s3.int-spec.ts > StorageService S3-compatible driver (R2 code path) against MinIO > public media goes to the public bucket and deletions are best-effort
+ ✓ test/providers/storage-s3.int-spec.ts > StorageService S3-compatible driver (R2 code path) against MinIO > reports missing configuration instead of pretending
+ ✓ test/providers/smtp-mailpit.int-spec.ts > MailService SMTP driver against Mailpit > delivers a real SMTP message
+ ✓ test/providers/smtp-mailpit.int-spec.ts > MailService SMTP driver against Mailpit > production never uses the log driver and reports missing SMTP settings
+ ✓ test/providers/stripe-mock.int-spec.ts > StripeProvider against stripe-mock (official Stripe API mock) > creates a PaymentIntent with the server amount/currency and returns a client secret
+ ✓ test/providers/stripe-mock.int-spec.ts > StripeProvider against stripe-mock (official Stripe API mock) > reconciles an intent server-side (retrieve / capture) and maps the status
+ ✓ test/providers/stripe-mock.int-spec.ts > StripeProvider against stripe-mock (official Stripe API mock) > creates refunds, customers and cancels intents through the SDK
+ ✓ test/providers/stripe-mock.int-spec.ts > StripeProvider against stripe-mock (official Stripe API mock) > reports configuration and test mode honestly
+ Test Files  3 passed (3)
+      Tests  11 passed (11)

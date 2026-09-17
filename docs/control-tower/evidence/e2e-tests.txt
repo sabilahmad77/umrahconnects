@@ -1,0 +1,146 @@
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > pilgrims: B cannot read, change, delete or re-link A's pilgrim
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > packages: B cannot read or change A's package
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > bookings: B cannot touch A's booking; A cannot link B's package or pilgrim
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > finance > invoices: B cannot read or change A's invoice; A cannot link B's booking or pilgrim
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > finance > manual payments: B cannot read, edit or refund A's payment
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > finance > invoice status cannot be forced to PAID without payments (status route)
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > finance > manual payments cannot be recorded as gateway payments or in another currency
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > groups > a PUBLIC group is readable through the public projection only
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > groups > B cannot write to A's PUBLIC group, its notes, documents, incidents or posts
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > groups > self-service join/leave cannot tamper with groups the caller is not in
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > visa applications, documents and requests > A cannot create or re-point an application at B's pilgrim or booking
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > visa applications, documents and requests > a stale foreign pilgrim link never leaks B's passport data
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > visa applications, documents and requests > B cannot read or act on A's application
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > visa applications, documents and requests > visa document files: only the owner gets a signed URL; the signature is the credential
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > operator A vs operator B > visa applications, documents and requests > visa requests: B cannot read or act on A's ticket; A cannot link B's records
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > hotel A vs hotel B > B cannot read or change A's hotel, room types, rooms, allotments, bookings or assignments
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > hotel A vs hotel B > A cannot link B's rooms, room types or bookings
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > hotel A vs hotel B > a shared (platform-wide) hotel is readable but not writable by any organization
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > transport A vs transport B > A cannot link B's vehicle, driver or route; B's seat counters never move
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > transport A vs transport B > B cannot read or change A's vehicles, drivers, routes or assignments
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > transport A vs transport B > seat counters are server-owned
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > visa agency A vs visa agency B > B cannot read or decide A's applications and requests
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > traveler A vs traveler B > non-public posts are invisible and untouchable for other travelers
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > traveler A vs traveler B > conversations: a non-participant can neither read nor write
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > traveler A vs traveler B > connections: only the recipient responds; a block cannot be reopened or erased by either party
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > traveler A vs traveler B > notifications: nobody can read or mark another user's notifications
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > traveler A vs traveler B > marketplace requests: B cannot read, close, accept or convert A's request
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > vertical access > travelers reach no organization or platform area
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > vertical access > operators never reach /admin
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > vertical access > hotel, transport and visa organizations stay in their own domain
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > mass assignment > server-owned fields are rejected (400) or ignored
+ ✓ test/isolation.e2e-spec.ts > red team: tenant isolation, vertical access and mass assignment > mass assignment > client totals and statuses do not override the server
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > registration > creates a Traveler in the community organization with an httpOnly refresh cookie 308ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > registration > rejects a client-chosen organization (tenant takeover vector)
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > registration > rejects privileged role interest, weak passwords and unknown fields
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > registration > rejects duplicate emails case-insensitively
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > login > signs in by email (case-insensitive) and rejects wrong passwords with a generic message 553ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > login > temporarily locks an account after repeated failures, even for the right password 3360ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > login > returns TENANT_REQUIRED with the workspace list when one email+password exists in two organizations
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > login > refuses sign-in to suspended organizations
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > tokens and sessions > rejects tampered, unsigned and wrong-purpose tokens
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > tokens and sessions > rotates refresh tokens and revokes every session when a rotated token is replayed 1139ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > tokens and sessions > accepts the refresh token from the httpOnly cookie
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > tokens and sessions > logout revokes the refresh token; logout-all also kills issued access tokens 3387ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > tokens and sessions > locking a user invalidates their live access token immediately 1433ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > password reset and email verification > password reset tokens are single-use, never returned in responses, and revoke sessions 2016ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > password reset and email verification > unknown emails get the same response as known ones (no enumeration)
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > password reset and email verification > a reset token cannot be used as an access token and a forged reset token is refused
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > password reset and email verification > email verification activates the account; tokens are single-use 347ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > password reset and email verification > change-password requires the current password and revokes other sessions 2270ms
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > disabled / unconfigured providers > phone OTP is unavailable instead of pretending to send a code
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > disabled / unconfigured providers > Google Sign-In reports itself disabled and fails closed
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > error hygiene > never leaks stack traces or internals and always returns a request id
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > error hygiene > does not expose x-powered-by and sets security headers
+ ✓ test/auth.e2e-spec.ts > authentication & sessions > error hygiene > CORS only reflects configured origins
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > Super Admin is a platform role, separate from Operator > every tenant role gets 403 on every platform route 488ms
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > Super Admin is a platform role, separate from Operator > platform mutations are refused for an operator admin
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > Super Admin is a platform role, separate from Operator > Super Admin reads platform data but holds no organization capabilities
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > Super Admin is a platform role, separate from Operator > unauthenticated creation of organizations is closed (AUD-008)
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > opA GET /pilgrims → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > opA GET /hotels → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > opA GET /finance/invoices → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > opA GET /compliance/visas → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > staffA GET /pilgrims → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > staffA GET /finance/summary → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > staffA GET /rbac/roles → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > financeA GET /finance/invoices → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > financeA GET /finance/summary → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > financeA GET /pilgrims → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > financeA GET /hotels → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > hotelA GET /hotels → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > hotelA GET /pilgrims → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > hotelA GET /transport/vehicles → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > hotelA GET /compliance/visas → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > transportA GET /transport/vehicles → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > transportA GET /hotels → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > transportA GET /pilgrims → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > visaA GET /compliance/visas → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > visaA GET /visa-requests → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > visaA GET /hotels → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > visaA GET /finance/summary → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /social/feed → 200
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /pilgrims → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /bookings → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /groups → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /hotels → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /finance/invoices → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > travelerA GET /tenants/me → 403
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > capability matrix per role > capabilities come from the server, not from token claims
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > an operator admin cannot grant SUPER_ADMIN to anyone
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > an operator admin cannot grant roles to users of another organization
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > an operator admin cannot use another organization's custom role
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > a hotel organization cannot hand out operator roles
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > custom roles cannot carry platform capabilities or capabilities the creator lacks
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > Super Admin can grant SUPER_ADMIN only to platform accounts
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > role management cannot escalate > a platform capability planted on a tenant role is ignored and removed on sync
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > organization onboarding + KYC lifecycle > traveler → verified email → hotel organization (pending) → KYC → approval → active hotel manager 586ms
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > organization onboarding + KYC lifecycle > operators cannot move themselves into onboarding
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > organization onboarding + KYC lifecycle > suspended organizations are locked out immediately
+ ✓ test/rbac.e2e-spec.ts > role architecture, platform separation and privilege escalation > public media uploads > accepts real images only and never serves nested private paths
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > validates the target, amount and currency on the server 366ms
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > capability and tenant checks
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > capture reconciles the invoice; refunds need finance:payment:refund and are capped
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > a declined capture fails the payment without touching the invoice
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > signed webhooks > rejects unsigned, mis-signed and tampered deliveries and unknown endpoints
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > signed webhooks > a valid capture settles once; replays are acknowledged without double counting
+ ✓ test/payments.e2e-spec.ts > red team: payments > organization intents > signed webhooks > an event for an unknown payment is recorded but changes nothing
+ ✓ test/payments.e2e-spec.ts > red team: payments > traveler checkout > only the customer can open a checkout, and the amount is the booking total
+ ✓ test/payments.e2e-spec.ts > red team: payments > traveler checkout > other users cannot read or complete the checkout
+ ✓ test/payments.e2e-spec.ts > red team: payments > traveler checkout > the customer completes it; the booking becomes PAID and CONFIRMED; no second charge
+ ✓ test/payments.e2e-spec.ts > red team: payments > traveler checkout > a new checkout supersedes an open one instead of charging twice
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > the listing is live; only a platform moderator can (re)approve it
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > vendor records cannot be created by travelers or staff without the manage capability
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > public listing and vendor routes never expose contact details, address or KYC
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > listing bookings > the server computes the price and the initial status; client values are refused
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > listing bookings > another provider cannot manage the listing, its bookings or its inquiries
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > listing bookings > even the owning provider cannot set payment fields or jump to PAID
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > service requests and offers > providers browse open requests; travelers cannot; nobody sees their own organization's requests
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > service requests and offers > a provider offers; it cannot offer on its own organization's request or with a foreign vendor
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > service requests and offers > other providers never see someone else's offers
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > service requests and offers > only the requester can read the request with its offers, accept, reject or convert
+ ✓ test/marketplace.e2e-spec.ts > red team: marketplace > service requests and offers > the requester accepts and converts exactly once, into the provider's own listing
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > start redirects to Google with PKCE (S256), state, nonce and a httpOnly state cookie
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > a new verified Google user becomes a Traveler; the ticket is single-use and not in the query string
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > the same Google account signs in to the same user next time
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > links to an existing verified account without touching its password
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > pre-registered unverified accounts lose their password and sessions when the real owner signs in (anti pre-hijack) 1435ms
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > refuses unverified Google emails, ambiguous accounts, platform accounts and disabled accounts
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > rejects forged state, a missing state cookie, provider errors and open redirects
+ ✓ test/google.e2e-spec.ts > Google Sign-In (provider token exchange stubbed) > explicit linking from a signed-in session; a Google account cannot be linked twice
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > issuing and voiding invoices requires finance:invoice:approve
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > parallel payment attempts cannot collect more than the invoice total
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > GET /groups/mine lists only the caller's memberships with safe fields
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > marketplace > draft and archived listings are not public
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > marketplace > offers cannot be accepted once the request is closed
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > Stripe webhooks (offline signature verification) > rejects a wrong signing secret
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > Stripe webhooks (offline signature verification) > ignores events whose live/test mode does not match the configured key
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > Stripe webhooks (offline signature verification) > holds a payment whose captured amount differs from the record
+ ✓ test/followups.e2e-spec.ts > core follow-ups: approvals, over-collection, offers, drafts, Stripe webhooks > Stripe webhooks (offline signature verification) > settles a matching capture exactly once
+ ✓ test/rate-limit.e2e-spec.ts > red team: rate limiting (throttling enabled) > the 9th wrong password for the same account within 5 minutes is throttled with Retry-After
+ ✓ test/rate-limit.e2e-spec.ts > red team: rate limiting (throttling enabled) > registration is throttled after 5 attempts in 10 minutes 1443ms
+ ✓ test/rate-limit.e2e-spec.ts > red team: rate limiting (throttling enabled) > normal authenticated reads are not throttled 365ms
+ ✓ test/access-policy.e2e-spec.ts > access policy inventory > every route declares a policy and only known capabilities
+ ✓ test/access-policy.e2e-spec.ts > access policy inventory > every /admin route requires a platform capability
+ Test Files  9 passed (9)
+      Tests  144 passed (144)

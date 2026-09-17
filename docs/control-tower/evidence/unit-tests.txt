@@ -1,0 +1,21 @@
+ ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > recognises real document and image signatures
+ ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > rejects renamed scripts, HTML and SVG
+ ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > rejects image/HTML polyglots and tiny buffers
+ ✓ src/bootstrap/client-ip.spec.ts > client IP resolution > uses the proxy header only with the shared secret
+ ✓ src/bootstrap/client-ip.spec.ts > client IP resolution > rejects malformed header values
+ ✓ src/bootstrap/client-ip.spec.ts > client IP resolution > ignores the header entirely when no secret is configured
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > accepts a valid signature and normalises payment_intent.succeeded
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > normalises failure, refund and dispute events
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > rejects a tampered payload
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > rejects a signature made with another secret
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > rejects a stale timestamp (> 300 s) even with a correct signature
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > rejects a missing or garbage header, and refuses to verify without a secret
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider with a mocked client (no network) > createIntent sends the server amount, currency and an idempotency key
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider with a mocked client (no network) > confirm maps succeeded → CAPTURED with the received amount
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider with a mocked client (no network) > confirm maps processing → PENDING and canceled → FAILED
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider with a mocked client (no network) > confirm captures a requires_capture intent with an idempotency key
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider with a mocked client (no network) > refund and cancel carry idempotency keys; a failed refund throws
+ ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider with a mocked client (no network) > status mapping helper
+ ✓ src/common/validation-pipe.spec.ts > global ValidationPipe behaviour (regression guard) > keeps plain objects inside untyped arrays and objects
+ Test Files  4 passed (4)
+      Tests  19 passed (19)
