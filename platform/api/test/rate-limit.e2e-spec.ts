@@ -77,6 +77,16 @@ describe('red team: rate limiting (throttling enabled)', () => {
     expect(await ctx.prisma.user.count({ where: { email: { startsWith: 'burst.' } } })).toBe(5);
   });
 
+  it('anonymous public inquiries are throttled after 5 in 10 minutes', async () => {
+    const codes: number[] = [];
+    for (let i = 0; i < 7; i++) {
+      const res = await ctx.http().post(api('/inquiries')).send({ name: 'Spam', email: `spam${i}@example.com`, message: 'hello' });
+      codes.push(res.status);
+    }
+    expect(codes.slice(0, 5).every((c) => c < 400)).toBe(true);
+    expect(codes.slice(5)).toEqual([429, 429]);
+  });
+
   it('normal authenticated reads are not throttled', async () => {
     const results = [];
     for (let i = 0; i < 50; i++) {

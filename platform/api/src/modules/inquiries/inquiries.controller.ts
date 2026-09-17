@@ -1,3 +1,4 @@
+import { Throttle } from '@nestjs/throttler';
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
@@ -17,6 +18,7 @@ export class InquiriesController {
   // ── Public website submissions (no auth) ──
   @Public()
   @Post()
+  @Throttle({ default: { limit: 5, ttl: 10 * 60_000 } })
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Submit a public website inquiry (contact / partner / careers / newsletter / demo)' })
   async create(@Body() dto: CreatePublicInquiryDto) {

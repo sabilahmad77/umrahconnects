@@ -1,3 +1,4 @@
+import { Throttle } from '@nestjs/throttler';
 import {
   Controller,
   Get,
@@ -100,6 +101,7 @@ export class MarketplaceController {
   // ── Inquiries ─────────────────────────────────────────────────────────────
   @Post('listings/:id/inquiries')
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 10 * 60_000 } })
   @ApiOperation({ summary: 'Send inquiry on a listing (auth or anon)' })
   async createInquiry(
     @Param('id', ParseUUIDPipe) id: string,

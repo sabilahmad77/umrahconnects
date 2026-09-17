@@ -6,7 +6,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 DUMP="${1:?usage: pg-restore.sh <dump> verify|replace}"
 MODE="${2:?usage: pg-restore.sh <dump> verify|replace}"
-set -a; . ./.env.production; set +a
+# Read single values from .env.production without executing it (values may contain shell metacharacters).
+env_get() { { grep -E "^$1=" ./.env.production || true; } | tail -n 1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'; }
+POSTGRES_DB="$(env_get POSTGRES_DB)"; POSTGRES_USER="$(env_get POSTGRES_USER)"; OFFSITE_REMOTE="${OFFSITE_REMOTE:-$(env_get OFFSITE_REMOTE)}"
 DB="${POSTGRES_DB:-umrah_connects}"; USER="${POSTGRES_USER:-umrah}"
 [ -f "$DUMP.sha256" ] && sha256sum -c "$DUMP.sha256"
 PSQL="docker compose --env-file .env.production exec -T postgres psql -v ON_ERROR_STOP=1 -U $USER"
