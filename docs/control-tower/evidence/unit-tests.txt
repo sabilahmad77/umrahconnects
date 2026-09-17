@@ -1,9 +1,9 @@
- ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > recognises real document and image signatures
- ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > rejects renamed scripts, HTML and SVG
- ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > rejects image/HTML polyglots and tiny buffers
  ✓ src/bootstrap/client-ip.spec.ts > client IP resolution > uses the proxy header only with the shared secret
  ✓ src/bootstrap/client-ip.spec.ts > client IP resolution > rejects malformed header values
  ✓ src/bootstrap/client-ip.spec.ts > client IP resolution > ignores the header entirely when no secret is configured
+ ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > recognises real document and image signatures
+ ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > rejects renamed scripts, HTML and SVG
+ ✓ src/modules/storage/file-sniff.spec.ts > sniffFile > rejects image/HTML polyglots and tiny buffers
  ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > accepts a valid signature and normalises payment_intent.succeeded
  ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > normalises failure, refund and dispute events
  ✓ src/modules/payments/providers/stripe.provider.spec.ts > StripeProvider.verifyWebhook (no network) > rejects a tampered payload

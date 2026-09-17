@@ -5,7 +5,9 @@ hotels, transport companies, visa agencies, finance teams, pilgrims, and a
 central Super Admin.
 
 - **Live web:** https://umrahconnect.io (Vercel, auto-deploys from `main`)
-- **Live API:** https://umrah-connect-api.onrender.com/api/v1 (Render, auto-deploys from `main`)
+- **API hosting:** legacy Render service (unresponsive since 2026-08-22); target is Hostinger KVM 8 —
+  see **[infrastructure/kvm/README.md](infrastructure/kvm/README.md)**
+- **Engineering control tower (security model, decisions, evidence):** **[docs/control-tower/](docs/control-tower/CONTROL_TOWER.md)**
 - **Full project picture, state of work, credentials map, and roadmap:**
   **[docs/HANDOFF.md](docs/HANDOFF.md)** ← read this first on a new machine.
 - **Setting this up on a new Mac?** See **[docs/migration/](docs/migration/)** —
@@ -18,7 +20,8 @@ central Super Admin.
 | Path | What |
 |---|---|
 | `apps/web` | Next.js 14 App Router frontend (TanStack Query, Tailwind) |
-| `platform/api` | NestJS 10 API (Prisma 5, PostgreSQL 13-schema multiSchema) |
+| `platform/api` | NestJS 10 API (Prisma 5 + Prisma Migrate, PostgreSQL 13-schema multiSchema, capability RBAC) |
+| `infrastructure/kvm` | Production stack for Hostinger KVM 8 (Docker Compose, Caddy, PostgreSQL 16, backups) |
 | `apps/mobile` | Expo app (not yet at parity) |
 | `audit/` | Playwright/Python verification + seed-proof scripts with evidence |
 | `IMPLEMENTATION_LOG.md`, `STATUS.md` | Living evidence log of every verified fix |
@@ -44,14 +47,18 @@ cp apps/web/.env.local.example apps/web/.env.local
 # 3. Schema + demo data
 cd platform/api
 npx prisma generate
-npx prisma db push          # no migrations dir — schema-push workflow
-npx ts-node prisma/seed.ts             # tenants + admin users (Admin@1234)
-npx ts-node prisma/seed-modules.ts     # role/module permissions
-npx ts-node prisma/seed-marketplace.ts # marketplace vendors + listings
+npx prisma migrate deploy                     # committed migrations (never `db push`)
+npx ts-node prisma/seed.ts                    # tenants + operator admins (Admin@1234)
+npx ts-node prisma/seed-modules.ts            # hotels, transport, finance, visa demo data
+npx ts-node prisma/seed-marketplace.ts        # marketplace vendors + listings
+npx ts-node prisma/scripts/sync-rbac.ts       # capability catalogue + system roles
+npx ts-node prisma/scripts/seed-demo-roles.ts # one account per role (dev only)
 cd ../..
+# Existing databases created with `db push`: run once
+#   npx prisma migrate resolve --applied 20260917000000_baseline && npx prisma migrate deploy
 
 # 4. Run (two terminals, or background both)
-pnpm --filter @umrah-connects/api dev   # API  → http://localhost:4000/api/v1/health
+pnpm --filter @umrah-connects/api dev   # API  → http://localhost:4000/api/v1/health (4100 on the team Mac)
 pnpm --filter @umrah-connects/web dev   # Web  → http://localhost:3000
 ```
 
@@ -60,9 +67,19 @@ Sign in at http://localhost:3000/login with `admin@alharamain.sa` / `Admin@1234`
 Access** tab also offers one-click role logins; it is hidden on production
 hosts by design.
 
+## Quality gate
+
+```bash
+pnpm --filter @umrah-connects/api typecheck
+pnpm --filter @umrah-connects/api lint
+pnpm --filter @umrah-connects/api exec vitest run                                   # unit
+pnpm --filter @umrah-connects/api exec vitest run --config vitest.e2e.config.ts     # security e2e (uses umrah_connects_test)
+```
+
 ## Deploying
 
-Push to `main` → GitHub → Vercel (web) + Render (API) auto-deploy. Always run
+Pushing to `main` deploys the web app (Vercel). The API is deployed to Hostinger KVM 8 from reviewed commits with
+`infrastructure/kvm/scripts/deploy.sh` (backup → migrate → start → health check). Run the quality gate and
 both production builds first:
 
 ```bash
