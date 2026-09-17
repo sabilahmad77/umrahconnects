@@ -1,4 +1,6 @@
 'use client';
+import { Textarea, Select, Input, ModalSurface , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -43,9 +45,10 @@ export function VisaRequestDetail({ id }: { id: string }) {
     catch (e: any) { toast.error(apiError(e)); }
   };
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   if (isLoading) {
     return (
-      <div className="py-24 text-center text-sm text-gray-500">
+      <div className="py-24 text-center text-sm text-gray-600">
         <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading ticket…
       </div>
     );
@@ -53,8 +56,8 @@ export function VisaRequestDetail({ id }: { id: string }) {
   if (error || !t) {
     return (
       <div className="py-24 text-center">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-        <p className="text-sm text-red-500 mb-2">This service request could not be loaded</p>
+        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+        <p className="text-sm text-red-700 mb-2">This service request could not be loaded</p>
         <Link href="/visa-requests" className="text-xs text-brand-500 hover:underline">Back to the queue</Link>
       </div>
     );
@@ -64,18 +67,19 @@ export function VisaRequestDetail({ id }: { id: string }) {
   const pr = VISA_REQUEST_PRIORITY_META[t.priority] ?? { label: t.priority, color: 'bg-gray-100 text-gray-600' };
   const isTerminal = t.status === 'RESOLVED' || t.status === 'CLOSED';
 
+
   return (
     <div className="space-y-5 pb-10">
-      <Link href="/visa-requests" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/visa-requests" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-700">
         <ArrowLeft className="h-4 w-4" /> Service requests
       </Link>
 
       {/* Header */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-mono text-gray-500">{t.ticketNumber}</span>
+              <span className="text-xs font-mono text-gray-600">{t.ticketNumber}</span>
               <span className={cn('inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium', st.color)}>
                 <span className={cn('w-1.5 h-1.5 rounded-full', st.dot)} />{st.label}
               </span>
@@ -95,16 +99,16 @@ export function VisaRequestDetail({ id }: { id: string }) {
         {/* Workflow actions */}
         <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-50">
           {VISA_REQUEST_WORKFLOW_STATUSES.map((s) => (
-            <button
+            <Button variant="quiet" type="button"
               key={s}
               disabled={changeStatus.isPending || t.status === s || t.status === 'CLOSED'}
               onClick={() => run(() => changeStatus.mutateAsync({ id, status: s }), `Moved to ${VISA_REQUEST_STATUS_META[s].label}`)}
               className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
             >
               {VISA_REQUEST_STATUS_META[s].label}
-            </button>
+            </Button>
           ))}
-          <button
+          <Button variant="quiet" type="button"
             disabled={escalate.isPending || t.status === 'ESCALATED' || isTerminal}
             onClick={() => setReasonPrompt({
               title: 'Escalate ticket',
@@ -117,8 +121,8 @@ export function VisaRequestDetail({ id }: { id: string }) {
             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40"
           >
             <AlertTriangle className="h-3.5 w-3.5" /> Escalate
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             disabled={resolve.isPending || t.status === 'RESOLVED' || t.status === 'CLOSED'}
             onClick={() => setReasonPrompt({
               title: 'Resolve ticket',
@@ -131,8 +135,8 @@ export function VisaRequestDetail({ id }: { id: string }) {
             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-40"
           >
             <CheckCircle2 className="h-3.5 w-3.5" /> Resolve
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             disabled={close.isPending || t.status === 'CLOSED'}
             onClick={() => setReasonPrompt({
               title: 'Close ticket',
@@ -145,8 +149,8 @@ export function VisaRequestDetail({ id }: { id: string }) {
             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           >
             <XCircle className="h-3.5 w-3.5" /> Close
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             disabled={reopen.isPending || !isTerminal}
             onClick={() => setReasonPrompt({
               title: 'Reopen ticket',
@@ -159,49 +163,49 @@ export function VisaRequestDetail({ id }: { id: string }) {
             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-brand-200 text-brand-600 hover:bg-brand-50 disabled:opacity-40"
           >
             <RotateCcw className="h-3.5 w-3.5" /> Reopen
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Conversation + timeline */}
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-gray-500" /> Notes &amp; responses
+              <MessageSquare className="h-4 w-4 text-gray-600" /> Notes &amp; responses
             </h2>
 
             <div className="flex gap-1.5 mb-2">
               {(['INTERNAL', 'PUBLIC'] as const).map((v) => (
-                <button
+                <Button variant="quiet" type="button"
                   key={v}
                   onClick={() => setVisibility(v)}
                   className={cn(
                     'text-xs px-3 py-1.5 rounded-full border font-medium transition-all inline-flex items-center gap-1.5',
-                    visibility === v ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-500 hover:border-gray-300',
+                    visibility === v ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-gray-300',
                   )}
                 >
                   {v === 'INTERNAL' ? <Lock className="h-3 w-3" /> : <Send className="h-3 w-3" />}
                   {v === 'INTERNAL' ? 'Internal note' : 'Public response'}
-                </button>
+                </Button>
               ))}
             </div>
-            <p className="text-[11px] text-gray-500 mb-2">
+            <p className="text-xs text-gray-600 mb-2">
               {visibility === 'INTERNAL'
                 ? 'Internal notes stay with the team — they are never shown to the requester.'
                 : 'Public responses are visible to the requester and start the response clock.'}
             </p>
 
-            <textarea
+            <Textarea
               value={noteBody}
               onChange={(e) => setNoteBody(e.target.value)}
               rows={3}
-              aria-label="Note body"
+              aria-label="Note Body"
               placeholder={visibility === 'INTERNAL' ? 'Context for the team…' : 'Reply to the requester…'}
               className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none"
             />
             <div className="flex justify-end mt-2">
-              <button
+              <Button variant="quiet" type="button"
                 disabled={addNote.isPending || !noteBody.trim()}
                 onClick={() => run(async () => {
                   await addNote.mutateAsync({ id, body: noteBody.trim(), visibility });
@@ -211,12 +215,12 @@ export function VisaRequestDetail({ id }: { id: string }) {
               >
                 {addNote.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 {visibility === 'INTERNAL' ? 'Add note' : 'Send response'}
-              </button>
+              </Button>
             </div>
 
             <div className="mt-4 space-y-3">
               {(t.notes ?? []).length === 0 ? (
-                <p className="text-xs text-gray-500 py-4 text-center">
+                <p className="text-xs text-gray-600 py-4 text-center">
                   No notes yet — add an internal note for the team, or send the requester a public response.
                 </p>
               ) : (t.notes ?? []).map((n: any) => (
@@ -224,19 +228,19 @@ export function VisaRequestDetail({ id }: { id: string }) {
                   key={n.id}
                   className={cn(
                     'rounded-xl border p-3',
-                    n.visibility === 'INTERNAL' ? 'bg-amber-50/60 border-amber-100' : 'bg-white border-gray-100',
+                    n.visibility === 'INTERNAL' ? 'bg-amber-50/60 border-amber-100' : 'bg-white border-gray-200',
                   )}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className={cn(
-                      'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full',
+                      'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full',
                       n.visibility === 'INTERNAL' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-700',
                     )}>
                       {n.visibility === 'INTERNAL' ? <Lock className="h-2.5 w-2.5" /> : <Send className="h-2.5 w-2.5" />}
                       {n.visibility === 'INTERNAL' ? 'INTERNAL' : 'PUBLIC'}
                     </span>
-                    <span className="text-xs text-gray-500">{n.authorName ?? 'System'}</span>
-                    <span className="text-xs text-gray-500">· {new Date(n.createdAt).toLocaleString()}</span>
+                    <span className="text-xs text-gray-600">{n.authorName ?? 'System'}</span>
+                    <span className="text-xs text-gray-600">· {new Date(n.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{n.body}</p>
                 </div>
@@ -244,9 +248,9 @@ export function VisaRequestDetail({ id }: { id: string }) {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-              <History className="h-4 w-4 text-gray-500" /> Timeline
+              <History className="h-4 w-4 text-gray-600" /> Timeline
             </h2>
             <ol className="space-y-3">
               {(t.events ?? []).map((e: any) => (
@@ -254,7 +258,7 @@ export function VisaRequestDetail({ id }: { id: string }) {
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm text-gray-700">{e.message}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-600">
                       {e.type} · {new Date(e.createdAt).toLocaleString()}{e.actorEmail ? ` · ${e.actorEmail}` : ''}
                     </p>
                   </div>
@@ -266,41 +270,41 @@ export function VisaRequestDetail({ id }: { id: string }) {
 
         {/* Side panel */}
         <div className="space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
             <h2 className="text-sm font-bold text-gray-900">Ticket</h2>
 
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Assignee</span>
-              <select
+              <Select
                 value={t.assigneeId ?? ''}
-                aria-label="Assignee"
+
                 disabled={assign.isPending}
                 onChange={(e) => run(() => assign.mutateAsync({ id, assigneeId: e.target.value || null }), 'Assignee updated')}
                 className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white"
               >
                 <option value="">Unassigned</option>
                 {(assigneesQ.data ?? []).map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              </Select>
             </label>
 
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Priority</span>
-              <select
+              <Select
                 value={t.priority}
-                aria-label="Priority"
+
                 disabled={update.isPending}
                 onChange={(e) => run(() => update.mutateAsync({ id, priority: e.target.value }), 'Priority updated')}
                 className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white"
               >
                 {VISA_REQUEST_PRIORITIES.map((p) => <option key={p} value={p}>{VISA_REQUEST_PRIORITY_META[p].label}</option>)}
-              </select>
+              </Select>
             </label>
 
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Due date</span>
-              <input
+              <Input
                 type="date"
-                aria-label="Due date"
+
                 defaultValue={t.dueAt ? new Date(t.dueAt).toISOString().slice(0, 10) : ''}
                 onChange={(e) => run(
                   () => update.mutateAsync({ id, dueAt: e.target.value ? new Date(e.target.value).toISOString() : undefined }),
@@ -311,16 +315,16 @@ export function VisaRequestDetail({ id }: { id: string }) {
             </label>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3">Requester</h2>
             <div className="space-y-2 text-sm">
-              <p className="flex items-center gap-2 text-gray-700"><User className="h-3.5 w-3.5 text-gray-500" /> {t.requesterName ?? '—'}</p>
-              <p className="flex items-center gap-2 text-gray-700"><Mail className="h-3.5 w-3.5 text-gray-500" /> {t.requesterEmail ?? '—'}</p>
-              <p className="flex items-center gap-2 text-gray-700"><Phone className="h-3.5 w-3.5 text-gray-500" /> {t.requesterPhone ?? '—'}</p>
+              <p className="flex items-center gap-2 text-gray-700"><User className="h-3.5 w-3.5 text-gray-600" /> {t.requesterName ?? '—'}</p>
+              <p className="flex items-center gap-2 text-gray-700"><Mail className="h-3.5 w-3.5 text-gray-600" /> {t.requesterEmail ?? '—'}</p>
+              <p className="flex items-center gap-2 text-gray-700"><Phone className="h-3.5 w-3.5 text-gray-600" /> {t.requesterPhone ?? '—'}</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3">Lifecycle</h2>
             <dl className="space-y-1.5 text-xs">
               <Row label="Created" value={new Date(t.createdAt).toLocaleString()} />
@@ -383,47 +387,47 @@ function ReasonModal({
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={prompt.title} className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
+    <ModalSurface title={prompt.title} onClose={onClose}    >
+      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-gray-900">{prompt.title}</h2>
-          <button onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-gray-100 rounded-lg">
-            <X className="h-4 w-4 text-gray-500" />
-          </button>
+          <Button variant="quiet" type="button" onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <X className="h-4 w-4 text-gray-600" />
+          </Button>
         </div>
         <label className="block">
           <span className="block text-xs font-semibold text-gray-600 mb-1">
             {prompt.label}{prompt.required ? ' *' : ''}
           </span>
-          <textarea
+          <Textarea
             autoFocus
             value={value}
             onChange={(e) => setValue(e.target.value)}
             rows={3}
-            aria-label={prompt.label}
+
             placeholder={prompt.placeholder}
             className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none"
           />
         </label>
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} disabled={busy} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-          <button
+          <Button variant="quiet" type="button" onClick={onClose} disabled={busy} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
+          <Button variant="quiet" type="button"
             onClick={submit}
             disabled={busy || invalid}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm"
           >
             {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {prompt.cta}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-gray-500">{label}</dt>
+      <dt className="text-gray-600">{label}</dt>
       <dd className="text-gray-700 text-right">{value}</dd>
     </div>
   );

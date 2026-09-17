@@ -1,4 +1,6 @@
 'use client';
+import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useRef, useState } from 'react';
 import {
@@ -25,7 +27,7 @@ const apiError = (e: any) =>
  * an attributable decision.
  */
 export function VisaDocumentPanel({ visaId }: { visaId: string }) {
-  const { data: docs = [], isLoading, refetch } = useVisaDocuments(visaId);
+  const { data: docs = [], isLoading, refetch , error: visaDocumentsError} = useVisaDocuments(visaId);
   const add = useAddVisaDocument();
   const update = useUpdateVisaDocument();
   const remove = useRemoveVisaDocument();
@@ -68,74 +70,75 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
     }
   };
 
+  if (visaDocumentsError) return <QueryFailure error={visaDocumentsError} onRetry={() => { refetch(); }} />;
   return (
     <div className="space-y-4">
       {/* Add to the checklist */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-          <Plus className="h-4 w-4 text-gray-500" /> Add a required document
+          <Plus className="h-4 w-4 text-gray-600" /> Add a required document
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <label className="block sm:col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Document name</span>
-            <input
+            <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              aria-label="Document name"
+
               placeholder="Passport bio page"
               className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none"
             />
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-            <select
+            <Select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              aria-label="Document type"
+
               className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white"
             >
               {VISA_DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{humanizeStatus(t)}</option>)}
-            </select>
+            </Select>
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Expires</span>
-            <input
+            <Input
               type="date"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              aria-label="Document expiry date"
+
               className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none"
             />
           </label>
         </div>
         <div className="flex justify-end mt-3">
-          <button
+          <Button variant="quiet" type="button"
             onClick={addDoc}
             disabled={add.isPending}
             className="inline-flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 disabled:opacity-50"
           >
             {add.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />} Add document
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Checklist */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-            <FileText className="h-4 w-4 text-gray-500" /> Documents ({docs.length})
+            <FileText className="h-4 w-4 text-gray-600" /> Documents ({docs.length})
           </h3>
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-sm text-gray-500">
+          <div className="py-12 text-center text-sm text-gray-600">
             <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading documents…
           </div>
         ) : docs.length === 0 ? (
           <div className="py-12 text-center px-6">
             <FileText className="h-10 w-10 mx-auto mb-3 text-gray-200" />
             <p className="text-sm font-semibold text-gray-700">No documents on this application yet</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 mt-1">
               Add what the applicant must provide, attach each file as it arrives, then verify or reject it.
             </p>
           </div>
@@ -151,17 +154,17 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-gray-800">{d.name}</p>
-                        <span className={cn('inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-medium', meta.color)}>
+                        <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full font-medium', meta.color)}>
                           <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />{meta.label}
                         </span>
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{humanizeStatus(d.type)}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{humanizeStatus(d.type)}</span>
                         {d.version > 0 && (
-                          <span className="text-[11px] text-gray-500 font-mono">v{d.version}</span>
+                          <span className="text-xs text-gray-600 font-mono">v{d.version}</span>
                         )}
                       </div>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px] text-gray-500">
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-600">
                         {d.expiresAt && (
-                          <span className={cn('inline-flex items-center gap-1', d.isExpired && 'text-orange-600 font-semibold')}>
+                          <span className={cn('inline-flex items-center gap-1', d.isExpired && 'text-orange-800 font-semibold')}>
                             <CalendarClock className="h-3 w-3" />
                             {d.isExpired ? 'expired ' : 'expires '}{new Date(d.expiresAt).toLocaleDateString()}
                           </span>
@@ -185,7 +188,7 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                         accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.tif,.tiff"
                         onChange={(e) => onFile(d.id, e.target.files?.[0])}
                       />
-                      <button
+                      <Button variant="quiet" type="button"
                         onClick={() => fileInputs.current[d.id]?.click()}
                         aria-label={`${d.url ? 'Replace' : 'Upload'} file for ${d.name}`}
                         disabled={busy}
@@ -193,7 +196,7 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                       >
                         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                         {d.url ? 'Replace' : 'Upload'}
-                      </button>
+                      </Button>
                       {d.url && (
                         <a
                           href={d.url}
@@ -205,15 +208,15 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                           <Download className="h-3.5 w-3.5" /> Open
                         </a>
                       )}
-                      <button
+                      <Button variant="quiet" type="button"
                         aria-label={`Verify ${d.name}`}
                         disabled={verify.isPending || !d.url || status === 'VERIFIED' || d.isExpired}
                         onClick={() => run(() => verify.mutateAsync({ visaId, docId: d.id }), `${d.name} verified`)}
                         className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-40"
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" /> Verify
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="quiet" type="button"
                         aria-label={`Reject ${d.name}`}
                         disabled={reject.isPending || status === 'REJECTED'}
                         onClick={() => setConfirm({
@@ -230,15 +233,15 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                         className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-40"
                       >
                         <XCircle className="h-3.5 w-3.5" /> Reject
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="quiet" type="button"
                         onClick={() => setOpenVersions(openVersions === d.id ? null : d.id)}
                         aria-label={`Version history for ${d.name}`}
                         className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
                       >
                         <History className="h-3.5 w-3.5" /> {d.versionCount ?? d.version ?? 0}
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="quiet" type="button"
                         aria-label={`Remove ${d.name}`}
                         onClick={() => setConfirm({
                           title: `Remove “${d.name}”?`,
@@ -247,10 +250,10 @@ export function VisaDocumentPanel({ visaId }: { visaId: string }) {
                           tone: 'danger',
                           onConfirm: () => run(() => remove.mutateAsync({ visaId, docId: d.id }), 'Document removed'),
                         })}
-                        className="p-1.5 rounded hover:bg-red-50 text-red-500"
+                        className="p-1.5 rounded hover:bg-red-50 text-red-700"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -272,17 +275,17 @@ function VersionHistory({ visaId, docId }: { visaId: string; docId: string }) {
   const versions = data ?? [];
   return (
     <div className="mt-3 bg-gray-50 rounded-xl p-3">
-      <p className="text-[11px] font-semibold text-gray-600 mb-2 inline-flex items-center gap-1.5">
+      <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1.5">
         <History className="h-3 w-3" /> Version history
       </p>
       {versions.length === 0 ? (
-        <p className="text-[11px] text-gray-500">No file has been attached yet.</p>
+        <p className="text-xs text-gray-600">No file has been attached yet.</p>
       ) : (
         <ol className="space-y-1.5">
           {versions.map((v: any) => (
-            <li key={v.id} className="flex items-center justify-between gap-3 text-[11px]">
+            <li key={v.id} className="flex items-center justify-between gap-3 text-xs">
               <span className="text-gray-700 font-mono">v{v.version}</span>
-              <span className="text-gray-500 flex-1 truncate">
+              <span className="text-gray-600 flex-1 truncate">
                 {new Date(v.uploadedAt).toLocaleString()}
                 {v.replacedAt ? ' · superseded' : ' · current'}
                 {v.sizeBytes ? ` · ${Math.max(1, Math.round(v.sizeBytes / 1024))} KB` : ''}

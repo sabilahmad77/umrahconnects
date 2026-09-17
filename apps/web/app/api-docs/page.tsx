@@ -29,13 +29,13 @@ export default function ApiDocsPage() {
         </div>
       </section>
       <section className="max-w-6xl mx-auto px-6 lg:px-8 pb-16">
-        <p className="text-center text-[13px] font-semibold tracking-wider text-gray-500 mb-5">WHAT TO EXPECT</p>
+        <p className="text-center text-[13px] font-semibold tracking-wider text-gray-600 mb-5">WHAT TO EXPECT</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {PREVIEW.map(({ Icon, t, d }) => (
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-5">
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-3"><Icon className="h-5 w-5 text-brand-600" /></div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
-              <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">{d}</p>
+              <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>
             </div>
           ))}
         </div>

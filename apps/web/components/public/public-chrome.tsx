@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { Button, Drawer, Input  } from '@/components/ui/system';
 import {
-  ArrowRight, ChevronDown, Mail, Linkedin, Youtube, Twitter, Instagram, Facebook,
+  ArrowRight, ChevronDown, Mail, Menu, Linkedin, Youtube, Twitter, Instagram, Facebook,
   Building2, Hotel, Bus, FileCheck2, Wallet, UserRound, Shield,
   BookOpen, LifeBuoy, Code2, Map,
 } from 'lucide-react';
@@ -18,7 +19,7 @@ export function Brandmark({ light = false }: { light?: boolean }) {
       </div>
       <div className="leading-none">
         <p className={`font-heading font-bold text-[15px] ${light ? 'text-white' : 'text-brand-600'}`}>Umrah Connect</p>
-        <p className={`text-[9px] tracking-[0.2em] mt-1 ${light ? 'text-gold-400' : 'text-gold-500'}`}>CONNECTED JOURNEYS</p>
+        <p className={`text-xs tracking-[0.2em] mt-1 ${light ? 'text-gold-400' : 'text-gold-800'}`}>CONNECTED JOURNEYS</p>
       </div>
     </Link>
   );
@@ -42,53 +43,13 @@ const RESOURCES = [
 ];
 
 function Dropdown({ label, items }: { label: string; items: typeof SOLUTIONS }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
-      <button className="flex items-center gap-1 hover:text-brand-600 transition-colors">
-        {label} <ChevronDown className="h-3.5 w-3.5" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full pt-3 w-64 z-40">
-          <div className="bg-white rounded-2xl border border-sandstone/70 shadow-xl shadow-brand-900/10 p-2">
-            {items.map(({ label, href, Icon }) => (
-              <Link key={label} href={href} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-ivory transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
-                  <Icon className="h-4 w-4 text-brand-600" />
-                </div>
-                <span className="text-[13px] font-medium text-gray-700">{label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <details className="public-dropdown relative"><summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-gray-700">{label}<ChevronDown className="h-4 w-4" /></summary><div className="absolute left-0 top-full z-40 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-lg">{items.map(({ label, href, Icon }) => <Link key={label} href={href} className="uc-menu-item"><Icon className="h-4 w-4 text-brand-600" />{label}</Link>)}</div></details>;
 }
 
 export function PublicHeader() {
-  return (
-    <header className="sticky top-0 z-30 bg-ivory/85 backdrop-blur-md border-b border-sandstone/60">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 h-[68px] flex items-center justify-between">
-        <Brandmark />
-        <nav className="hidden lg:flex items-center gap-8 text-[13px] font-medium text-gray-600">
-          <Dropdown label="Solutions" items={SOLUTIONS} />
-          <Link href="/marketplace-preview" className="hover:text-brand-600 transition-colors">Marketplace</Link>
-          <Dropdown label="Resources" items={RESOURCES} />
-          <Link href="/pricing" className="hover:text-brand-600 transition-colors">Pricing</Link>
-          <Link href="/about" className="hover:text-brand-600 transition-colors">About Us</Link>
-        </nav>
-        <div className="flex items-center gap-2.5">
-          <Link href="/login" className="hidden sm:inline-flex items-center px-4 py-2 text-[13px] font-semibold text-gray-700 hover:text-brand-600 rounded-xl border border-sandstone transition-colors">
-            Log in
-          </Link>
-          <Link href="/signup" className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-brand-500 hover:bg-brand-600 rounded-xl shadow-sm transition-colors">
-            Get Started
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
+ const [open, setOpen] = useState(false);
+ const links = [['Solutions','/solutions'],['Marketplace','/marketplace-preview'],['Resources','/resources'],['Pricing','/pricing'],['About Us','/about'],['Help center','/help'],['Contact','/contact'],['Log in','/login']];
+ return <header className="sticky top-0 z-30 border-b border-sandstone/70 bg-ivory"><a href="#public-main" className="skip-link">Skip to content</a><div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8"><Brandmark /><nav aria-label="Main navigation" className="hidden items-center gap-5 lg:flex"><Dropdown label="Solutions" items={SOLUTIONS} /><Link href="/marketplace-preview" className="uc-menu-item">Marketplace</Link><Dropdown label="Resources" items={RESOURCES} /><Link href="/pricing" className="uc-menu-item">Pricing</Link><Link href="/about" className="uc-menu-item">About Us</Link></nav><div className="flex shrink-0 items-center gap-2"><Link href="/login" className="uc-button uc-button-secondary hidden sm:inline-flex">Log in</Link><Link href="/signup" className="uc-button uc-button-primary px-3">Get Started</Link><Button variant="quiet" onClick={() => setOpen(true)} aria-label="Open navigation" className="lg:hidden px-2"><Menu className="h-5 w-5" /></Button></div></div><Drawer open={open} onOpenChange={setOpen} title="Umrah Connect navigation"><nav aria-label="Mobile navigation" className="space-y-1">{links.map(([label,href]) => <Link key={href} href={href} onClick={() => setOpen(false)} className="uc-menu-item">{label}</Link>)}</nav></Drawer></header>;
 }
 
 // FIX-08: real social handles go here when available (set href to the URL).
@@ -111,13 +72,18 @@ const FOOTER_COLS = [
 export function PublicFooter() {
   const [email, setEmail] = useState('');
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const subscribe = async () => {
-    if (!email) return;
+    if (busy) return;
+    setError('');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { setError('Enter a valid email address.'); return; }
+    setBusy(true);
     try {
       const { apiClient } = await import('@/lib/api');
       await apiClient.post('/inquiries', { type: 'NEWSLETTER', email, metadata: { source: 'footer' } });
       setDone(true); setEmail('');
-    } catch { /* keep silent on the public footer */ setDone(true); }
+    } catch { setError('Your subscription could not be saved. Try again.'); } finally { setBusy(false); }
   };
   return (
     <footer className="bg-brand-700 text-white">
@@ -134,16 +100,17 @@ export function PublicFooter() {
             {done ? (
               <p className="text-[13px] text-gold-300 font-medium">Thank you — you&apos;re subscribed.</p>
             ) : (
-              <div className="flex gap-2 max-w-sm">
-                <input
-                  value={email} onChange={(e) => setEmail(e.target.value)}
+              <div className="flex flex-wrap gap-2 max-w-sm">
+                <Input
+                  aria-label="Email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && subscribe()}
                   placeholder="Enter your email" type="email"
                   className="flex-1 bg-white/10 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-gold-400"
                 />
-                <button onClick={subscribe} className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-semibold text-sm px-5 rounded-xl transition-colors">Subscribe</button>
+                <Button variant="quiet" type="button" disabled={busy} onClick={subscribe} className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-semibold text-sm px-5 rounded-xl transition-colors">{busy ? 'Subscribing…' : 'Subscribe'}</Button>
               </div>
             )}
+            {error && <p role="alert" className="mt-3 text-sm text-red-200">{error}</p>}
           </div>
           {FOOTER_COLS.map((col) => (
             <div key={col.h}>
@@ -207,9 +174,9 @@ export function PublicHero({ eyebrow, title, subtitle }: { eyebrow: string; titl
 export function CTASection({ title, subtitle }: { title?: string; subtitle?: string }) {
   return (
     <section className="max-w-5xl mx-auto px-6 lg:px-8 py-16 text-center">
-      <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-3xl p-12 text-white">
+      <div className="bg-brand-600 rounded-xl p-6 sm:p-10 text-white">
         <h2 className="font-heading text-3xl font-extrabold">{title ?? 'Ready to begin your connected journey?'}</h2>
-        <p className="mt-3 text-white/75 max-w-xl mx-auto">{subtitle ?? 'Join operators, hotels, transport, visa agencies, finance teams and travelers already on Umrah Connect.'}</p>
+        <p className="mt-3 text-white/75 max-w-xl mx-auto">{subtitle ?? 'Connect your journey and workspace with services, requests, bookings and conversations.'}</p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link href="/signup" className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-brand-900 px-6 py-3.5 rounded-xl font-semibold text-sm transition-colors">
             Get Started <ArrowRight className="h-4 w-4" />
@@ -227,7 +194,7 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-ivory text-gray-900 flex flex-col">
       <PublicHeader />
-      <main className="flex-1">{children}</main>
+      <main id="public-main" tabIndex={-1} className="flex-1">{children}</main>
       <PublicFooter />
     </div>
   );

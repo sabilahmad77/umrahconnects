@@ -1,0 +1,147 @@
+[
+  {
+    "route": "/",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/dashboard",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/hotel-dashboard",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/transport-dashboard",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/visa-dashboard",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/marketplace",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/travel-plan",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/profile",
+    "viewport": "mobile",
+    "flags": []
+  },
+  {
+    "route": "/social",
+    "viewport": "mobile",
+    "flags": [
+      {
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "class": "w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold shrink-0",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1,
+        "text": "A"
+      },
+      {
+        "background": [
+          15,
+          61,
+          55
+        ],
+        "class": "uc-button uc-button-quiet flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors shadow-sm",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 4.24,
+        "text": "Post"
+      },
+      {
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "class": "w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold shrink-0",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1,
+        "text": "AG"
+      },
+      {
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "class": "w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold shrink-0",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1,
+        "text": "AG"
+      }
+    ]
+  },
+  {
+    "route": "/finance",
+    "viewport": "mobile",
+    "flags": [
+      {
+        "background": [
+          244,
+          246,
+          243
+        ],
+        "class": "text-sm font-medium opacity-80",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1.07,
+        "text": "Revenue Collected"
+      },
+      {
+        "background": [
+          244,
+          246,
+          243
+        ],
+        "class": "text-3xl font-bold",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1.09,
+        "text": "SAR 17,000"
+      },
+      {
+        "background": [
+          244,
+          246,
+          243
+        ],
+        "class": "text-xs opacity-70 mt-1",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1.06,
+        "text": "2 invoices paid"
+      },
+      {
+        "background": [
+          244,
+          246,
+          243
+        ],
+        "class": "",
+        "color": "rgb(255, 255, 255)",
+        "ratio": 1.07,
+        "text": "Recorded payments"
+      }
+    ]
+  },
+  {
+    "route": "/contact",
+    "viewport": "mobile",
+    "flags": []
+  }
+]

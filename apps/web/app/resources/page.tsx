@@ -29,7 +29,7 @@ function Cards({ id, title, Icon, items }: { id: string; title: string; Icon: an
       <div className="grid sm:grid-cols-2 gap-4">
         {items.map((it) => (
           <Link key={it.slug} href={`/resources/${it.slug}`} className="bg-white rounded-2xl border border-sandstone/60 p-5 hover:shadow-lg hover:shadow-brand-900/5 transition-all group">
-            <span className="text-[10.5px] font-bold tracking-wider text-gold-600 bg-gold-50 px-2 py-1 rounded-md">{it.c.toUpperCase()}</span>
+            <span className="text-[10.5px] font-bold tracking-wider text-gold-800 bg-gold-50 px-2 py-1 rounded-md">{it.c.toUpperCase()}</span>
             <p className="font-heading font-bold text-gray-900 mt-3 group-hover:text-brand-600 transition-colors">{it.t}</p>
             <span className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-600 mt-3">Read more <ArrowRight className="h-3.5 w-3.5" /></span>
           </Link>
@@ -48,11 +48,11 @@ export default function ResourcesPage() {
       <section className="max-w-6xl mx-auto px-6 lg:px-8 pb-16 grid sm:grid-cols-2 gap-4">
         <Link href="/help" className="bg-white rounded-2xl border border-sandstone/60 p-6 flex items-center gap-4 hover:shadow-lg hover:shadow-brand-900/5 transition-all">
           <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center"><LifeBuoy className="h-6 w-6 text-brand-600" /></div>
-          <div><p className="font-heading font-bold text-gray-900">Help Center</p><p className="text-[13px] text-gray-500 mt-0.5">Browse FAQs and get support.</p></div>
+          <div><p className="font-heading font-bold text-gray-900">Help Center</p><p className="text-[13px] text-gray-600 mt-0.5">Browse FAQs and get support.</p></div>
         </Link>
         <Link href="/api-docs" className="bg-white rounded-2xl border border-sandstone/60 p-6 flex items-center gap-4 hover:shadow-lg hover:shadow-brand-900/5 transition-all">
           <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center"><Code2 className="h-6 w-6 text-brand-600" /></div>
-          <div><p className="font-heading font-bold text-gray-900">API Docs</p><p className="text-[13px] text-gray-500 mt-0.5">Partner & integration docs (coming soon).</p></div>
+          <div><p className="font-heading font-bold text-gray-900">API Docs</p><p className="text-[13px] text-gray-600 mt-0.5">Partner & integration docs (coming soon).</p></div>
         </Link>
       </section>
       <CTASection />

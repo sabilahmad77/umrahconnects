@@ -1,4 +1,6 @@
 'use client';
+import { LinkedStatBlock as KPI } from '@/components/ui/system';
+import { Button , QueryFailure } from '@/components/ui/system';
 
 import Link from 'next/link';
 import {
@@ -14,29 +16,26 @@ const fmt = (cents: number, cur = 'SAR') => `${cur} ${((cents ?? 0) / 100).toLoc
 export function AdminDashboard() {
   const { data: stats, isLoading, error, refetch } = useAdminStats();
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Platform overview</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Cross-tenant view of every role, listing, booking and transaction</p>
+          <p className="text-sm text-gray-600 mt-0.5">Cross-tenant view of every role, listing, booking and transaction</p>
         </div>
-        <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500">
+        <Button variant="quiet" type="button" aria-label="Refresh dashboard" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
           <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-        </button>
+        </Button>
       </div>
 
-      {error ? (
-        <div className="py-10 text-center bg-white rounded-2xl border border-gray-100">
-          <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-          <p className="text-sm text-red-500">Failed to load platform stats</p>
-        </div>
-      ) : isLoading || !stats ? (
-        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
+      {isLoading || !stats ? (
+        <div className="flex items-center justify-center py-12 text-gray-600 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
         <>
+          <section className="border-l-4 border-brand-500 bg-white p-5"><h2 className="text-base font-semibold text-gray-900">Platform governance</h2><p className="mt-2 text-sm text-gray-600">Review organization verification, platform users and listing moderation across tenants.</p><Link href="/admin-tenants" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">Open work queue</Link></section>
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KPI label="Tenants" value={stats.tenants.total} sub={`across ${Object.keys(stats.tenants.byType).length} types`} icon={Building2} color="bg-brand-50 text-brand-700" href="/admin-tenants" />
@@ -58,10 +57,10 @@ export function AdminDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Tenants by type */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Building2 className="h-4 w-4 text-brand-600" /> Tenants by type</h3>
               {Object.keys(stats.tenants.byType).length === 0 ? (
-                <p className="text-xs text-gray-500">No tenants</p>
+                <p className="text-xs text-gray-600">No tenants</p>
               ) : (
                 <ul className="space-y-2">
                   {Object.entries(stats.tenants.byType).map(([type, count]: any) => (
@@ -75,19 +74,19 @@ export function AdminDashboard() {
             </div>
 
             {/* Recent activity */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:col-span-2">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2">
               <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Activity className="h-4 w-4 text-blue-600" /> Recent platform activity</h3>
               {(stats.recentActivity ?? []).length === 0 ? (
-                <p className="text-xs text-gray-500">No recent activity</p>
+                <p className="text-xs text-gray-600">No recent activity</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.recentActivity.map((a: any) => (
                     <li key={a.id} className="flex items-center justify-between text-xs border-b border-gray-50 pb-2 last:border-0">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{a.action} · {a.resource}</p>
-                        <p className="text-[11px] text-gray-500 truncate">{a.actorEmail ?? '—'}</p>
+                        <p className="text-xs text-gray-600 truncate">{a.actorEmail ?? '—'}</p>
                       </div>
-                      <span className="text-[11px] text-gray-500 shrink-0">{new Date(a.occurredAt).toLocaleString()}</span>
+                      <span className="text-xs text-gray-600 shrink-0">{new Date(a.occurredAt).toLocaleString()}</span>
                     </li>
                   ))}
                 </ul>
@@ -97,13 +96,13 @@ export function AdminDashboard() {
           </div>
 
           {/* Quick navigation */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <QuickAction href="/admin-tenants" label="All Tenants" icon={Building2} bg="bg-brand-50 text-brand-600" />
               <QuickAction href="/admin-users" label="All Users" icon={Users} bg="bg-blue-50 text-blue-600" />
-              <QuickAction href="/pilgrims" label="All Pilgrims" icon={UserCircle2} bg="bg-green-50 text-green-600" />
-              <QuickAction href="/bookings" label="All Bookings" icon={BookOpen} bg="bg-yellow-50 text-yellow-600" />
+              <QuickAction href="/pilgrims" label="All Pilgrims" icon={UserCircle2} bg="bg-green-50 text-green-800" />
+              <QuickAction href="/bookings" label="All Bookings" icon={BookOpen} bg="bg-yellow-50 text-yellow-800" />
               <QuickAction href="/groups" label="All Groups" icon={Users} bg="bg-purple-50 text-purple-600" />
               <QuickAction href="/admin-listings" label="All Listings" icon={Store} bg="bg-pink-50 text-pink-600" />
               <QuickAction href="/admin-kyc" label="KYC Verification" icon={ShieldCheck} bg="bg-yellow-50 text-yellow-700" />
@@ -122,27 +121,14 @@ export function AdminDashboard() {
   );
 }
 
-function KPI({ label, value, sub, icon: Icon, color, href }: { label: string; value: any; sub?: string; icon: any; color: string; href: string }) {
-  return (
-    <Link href={href} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-brand-200 transition-all flex items-start gap-3">
-      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', color)}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-gray-500">{label}</p>
-        <p className="text-xl font-bold text-gray-900 leading-tight mt-1 truncate">{typeof value === 'number' ? value.toLocaleString() : value}</p>
-        {sub && <p className="text-[11px] text-gray-500 mt-0.5">{sub}</p>}
-      </div>
-    </Link>
-  );
-}
+
 
 function Tile({ label, value, icon: Icon, accent }: { label: string; value: number; icon: any; accent?: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-3">
+    <div className="bg-white rounded-xl border border-gray-200 p-3">
       <div className="flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 text-gray-500" />
-        <p className="text-[11px] text-gray-500 truncate">{label}</p>
+        <Icon className="h-3.5 w-3.5 text-gray-600" />
+        <p className="text-xs text-gray-600 truncate">{label}</p>
       </div>
       <p className={cn('text-xl font-bold mt-1', accent || 'text-gray-900')}>{value.toLocaleString()}</p>
     </div>
@@ -151,7 +137,7 @@ function Tile({ label, value, icon: Icon, accent }: { label: string; value: numb
 
 function QuickAction({ href, label, icon: Icon, bg }: { href: string; label: string; icon: any; bg: string }) {
   return (
-    <Link href={href} className="group flex flex-col items-center text-center bg-white border border-gray-100 rounded-xl p-3 hover:border-brand-200 hover:shadow-sm transition-all">
+    <Link href={href} className="group flex flex-col items-center text-center bg-white border border-gray-200 rounded-xl p-3 hover:border-brand-200 hover:shadow-sm transition-all">
       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-2', bg)}>
         <Icon className="h-5 w-5" />
       </div>

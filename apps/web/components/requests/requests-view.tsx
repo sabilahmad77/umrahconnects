@@ -1,4 +1,6 @@
 'use client';
+import { ModalSurface, Input, Textarea , Button } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -27,7 +29,7 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
   IN_NEGOTIATION: { label: 'Receiving offers', color: 'bg-yellow-100 text-yellow-700' },
   FULFILLED:      { label: 'Fulfilled',      color: 'bg-saudi-50  text-saudi-700' },
   CLOSED:         { label: 'Closed',         color: 'bg-gray-100 text-gray-600' },
-  EXPIRED:        { label: 'Expired',        color: 'bg-gray-100 text-gray-500' },
+  EXPIRED:        { label: 'Expired',        color: 'bg-gray-100 text-gray-600' },
 };
 
 const fmtSAR = (cents?: number | null) =>
@@ -46,16 +48,16 @@ export function RequestsView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Marketplace Requests</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-600 mt-0.5">
             Tell providers what you need — they send offers, you pick the best one.
           </p>
         </div>
-        <button
+        <Button variant="quiet" type="button"
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30"
+          className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
         >
           <Plus className="h-4 w-4" /> New request
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -67,22 +69,22 @@ export function RequestsView() {
       {my.isLoading ? (
         <div className="grid gap-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-40 bg-gray-50 rounded-2xl animate-pulse" />
+            <div key={i} className="h-40 bg-gray-50 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
+        <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
           <Sparkles className="h-8 w-8 mx-auto text-brand-400 mb-3" />
           <p className="font-semibold text-gray-800">No requests yet</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             Open your first request and let providers come to you with offers.
           </p>
-          <button
+          <Button variant="quiet" type="button"
             onClick={() => setShowCreate(true)}
             className="inline-flex items-center gap-2 mt-5 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors"
           >
             <Plus className="h-4 w-4" /> Create a request
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="grid gap-3">
@@ -113,9 +115,9 @@ export function RequestsView() {
 
 function StatCard({ label, value, tint }: { label: string; value: string; tint: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <p className={cn('text-2xl font-bold', tint)}>{value}</p>
-      <p className="text-xs text-gray-500 mt-1">{label}</p>
+      <p className="text-xs text-gray-600 mt-1">{label}</p>
     </div>
   );
 }
@@ -127,7 +129,7 @@ function RequestCard({ request: r }: { request: any }) {
   const rejectOffer = useRejectOffer();
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 hover:border-gray-200 transition-colors">
+    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-200 transition-colors">
       <Link href={`/requests/${r.id}`} className="flex items-start gap-4 group">
         <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center shrink-0', meta.tint)}>
           <meta.Icon className="h-5 w-5" />
@@ -136,14 +138,14 @@ function RequestCard({ request: r }: { request: any }) {
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <p className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors">{r.title}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{meta.label}</p>
+              <p className="text-xs text-gray-600 mt-0.5">{meta.label}</p>
             </div>
-            <span className={cn('text-[10px] font-bold px-2 py-1 rounded-full', statusMeta.color)}>
+            <span className={cn('text-xs font-bold px-2 py-1 rounded-full', statusMeta.color)}>
               {statusMeta.label}
             </span>
           </div>
           {r.description && <p className="text-sm text-gray-600 mt-2.5">{r.description}</p>}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-xs text-gray-600">
             {r.city && (
               <span className="inline-flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" /> {r.city}
@@ -173,8 +175,8 @@ function RequestCard({ request: r }: { request: any }) {
 
       {/* Offers list */}
       {(r.offers?.length ?? 0) > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
             Offers ({r.offers.length})
           </p>
           <div className="space-y-2">
@@ -189,7 +191,7 @@ function RequestCard({ request: r }: { request: any }) {
                   </div>
                   {oStatus === 'PENDING' ? (
                     <div className="flex flex-col gap-1.5 shrink-0">
-                      <button
+                      <Button busy={acceptOffer.isPending} variant="quiet" type="button"
                         onClick={async () => {
                           try {
                             await acceptOffer.mutateAsync({ requestId: r.id, offerId: o.id });
@@ -198,11 +200,11 @@ function RequestCard({ request: r }: { request: any }) {
                             toast.error(e?.response?.data?.error?.message ?? 'Failed');
                           }
                         }}
-                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 bg-saudi-500 text-white rounded-lg hover:bg-saudi-600"
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 bg-saudi-500 text-white rounded-lg hover:bg-saudi-600"
                       >
                         <Check className="h-3 w-3" /> Accept
-                      </button>
-                      <button
+                      </Button>
+                      <Button busy={rejectOffer.isPending} variant="quiet" type="button"
                         onClick={async () => {
                           try {
                             await rejectOffer.mutateAsync({ requestId: r.id, offerId: o.id });
@@ -211,16 +213,16 @@ function RequestCard({ request: r }: { request: any }) {
                             toast.error(e?.response?.data?.error?.message ?? 'Failed');
                           }
                         }}
-                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg hover:bg-white"
+                        className="inline-flex items-center gap-1 text-xs px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg hover:bg-white"
                       >
                         <XCircle className="h-3 w-3" /> Reject
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <span className={cn(
-                      'text-[10px] font-bold px-2 py-1 rounded-full shrink-0',
+                      'text-xs font-bold px-2 py-1 rounded-full shrink-0',
                       oStatus === 'ACCEPTED' ? 'bg-saudi-50 text-saudi-700' :
-                      oStatus === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500',
+                      oStatus === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600',
                     )}>
                       {oStatus}
                     </span>
@@ -270,20 +272,20 @@ function CreateRequestModal({
   };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+    <ModalSurface title="What do you need?" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">What do you need?</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
-            <X className="h-4 w-4 text-gray-500" />
-          </button>
+          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <X className="h-4 w-4 text-gray-600" />
+          </Button>
         </div>
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1.5">Service type</label>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {Object.entries(SERVICE_TYPE_META).map(([key, meta]) => (
-                <button
+                <Button variant="quiet" aria-label="meta.Icon"
                   key={key}
                   type="button"
                   onClick={() => setServiceType(key)}
@@ -291,19 +293,19 @@ function CreateRequestModal({
                     'flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all',
                     serviceType === key
                       ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300',
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300',
                   )}
                 >
                   <meta.Icon className="h-4 w-4" />
-                  <span className="text-[10px] font-medium">{meta.label}</span>
-                </button>
+                  <span className="text-xs font-medium">{meta.label}</span>
+                </Button>
               ))}
             </div>
           </div>
 
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Title *</span>
-            <input
+            <Input
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -315,39 +317,39 @@ function CreateRequestModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">City</span>
-              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Makkah" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input  value={city} onChange={(e) => setCity(e.target.value)} placeholder="Makkah" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Travelers</span>
-              <input type="number" min="1" value={travelers} onChange={(e) => setTravelers(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input  type="number" min="1" value={travelers} onChange={(e) => setTravelers(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">From</span>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input  type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">To</span>
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input  type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Budget min (SAR)</span>
-              <input type="number" min="0" value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} placeholder="3000" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input  type="number" min="0" value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} placeholder="3000" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Budget max (SAR)</span>
-              <input type="number" min="0" value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} placeholder="6000" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input  type="number" min="0" value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} placeholder="6000" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
             </label>
           </div>
 
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Description</span>
-            <textarea
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
@@ -357,19 +359,19 @@ function CreateRequestModal({
           </label>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+          <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={submit}
             disabled={pending || !title.trim()}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm"
           >
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Post request
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }

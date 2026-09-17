@@ -31,7 +31,7 @@ export default function HelpPage() {
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-5">
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-3"><Icon className="h-5 w-5 text-brand-600" /></div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
-              <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">{d}</p>
+              <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>
             </div>
           ))}
         </div>

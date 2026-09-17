@@ -20,7 +20,7 @@ export default function CareersPage() {
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-6">
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-3"><Icon className="h-5 w-5 text-brand-600" /></div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
-              <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">{d}</p>
+              <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>
             </div>
           ))}
         </div>
@@ -31,7 +31,7 @@ export default function CareersPage() {
             <Sparkles className="h-3.5 w-3.5" /> Open application
           </div>
           <h2 className="font-heading font-bold text-2xl text-gray-900 mt-3">Register your interest</h2>
-          <p className="text-[14px] text-gray-500 mt-2">Tell us about yourself and how you&apos;d like to contribute. We&apos;ll reach out when a matching opportunity opens.</p>
+          <p className="text-[14px] text-gray-600 mt-2">Tell us about yourself and how you&apos;d like to contribute. We&apos;ll reach out when a matching opportunity opens.</p>
         </div>
         <InquiryForm
           type="CAREERS"

@@ -1,0 +1,11 @@
+# Accessibility QA
+
+Baseline evidence passes for observed ordinary route surfaces; full accessibility certification remains PARTIAL. Final 237 route/viewport captures had zero unnamed rendered controls. Native labels were retained; 134 conflicting API-derived aria-label overrides on wrapped controls and four redundant signup overrides were removed. Auth and inquiry labels are associated; invalid signup first name exposes its described error; login password visibility has an explicit changing name/state.
+
+Shared semantic tests cover busy/disabled buttons, explicit submit intent, loading/status and alert roles, permission retry, unknown versus zero values, label ID association and keyboard-reachable tables. Radix owns focus-managed overlays. Actual browser checks confirm Tab stays in workspace drawer and booking dialog, Escape closes them, and focus returns to the opener; public drawer behaves likewise. Enter expands native FAQ disclosure. Global visible focus and skip links remain; reduced-motion styles disable decorative animation.
+
+Settled-screen direct-text contrast sampling covered 11 major mobile routes. Ordinary text produced no flags on nine routes. Social/finance gradient backgrounds produced sampler false positives because the sampler sees transparent background-color, and a disabled composer action produced one exempt flag. Computed gradient stops were read from the browser: social white text minimum 5.05:1; finance including 70%/80% white text minimum 6.75:1. These exceed the 4.5:1 normal-text threshold. Raw flags are preserved, with adjudication, rather than silently discarded.
+
+Limitations: sampling covers visible direct text, not every icon, chart, hover/focus/error combination, every record form, offscreen text or every gradient treatment. No full automated WCAG audit or screen-reader session was available. Correct-role acceptance, full RTL and 200%/400% zoom need separate verification. State-specific cells therefore stay PARTIAL where browser evidence is incomplete.
+
+Evidence: [semantic tests](../../apps/web/tests/component-semantics.test.tsx), [interactions](release-evidence/interaction-checks.json), [contrast flags](release-evidence/contrast-checks.json), [adjudication](release-evidence/contrast-adjudication.json), [matrix](ROUTE_UI_COMPLETION_MATRIX.md).

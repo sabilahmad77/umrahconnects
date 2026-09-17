@@ -1,5 +1,8 @@
 'use client';
+import { Input, Select, Textarea, ModalSurface , Button , QueryFailure } from '@/components/ui/system';
 
+
+import { bookingEstimateCents } from '@/lib/booking-estimate';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -41,18 +44,19 @@ export function ListingDetail({ id }: { id: string }) {
   const [showInquire, setShowInquire] = useState(false);
   const [showBook, setShowBook] = useState(false);
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading listing…
       </div>
     );
   }
   if (error || !listing) {
     return (
-      <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-        <p className="text-sm text-red-500">Listing not found</p>
+      <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
+        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+        <p className="text-sm text-red-700">Listing not found</p>
         <Link href="/marketplace" className="text-xs text-brand-500 hover:underline mt-3 inline-block">← Back to marketplace</Link>
       </div>
     );
@@ -61,60 +65,61 @@ export function ListingDetail({ id }: { id: string }) {
   const Icon = TYPE_ICON[listing.type] ?? Building2;
   const price = listing.priceCents ? (listing.priceCents / 100).toLocaleString() : null;
 
+
   return (
     <div className="space-y-5 pb-10">
       {/* Header */}
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => router.push('/marketplace')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
-          <ArrowLeft className="h-4 w-4 text-gray-500" />
-        </button>
+        <Button variant="quiet" type="button" aria-label="Go back" onClick={() => router.push('/marketplace')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
+          <ArrowLeft className="h-4 w-4 text-gray-600" />
+        </Button>
         <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center">
           <Icon className="h-6 w-6 text-brand-600" />
         </div>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 basis-[calc(100%_-_140px)] sm:basis-auto">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900 truncate">{listing.name}</h1>
-            <span className="text-[11px] font-medium text-saudi-700 bg-saudi-50 px-2 py-1 rounded-full">{listing.type?.replace('_', ' ')}</span>
-            <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full',
+            <h1 className="text-2xl font-bold text-gray-900 ">{listing.name}</h1>
+            <span className="text-xs font-medium text-saudi-700 bg-saudi-50 px-2 py-1 rounded-full">{listing.type?.replace('_', ' ')}</span>
+            <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
               listing.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' :
               listing.status === 'PAUSED' ? 'bg-yellow-50 text-yellow-700' :
-              listing.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-700'
+              listing.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-700'
             )}>{listing.status ?? 'PUBLISHED'}</span>
           </div>
           {listing.vendor && (
-            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
+            <p className="text-xs text-gray-600 mt-1 flex items-center gap-1.5">
               <Building2 className="h-3 w-3" /> {listing.vendor.name} {listing.vendor.city && `• ${listing.vendor.city}`}
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <PublishToggle listing={listing} refetch={refetch} />
-          <button onClick={() => setShowInquire(true)} className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50">
+          <Button variant="quiet" type="button" onClick={() => setShowInquire(true)} className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50">
             <MessageSquare className="h-4 w-4" /> Inquire
-          </button>
-          <button onClick={() => setShowBook(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-sm shadow-brand-500/30">
+          </Button>
+          <Button variant="quiet" type="button" onClick={() => setShowBook(true)} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-xl shadow-sm">
             <CalendarCheck2 className="h-4 w-4" /> Book
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-1.5 flex gap-1 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {TABS.map((t) => {
           const I = t.icon;
           return (
-            <button
+            <Button variant="quiet" type="button"
               key={t.key}
               onClick={() => setTab(t.key)}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors shrink-0',
                 tab === t.key
                   ? 'bg-brand-50 text-brand-700 border border-brand-100'
-                  : 'text-gray-500 hover:bg-gray-50',
+                  : 'text-gray-600 hover:bg-gray-50',
               )}
             >
               <I className="h-4 w-4" /> {t.label}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -136,7 +141,7 @@ function PublishToggle({ listing, refetch }: { listing: any; refetch: () => void
   const update = useUpdateListing();
   const isPublished = (listing.status ?? 'PUBLISHED') === 'PUBLISHED' && listing.isActive !== false;
   return (
-    <button
+    <Button busy={update.isPending} variant="quiet" type="button"
       onClick={async () => {
         try {
           await update.mutateAsync({
@@ -159,7 +164,7 @@ function PublishToggle({ listing, refetch }: { listing: any; refetch: () => void
     >
       {isPublished ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
       {isPublished ? 'Published' : 'Unpublished'}
-    </button>
+    </Button>
   );
 }
 
@@ -167,7 +172,7 @@ function OverviewTab({ listing, price }: { listing: any; price: string | null })
   const attrs = listing.attributes ?? {};
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:col-span-2 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
         <h3 className="text-sm font-bold text-gray-900">About this listing</h3>
         <p className="text-sm text-gray-700 whitespace-pre-wrap">{listing.description ?? '—'}</p>
 
@@ -177,7 +182,7 @@ function OverviewTab({ listing, price }: { listing: any; price: string | null })
             <dl className="grid grid-cols-2 gap-2 text-xs">
               {Object.entries(attrs).map(([k, v]) => (
                 <div key={k} className="bg-gray-50 rounded-lg px-2.5 py-1.5">
-                  <dt className="text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</dt>
+                  <dt className="text-gray-600 capitalize">{k.replace(/([A-Z])/g, ' $1')}</dt>
                   <dd className="text-gray-900 font-medium">{Array.isArray(v) ? v.join(', ') : v === true ? 'Yes' : v === false ? 'No' : String(v)}</dd>
                 </div>
               ))}
@@ -199,46 +204,46 @@ function OverviewTab({ listing, price }: { listing: any; price: string | null })
       </div>
 
       <div className="space-y-3">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2">Price</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2">Price</p>
           {price ? (
             <p className="text-3xl font-bold text-gray-900">
-              <span className="text-base font-medium text-gray-500">{listing.currency ?? 'SAR'} </span>
+              <span className="text-base font-medium text-gray-600">{listing.currency ?? 'SAR'} </span>
               {price}
             </p>
           ) : (
-            <p className="text-base font-medium text-gray-500">Contact for pricing</p>
+            <p className="text-base font-medium text-gray-600">Contact for pricing</p>
           )}
-          <p className="text-[11px] text-gray-500 mt-1">{listing.pricingModel?.replace('_', ' ').toLowerCase()}</p>
+          <p className="text-xs text-gray-600 mt-1">{listing.pricingModel?.replace('_', ' ').toLowerCase()}</p>
         </div>
 
         {listing.vendor && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-2">
-            <p className="text-xs font-semibold text-gray-500">Provider</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-2">
+            <p className="text-xs font-semibold text-gray-600">Provider</p>
             <p className="text-sm font-bold text-gray-900">{listing.vendor.name}</p>
-            {listing.vendor.city && <p className="text-xs text-gray-500 inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{listing.vendor.city}, {listing.vendor.country}</p>}
-            {listing.vendor.phone && <p className="text-xs text-gray-500 inline-flex items-center gap-1"><Phone className="h-3 w-3" />{listing.vendor.phone}</p>}
-            {listing.vendor.email && <p className="text-xs text-gray-500 inline-flex items-center gap-1"><Mail className="h-3 w-3" />{listing.vendor.email}</p>}
-            {listing.vendor.rating && (
+            {listing.vendor.city && <p className="text-xs text-gray-600 inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{listing.vendor.city}, {listing.vendor.country}</p>}
+            {listing.vendor.phone && <p className="text-xs text-gray-600 inline-flex items-center gap-1"><Phone className="h-3 w-3" />{listing.vendor.phone}</p>}
+            {listing.vendor.email && <p className="text-xs text-gray-600 inline-flex items-center gap-1"><Mail className="h-3 w-3" />{listing.vendor.email}</p>}
+            {listing.vendor.rating != null && listing.vendor.ratingCount > 0 && (
               <div className="flex items-center gap-1 pt-2 border-t border-gray-50">
                 <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
                 <span className="text-xs font-semibold text-gray-700">{Number(listing.vendor.rating).toFixed(1)}</span>
-                <span className="text-[11px] text-gray-500">({listing.vendor.ratingCount ?? 0} reviews)</span>
+                <span className="text-xs text-gray-600">({listing.vendor.ratingCount ?? 0} reviews)</span>
               </div>
             )}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2">Activity</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2">Activity</p>
           <div className="grid grid-cols-2 gap-2 text-center">
             <div>
               <p className="text-xl font-bold text-gray-900">{listing._count?.inquiries ?? 0}</p>
-              <p className="text-[11px] text-gray-500">Inquiries</p>
+              <p className="text-xs text-gray-600">Inquiries</p>
             </div>
             <div>
               <p className="text-xl font-bold text-gray-900">{listing._count?.bookings ?? 0}</p>
-              <p className="text-[11px] text-gray-500">Bookings</p>
+              <p className="text-xs text-gray-600">Bookings</p>
             </div>
           </div>
         </div>
@@ -248,63 +253,64 @@ function OverviewTab({ listing, price }: { listing: any; price: string | null })
 }
 
 function InquiriesTab({ listingId }: { listingId: string }) {
-  const { data: inquiries = [], refetch } = useListingInquiries(listingId);
+  const { data: inquiries = [], refetch , error: listingInquiriesError} = useListingInquiries(listingId);
   const respond = useRespondInquiry();
   const [active, setActive] = useState<string | null>(null);
   const [text, setText] = useState('');
 
+  if (listingInquiriesError) return <QueryFailure error={listingInquiriesError} onRetry={() => { refetch(); }} />;
   return (
     <div className="space-y-3">
       {inquiries.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-500 bg-white rounded-2xl border border-gray-100">No inquiries yet — inquiries from interested buyers will appear here</div>
+        <div className="py-10 text-center text-sm text-gray-600 bg-white rounded-xl border border-gray-200">No inquiries yet — inquiries from interested buyers will appear here</div>
       ) : (
         inquiries.map((q: any) => (
-          <div key={q.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div key={q.id} className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-start justify-between mb-2">
               <div>
                 <p className="text-sm font-semibold text-gray-900">{q.fromName ?? 'Customer'}</p>
-                <p className="text-[11px] text-gray-500">
+                <p className="text-xs text-gray-600">
                   {q.fromEmail ?? '—'} {q.fromPhone && `• ${q.fromPhone}`}
                   {q.partySize ? ` • ${q.partySize} pax` : ''}
                 </p>
               </div>
-              <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full',
+              <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
                 q.status === 'NEW' ? 'bg-blue-50 text-blue-600' :
                 q.status === 'RESPONDED' ? 'bg-green-50 text-green-700' :
-                'bg-gray-100 text-gray-500'
+                'bg-gray-100 text-gray-600'
               )}>{q.status}</span>
             </div>
             <p className="text-sm text-gray-700 whitespace-pre-wrap">{q.message}</p>
             {q.response && (
               <div className="mt-2 pt-2 border-t border-gray-50 bg-brand-50/50 rounded-lg p-3">
-                <p className="text-[11px] font-semibold text-brand-700 mb-1">Your response</p>
+                <p className="text-xs font-semibold text-brand-700 mb-1">Your response</p>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{q.response}</p>
               </div>
             )}
             {active === q.id ? (
               <div className="mt-3 flex gap-2">
-                <input
+                <Input aria-label="Text"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   placeholder="Reply…"
                   className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none"
                 />
-                <button
-                  onClick={async () => {
+                <Button variant="quiet" type="button"
+                  onClick={async () => { try {
                     if (!text.trim()) return;
                     await respond.mutateAsync({ id: q.id, response: text.trim() });
                     toast.success('Response sent');
                     setText(''); setActive(null);
                     refetch();
-                  }}
+                  } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
                   className="text-sm px-3 py-2 bg-brand-500 text-white rounded-lg disabled:opacity-50"
                   disabled={respond.isPending}
                 >
                   Send
-                </button>
+                </Button>
               </div>
             ) : (
-              <button onClick={() => setActive(q.id)} className="text-xs text-brand-500 font-medium hover:underline mt-2">Reply</button>
+              <Button variant="quiet" type="button" onClick={() => setActive(q.id)} className="text-xs text-brand-500 font-medium hover:underline mt-2">Reply</Button>
             )}
           </div>
         ))
@@ -314,16 +320,17 @@ function InquiriesTab({ listingId }: { listingId: string }) {
 }
 
 function BookingsTab({ listingId }: { listingId: string }) {
-  const { data: bookings = [], refetch } = useListingBookings(listingId);
+  const { data: bookings = [], refetch , error: listingBookingsError} = useListingBookings(listingId);
   const update = useUpdateMarketplaceBooking();
 
+  if (listingBookingsError) return <QueryFailure error={listingBookingsError} onRetry={() => { refetch(); }} />;
   return (
-    <div className="bg-white rounded-2xl border border-gray-100">
+    <div className="bg-white rounded-xl border border-gray-200">
       {bookings.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-500">No bookings yet — accepted offers convert into bookings here</div>
+        <div className="py-10 text-center text-sm text-gray-600">No bookings yet — accepted offers convert into bookings here</div>
       ) : (
-        <table className="w-full text-sm">
-          <thead className="text-xs text-gray-500 border-b border-gray-100">
+        <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full text-sm">
+          <thead className="text-xs text-gray-600 border-b border-gray-200">
             <tr>
               <th className="text-left p-3">Customer</th>
               <th className="text-left p-3">Dates</th>
@@ -339,7 +346,7 @@ function BookingsTab({ listingId }: { listingId: string }) {
               <tr key={b.id}>
                 <td className="p-3">
                   <p className="font-medium text-gray-900">{b.customerName}</p>
-                  <p className="text-[11px] text-gray-500">{b.customerEmail ?? b.customerPhone ?? ''}</p>
+                  <p className="text-xs text-gray-600">{b.customerEmail ?? b.customerPhone ?? ''}</p>
                 </td>
                 <td className="p-3 text-xs text-gray-600">
                   {b.startDate ? new Date(b.startDate).toLocaleDateString() : '—'}
@@ -348,35 +355,35 @@ function BookingsTab({ listingId }: { listingId: string }) {
                 <td className="p-3">{b.partySize}</td>
                 <td className="p-3 font-medium">{b.currency} {(b.totalAmountCents / 100).toLocaleString()}</td>
                 <td className="p-3">
-                  <select
+                  <Select disabled={update.isPending} aria-label={`Status for ${b.id ?? 'record'}`}
                     value={b.status}
-                    onChange={async (e) => {
+                    onChange={async (e) => { try {
                       await update.mutateAsync({ id: b.id, status: e.target.value });
                       refetch();
-                    }}
+                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                   >
                     {['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELLED', 'REFUNDED'].map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  </Select>
                 </td>
                 <td className="p-3">
-                  <select
+                  <Select disabled={update.isPending} aria-label={`Payment Status for ${b.id ?? 'record'}`}
                     value={b.paymentStatus}
-                    onChange={async (e) => {
+                    onChange={async (e) => { try {
                       await update.mutateAsync({ id: b.id, paymentStatus: e.target.value });
                       refetch();
-                    }}
+                    } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                   >
                     {['UNPAID', 'PARTIAL', 'PAID', 'REFUNDED'].map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+                  </Select>
                 </td>
                 <td className="p-3 text-right">
                 </td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
     </div>
   );
@@ -426,52 +433,52 @@ function EditTab({ listing, refetch }: { listing: any; refetch: () => void }) {
 
   return (
     <div className="space-y-4 max-w-2xl">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Edit listing
         </h3>
         <FieldLabel label="Title">
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+          <Input aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
         </FieldLabel>
         <FieldLabel label="Description">
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none outline-none focus:border-brand-400" />
+          <Textarea aria-label="Description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none outline-none focus:border-brand-400" />
         </FieldLabel>
         <div className="grid grid-cols-3 gap-3">
           <FieldLabel label="Price">
-            <input type="number" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+            <Input aria-label="Price From" type="number" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
           </FieldLabel>
           <FieldLabel label="Currency">
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select aria-label="Currency" value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               {['SAR', 'USD', 'IDR', 'PKR', 'MYR'].map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            </Select>
           </FieldLabel>
           <FieldLabel label="Pricing model">
-            <select value={pricingModel} onChange={(e) => setPricingModel(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select aria-label="Pricing Model" value={pricingModel} onChange={(e) => setPricingModel(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               {['PER_PERSON', 'PER_GROUP', 'PER_NIGHT', 'PER_TRIP', 'FLAT'].map((c) => <option key={c} value={c}>{c.replace('_', ' ')}</option>)}
-            </select>
+            </Select>
           </FieldLabel>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <FieldLabel label="Status">
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               {['PUBLISHED', 'DRAFT', 'PAUSED', 'ARCHIVED'].map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </FieldLabel>
           <FieldLabel label="City">
-            <input value={city} onChange={(e) => setCity(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+            <Input aria-label="City" value={city} onChange={(e) => setCity(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
           </FieldLabel>
         </div>
         <div className="flex justify-end pt-2">
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
+          <Button variant="quiet" type="button" onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
             {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save listing
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-red-100 p-5">
+      <div className="bg-white rounded-xl border border-red-100 p-5">
         <h3 className="text-sm font-bold text-red-700 inline-flex items-center gap-2"><Archive className="h-4 w-4" /> Archive listing</h3>
-        <p className="text-xs text-gray-500 my-2">Hide this listing from the public marketplace. Past inquiries and bookings remain.</p>
-        <button onClick={archive} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg">Archive listing</button>
+        <p className="text-xs text-gray-600 my-2">Hide this listing from the public marketplace. Past inquiries and bookings remain.</p>
+        <Button variant="quiet" type="button" onClick={archive} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg">Archive listing</Button>
       </div>
     </div>
   );
@@ -494,22 +501,22 @@ function InquireModal({ listingId, onClose }: { listingId: string; onClose: () =
   const [message, setMessage] = useState('');
   const [partySize, setPartySize] = useState<string>('');
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
+    <ModalSurface busy={createInquiry.isPending} title="Send inquiry" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Send inquiry</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></button>
+          <Button disabled={createInquiry.isPending} variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></Button>
         </div>
         <div className="space-y-3">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
-          <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
-          <input value={partySize} onChange={(e) => setPartySize(e.target.value)} type="number" placeholder="Party size" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
-          <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="Your message" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
+          <Input aria-label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Input aria-label="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Input aria-label="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Input aria-label="Party Size" value={partySize} onChange={(e) => setPartySize(e.target.value)} type="number" placeholder="Party size" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Textarea aria-label="Message" value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="Your message" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</button>
-          <button
+          <Button disabled={createInquiry.isPending} variant="quiet" type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</Button>
+          <Button variant="quiet" type="button"
             onClick={async () => {
               try {
                 await createInquiry.mutateAsync({
@@ -526,10 +533,10 @@ function InquireModal({ listingId, onClose }: { listingId: string; onClose: () =
             className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50"
           >
             {createInquiry.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Send
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }
 
@@ -543,42 +550,46 @@ function BookModal({ listing, onClose }: { listing: any; onClose: () => void }) 
   const [partySize, setPartySize] = useState<string>('1');
   const [notes, setNotes] = useState('');
 
-  const unitPrice = (listing.priceCents ?? 0) / 100;
-  const totalEst = unitPrice * (Number(partySize) || 1);
+  const estimateCents = bookingEstimateCents(listing.priceCents, listing.pricingModel, Number(partySize));
+  const canPrice = estimateCents != null;
+  const validPartySize = Number.isSafeInteger(Number(partySize)) && Number(partySize) >= 1;
+  const totalEst = (estimateCents ?? 0) / 100;
+  const validDates = !!startDate && (!endDate || endDate >= startDate);
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+    <ModalSurface busy={createBooking.isPending} title="Create booking" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">Create booking</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></button>
+          <Button disabled={createBooking.isPending} variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></Button>
         </div>
         <div className="space-y-3">
-          <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
-          <input value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="Email" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
-          <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Phone" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Input aria-label="Customer Name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Customer name" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Input aria-label="Customer Email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="Email" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+          <Input aria-label="Customer Phone" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="Phone" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="block text-[11px] font-semibold text-gray-600 mb-1">Start date</span>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+              <span className="block text-xs font-semibold text-gray-600 mb-1">Start date</span>
+              <Input  type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
             </label>
             <label className="block">
-              <span className="block text-[11px] font-semibold text-gray-600 mb-1">End date</span>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+              <span className="block text-xs font-semibold text-gray-600 mb-1">End date</span>
+              <Input  type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
             </label>
           </div>
           <label className="block">
-            <span className="block text-[11px] font-semibold text-gray-600 mb-1">Party size</span>
-            <input type="number" min="1" value={partySize} onChange={(e) => setPartySize(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+            <span className="block text-xs font-semibold text-gray-600 mb-1">Party size</span>
+            <Input  type="number" min="1" value={partySize} onChange={(e) => setPartySize(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
           </label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Notes" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
+          <Textarea aria-label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Notes" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
           <div className="bg-brand-50 rounded-lg px-3 py-2 text-sm">
-            <span className="text-gray-500">Estimated total:</span> <span className="font-bold text-gray-900">{listing.currency ?? 'SAR'} {totalEst.toLocaleString()}</span>
+            <span className="text-gray-600">Estimated total:</span> <span className="font-bold text-gray-900">{canPrice && validPartySize ? `${listing.currency ?? 'SAR'} ${totalEst.toLocaleString()}` : 'Provider confirmation required'}</span>
           </div>
+          <p className="text-sm text-gray-600">Enter a customer name, a start date and a whole party size. The end date cannot precede the start date. Creating a booking records a request with the provider; it does not confirm availability or collect payment. Review the dates, party size and estimate before continuing. Nightly and custom pricing require a provider inquiry.</p>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</button>
-          <button
+          <Button disabled={createBooking.isPending} variant="quiet" type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</Button>
+          <Button variant="quiet" type="button"
             onClick={async () => {
               try {
                 await createBooking.mutateAsync({
@@ -596,13 +607,13 @@ function BookModal({ listing, onClose }: { listing: any; onClose: () => void }) 
                 toast.error(e?.response?.data?.error?.message ?? 'Failed');
               }
             }}
-            disabled={createBooking.isPending || !customerName.trim()}
+            disabled={createBooking.isPending || !customerName.trim() || !validPartySize || !validDates || !canPrice}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50"
           >
-            {createBooking.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarCheck2 className="h-4 w-4" />} Book
-          </button>
+            {createBooking.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarCheck2 className="h-4 w-4" />} Create booking
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }

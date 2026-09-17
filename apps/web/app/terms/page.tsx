@@ -19,9 +19,9 @@ export default function TermsPage() {
   return (
     <PublicShell>
       <section className="max-w-3xl mx-auto px-6 lg:px-8 pt-16 pb-16">
-        <p className="text-[11px] font-bold tracking-[0.14em] text-gold-600">LEGAL</p>
+        <p className="text-[11px] font-bold tracking-[0.14em] text-gold-800">LEGAL</p>
         <h1 className="font-heading text-4xl font-extrabold text-brand-600 mt-2">Terms of Service</h1>
-        <p className="text-[13px] text-gray-500 mt-2">Last updated: June 2026</p>
+        <p className="text-[13px] text-gray-600 mt-2">Last updated: June 2026</p>
         <div className="mt-8 space-y-6">
           {SECTIONS.map((s) => (
             <div key={s.h}>

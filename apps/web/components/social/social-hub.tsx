@@ -1,4 +1,6 @@
 'use client';
+import { Textarea, Input , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import {
@@ -39,34 +41,34 @@ function PostComposer() {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
           {initials}
         </div>
         <div className="flex-1">
-          <textarea
+          <Textarea aria-label="Body"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Share an update, tip, or experience with the Umrah community…"
             rows={3}
-            className="w-full text-sm bg-gray-50 rounded-xl px-3 py-2.5 outline-none resize-none border border-gray-200 focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all placeholder:text-gray-500"
+            className="w-full text-sm bg-gray-50 rounded-xl px-3 py-2.5 outline-none resize-none border border-gray-200 focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all placeholder:text-gray-600"
           />
           {/* Media actions (frontend-ready; upload backend pending) */}
           <div className="flex items-center gap-1 mt-2 pb-2.5 border-b border-gray-50">
             {[
               { label: 'Photo', Icon: Image,     color: 'text-emerald-600' },
               { label: 'Video', Icon: Video,     color: 'text-blue-600' },
-              { label: 'Poll',  Icon: BarChart3, color: 'text-gold-600' },
+              { label: 'Poll',  Icon: BarChart3, color: 'text-gold-800' },
             ].map((m) => (
-              <button
+              <Button variant="quiet" type="button"
                 key={m.label}
                 onClick={() => toast.info(`${m.label} upload connects to the media backend when enabled.`)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 <m.Icon className={cn('h-4 w-4', m.color)} />
                 {m.label}
-              </button>
+              </Button>
             ))}
           </div>
           <div className="flex items-center justify-between mt-2.5">
@@ -78,29 +80,29 @@ function PostComposer() {
                 { type: 'STORY',      label: 'Experience', Icon: Star },
                 { type: 'OFFER',      label: 'Offer',      Icon: Gift },
               ].map((t) => (
-                <button
+                <Button variant="quiet" type="button"
                   key={t.type}
                   onClick={() => setType(t.type)}
                   className={cn(
-                    'inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full border transition-colors',
+                    'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border transition-colors',
                     type === t.type
                       ? 'bg-brand-50 text-brand-700 border-brand-300'
-                      : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300',
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300',
                   )}
                 >
                   <t.Icon className="h-3 w-3" />
                   {t.label}
-                </button>
+                </Button>
               ))}
             </div>
-            <button
+            <Button variant="quiet" type="button"
               onClick={submit}
               disabled={!body.trim() || isPending}
               className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors shadow-sm"
             >
               {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
               Post
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -154,7 +156,7 @@ function PostCard({ post }: { post: any }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-sm transition-shadow">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
       {/* Header */}
       <div className="flex items-start justify-between px-5 pt-4 pb-3">
         <div className="flex items-center gap-3">
@@ -167,9 +169,9 @@ function PostCard({ post }: { post: any }) {
               {post.author?.verified && <BadgeCheck className="h-3.5 w-3.5 text-brand-500" />}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-[11px] text-gray-500">{timeAgo}</p>
+              <p className="text-xs text-gray-600">{timeAgo}</p>
               {post.type && (
-                <span className={cn('inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md', typeCfg.color)}>
+                <span className={cn('inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md', typeCfg.color)}>
                   <typeCfg.Icon className="h-2.5 w-2.5" />
                   {typeCfg.label}
                 </span>
@@ -177,9 +179,9 @@ function PostCard({ post }: { post: any }) {
             </div>
           </div>
         </div>
-        <button className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
-          <MoreHorizontal className="h-4 w-4 text-gray-500" />
-        </button>
+        <Button variant="quiet" type="button" aria-label="More options" className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
+          <MoreHorizontal className="h-4 w-4 text-gray-600" />
+        </Button>
       </div>
 
       {/* Body */}
@@ -190,7 +192,7 @@ function PostCard({ post }: { post: any }) {
         {post.tags?.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {post.tags.map((tag: string) => (
-              <span key={tag} className="text-[11px] text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-brand-100 transition-colors">
+              <span key={tag} className="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-brand-100 transition-colors">
                 #{tag}
               </span>
             ))}
@@ -208,7 +210,7 @@ function PostCard({ post }: { post: any }) {
 
       {/* Engagement summary */}
       {(likeCount > 0 || commentCount > 0 || shareCount > 0) && (
-        <div className="flex items-center justify-between px-5 pt-3 text-[12px] text-gray-500">
+        <div className="flex items-center justify-between px-5 pt-3 text-[12px] text-gray-600">
           <div className="flex items-center gap-1.5">
             <span className="flex items-center justify-center w-4.5 h-4.5 rounded-full bg-red-500">
               <Heart className="h-2.5 w-2.5 text-white fill-current" />
@@ -224,42 +226,42 @@ function PostCard({ post }: { post: any }) {
 
       {/* Actions */}
       <div className="flex items-center gap-1 px-3 py-1.5 mt-2 border-t border-gray-50">
-        <button
+        <Button variant="quiet" type="button" aria-label="Heart"
           onClick={handleLike}
           className={cn(
             'flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm transition-all font-medium',
-            liked ? 'text-red-500 bg-red-50' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700',
+            liked ? 'text-red-700 bg-red-50' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-700',
           )}
         >
           <Heart className={cn('h-[18px] w-[18px]', liked && 'fill-current')} />
           <span>Like</span>
-        </button>
-        <button
+        </Button>
+        <Button variant="quiet" type="button" aria-label="Message Circle"
           onClick={() => setShowComments(!showComments)}
-          className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all font-medium"
+          className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700 transition-all font-medium"
         >
           <MessageCircle className="h-[18px] w-[18px]" />
           <span>Comment</span>
-        </button>
-        <button
-          onClick={() => toggleReaction({ postId: post.id, type: 'SHARE' }).catch(() => {})}
-          className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all font-medium"
+        </Button>
+        <Button variant="quiet" type="button" aria-label="Share2"
+          onClick={() => toggleReaction({ postId: post.id, type: 'SHARE' }).catch(() => toast.error('Could not save your reaction. Try again.'))}
+          className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700 transition-all font-medium"
         >
           <Share2 className="h-[18px] w-[18px]" />
           <span>Share</span>
-        </button>
-        <button
+        </Button>
+        <Button variant="quiet" type="button"
           onClick={async () => {
             try { const res = await toggleSave(post.id); setSaved(res.saved); } catch { /* no-op */ }
           }}
           className={cn(
             'p-2 rounded-xl transition-colors',
-            saved ? 'text-brand-600 bg-brand-50' : 'text-gray-500 hover:text-gray-600 hover:bg-gray-50',
+            saved ? 'text-brand-600 bg-brand-50' : 'text-gray-600 hover:text-gray-600 hover:bg-gray-50',
           )}
           title={saved ? 'Saved' : 'Save'}
         >
           <BookmarkPlus className={cn('h-[18px] w-[18px]', saved && 'fill-current')} />
-        </button>
+        </Button>
       </div>
 
       {/* Comments section */}
@@ -267,7 +269,7 @@ function PostCard({ post }: { post: any }) {
         <div className="px-5 pb-4 border-t border-gray-50 pt-3 space-y-3">
           {post.comments?.slice(0, 3).map((c: any) => (
             <div key={c.id} className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 text-[10px] font-bold shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-bold shrink-0">
                 {(c.author?.displayName ?? 'U').charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
@@ -277,20 +279,20 @@ function PostCard({ post }: { post: any }) {
             </div>
           ))}
           <div className="flex items-center gap-2">
-            <input
+            <Input aria-label="Comment Text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleComment()}
               placeholder="Write a comment…"
               className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-brand-300 transition-colors"
             />
-            <button
+            <Button variant="quiet" type="button"
               onClick={handleComment}
               disabled={!commentText.trim() || commentPending}
               className="p-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors"
             >
               {commentPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -302,28 +304,29 @@ function PostCard({ post }: { post: any }) {
 
 function ProfilePanel() {
   const { user } = useAuthContext();
-  const { data: account } = useSocialAccount();
+  const { data: account , error: socialAccountError, refetch: retrySocialAccount} = useSocialAccount();
 
   const displayName = account?.displayName ?? user?.displayName ?? 'Community Member';
   const bio = account?.bio ?? 'Umrah operator & community member';
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 
+  if (socialAccountError) return <QueryFailure error={socialAccountError} onRetry={() => { retrySocialAccount(); }} />;
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
       {/* Cover */}
       <div className="h-16 bg-gradient-to-r from-brand-500 to-brand-600" />
       <div className="px-4 pb-4">
         {/* Avatar */}
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-lg font-bold border-4 border-white -mt-7 mb-3 shadow-sm">
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-lg font-bold border-4 border-white -mt-7 mb-3 shadow-sm">
           {initials}
         </div>
         <p className="font-bold text-gray-900 text-sm">{displayName}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{bio}</p>
+        <p className="text-xs text-gray-600 mt-0.5">{bio}</p>
         {user?.tenantName && (
-          <p className="text-[11px] text-brand-600 font-medium mt-1">🏢 {user.tenantName}</p>
+          <p className="text-xs text-brand-600 font-medium mt-1">🏢 {user.tenantName}</p>
         )}
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
+        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200">
           {[
             { label: 'Posts',      value: account?._count?.posts ?? 0 },
             { label: 'Followers',  value: account?._count?.followers ?? 0 },
@@ -331,7 +334,7 @@ function ProfilePanel() {
           ].map((s) => (
             <div key={s.label} className="text-center">
               <p className="text-base font-bold text-gray-900">{s.value}</p>
-              <p className="text-[10px] text-gray-500">{s.label}</p>
+              <p className="text-xs text-gray-600">{s.label}</p>
             </div>
           ))}
         </div>
@@ -343,13 +346,14 @@ function ProfilePanel() {
 // ─── Trending Topics (real data) ────────────────────────────────────────────
 
 function TrendingPanel() {
-  const { data } = useTrendingPosts();
+  const { data , error: trendingPostsError, refetch: retryTrendingPosts} = useTrendingPosts();
   const posts: any[] = (data as any)?.items ?? (data as any) ?? [];
   // Derive real hashtags from the trending posts' tags
   const tags = Array.from(new Set(posts.flatMap((p) => p?.tags ?? []))).slice(0, 8) as string[];
 
+  if (trendingPostsError) return <QueryFailure error={trendingPostsError} onRetry={() => { retryTrendingPosts(); }} />;
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-2 mb-3">
         <TrendingUp className="h-4 w-4 text-brand-500" />
         <h3 className="text-sm font-bold text-gray-900">Trending</h3>
@@ -357,9 +361,9 @@ function TrendingPanel() {
       {tags.length > 0 ? (
         <div className="flex flex-col gap-1.5">
           {tags.map((tag) => (
-            <button key={tag} className="text-left text-xs text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-2 py-1.5 rounded-lg transition-colors font-medium">
+            <Button variant="quiet" type="button" key={tag} className="text-left text-xs text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-2 py-1.5 rounded-lg transition-colors font-medium">
               #{String(tag).replace(/^#/, '')}
-            </button>
+            </Button>
           ))}
         </div>
       ) : posts.length > 0 ? (
@@ -371,7 +375,7 @@ function TrendingPanel() {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-gray-500 px-2 py-2">Topics will appear as the community posts.</p>
+        <p className="text-xs text-gray-600 px-2 py-2">Topics will appear as the community posts.</p>
       )}
     </div>
   );
@@ -380,7 +384,7 @@ function TrendingPanel() {
 // ─── Suggested Connections (real data) ───────────────────────────────────────
 
 function SuggestedPanel() {
-  const { data } = useDiscoverPeople();
+  const { data , error: discoverPeopleError, refetch: retryDiscoverPeople} = useDiscoverPeople();
   const people: any[] = (data as any)?.items ?? (data as any) ?? [];
   const requestConnection = useRequestConnection();
   const [done, setDone] = useState<Record<string, boolean>>({});
@@ -391,17 +395,18 @@ function SuggestedPanel() {
     try {
       await requestConnection.mutateAsync({ recipientId, message: 'Let’s connect on Umrah Connect.' } as any);
       setDone((prev) => ({ ...prev, [recipientId]: true }));
-    } catch { /* already requested / not allowed */ setDone((prev) => ({ ...prev, [recipientId]: true })); }
+    } catch { toast.error('Connection request could not be sent. Try again.'); }
   };
 
+  if (discoverPeopleError) return <QueryFailure error={discoverPeopleError} onRetry={() => { retryDiscoverPeople(); }} />;
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-2 mb-3">
         <Users className="h-4 w-4 text-brand-500" />
         <h3 className="text-sm font-bold text-gray-900">Suggested connections</h3>
       </div>
       {people.length === 0 ? (
-        <p className="text-xs text-gray-500 px-2 py-2">No suggestions yet.</p>
+        <p className="text-xs text-gray-600 px-2 py-2">No suggestions yet.</p>
       ) : (
         <div className="space-y-3">
           {people.slice(0, 6).map((u) => {
@@ -411,25 +416,25 @@ function SuggestedPanel() {
             const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
             return (
               <div key={id} className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-[11px] font-bold shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {initials}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold text-gray-800 truncate">{name}</p>
-                  <p className="text-[10px] text-gray-500 truncate">{role}</p>
+                  <p className="text-xs text-gray-600 truncate">{role}</p>
                 </div>
-                <button
+                <Button variant="quiet" type="button"
                   onClick={() => onConnect(u)}
                   disabled={done[id]}
                   className={cn(
-                    'text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-colors',
+                    'text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors',
                     done[id]
-                      ? 'bg-gray-100 text-gray-500 border-gray-200'
+                      ? 'bg-gray-100 text-gray-600 border-gray-200'
                       : 'bg-brand-50 text-brand-700 border-brand-200 hover:bg-brand-100',
                   )}
                 >
                   {done[id] ? 'Requested' : 'Connect'}
-                </button>
+                </Button>
               </div>
             );
           })}
@@ -462,13 +467,13 @@ export function SocialHub() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Social Hub</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Umrah operator community · real-time updates</p>
+          <p className="text-sm text-gray-600 mt-0.5">Umrah operator community · real-time updates</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30">
+          <Button variant="quiet" type="button" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm">
             <Globe className="h-4 w-4" />
             Discover
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -479,7 +484,7 @@ export function SocialHub() {
 
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse space-y-3">
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-gray-100" />
                   <div className="space-y-2 flex-1">
@@ -493,10 +498,10 @@ export function SocialHub() {
               </div>
             ))
           ) : posts.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 py-20 text-center">
+            <div className="bg-white rounded-xl border border-gray-200 py-20 text-center">
               <Globe className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500 mb-1">The feed is empty right now</p>
-              <p className="text-xs text-gray-500">Be the first to share an update!</p>
+              <p className="text-sm text-gray-600 mb-1">The feed is empty right now</p>
+              <p className="text-xs text-gray-600">Be the first to share an update!</p>
             </div>
           ) : (
             posts.map((post) => <PostCard key={post.id} post={post} />)
@@ -504,17 +509,17 @@ export function SocialHub() {
 
           {/* Load More */}
           {hasNextPage && (
-            <button
+            <Button variant="quiet" type="button"
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="w-full py-3 border border-gray-200 rounded-2xl text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
             >
               {isFetchingNextPage ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Loading…</>
               ) : (
                 <><RefreshCw className="h-4 w-4" /> Load more posts</>
               )}
-            </button>
+            </Button>
           )}
         </div>
 

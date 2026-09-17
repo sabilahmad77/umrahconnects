@@ -1,4 +1,6 @@
 'use client';
+import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -45,49 +47,45 @@ export function FinancePaymentsView() {
     URL.revokeObjectURL(url);
   };
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-600 mt-0.5">
             {data?.total ?? 0} payments · SAR {(totalCollected / 100).toLocaleString()} collected
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500">
+          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          </button>
-          <button onClick={exportCsv} className="flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50">
+          </Button>
+          <Button variant="quiet" type="button" onClick={exportCsv} className="flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50">
             <Download className="h-4 w-4" /> Export
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80">
-        <Search className="h-4 w-4 text-gray-500" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice / counterparty / ref…" className="text-sm bg-transparent flex-1 outline-none" />
+        <Search className="h-4 w-4 text-gray-600" />
+        <Input aria-label="Search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search invoice / counterparty / ref…" className="text-sm bg-transparent flex-1 outline-none" />
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
+        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center text-sm text-gray-600">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
-      ) : error ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
-          <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-          <p className="text-sm text-red-500">Failed to load payments</p>
-        </div>
       ) : items.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
+        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
           <CreditCard className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-500">No payments recorded yet</p>
+          <p className="text-sm text-gray-600">No payments recorded yet</p>
           <Link href="/finance" className="text-xs text-brand-500 hover:underline mt-2 inline-block">Record a payment from an invoice →</Link>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full text-sm">
+            <thead className="text-xs text-gray-600 bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left p-3">Invoice</th>
                 <th className="text-left p-3">Counterparty</th>
@@ -111,40 +109,40 @@ export function FinancePaymentsView() {
                   </td>
                   <td className="p-3 text-xs text-gray-600">{p.invoice?.issuedToName ?? '—'}</td>
                   <td className="p-3 text-xs text-gray-600">{p.gateway ?? '—'}</td>
-                  <td className="p-3 text-xs text-gray-500 font-mono">{p.gatewayRef ?? '—'}</td>
+                  <td className="p-3 text-xs text-gray-600 font-mono">{p.gatewayRef ?? '—'}</td>
                   <td className="p-3 font-medium">
                     {p.currency} {(p.amountCents / 100).toLocaleString()}
-                    {p.refundedCents > 0 && <span className="block text-[10px] text-red-500">−{(p.refundedCents / 100).toLocaleString()} refunded</span>}
+                    {p.refundedCents > 0 && <span className="block text-xs text-red-700">−{(p.refundedCents / 100).toLocaleString()} refunded</span>}
                   </td>
                   <td className="p-3 text-xs text-gray-600">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
                   <td className="p-3">
-                    <select
+                    <Select disabled={update.isPending} aria-label={`Status for ${p.id ?? 'record'}`}
                       value={p.status}
-                      onChange={async (e) => { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); }}
+                      onChange={async (e) => { try { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    </Select>
                   </td>
                   <td className="p-3 text-right">
                     {p.status !== 'REFUNDED' && (
-                      <button
-                        onClick={async () => {
+                      <Button busy={refund.isPending} variant="quiet" type="button"
+                        onClick={async () => { try {
                           if (!confirm('Refund this payment? The linked invoice balance will be adjusted.')) return;
                           await refund.mutateAsync({ id: p.id });
                           toast.success('Payment refunded');
                           refetch();
-                        }}
-                        className="inline-flex items-center gap-1 text-xs text-red-500 hover:underline"
+                        } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
+                        className="inline-flex items-center gap-1 text-xs text-red-700 hover:underline"
                       >
                         <Undo2 className="h-3 w-3" /> Refund
-                      </button>
+                      </Button>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

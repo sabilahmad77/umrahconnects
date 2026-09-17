@@ -1,0 +1,19 @@
+{
+  "ordinaryTextSampleRoutes": 11,
+  "socialGradient": {
+    "computedStops": [
+      "rgb(53,122,110)",
+      "rgb(11,46,42)"
+    ],
+    "minimumWhiteContrast": 5.05
+  },
+  "financeGradient": {
+    "computedStops": [
+      "rgb(15,61,55)",
+      "rgb(11,46,42)"
+    ],
+    "minimumContrastIncludingTextOpacity": 6.75
+  },
+  "postFlag": "Disabled empty-composer Post button, contrast requirement exemption; visually reviewed.",
+  "methodLimit": "Solid-background DOM sampler does not model background-image gradients; flagged transparent gradient backgrounds were adjudicated from observed computed CSS stops."
+}

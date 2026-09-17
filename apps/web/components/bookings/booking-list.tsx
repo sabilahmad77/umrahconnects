@@ -1,4 +1,6 @@
 'use client';
+import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import {
@@ -25,7 +27,7 @@ const FILTERS = ['ALL', 'CONFIRMED', 'PENDING', 'DRAFT', 'CANCELLED', 'COMPLETED
 
 function StatCard({ label, value, color, Icon }: { label: string; value: number; color: string; Icon?: any }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
       <p className="text-2xl font-bold text-gray-900">{value.toLocaleString()}</p>
       <div className={cn('inline-flex items-center gap-1.5 text-xs font-medium mt-1', color)}>
         {Icon && <Icon className="h-3.5 w-3.5" />}
@@ -48,26 +50,27 @@ export function BookingList() {
     search: search || undefined,
     status: statusFilter !== 'ALL' ? statusFilter : undefined,
   });
-  const { data: stats } = useBookingStats();
+  const { data: stats , error: bookingStatsError, refetch: retryBookingStats} = useBookingStats();
   const createBooking = useCreateBooking();
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
 
+  if (error || bookingStatsError) return <QueryFailure error={error || bookingStatsError} onRetry={() => { refetch(); retryBookingStats(); }} />;
   return (
     <div className="space-y-5 pb-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{total.toLocaleString()} total bookings</p>
+          <p className="text-sm text-gray-600 mt-0.5">{total.toLocaleString()} total bookings</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 hover:text-gray-600 transition-colors">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
+          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 hover:text-gray-600 transition-colors">
             <RefreshCw className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={() => {
               const rows = items;
               if (!rows.length) { toast('Nothing to export'); return; }
@@ -93,58 +96,58 @@ export function BookingList() {
           >
             <Download className="h-4 w-4" />
             Export
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30"
+            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
           >
             <Plus className="h-4 w-4" />
             New Booking
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Confirmed" Icon={CheckCircle2} value={stats.byStatus?.CONFIRMED ?? 0} color="text-green-600" />
-          <StatCard label="Pending"   Icon={Clock}        value={stats.byStatus?.PENDING ?? 0}   color="text-yellow-600" />
-          <StatCard label="Draft"     Icon={FileEdit}     value={stats.byStatus?.DRAFT ?? 0}     color="text-gray-500" />
-          <StatCard label="Cancelled" Icon={XCircle}      value={stats.byStatus?.CANCELLED ?? 0} color="text-red-500" />
+          <StatCard label="Confirmed" Icon={CheckCircle2} value={stats.byStatus?.CONFIRMED ?? 0} color="text-green-800" />
+          <StatCard label="Pending"   Icon={Clock}        value={stats.byStatus?.PENDING ?? 0}   color="text-yellow-800" />
+          <StatCard label="Draft"     Icon={FileEdit}     value={stats.byStatus?.DRAFT ?? 0}     color="text-gray-600" />
+          <StatCard label="Cancelled" Icon={XCircle}      value={stats.byStatus?.CANCELLED ?? 0} color="text-red-700" />
         </div>
       )}
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-500 shrink-0" />
-          <input
+          <Search className="h-4 w-4 text-gray-600 shrink-0" />
+          <Input aria-label="Search"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search bookings..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-600"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {FILTERS.map((f) => (
-            <button
+            <Button variant="quiet" type="button"
               key={f}
               onClick={() => { setStatusFilter(f); setPage(1); }}
               className={cn(
                 'text-xs px-3 py-1.5 rounded-full border transition-all font-medium',
                 statusFilter === f
                   ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
-                  : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-700',
               )}
             >
               {f === 'ALL' ? 'All Bookings' : STATUS[f]?.label ?? f}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="divide-y divide-gray-50">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -159,23 +162,17 @@ export function BookingList() {
               </div>
             ))}
           </div>
-        ) : error ? (
-          <div className="py-20 text-center">
-            <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-            <p className="text-sm text-red-500 mb-2">Failed to load bookings</p>
-            <button onClick={() => refetch()} className="text-xs text-brand-500 hover:underline">Retry</button>
-          </div>
         ) : (
           <>
-            <table className="w-full">
+            <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Booking</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden md:table-cell">Package</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden lg:table-cell">Amount</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden xl:table-cell">Date</th>
-                  <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3">Actions</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Booking</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden md:table-cell">Package</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden lg:table-cell">Amount</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden xl:table-cell">Date</th>
+                  <th className="text-right text-xs font-semibold text-gray-600 px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -183,7 +180,7 @@ export function BookingList() {
                   <tr>
                     <td colSpan={6} className="py-20 text-center">
                       <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-500">No bookings found</p>
+                      <p className="text-sm text-gray-600">No bookings found</p>
                     </td>
                   </tr>
                 ) : items.map((b: any) => {
@@ -203,7 +200,7 @@ export function BookingList() {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{b.bookingRef ?? b.id?.slice(0, 8)}</p>
-                            <p className="text-xs text-gray-500">{pilgrimName}</p>
+                            <p className="text-xs text-gray-600">{pilgrimName}</p>
                           </div>
                         </div>
                       </td>
@@ -215,7 +212,7 @@ export function BookingList() {
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell">
                         <p className="text-sm text-gray-700">{b.package?.name ?? '—'}</p>
-                        <p className="text-xs text-gray-500">{b.package?.type ?? ''}</p>
+                        <p className="text-xs text-gray-600">{b.package?.type ?? ''}</p>
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
                         <p className="text-sm font-semibold text-gray-800">{amt}</p>
@@ -225,23 +222,23 @@ export function BookingList() {
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                          <button onClick={(e) => { e.stopPropagation(); setViewBooking(b); }} title="View" className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                            <Eye className="h-3.5 w-3.5 text-gray-500" />
-                          </button>
+                          <Button variant="quiet" type="button" onClick={(e) => { e.stopPropagation(); setViewBooking(b); }} title="View" className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Eye className="h-3.5 w-3.5 text-gray-600" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total.toLocaleString()} results</p>
+              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200">
+                <p className="text-xs text-gray-600">Page {page} of {totalPages} · {total.toLocaleString()} results</p>
                 <div className="flex gap-1.5">
-                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors">Prev</button>
-                  <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors">Next</button>
+                  <Button variant="quiet" type="button" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors">Prev</Button>
+                  <Button variant="quiet" type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors">Next</Button>
                 </div>
               </div>
             )}
@@ -278,38 +275,38 @@ function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () =>
     ? `${booking.currency ?? 'SAR'} ${(Number(cents) / 100).toLocaleString()}`
     : '—';
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+    <ModalSurface title={booking.bookingRef ?? booking.id?.slice(0, 8)} onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">{booking.bookingRef ?? booking.id?.slice(0, 8)}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{booking.status?.replace(/_/g, ' ')}</p>
+            <p className="text-xs text-gray-600 mt-0.5">{booking.status?.replace(/_/g, ' ')}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
-            <X className="h-4 w-4 text-gray-500" />
-          </button>
+          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <X className="h-4 w-4 text-gray-600" />
+          </Button>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Package</p><p className="text-gray-800 mt-0.5">{booking.package?.name ?? '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Status</p><p className="text-gray-800 mt-0.5">{booking.status?.replace(/_/g, ' ') ?? '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Total</p><p className="text-brand-700 font-bold mt-0.5">{fmt(booking.totalAmountCents)}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Paid</p><p className="text-gray-800 mt-0.5">{fmt(booking.paidAmountCents)}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Departure</p><p className="text-gray-800 mt-0.5">{booking.departureDate ? new Date(booking.departureDate).toLocaleDateString() : '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Return</p><p className="text-gray-800 mt-0.5">{booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Created</p><p className="text-gray-800 mt-0.5">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : '—'}</p></div>
-          <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Pilgrims</p><p className="text-gray-800 mt-0.5">{booking.pilgrims?.length ?? 0} assigned</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Package</p><p className="text-gray-800 mt-0.5">{booking.package?.name ?? '—'}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Status</p><p className="text-gray-800 mt-0.5">{booking.status?.replace(/_/g, ' ') ?? '—'}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Total</p><p className="text-brand-700 font-bold mt-0.5">{fmt(booking.totalAmountCents)}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Paid</p><p className="text-gray-800 mt-0.5">{fmt(booking.paidAmountCents)}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Departure</p><p className="text-gray-800 mt-0.5">{booking.departureDate ? new Date(booking.departureDate).toLocaleDateString() : '—'}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Return</p><p className="text-gray-800 mt-0.5">{booking.returnDate ? new Date(booking.returnDate).toLocaleDateString() : '—'}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Created</p><p className="text-gray-800 mt-0.5">{booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : '—'}</p></div>
+          <div><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Pilgrims</p><p className="text-gray-800 mt-0.5">{booking.pilgrims?.length ?? 0} assigned</p></div>
           {booking.notes && (
-            <div className="col-span-2 mt-2 pt-3 border-t border-gray-100">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Notes</p>
+            <div className="col-span-2 mt-2 pt-3 border-t border-gray-200">
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-600">Notes</p>
               <p className="text-sm text-gray-700 mt-1 whitespace-pre-line">{booking.notes}</p>
             </div>
           )}
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Close</button>
+          <Button variant="quiet" type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50">Close</Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }
 
@@ -364,28 +361,28 @@ function NewBookingModal({
   };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+    <ModalSurface title="New booking" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New booking</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
-            <X className="h-4 w-4 text-gray-500" />
-          </button>
+          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <X className="h-4 w-4 text-gray-600" />
+          </Button>
         </div>
 
         {pkgList.length === 0 ? (
-          <p className="text-sm text-gray-500 py-6 text-center">
+          <p className="text-sm text-gray-600 py-6 text-center">
             No packages found. Create a package first from the operator setup.
           </p>
         ) : pilgrimList.length === 0 ? (
-          <p className="text-sm text-gray-500 py-6 text-center">
+          <p className="text-sm text-gray-600 py-6 text-center">
             No pilgrims found. Add at least one pilgrim before booking.
           </p>
         ) : (
           <div className="space-y-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Package *</span>
-              <select
+              <Select
                 value={packageId}
                 onChange={(e) => setPackageId(e.target.value)}
                 className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white"
@@ -393,11 +390,11 @@ function NewBookingModal({
                 {pkgList.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Lead pilgrim *</span>
-              <select
+              <Select
                 value={leadPilgrimId}
                 onChange={(e) => setLeadPilgrimId(e.target.value)}
                 className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white"
@@ -407,22 +404,22 @@ function NewBookingModal({
                     {[p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || p.id.slice(0, 8)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Adults *</span>
-                <input type="number" min="1" value={paxAdult} onChange={(e) => setPaxAdult(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="1" value={paxAdult} onChange={(e) => setPaxAdult(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Children</span>
-                <input type="number" min="0" value={paxChild} onChange={(e) => setPaxChild(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="0" value={paxChild} onChange={(e) => setPaxChild(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
               </label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Total (SAR) *</span>
-                <input
+                <Input
                   type="number"
                   min="0"
                   value={totalAmount}
@@ -433,22 +430,22 @@ function NewBookingModal({
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Deposit (SAR)</span>
-                <input type="number" min="0" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="0" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
               </label>
             </div>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+              <Select  value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
                 <option value="DRAFT">Draft / Enquiry</option>
                 <option value="CONFIRMED">Confirmed</option>
                 <option value="PARTIALLY_PAID">Partially paid</option>
                 <option value="FULLY_PAID">Fully paid</option>
                 <option value="VISA_PROCESSING">Visa processing</option>
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-              <textarea
+              <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
@@ -460,17 +457,17 @@ function NewBookingModal({
         )}
 
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-          <button
+          <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
+          <Button variant="quiet" type="button"
             onClick={submit}
             disabled={pending || !packageId || !leadPilgrimId || !(totalAmount || suggestedSar)}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm"
           >
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Create booking
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }

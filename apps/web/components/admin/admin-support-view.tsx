@@ -13,7 +13,7 @@ export function AdminSupportView() {
     <div className="space-y-5 pb-10 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Support &amp; issues</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Inbound channels where users report problems or request help</p>
+        <p className="text-sm text-gray-600 mt-0.5">Inbound channels where users report problems or request help</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -47,7 +47,7 @@ export function AdminSupportView() {
         />
       </div>
 
-      <div className="bg-yellow-50 border border-yellow-100 rounded-2xl p-4">
+      <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
         <p className="text-sm font-semibold text-yellow-800 mb-1">Dedicated support tickets — coming soon</p>
         <p className="text-xs text-yellow-700">
           A first-class <code>SupportTicket</code> model with status workflow, SLA tracking and assignment will be added here.
@@ -60,13 +60,13 @@ export function AdminSupportView() {
 
 function SupportTile({ href, icon: Icon, title, subtitle, color }: { href: string; icon: any; title: string; subtitle: string; color: string }) {
   return (
-    <Link href={href} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-brand-200 transition-all flex items-start gap-3">
+    <Link href={href} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all flex items-start gap-3">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
         <Icon className="h-5 w-5" />
       </div>
       <div className="flex-1">
         <p className="text-sm font-bold text-gray-900">{title}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
+        <p className="text-xs text-gray-600">{subtitle}</p>
         <p className="text-xs text-brand-500 inline-flex items-center gap-1 mt-2">Open <ArrowRight className="h-3 w-3" /></p>
       </div>
     </Link>

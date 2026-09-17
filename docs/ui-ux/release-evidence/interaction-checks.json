@@ -1,0 +1,21 @@
+{
+  "drawerFocus": {
+    "insideDialog": true,
+    "name": "Dashboard"
+  },
+  "drawerReturn": "Open workspace navigation",
+  "forgotEmptyEmail": "Displayed Enter your account email address first; no request sent",
+  "auth": "Real seeded operator login succeeded on final production build",
+  "modalFocus": {
+    "insideDialog": true,
+    "label": "Package *Ramadan VIP Umrah Package 2026"
+  },
+  "modalReturn": "New Booking",
+  "bookingSelectLabels": "Package *, Lead pilgrim *",
+  "publicNavReturn": "Open navigation",
+  "publicFaq": "Enter expands native summary disclosure",
+  "logout": "Account menu Sign out returned to login",
+  "signupValidation": "Blurring empty First name exposed First name is required; no account created or terms accepted",
+  "passwordVisibility": "text",
+  "returnTo": "http://localhost:3106/bookings/4e46e167-838a-4175-9db2-ece23e910ce6"
+}

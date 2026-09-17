@@ -1,4 +1,6 @@
 'use client';
+import { Input, Select, ModalSurface, Textarea , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import {
@@ -44,63 +46,59 @@ export function HotelBookingsView() {
     URL.revokeObjectURL(url);
   };
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Hotel bookings</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{bookings.length} bookings — platform guests &amp; external clients</p>
+          <p className="text-sm text-gray-600 mt-0.5">{bookings.length} bookings — platform guests &amp; external clients</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500">
+          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          </button>
-          <button onClick={exportCsv} className="flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50">
+          </Button>
+          <Button variant="quiet" type="button" onClick={exportCsv} className="flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50">
             <Download className="h-4 w-4" /> Export
-          </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm shadow-brand-500/30">
+          </Button>
+          <Button variant="quiet" type="button" onClick={() => setShowCreate(true)} className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
             <Plus className="h-4 w-4" /> New booking
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
-          <Search className="h-4 w-4 text-gray-500" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search guest / phone…" className="text-sm bg-transparent flex-1 outline-none" />
+          <Search className="h-4 w-4 text-gray-600" />
+          <Input aria-label="Search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search guest / phone…" className="text-sm bg-transparent flex-1 outline-none" />
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {['ALL', ...STATUSES].map((s) => (
-            <button
+            <Button variant="quiet" type="button"
               key={s}
               onClick={() => setStatusFilter(s)}
               className={cn('text-xs px-3 py-1.5 rounded-full border font-medium transition-all',
-                statusFilter === s ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-500 hover:border-gray-300')}
+                statusFilter === s ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
             >
               {s.replace(/_/g, ' ')}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-sm text-gray-500">
+        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center text-sm text-gray-600">
           <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading…
         </div>
-      ) : error ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
-          <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-          <p className="text-sm text-red-500">Failed to load bookings</p>
-        </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
+        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
           <CalendarCheck2 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-          <p className="text-sm text-gray-500">No bookings yet — use “New booking” to record your first reservation</p>
+          <p className="text-sm text-gray-600">No bookings yet — use “New booking” to record your first reservation</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
+          <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full text-sm">
+            <thead className="text-xs text-gray-600 bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="text-left p-3">Guest</th>
                 <th className="text-left p-3">Hotel</th>
@@ -117,7 +115,7 @@ export function HotelBookingsView() {
                 <tr key={b.id} className="hover:bg-gray-50/60">
                   <td className="p-3">
                     <p className="font-medium text-gray-900">{b.guestName}</p>
-                    <p className="text-[11px] text-gray-500">{b.guestEmail ?? b.guestPhone ?? ''}</p>
+                    <p className="text-xs text-gray-600">{b.guestEmail ?? b.guestPhone ?? ''}</p>
                   </td>
                   <td className="p-3 text-xs text-gray-600">{b.hotel?.name ?? '—'}</td>
                   <td className="p-3 text-xs text-gray-600">
@@ -125,30 +123,30 @@ export function HotelBookingsView() {
                     {b.checkOut ? ` → ${new Date(b.checkOut).toLocaleDateString()}` : ''}
                   </td>
                   <td className="p-3">{b.guests}</td>
-                  <td className="p-3 text-[11px] text-brand-700">{b.source?.replace(/_/g, ' ')}</td>
+                  <td className="p-3 text-xs text-brand-700">{b.source?.replace(/_/g, ' ')}</td>
                   <td className="p-3 font-medium">{b.currency} {(b.totalAmountCents / 100).toLocaleString()}</td>
                   <td className="p-3">
-                    <select
+                    <Select disabled={update.isPending} aria-label={`Status for ${b.id ?? 'record'}`}
                       value={b.status}
-                      onChange={async (e) => { await update.mutateAsync({ id: b.id, status: e.target.value }); toast.success('Updated'); refetch(); }}
+                      onChange={async (e) => { try { await update.mutateAsync({ id: b.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-                    </select>
+                    </Select>
                   </td>
                   <td className="p-3">
-                    <select
+                    <Select disabled={update.isPending} aria-label={`Payment Status for ${b.id ?? 'record'}`}
                       value={b.paymentStatus}
-                      onChange={async (e) => { await update.mutateAsync({ id: b.id, paymentStatus: e.target.value }); toast.success('Updated'); refetch(); }}
+                      onChange={async (e) => { try { await update.mutateAsync({ id: b.id, paymentStatus: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
                     >
                       {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    </Select>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
@@ -161,7 +159,7 @@ export function HotelBookingsView() {
 
 function CreateHotelBookingModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const create = useCreateHotelBooking();
-  const { data: hotelsData } = useHotels({ limit: 100 });
+  const { data: hotelsData , error: hotelsError, refetch: retryHotels} = useHotels({ limit: 100 });
   const hotels = hotelsData?.items ?? [];
   const [form, setForm] = useState({
     hotelId: '',
@@ -207,78 +205,75 @@ function CreateHotelBookingModal({ onClose, onCreated }: { onClose: () => void; 
     }
   };
 
+  if (hotelsError) return <QueryFailure error={hotelsError} onRetry={() => { retryHotels(); }} />;
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 shadow-xl">
+    <ModalSurface busy={create.isPending} title="New hotel booking" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New hotel booking</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></button>
+          <Button disabled={create.isPending} variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4" /></Button>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Hotel *">
-            <select value={form.hotelId} onChange={(e) => setForm({ ...form, hotelId: e.target.value })} className="input bg-white">
+            <Select aria-label="Hotel Id" value={form.hotelId} onChange={(e) => setForm({ ...form, hotelId: e.target.value })} className="input bg-white">
               <option value="">Select hotel…</option>
               {hotels.map((h: any) => <option key={h.id} value={h.id}>{h.name} ({h.city})</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Booking source">
-            <select value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} className="input bg-white">
+            <Select aria-label="Source" value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} className="input bg-white">
               <option value="EXTERNAL">External guest / client</option>
               <option value="PLATFORM_USER">Platform user</option>
               <option value="OPERATOR">Operator</option>
               <option value="MARKETPLACE">Marketplace</option>
-            </select>
+            </Select>
           </Field>
           <Field label="Guest name *">
-            <input value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} className="input" />
+            <Input aria-label="Guest Name" value={form.guestName} onChange={(e) => setForm({ ...form, guestName: e.target.value })} className="input" />
           </Field>
           <Field label="Nationality (ISO-2)">
-            <input value={form.guestNationality} maxLength={2} onChange={(e) => setForm({ ...form, guestNationality: e.target.value.toUpperCase() })} className="input" placeholder="SA" />
+            <Input aria-label="Guest Nationality" value={form.guestNationality} maxLength={2} onChange={(e) => setForm({ ...form, guestNationality: e.target.value.toUpperCase() })} className="input" placeholder="SA" />
           </Field>
           <Field label="Email">
-            <input value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} className="input" />
+            <Input aria-label="Guest Email" value={form.guestEmail} onChange={(e) => setForm({ ...form, guestEmail: e.target.value })} className="input" />
           </Field>
           <Field label="Phone">
-            <input value={form.guestPhone} onChange={(e) => setForm({ ...form, guestPhone: e.target.value })} className="input" />
+            <Input aria-label="Guest Phone" value={form.guestPhone} onChange={(e) => setForm({ ...form, guestPhone: e.target.value })} className="input" />
           </Field>
           <Field label="Check-in *">
-            <input type="date" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} className="input" />
+            <Input aria-label="Check In" type="date" value={form.checkIn} onChange={(e) => setForm({ ...form, checkIn: e.target.value })} className="input" />
           </Field>
           <Field label="Check-out *">
-            <input type="date" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} className="input" />
+            <Input aria-label="Check Out" type="date" value={form.checkOut} onChange={(e) => setForm({ ...form, checkOut: e.target.value })} className="input" />
           </Field>
           <Field label="Number of guests">
-            <input type="number" min="1" value={form.guests} onChange={(e) => setForm({ ...form, guests: e.target.value })} className="input" />
+            <Input aria-label="Guests" type="number" min="1" value={form.guests} onChange={(e) => setForm({ ...form, guests: e.target.value })} className="input" />
           </Field>
           <Field label="Amount (SAR)">
-            <input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="input" />
+            <Input aria-label="Amount" type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="input" />
           </Field>
           <Field label="Booking status">
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="input bg-white">
+            <Select aria-label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="input bg-white">
               {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Payment status">
-            <select value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })} className="input bg-white">
+            <Select aria-label="Payment Status" value={form.paymentStatus} onChange={(e) => setForm({ ...form, paymentStatus: e.target.value })} className="input bg-white">
               {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Notes" full>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="input resize-none" />
+            <Textarea aria-label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="input resize-none" />
           </Field>
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</button>
-          <button onClick={submit} disabled={create.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
+          <Button disabled={create.isPending} variant="quiet" type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</Button>
+          <Button variant="quiet" type="button" onClick={submit} disabled={create.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
             {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create booking
-          </button>
+          </Button>
         </div>
       </div>
-      <style jsx>{`
-        :global(.input) { width: 100%; font-size: 14px; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; outline: none; }
-        :global(.input:focus) { border-color: #d4831a; box-shadow: 0 0 0 2px #fef3e6; }
-      `}</style>
-    </div>
+    </ModalSurface>
   );
 }
 

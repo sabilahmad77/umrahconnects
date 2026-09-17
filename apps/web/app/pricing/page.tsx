@@ -8,7 +8,7 @@ const PLANS = [
   {
     name: 'Traveler', price: 'Free', cadence: 'for pilgrims',
     desc: 'For individual travelers planning their Umrah journey.',
-    features: ['Browse the full marketplace', 'Book hotels, transport & visa services', 'Social Hub community & groups', 'Itinerary & booking management', 'Real-time travel notifications'],
+    features: ['Browse the full marketplace', 'Book hotels, transport & visa services', 'Social Hub community & groups', 'Personal bookings and service requests', 'Account notifications'],
     cta: 'Get Started', href: '/signup', highlight: false,
   },
   {
@@ -18,9 +18,9 @@ const PLANS = [
     cta: 'Contact Sales', href: '/contact?type=sales', highlight: true,
   },
   {
-    name: 'Enterprise / Governance', price: 'Custom', cadence: 'for groups & platforms',
-    desc: 'For large operators, multi-brand groups and platform governance.',
-    features: ['Everything in Operator', 'Multi-tenant administration', 'KYC verification workflows', 'Advanced reporting & analytics', 'Roles, permissions & audit logs', 'Priority support & onboarding'],
+    name: 'Enterprise coordination', price: 'Custom', cadence: 'for groups & platforms',
+    desc: 'For larger operators and teams with additional coordination needs.',
+    features: ['Everything in Operator', 'Organization onboarding discussion', 'Provider review requirements', 'Workspace reporting', 'Team roles and account setup', 'Support and onboarding discussion'],
     cta: 'Talk to us', href: '/contact?type=sales', highlight: false,
   },
 ];
@@ -37,12 +37,12 @@ export default function PricingPage() {
         <div className="grid md:grid-cols-3 gap-5">
           {PLANS.map((p) => (
             <div key={p.name} className={`rounded-2xl border p-6 flex flex-col ${p.highlight ? 'border-brand-500 bg-white shadow-xl shadow-brand-900/10 ring-1 ring-brand-500' : 'border-sandstone/60 bg-white'}`}>
-              {p.highlight && <span className="self-start text-[10px] font-bold tracking-wider text-brand-900 bg-gold-400 px-2.5 py-1 rounded-full mb-3">MOST POPULAR</span>}
+              {p.highlight && <span className="self-start text-[10px] font-bold tracking-wider text-brand-900 bg-gold-400 px-2.5 py-1 rounded-full mb-3">PROVIDER WORKSPACE</span>}
               <p className="font-heading font-bold text-lg text-gray-900">{p.name}</p>
-              <p className="text-[13px] text-gray-500 mt-1 leading-snug">{p.desc}</p>
+              <p className="text-[13px] text-gray-600 mt-1 leading-snug">{p.desc}</p>
               <div className="mt-4 mb-5">
                 <span className="font-heading text-3xl font-extrabold text-brand-600">{p.price}</span>
-                <span className="text-[12px] text-gray-500 ml-1.5">{p.cadence}</span>
+                <span className="text-[12px] text-gray-600 ml-1.5">{p.cadence}</span>
               </div>
               <ul className="space-y-2.5 flex-1">
                 {p.features.map((f) => (
@@ -57,8 +57,8 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
-        <p className="text-center text-[13px] text-gray-500 mt-8 max-w-2xl mx-auto">
-          Final provider and enterprise pricing is confirmed with our team based on your services, volume and onboarding needs. No hidden fees — SAR-native billing.
+        <p className="text-center text-[13px] text-gray-600 mt-8 max-w-2xl mx-auto">
+          Final provider and enterprise pricing is confirmed with our team based on your services, volume and onboarding needs. Confirm pricing, currency and terms before committing. Platform administration is reserved for authorized Super Admin accounts.
         </p>
       </section>
       <CTASection title="Not sure which plan fits?" subtitle="Tell us about your operation and we'll recommend the right setup for your team." />

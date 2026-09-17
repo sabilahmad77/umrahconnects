@@ -1,4 +1,6 @@
 'use client';
+import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -19,7 +21,7 @@ const VISA_STATUS: Record<string, { label: string; color: string; dot: string }>
   UNDER_REVIEW:          { label: 'Under Review',    color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
   APPROVED:              { label: 'Approved',        color: 'bg-green-100 text-green-700',  dot: 'bg-green-500' },
   REJECTED:              { label: 'Rejected',        color: 'bg-red-100 text-red-600',      dot: 'bg-red-500' },
-  EXPIRED:               { label: 'Expired',         color: 'bg-gray-100 text-gray-500',    dot: 'bg-gray-400' },
+  EXPIRED:               { label: 'Expired',         color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
 };
 
 const FILTERS = ['ALL', 'NOT_STARTED', 'DOCUMENTS_COLLECTING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
@@ -35,7 +37,7 @@ export function ComplianceList() {
     limit: 20,
     status: statusFilter !== 'ALL' ? statusFilter : undefined,
   });
-  const { data: stats } = useComplianceStats();
+  const { data: stats , error: complianceStatsError, refetch: retryComplianceStats} = useComplianceStats();
   const createVisa = useCreateVisaApplication();
   const pilgrimsQ = usePilgrims({ limit: 100 });
 
@@ -44,41 +46,42 @@ export function ComplianceList() {
   const totalPages = Math.ceil(total / 20);
 
   const statCards = [
-    { label: 'Approved',     value: stats?.byStatus?.APPROVED ?? 0,     color: 'text-green-600',  Icon: CheckCircle2 },
-    { label: 'Under Review', value: stats?.byStatus?.UNDER_REVIEW ?? 0, color: 'text-orange-600', Icon: Clock },
+    { label: 'Approved',     value: stats?.byStatus?.APPROVED ?? 0,     color: 'text-green-800',  Icon: CheckCircle2 },
+    { label: 'Under Review', value: stats?.byStatus?.UNDER_REVIEW ?? 0, color: 'text-orange-800', Icon: Clock },
     { label: 'Submitted',    value: stats?.byStatus?.SUBMITTED ?? 0,    color: 'text-blue-600',   Icon: FileText },
-    { label: 'Rejected',     value: stats?.byStatus?.REJECTED ?? 0,     color: 'text-red-500',    Icon: XCircle },
+    { label: 'Rejected',     value: stats?.byStatus?.REJECTED ?? 0,     color: 'text-red-700',    Icon: XCircle },
   ];
 
+  if (error || complianceStatsError) return <QueryFailure error={error || complianceStatsError} onRetry={() => { refetch(); retryComplianceStats(); }} />;
   return (
     <div className="space-y-5 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Visa & Compliance</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-600 mt-0.5">
             {total.toLocaleString()} applications · Approval rate:{' '}
             {stats?.successRate != null ? `${Number(stats.successRate).toFixed(1)}%` : '—'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
+          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
             <RefreshCw className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30"
+            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
           >
             <Plus className="h-4 w-4" />
             New Application
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map((s) => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-2xl font-bold text-gray-900">{s.value.toLocaleString()}</p>
             <div className={cn('inline-flex items-center gap-1.5 text-xs font-medium mt-1', s.color)}>
               <s.Icon className="h-3.5 w-3.5" /> {s.label}
@@ -95,11 +98,11 @@ export function ComplianceList() {
           <span
             key={label}
             title="Direct API integration planned — applications are tracked in-platform and submitted on the official portal today"
-            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border bg-gray-50 text-gray-500 border-gray-200"
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border bg-gray-50 text-gray-600 border-gray-200"
           >
             <Clock className="h-3 w-3" />
             {label}
-            <span className="text-[9px] font-bold tracking-wide text-gold-600 bg-gold-50 px-1.5 py-0.5 rounded-full">PLANNED</span>
+            <span className="text-[9px] font-bold tracking-wide text-gold-800 bg-gold-50 px-1.5 py-0.5 rounded-full">PLANNED</span>
           </span>
         ))}
       </div>
@@ -107,34 +110,34 @@ export function ComplianceList() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-          <Search className="h-4 w-4 text-gray-500 shrink-0" />
-          <input
+          <Search className="h-4 w-4 text-gray-600 shrink-0" />
+          <Input aria-label="Search"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search applications..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
+            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-600"
           />
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {FILTERS.map((f) => (
-            <button
+            <Button variant="quiet" type="button"
               key={f}
               onClick={() => { setStatusFilter(f); setPage(1); }}
               className={cn(
                 'text-xs px-3 py-1.5 rounded-full border transition-all font-medium',
                 statusFilter === f
                   ? 'bg-brand-500 text-white border-brand-500'
-                  : 'border-gray-200 text-gray-500 hover:border-gray-300',
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300',
               )}
             >
               {f === 'ALL' ? 'All' : VISA_STATUS[f]?.label ?? f}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {isLoading ? (
           <div className="divide-y divide-gray-50">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -148,21 +151,15 @@ export function ComplianceList() {
               </div>
             ))}
           </div>
-        ) : error ? (
-          <div className="py-20 text-center">
-            <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-            <p className="text-sm text-red-500 mb-2">Failed to load applications</p>
-            <button onClick={() => refetch()} className="text-xs text-brand-500 hover:underline">Retry</button>
-          </div>
         ) : (
           <>
-            <table className="w-full">
+            <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Pilgrim</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Visa Status</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden md:table-cell">Passport</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden lg:table-cell">Submitted</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Pilgrim</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Visa Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden md:table-cell">Passport</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden lg:table-cell">Submitted</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -170,7 +167,7 @@ export function ComplianceList() {
                   <tr>
                     <td colSpan={4} className="py-20 text-center">
                       <FileCheck2 className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-500">No visa applications found</p>
+                      <p className="text-sm text-gray-600">No visa applications found</p>
                     </td>
                   </tr>
                 ) : items.map((v: any) => {
@@ -182,12 +179,12 @@ export function ComplianceList() {
                     <tr key={v.id} className="hover:bg-gray-50/60 transition-colors cursor-pointer">
                       <td className="px-5 py-3.5">
                         <Link href={`/compliance/${v.id}`} className="flex items-center gap-3 hover:underline">
-                          <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-600 text-xs font-bold shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-800 text-xs font-bold shrink-0">
                             {pilgrimName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{pilgrimName}</p>
-                            <p className="text-xs text-gray-500">{v.pilgrim?.nationality ?? '—'}</p>
+                            <p className="text-xs text-gray-600">{v.pilgrim?.nationality ?? '—'}</p>
                           </div>
                         </Link>
                       </td>
@@ -207,13 +204,13 @@ export function ComplianceList() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500">Page {page} of {totalPages} · {total} results</p>
+              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200">
+                <p className="text-xs text-gray-600">Page {page} of {totalPages} · {total} results</p>
                 <div className="flex gap-1.5">
-                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Prev</button>
-                  <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</button>
+                  <Button variant="quiet" type="button" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Prev</Button>
+                  <Button variant="quiet" type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</Button>
                 </div>
               </div>
             )}
@@ -260,59 +257,59 @@ function NewVisaModal({
   });
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl">
+    <ModalSurface title="New visa application" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New visa application</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-500" /></button>
+          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-600" /></Button>
         </div>
         {pilgrims.length === 0 ? (
-          <p className="text-sm text-gray-500 py-4 text-center">No pilgrims yet — add a pilgrim first.</p>
+          <p className="text-sm text-gray-600 py-4 text-center">No pilgrims yet — add a pilgrim first.</p>
         ) : (
           <div className="space-y-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Pilgrim *</span>
-              <select value={pilgrimId} onChange={(e) => setPilgrimId(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+              <Select  value={pilgrimId} onChange={(e) => setPilgrimId(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
                 {pilgrims.map((p) => (
                   <option key={p.id} value={p.id}>
                     {[p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || p.id.slice(0, 8)} {p.passportNumber ? `· ${p.passportNumber}` : ''}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Visa type *</span>
-                <select value={type} onChange={(e) => setType(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select  value={type} onChange={(e) => setType(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
                   <option value="UMRAH">Umrah</option>
                   <option value="HAJJ">Hajj</option>
                   <option value="VISIT">Visit</option>
-                </select>
+                </Select>
               </label>
               <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">System *</span>
-                <select value={regulatorySystem} onChange={(e) => setRegulatorySystem(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select  value={regulatorySystem} onChange={(e) => setRegulatorySystem(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
                   <option value="NUSUK_MASAR">Nusuk / Masar</option>
                   <option value="SISKOPATUH">SISKOPATUH</option>
                   <option value="OTHER">Other</option>
-                </select>
+                </Select>
               </label>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Passport #</span><input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} placeholder="A1234567" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" /></label>
-              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Fees (SAR)</span><input type="number" min="0" value={fees} onChange={(e) => setFees(e.target.value)} placeholder="500" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" /></label>
+              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Passport #</span><Input  value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} placeholder="A1234567" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" /></label>
+              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Fees (SAR)</span><Input  type="number" min="0" value={fees} onChange={(e) => setFees(e.target.value)} placeholder="500" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" /></label>
             </div>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none" />
+              <Textarea  value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none" />
             </label>
           </div>
         )}
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-          <button onClick={submit} disabled={pending || !pilgrimId} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
+          <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
+          <Button variant="quiet" type="button" onClick={submit} disabled={pending || !pilgrimId} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Create application
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }

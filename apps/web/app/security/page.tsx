@@ -4,12 +4,12 @@ import { PublicShell, PublicHero, CTASection } from '@/components/public/public-
 export const metadata = { title: 'Security — Umrah Connect' };
 
 const ITEMS = [
-  { Icon: Lock, t: 'Encrypted authentication', d: 'JWT-based sessions with short-lived access tokens and rotating refresh tokens. Passwords are hashed with bcrypt.' },
-  { Icon: Users, t: 'Role-based access control', d: 'Granular permissions enforced per endpoint, scoped per tenant, so every user only sees what their role allows.' },
-  { Icon: Database, t: 'Multi-tenant isolation', d: 'Tenant data is isolated from the database up — no cross-tenant leakage between operators, hotels or agencies.' },
-  { Icon: ScrollText, t: 'Audit logging', d: 'Every meaningful mutation is recorded with actor, action and timestamp, visible to Super Admin governance.' },
-  { Icon: KeyRound, t: 'KYC verification', d: 'Providers are verified through a KYC workflow before they can transact on the marketplace.' },
-  { Icon: ShieldCheck, t: 'Secure by design', d: 'Hardened HTTP headers, input validation on every request, and upload safeguards across the platform.' },
+  { Icon: Lock, t: 'Account authentication', d: 'JWT-based sessions with short-lived access tokens and rotating refresh tokens. Passwords are hashed with bcrypt.' },
+  { Icon: Users, t: 'Role-based access control', d: 'Account roles and endpoint permissions determine supported actions. Workspace context is visible in the application.' },
+  { Icon: Database, t: 'Tenant workspaces', d: 'Workspaces organize tenant records separately. Access is controlled by the platform and account permissions.' },
+  { Icon: ScrollText, t: 'Audit logging', d: 'Governance screens provide recorded activity with actor, action and timestamp where supported.' },
+  { Icon: KeyRound, t: 'KYC verification', d: 'Governance includes a provider KYC review workflow. Review the specific provider and service information before booking.' },
+  { Icon: ShieldCheck, t: 'Application controls', d: 'Hardened HTTP headers, input validation and upload controls form part of the platform implementation.' },
 ];
 
 export default function SecurityPage() {
@@ -22,7 +22,7 @@ export default function SecurityPage() {
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-6">
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-3"><Icon className="h-5 w-5 text-brand-600" /></div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
-              <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">{d}</p>
+              <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>
             </div>
           ))}
         </div>
