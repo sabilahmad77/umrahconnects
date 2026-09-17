@@ -64,12 +64,12 @@ export function ListingMedia({
       {/* category pill (top-left) */}
       <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur shadow-sm">
         <m.Icon className="h-3.5 w-3.5 text-brand-600" />
-        <span className="text-[11px] font-semibold text-brand-700 uppercase tracking-wide">{m.label}</span>
+        <span className="text-xs font-semibold text-brand-700 uppercase tracking-wide">{m.label}</span>
       </div>
 
       {/* verified (top-right) */}
       {verified && (
-        <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-emerald-500/95 text-white text-[10px] font-semibold flex items-center gap-1 shadow-sm">
+        <div className="absolute top-3 right-3 px-2 py-1 rounded-full bg-emerald-500/95 text-white text-xs font-semibold flex items-center gap-1 shadow-sm">
           ✓ Verified
         </div>
       )}

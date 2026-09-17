@@ -1,4 +1,6 @@
 'use client';
+import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -35,7 +37,7 @@ export function MarketplaceView() {
     limit: 20,
     category: categoryFilter !== 'ALL' ? CATEGORY_TO_TYPE[categoryFilter] : undefined,
   });
-  const { data: vendors, isLoading: vl } = useMarketplaceVendors();
+  const { data: vendors, isLoading: vl , error: marketplaceVendorsError, refetch: retryMarketplaceVendors} = useMarketplaceVendors();
   const createListing = useCreateListing();
 
   const listings = listingsData?.items ?? [];
@@ -44,42 +46,43 @@ export function MarketplaceView() {
 
   const categories = ['ALL', 'HOTEL', 'TRANSPORT', 'VISA', 'CATERING', 'GUIDE', 'PACKAGE'];
 
+  if (le || marketplaceVendorsError) return <QueryFailure error={le || marketplaceVendorsError} onRetry={() => { rl(); retryMarketplaceVendors(); }} />;
   return (
     <div className="space-y-5 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Marketplace</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Discover & connect with Umrah service providers</p>
+          <p className="text-sm text-gray-600 mt-0.5">Discover & connect with Umrah service providers</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => rl()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
+          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => rl()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
             <RefreshCw className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30"
+            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
           >
             <Plus className="h-4 w-4" />
             Add Listing
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-white border border-gray-200 rounded-2xl p-1 w-fit">
+      <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 w-fit">
         {TABS.map((t) => (
-          <button
+          <Button variant="quiet" type="button"
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               'flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition-all capitalize',
-              tab === t ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
+              tab === t ? 'bg-brand-500 text-white shadow-sm' : 'text-gray-600 hover:text-gray-700 hover:bg-gray-50',
             )}
           >
             {t === 'listings' ? <ShoppingBag className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
             {t === 'listings' ? 'Listings' : 'Vendors'}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -88,17 +91,17 @@ export function MarketplaceView() {
         <>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
-              <Search className="h-4 w-4 text-gray-500 shrink-0" />
-              <input
+              <Search className="h-4 w-4 text-gray-600 shrink-0" />
+              <Input aria-label="Search"
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 placeholder="Search listings..."
-                className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-500"
+                className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-600"
               />
             </div>
             <div className="flex gap-1.5 flex-wrap">
               {categories.map((c) => (
-                <button
+                <Button variant="quiet" type="button"
                   key={c}
                   onClick={() => { setCategoryFilter(c); setPage(1); }}
                   className={cn(
@@ -110,7 +113,7 @@ export function MarketplaceView() {
                 >
                   {c !== 'ALL' && <CategoryIcon category={c} className={categoryFilter === c ? 'text-white' : 'text-brand-500'} />}
                   {c === 'ALL' ? 'All' : CATEGORY_META[normalizeCategory(c)].label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -118,7 +121,7 @@ export function MarketplaceView() {
           {ll ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse space-y-3">
+                <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3">
                   <div className="h-32 bg-gray-100 rounded-xl" />
                   <div className="h-4 w-36 bg-gray-100 rounded" />
                   <div className="h-3 w-24 bg-gray-100 rounded" />
@@ -126,14 +129,14 @@ export function MarketplaceView() {
               ))}
             </div>
           ) : le ? (
-            <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
-              <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-              <p className="text-sm text-red-500">Failed to load listings</p>
+            <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
+              <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+              <p className="text-sm text-red-700">Failed to load listings</p>
             </div>
           ) : listings.length === 0 ? (
-            <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
+            <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
               <Store className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500">No listings found</p>
+              <p className="text-sm text-gray-600">No listings found</p>
             </div>
           ) : (
             <>
@@ -153,7 +156,7 @@ export function MarketplaceView() {
                     <Link
                       key={l.id}
                       href={`/marketplace/${l.id}`}
-                      className="group block bg-white rounded-2xl border border-gray-100 hover:shadow-xl hover:shadow-brand-500/5 hover:border-brand-200 hover:-translate-y-0.5 transition-all overflow-hidden"
+                      className="group block bg-white rounded-xl border border-gray-200 hover:shadow-xl hover:shadow-brand-500/5 hover:border-brand-200 hover:-translate-y-0.5 transition-all overflow-hidden"
                     >
                       <ListingMedia category={cat} image={img} priceLabel={priceLabel} verified={l.verified} />
 
@@ -162,18 +165,18 @@ export function MarketplaceView() {
                           {l.title ?? l.name}
                         </p>
                         {l.description && (
-                          <p className="text-xs text-gray-500 line-clamp-2 mt-1 leading-relaxed">{l.description}</p>
+                          <p className="text-xs text-gray-600 line-clamp-2 mt-1 leading-relaxed">{l.description}</p>
                         )}
 
                         {/* rating */}
-                        <div className="flex items-center gap-1 mt-3">
+                        {l.rating != null && l.reviewCount > 0 && <div className="flex items-center gap-1 mt-3">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={cn('h-3.5 w-3.5', i < Math.floor(l.rating ?? 4.6) ? 'fill-gold-400 text-gold-400' : 'text-gray-200')} />
+                            <Star key={i} className={cn('h-3.5 w-3.5', i < Math.floor(Number(l.rating)) ? 'fill-gold-400 text-gold-400' : 'text-gray-200')} />
                           ))}
-                          <span className="text-[11px] text-gray-500 ml-1">
-                            {(l.rating ?? 4.6).toFixed(1)} ({l.reviewCount ?? 0})
+                          <span className="text-xs text-gray-600 ml-1">
+                            {(Number(l.rating)).toFixed(1)} ({l.reviewCount ?? 0})
                           </span>
-                        </div>
+                        </div>}
 
                         {/* footer: provider + location */}
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
@@ -181,10 +184,10 @@ export function MarketplaceView() {
                             <div className="w-5 h-5 rounded-md bg-brand-50 flex items-center justify-center shrink-0">
                               <CategoryIcon category={cat} className="text-brand-600 h-3 w-3" />
                             </div>
-                            <span className="text-[11px] text-gray-500 truncate">{provider ?? CATEGORY_META[normalizeCategory(cat)].label + ' provider'}</span>
+                            <span className="text-xs text-gray-600 truncate">{provider ?? CATEGORY_META[normalizeCategory(cat)].label + ' provider'}</span>
                           </div>
                           {city && (
-                            <span className="flex items-center gap-1 text-[11px] text-gray-500 shrink-0">
+                            <span className="flex items-center gap-1 text-xs text-gray-600 shrink-0">
                               <MapPin className="h-3 w-3" /> {city}
                             </span>
                           )}
@@ -197,10 +200,10 @@ export function MarketplaceView() {
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-2">
-                  <p className="text-xs text-gray-500">Page {page} of {totalPages}</p>
+                  <p className="text-xs text-gray-600">Page {page} of {totalPages}</p>
                   <div className="flex gap-1.5">
-                    <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Prev</button>
-                    <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Next</button>
+                    <Button variant="quiet" type="button" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Prev</Button>
+                    <Button variant="quiet" type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-white">Next</Button>
                   </div>
                 </div>
               )}
@@ -214,22 +217,22 @@ export function MarketplaceView() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {vl ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse space-y-3 h-36" />
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3 h-36" />
             ))
           ) : !vendors || (vendors as any[]).length === 0 ? (
-            <div className="col-span-3 py-16 text-center bg-white rounded-2xl border border-gray-100">
+            <div className="col-span-3 py-16 text-center bg-white rounded-xl border border-gray-200">
               <Package className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500">No vendors found</p>
+              <p className="text-sm text-gray-600">No vendors found</p>
             </div>
           ) : (vendors as any[]).map((v: any) => (
-            <div key={v.id} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md transition-shadow">
+            <div key={v.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-emerald-600 flex items-center justify-center shrink-0">
                   <CategoryIcon category={v.type ?? ''} className="text-white h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">{v.companyName ?? v.name}</p>
-                  <p className="text-xs text-gray-500">{v.type ?? 'Vendor'} · {v.city ?? '—'}</p>
+                  <p className="text-xs text-gray-600">{v.type ?? 'Vendor'} · {v.city ?? '—'}</p>
                 </div>
               </div>
               {v.rating != null && (
@@ -237,11 +240,11 @@ export function MarketplaceView() {
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className={cn('h-3 w-3', i < Math.floor(v.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200')} />
                   ))}
-                  <span className="text-[10px] text-gray-500 ml-1">{v.rating?.toFixed(1)}</span>
+                  <span className="text-xs text-gray-600 ml-1">{v.rating?.toFixed(1)}</span>
                 </div>
               )}
               {v.verified && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full mt-2">
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full mt-2">
                   <CheckCircle2 className="h-3 w-3" /> Verified
                 </span>
               )}
@@ -357,13 +360,13 @@ function CreateListingModal({
   };
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+    <ModalSurface title="New marketplace listing" onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New marketplace listing</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
-            <X className="h-4 w-4 text-gray-500" />
-          </button>
+          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg">
+            <X className="h-4 w-4 text-gray-600" />
+          </Button>
         </div>
 
         <div className="space-y-3">
@@ -372,26 +375,26 @@ function CreateListingModal({
             <span className="block text-xs font-semibold text-gray-600 mb-1.5">Service type</span>
             <div className="grid grid-cols-3 gap-2">
               {CATEGORIES.map((c) => (
-                <button
+                <Button variant="quiet"
                   key={c.value}
                   type="button"
                   onClick={() => setCategory(c.value)}
                   className={cn(
-                    'text-[11px] font-medium px-2 py-2.5 rounded-lg border transition-all',
+                    'text-xs font-medium px-2 py-2.5 rounded-lg border transition-all',
                     category === c.value
                       ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
-                      : 'border-gray-200 text-gray-500 hover:border-gray-300',
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300',
                   )}
                 >
                   {c.label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Title *</span>
-            <input
+            <Input
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -403,7 +406,7 @@ function CreateListingModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Vendor *</span>
-              <select
+              <Select
                 value={vendorId}
                 onChange={(e) => setVendorId(e.target.value)}
                 className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white"
@@ -412,11 +415,11 @@ function CreateListingModal({
                 {vendors.map((v) => (
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Price from (SAR)</span>
-              <input
+              <Input
                 type="number" min="0" value={priceFrom}
                 onChange={(e) => setPriceFrom(e.target.value)}
                 placeholder="600"
@@ -427,7 +430,7 @@ function CreateListingModal({
 
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">City</span>
-            <input
+            <Input
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder={category === 'transport_service' ? 'Hub city, e.g. Jeddah' : 'Makkah'}
@@ -440,24 +443,24 @@ function CreateListingModal({
             <div className="grid grid-cols-3 gap-3 p-3 bg-blue-50/40 rounded-xl border border-blue-100">
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Room type</span>
-                <select value={roomType} onChange={(e) => setRoomType(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select  value={roomType} onChange={(e) => setRoomType(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
                   <option value="">—</option>
                   <option value="single">Single</option>
                   <option value="double">Double</option>
                   <option value="triple">Triple</option>
                   <option value="quad">Quad</option>
                   <option value="suite">Suite</option>
-                </select>
+                </Select>
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Stars</span>
-                <select value={starRating} onChange={(e) => setStarRating(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select  value={starRating} onChange={(e) => setStarRating(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
                   {[3, 4, 5].map((n) => <option key={n} value={n}>{'★'.repeat(n)}</option>)}
-                </select>
+                </Select>
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Haram (m)</span>
-                <input type="number" min="0" value={distanceToHaram} onChange={(e) => setDistanceToHaram(e.target.value)} placeholder="200" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="0" value={distanceToHaram} onChange={(e) => setDistanceToHaram(e.target.value)} placeholder="200" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
             </div>
           )}
@@ -466,24 +469,24 @@ function CreateListingModal({
             <div className="grid grid-cols-2 gap-3 p-3 bg-purple-50/40 rounded-xl border border-purple-100">
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Vehicle type</span>
-                <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select  value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
                   <option value="coach">Coach</option>
                   <option value="van">Van</option>
                   <option value="sedan">Sedan</option>
                   <option value="suv">SUV</option>
-                </select>
+                </Select>
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Seats</span>
-                <input type="number" min="1" value={seatCapacity} onChange={(e) => setSeatCapacity(e.target.value)} placeholder="45" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="1" value={seatCapacity} onChange={(e) => setSeatCapacity(e.target.value)} placeholder="45" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">From</span>
-                <input value={routeFrom} onChange={(e) => setRouteFrom(e.target.value)} placeholder="Jeddah" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  value={routeFrom} onChange={(e) => setRouteFrom(e.target.value)} placeholder="Jeddah" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">To</span>
-                <input value={routeTo} onChange={(e) => setRouteTo(e.target.value)} placeholder="Makkah" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  value={routeTo} onChange={(e) => setRouteTo(e.target.value)} placeholder="Makkah" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
             </div>
           )}
@@ -492,19 +495,19 @@ function CreateListingModal({
             <div className="grid grid-cols-3 gap-3 p-3 bg-yellow-50/40 rounded-xl border border-yellow-100">
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Country</span>
-                <input value={visaCountry} onChange={(e) => setVisaCountry(e.target.value)} placeholder="Pakistan" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  value={visaCountry} onChange={(e) => setVisaCountry(e.target.value)} placeholder="Pakistan" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Visa type</span>
-                <select value={visaType} onChange={(e) => setVisaType(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select  value={visaType} onChange={(e) => setVisaType(e.target.value)} className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none bg-white">
                   <option value="UMRAH">Umrah</option>
                   <option value="HAJJ">Hajj</option>
                   <option value="VISIT">Visit</option>
-                </select>
+                </Select>
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Days</span>
-                <input type="number" min="0" value={processingDays} onChange={(e) => setProcessingDays(e.target.value)} placeholder="7" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="0" value={processingDays} onChange={(e) => setProcessingDays(e.target.value)} placeholder="7" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
             </div>
           )}
@@ -513,7 +516,7 @@ function CreateListingModal({
             <div className="p-3 bg-rose-50/40 rounded-xl border border-rose-100 space-y-2">
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Duration (days)</span>
-                <input type="number" min="1" value={packageDuration} onChange={(e) => setPackageDuration(e.target.value)} placeholder="14" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
+                <Input  type="number" min="1" value={packageDuration} onChange={(e) => setPackageDuration(e.target.value)} placeholder="14" className="w-full text-sm px-2 py-2 border border-gray-200 rounded-lg outline-none" />
               </label>
               <div className="flex flex-wrap gap-3 text-xs">
                 {(['hotel', 'transport', 'visa'] as const).map((k) => (
@@ -532,7 +535,7 @@ function CreateListingModal({
 
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Description</span>
-            <textarea
+            <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
@@ -542,23 +545,23 @@ function CreateListingModal({
           </label>
         </div>
         <div className="flex justify-end gap-2 mt-5">
-          <button
+          <Button variant="quiet" type="button"
             onClick={onClose}
             disabled={pending}
             className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={submit}
             disabled={pending || !title.trim() || !vendorId}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm"
           >
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Create listing
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }

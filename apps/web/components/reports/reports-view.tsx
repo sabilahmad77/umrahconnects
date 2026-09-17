@@ -1,4 +1,5 @@
 'use client';
+import { Button , QueryFailure } from '@/components/ui/system';
 
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -17,10 +18,10 @@ const fmtSAR = (cents?: number) =>
 
 function SectionCard({ title, children, loading }: { title: string; children: React.ReactNode; loading?: boolean }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5">
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
       <h3 className="font-semibold text-gray-900 mb-4">{title}</h3>
       {loading ? (
-        <div className="h-48 bg-gray-50 rounded-xl animate-pulse flex items-center justify-center text-gray-500 text-sm">
+        <div className="h-48 bg-gray-50 rounded-xl animate-pulse flex items-center justify-center text-gray-600 text-sm">
           Loading…
         </div>
       ) : children}
@@ -29,11 +30,11 @@ function SectionCard({ title, children, loading }: { title: string; children: Re
 }
 
 export function ReportsView() {
-  const { data: overview, isLoading: ol } = useReportsOverview();
-  const { data: pilgrims, isLoading: pl } = useReportsPilgrims();
-  const { data: bookings, isLoading: bl } = useReportsBookings();
-  const { data: finance, isLoading: fl } = useReportsFinance();
-  const { data: visa, isLoading: vl } = useReportsVisa();
+  const { data: overview, isLoading: ol , error: reportsOverviewError, refetch: retryReportsOverview} = useReportsOverview();
+  const { data: pilgrims, isLoading: pl , error: reportsPilgrimsError, refetch: retryReportsPilgrims} = useReportsPilgrims();
+  const { data: bookings, isLoading: bl , error: reportsBookingsError, refetch: retryReportsBookings} = useReportsBookings();
+  const { data: finance, isLoading: fl , error: reportsFinanceError, refetch: retryReportsFinance} = useReportsFinance();
+  const { data: visa, isLoading: vl , error: reportsVisaError, refetch: retryReportsVisa} = useReportsVisa();
 
   // Derived data
   const pilgrimStatusData = pilgrims?.byStatus
@@ -41,7 +42,7 @@ export function ReportsView() {
     : [];
 
   const bookingTrend = bookings?.monthlyTrend?.map((t: any) => ({
-    month: t.month?.slice(0, 3) ?? '',
+    month: t.month ? new Date(t.month + (t.month.length === 7 ? '-01' : '')).toLocaleDateString('en', { month: 'short', year: '2-digit', timeZone: 'UTC' }) : 'Unknown',
     count: t.count ?? 0,
   })) ?? [];
 
@@ -61,15 +62,16 @@ export function ReportsView() {
       ]
     : [];
 
+  if (reportsOverviewError || reportsPilgrimsError || reportsBookingsError || reportsFinanceError || reportsVisaError) return <QueryFailure error={reportsOverviewError || reportsPilgrimsError || reportsBookingsError || reportsFinanceError || reportsVisaError} onRetry={() => { retryReportsOverview(); retryReportsPilgrims(); retryReportsBookings(); retryReportsFinance(); retryReportsVisa(); }} />;
   return (
     <div className="space-y-5 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Platform-wide insights and trends</p>
+          <p className="text-sm text-gray-600 mt-0.5">Platform-wide insights and trends</p>
         </div>
-        <button
+        <Button variant="quiet" type="button"
           onClick={() => {
             // Build a CSV from every loaded report dataset and download it
             const rows: string[][] = [['Section', 'Metric', 'Value']];
@@ -97,25 +99,25 @@ export function ReportsView() {
         >
           <Download className="h-4 w-4" />
           Export CSV
-        </button>
+        </Button>
       </div>
 
       {/* KPI summary row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Pilgrims',     value: overview?.totalPilgrims?.toLocaleString() ?? '—', icon: Users,       color: 'bg-blue-50 text-blue-600',   trend: '+12%' },
-          { label: 'Confirmed Bookings', value: overview?.confirmedBookings?.toLocaleString() ?? '—', icon: BookOpen, color: 'bg-green-50 text-green-600', trend: '+8%' },
-          { label: 'Revenue Paid',       value: fmtSAR(overview?.revenuePaidCents),           icon: DollarSign,  color: 'bg-brand-50 text-brand-600',  trend: '+18%' },
+          { label: 'Total Pilgrims',     value: overview?.totalPilgrims?.toLocaleString() ?? '—', icon: Users,       color: 'bg-blue-50 text-blue-600' },
+          { label: 'Confirmed Bookings', value: overview?.confirmedBookings?.toLocaleString() ?? '—', icon: BookOpen, color: 'bg-green-50 text-green-800' },
+          { label: 'Revenue Paid',       value: fmtSAR(overview?.revenuePaidCents),           icon: DollarSign,  color: 'bg-brand-50 text-brand-600' },
           { label: 'Visa Approval Rate', value: visa?.successRate != null ? `${visa.successRate.toFixed(1)}%` : '—', icon: FileCheck2, color: 'bg-purple-50 text-purple-600', trend: '' },
         ].map((k) => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${k.color}`}>
               <k.icon className="h-5 w-5" />
             </div>
             <p className="text-2xl font-bold text-gray-900">{k.value}</p>
-            <p className="text-xs text-gray-500 mt-1">{k.label}</p>
+            <p className="text-xs text-gray-600 mt-1">{k.label}</p>
             {k.trend && (
-              <p className="flex items-center gap-1 text-xs text-green-600 font-medium mt-1.5">
+              <p className="flex items-center gap-1 text-xs text-green-800 font-medium mt-1.5">
                 <TrendingUp className="h-3 w-3" /> {k.trend} vs last period
               </p>
             )}
@@ -126,7 +128,7 @@ export function ReportsView() {
       {/* Booking Trend — full width */}
       <SectionCard title="📈 Monthly Booking Trend" loading={bl}>
         {bookingTrend.length === 0 ? (
-          <p className="text-sm text-gray-500 py-10 text-center">No trend data available</p>
+          <p className="text-sm text-gray-600 py-10 text-center">No trend data available</p>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={bookingTrend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
@@ -153,7 +155,7 @@ export function ReportsView() {
         {/* Pilgrim status breakdown */}
         <SectionCard title="👥 Pilgrim Status Breakdown" loading={pl}>
           {pilgrimStatusData.length === 0 ? (
-            <p className="text-sm text-gray-500 py-10 text-center">No pilgrim data</p>
+            <p className="text-sm text-gray-600 py-10 text-center">No pilgrim data</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={pilgrimStatusData} layout="vertical" margin={{ left: 4, right: 4 }}>
@@ -180,7 +182,7 @@ export function ReportsView() {
         {/* Visa pipeline pie */}
         <SectionCard title="📋 Visa Pipeline Distribution" loading={vl}>
           {visaStatusData.length === 0 ? (
-            <p className="text-sm text-gray-500 py-10 text-center">No visa data</p>
+            <p className="text-sm text-gray-600 py-10 text-center">No visa data</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
@@ -216,7 +218,7 @@ export function ReportsView() {
       {/* Finance breakdown */}
       <SectionCard title="💰 Revenue Breakdown (SAR)" loading={fl}>
         {financeData.length === 0 ? (
-          <p className="text-sm text-gray-500 py-10 text-center">No finance data</p>
+          <p className="text-sm text-gray-600 py-10 text-center">No finance data</p>
         ) : (
           <div className="flex flex-col lg:flex-row items-center gap-8">
             <ResponsiveContainer width={200} height={180}>
@@ -230,7 +232,7 @@ export function ReportsView() {
             </ResponsiveContainer>
             <div className="flex-1 space-y-3">
               {financeData.map((d, i) => {
-                const colors = ['text-brand-600 bg-brand-50', 'text-yellow-600 bg-yellow-50', 'text-gray-500 bg-gray-100'];
+                const colors = ['text-brand-600 bg-brand-50', 'text-yellow-800 bg-yellow-50', 'text-gray-600 bg-gray-100'];
                 const total = financeData.reduce((s, x) => s + x.value, 0);
                 const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
                 return (
@@ -247,7 +249,7 @@ export function ReportsView() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-0.5">{pct}% of total billed</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{pct}% of total billed</p>
                   </div>
                 );
               })}
@@ -258,7 +260,7 @@ export function ReportsView() {
 
       {/* Gender split */}
       {pilgrims?.byGender && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="font-semibold text-gray-900 mb-4">🧕 Pilgrim Gender Distribution</h3>
           <div className="grid grid-cols-2 gap-4">
             {[

@@ -1,4 +1,6 @@
 'use client';
+import { Select, Input, Textarea , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -32,18 +34,19 @@ export function VisaDetail({ id }: { id: string }) {
   const { data: v, isLoading, error, refetch } = useVisa(id);
   const [tab, setTab] = useState<TabKey>('overview');
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading visa application…
       </div>
     );
   }
   if (error || !v) {
     return (
-      <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-        <p className="text-sm text-red-500">Visa application not found</p>
+      <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
+        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+        <p className="text-sm text-red-700">Visa application not found</p>
         <Link href="/compliance" className="text-xs text-brand-500 hover:underline mt-3 inline-block">← Back to compliance</Link>
       </div>
     );
@@ -51,18 +54,19 @@ export function VisaDetail({ id }: { id: string }) {
 
   const pilgrimName = formatPilgrimName(v.pilgrim);
 
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => router.push('/compliance')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
-          <ArrowLeft className="h-4 w-4 text-gray-500" />
-        </button>
+        <Button variant="quiet" type="button" aria-label="Go back" onClick={() => router.push('/compliance')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
+          <ArrowLeft className="h-4 w-4 text-gray-600" />
+        </Button>
         <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-          <FileCheck2 className="h-6 w-6 text-green-600" />
+          <FileCheck2 className="h-6 w-6 text-green-800" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 truncate">{pilgrimName}</h1>
-          <p className="text-sm text-gray-500">
+        <div className="flex-1 min-w-0 basis-[calc(100%_-_140px)] sm:basis-auto">
+          <h1 className="text-2xl font-bold text-gray-900 ">{pilgrimName}</h1>
+          <p className="text-sm text-gray-600">
             {v.type ?? 'Visa'} · {formatSystem(v.regulatorySystem)}
             {v.externalRef ? ` · Ref ${v.externalRef}` : ''}
           </p>
@@ -70,18 +74,18 @@ export function VisaDetail({ id }: { id: string }) {
         <StatusBadge status={v.status} />
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-1.5 flex gap-1 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {(['overview', 'documents', 'timeline', 'edit'] as TabKey[]).map((t) => (
-          <button
+          <Button variant="quiet" type="button"
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               'capitalize px-3 py-2 rounded-xl text-sm font-medium transition-colors',
-              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-500 hover:bg-gray-50',
+              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50',
             )}
           >
             {t}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -100,9 +104,9 @@ function StatusBadge({ status }: { status: string }) {
     status === 'UNDER_REVIEW' ? 'bg-orange-50 text-orange-700' :
     status === 'DOCUMENTS_COLLECTING' ? 'bg-yellow-50 text-yellow-700' :
     status === 'REJECTED' ? 'bg-red-50 text-red-700' :
-    status === 'EXPIRED' ? 'bg-gray-100 text-gray-500' :
-    'bg-gray-100 text-gray-500';
-  return <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full', color)}>{status?.replace(/_/g, ' ')}</span>;
+    status === 'EXPIRED' ? 'bg-gray-100 text-gray-600' :
+    'bg-gray-100 text-gray-600';
+  return <span className={cn('text-xs font-medium px-2 py-1 rounded-full', color)}>{status?.replace(/_/g, ' ')}</span>;
 }
 
 function Overview({ v }: { v: any }) {
@@ -111,7 +115,7 @@ function Overview({ v }: { v: any }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:col-span-2 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <ListChecks className="h-4 w-4" /> Application details
         </h3>
@@ -155,18 +159,18 @@ function Overview({ v }: { v: any }) {
       </div>
 
       <div className="space-y-3">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1">
             <Hash className="h-3.5 w-3.5" /> Pilgrim
           </p>
           {pilgrim ? (
             <div className="space-y-1.5 text-sm">
               <p className="font-medium text-gray-900">{formatPilgrimName(pilgrim)}</p>
               {pilgrim.passportNumber && (
-                <p className="text-xs text-gray-500">Passport: <span className="font-mono text-gray-700">{pilgrim.passportNumber}</span></p>
+                <p className="text-xs text-gray-600">Passport: <span className="font-mono text-gray-700">{pilgrim.passportNumber}</span></p>
               )}
               {pilgrim.nationality && (
-                <p className="text-xs text-gray-500">Nationality: {pilgrim.nationality}</p>
+                <p className="text-xs text-gray-600">Nationality: {pilgrim.nationality}</p>
               )}
               {pilgrim.id && (
                 <Link href={`/pilgrims/${pilgrim.id}`} className="text-xs text-brand-600 hover:underline inline-block mt-1">
@@ -175,18 +179,18 @@ function Overview({ v }: { v: any }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500">No pilgrim linked</p>
+            <p className="text-xs text-gray-600">No pilgrim linked</p>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1">
             <Building2 className="h-3.5 w-3.5" /> Package
           </p>
           {pkg ? (
             <div className="space-y-1 text-sm">
               <p className="font-medium text-gray-900">{pkg.name ?? pkg.title ?? '—'}</p>
-              {pkg.code && <p className="text-xs text-gray-500">Code: {pkg.code}</p>}
+              {pkg.code && <p className="text-xs text-gray-600">Code: {pkg.code}</p>}
               {pkg.id && (
                 <Link href={`/packages/${pkg.id}`} className="text-xs text-brand-600 hover:underline inline-block mt-1">
                   View package →
@@ -194,18 +198,18 @@ function Overview({ v }: { v: any }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500">No package linked</p>
+            <p className="text-xs text-gray-600">No package linked</p>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" /> Key dates
           </p>
           <ul className="space-y-1.5 text-xs">
-            <li><span className="text-gray-500">Submitted:</span> <span className="text-gray-700">{v.submittedAt ? new Date(v.submittedAt).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-500">Decision:</span> <span className="text-gray-700">{v.decisionAt ? new Date(v.decisionAt).toLocaleDateString() : v.approvedAt ? new Date(v.approvedAt).toLocaleDateString() : v.rejectedAt ? new Date(v.rejectedAt).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-500">Expires:</span> <span className="text-gray-700">{v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-600">Submitted:</span> <span className="text-gray-700">{v.submittedAt ? new Date(v.submittedAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-600">Decision:</span> <span className="text-gray-700">{v.decisionAt ? new Date(v.decisionAt).toLocaleDateString() : v.approvedAt ? new Date(v.approvedAt).toLocaleDateString() : v.rejectedAt ? new Date(v.rejectedAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-600">Expires:</span> <span className="text-gray-700">{v.expiresAt ? new Date(v.expiresAt).toLocaleDateString() : '—'}</span></li>
           </ul>
         </div>
       </div>
@@ -226,14 +230,14 @@ function TimelineTab({ v }: { v: any }) {
         : [];
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100">
-      <div className="p-4 border-b border-gray-100">
+    <div className="bg-white rounded-xl border border-gray-200">
+      <div className="p-4 border-b border-gray-200">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Activity className="h-4 w-4" /> Timeline ({events.length})
         </h3>
       </div>
       {events.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-500">No timeline events yet — submissions and status changes will appear here</div>
+        <div className="py-10 text-center text-sm text-gray-600">No timeline events yet — submissions and status changes will appear here</div>
       ) : (
         <ul className="divide-y divide-gray-50">
           {events.map((e: any, i: number) => {
@@ -249,12 +253,12 @@ function TimelineTab({ v }: { v: any }) {
                     <p className="text-sm font-medium text-gray-900">
                       {String(status).replace(/_/g, ' ')}
                     </p>
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-xs text-gray-600">
                       {at ? new Date(at).toLocaleString() : '—'}
                     </p>
                   </div>
                   {note && <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{note}</p>}
-                  {actor && <p className="text-[11px] text-gray-500 mt-0.5">by {actor}</p>}
+                  {actor && <p className="text-xs text-gray-600 mt-0.5">by {actor}</p>}
                 </div>
               </li>
             );
@@ -268,7 +272,7 @@ function TimelineTab({ v }: { v: any }) {
 function Field({ label, value }: { label: string; value: any }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold text-gray-500">{label}</dt>
+      <dt className="text-xs font-semibold text-gray-600">{label}</dt>
       <dd className="text-sm text-gray-900 font-medium">{value ?? '—'}</dd>
     </div>
   );
@@ -332,60 +336,60 @@ function EditTab({ v, refetch }: { v: any; refetch: () => void }) {
 
   return (
     <div className="space-y-4 max-w-3xl">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Edit application
         </h3>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
+            <Select aria-label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
               {VISA_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-            </select>
+            </Select>
           </FormField>
           <FormField label="Visa type">
-            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
+            <Select aria-label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
               {VISA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
+            </Select>
           </FormField>
           <FormField label="Application number">
-            <input value={form.applicationNumber} onChange={(e) => setForm({ ...form, applicationNumber: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            <Input aria-label="Application Number" value={form.applicationNumber} onChange={(e) => setForm({ ...form, applicationNumber: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
           </FormField>
           <FormField label="Regulatory system">
-            <select value={form.regulatorySystem} onChange={(e) => setForm({ ...form, regulatorySystem: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
+            <Select aria-label="Regulatory System" value={form.regulatorySystem} onChange={(e) => setForm({ ...form, regulatorySystem: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
               {REGULATORY_SYSTEMS.map((s) => <option key={s} value={s}>{formatSystem(s)}</option>)}
-            </select>
+            </Select>
           </FormField>
           <FormField label="Submitted at">
-            <input type="datetime-local" value={form.submittedAt} onChange={(e) => setForm({ ...form, submittedAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            <Input aria-label="Submitted At" type="datetime-local" value={form.submittedAt} onChange={(e) => setForm({ ...form, submittedAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
           </FormField>
           <FormField label="Decision at">
-            <input type="datetime-local" value={form.decisionAt} onChange={(e) => setForm({ ...form, decisionAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            <Input aria-label="Decision At" type="datetime-local" value={form.decisionAt} onChange={(e) => setForm({ ...form, decisionAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
           </FormField>
           <FormField label="Expires at">
-            <input type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            <Input aria-label="Expires At" type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
           </FormField>
           <FormField label="Rejection reason">
-            <input value={form.rejectionReason} onChange={(e) => setForm({ ...form, rejectionReason: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            <Input aria-label="Rejection Reason" value={form.rejectionReason} onChange={(e) => setForm({ ...form, rejectionReason: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
           </FormField>
           <FormField label="Notes" full>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none focus:border-brand-400" />
+            <Textarea aria-label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none focus:border-brand-400" />
           </FormField>
         </div>
         <div className="flex justify-end pt-2">
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50 hover:bg-brand-600">
+          <Button variant="quiet" type="button" onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50 hover:bg-brand-600">
             {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save application
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-red-100 p-5">
+      <div className="bg-white rounded-xl border border-red-100 p-5">
         <h3 className="text-sm font-bold text-red-700 inline-flex items-center gap-2">
           <Trash2 className="h-4 w-4" /> Archive application
         </h3>
-        <p className="text-xs text-gray-500 my-2">Removes the application from the active list. Past submissions are preserved.</p>
-        <button onClick={archive} disabled={remove.isPending} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg disabled:opacity-50">
+        <p className="text-xs text-gray-600 my-2">Removes the application from the active list. Past submissions are preserved.</p>
+        <Button variant="quiet" type="button" onClick={archive} disabled={remove.isPending} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg disabled:opacity-50">
           {remove.isPending ? 'Archiving…' : 'Archive'}
-        </button>
+        </Button>
       </div>
     </div>
   );

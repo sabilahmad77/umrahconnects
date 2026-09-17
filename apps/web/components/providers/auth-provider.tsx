@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getStoredUser, getToken, clearAuth, isTokenExpired, type StoredUser, type DashboardType } from '@/lib/auth';
-import { refreshAccessToken } from '@/lib/api';
+import { getStoredUser, getToken, clearAuth, isTokenExpired, decodeJwt, inferDashboardType, setStoredUser, type StoredUser, type DashboardType } from '@/lib/auth';
+import { apiClient, refreshAccessToken } from '@/lib/api';
 
 interface AuthContextValue {
   user: StoredUser | null;
@@ -29,7 +29,7 @@ export function getDashboardPath(dashboardType: DashboardType): string {
     case 'transport':   return '/transport-dashboard';
     case 'compliance':  return '/visa-dashboard';
     case 'finance':     return '/finance-dashboard';
-    case 'pilgrim':     return '/social';
+    case 'pilgrim':     return '/travel-plan';
     case 'admin':       return '/admin-dashboard';
     case 'operator':
     default:            return '/dashboard';
@@ -50,10 +50,10 @@ const PUBLIC_PATHS = [
 const AUTH_ONLY_PUBLIC = ['/login', '/register', '/forgot-password'];
 
 const isPublicPath = (pathname?: string | null) =>
-  PUBLIC_PATHS.some((p) => (p === '/' ? pathname === '/' : pathname?.startsWith(p)));
+  PUBLIC_PATHS.some((p) => (p === '/' ? pathname === '/' : (pathname === p || pathname?.startsWith(p + '/'))));
 
 const shouldBounceLoggedInUser = (pathname?: string | null) =>
-  AUTH_ONLY_PUBLIC.some((p) => pathname?.startsWith(p));
+  AUTH_ONLY_PUBLIC.some((p) => (pathname === p || pathname?.startsWith(p + '/')));
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<StoredUser | null>(null);
@@ -72,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    try { const refreshToken = localStorage.getItem('refreshToken'); if (refreshToken) void apiClient.post('/auth/logout', { refreshToken }).catch(() => {}); } catch {}
     clearAuth();
     setUserState(null);
     redirected.current = false;
@@ -86,12 +87,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const settleLoggedIn = (u: StoredUser) => {
       if (cancelled) return;
-      setUserState(u);
+      const decoded = decodeJwt(getToken() || '');
+      if (!decoded?.sub || !decoded.roles?.length) { bounceToLogin(); return; }
+      const boundUser: StoredUser = { ...u, id: decoded.sub, email: decoded.email || u.email, tenantId: decoded.tenantId, tenantType: decoded.tenantType, roles: decoded.roles, dashboardType: inferDashboardType(decoded.roles), displayName: decoded.email?.split('@')[0] || 'Account' };
+      setStoredUser(boundUser);
+      setUserState(boundUser);
       setIsLoaded(true);
       // Only bounce off /login, /register, /forgot-password — let / (landing) stay reachable
       if (shouldBounceLoggedInUser(pathname) && !redirected.current) {
         redirected.current = true;
-        router.push(getDashboardPath(u.dashboardType));
+        router.push(getDashboardPath(boundUser.dashboardType));
       }
     };
 
@@ -102,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isPublic && !redirected.current) {
         redirected.current = true;
         // FIX-02: preserve intended destination instead of a silent bounce
-        const returnTo = pathname && pathname !== '/login' ? `?returnTo=${encodeURIComponent(pathname)}` : '';
+        const returnTo = pathname && pathname !== '/login' ? `?returnTo=${encodeURIComponent(pathname + window.location.search)}` : '';
         router.push(`/login${returnTo}`);
       }
     };
@@ -125,16 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return () => { cancelled = true; };
     }
 
-    // Demo sessions: token may be a client persona with no refresh — keep the user
-    // on their page rather than bouncing mid-demo.
-    if (storedUser && (refreshToken?.startsWith('demo.') || token)) {
-      settleLoggedIn(storedUser);
-      return () => { cancelled = true; };
-    }
-
     bounceToLogin();
     return () => { cancelled = true; };
-  }, [pathname]); // re-run on route changes
+  }, [pathname, router]); // re-run on route changes
 
   return (
     <AuthContext.Provider value={{ user, isLoaded, logout, setUser }}>

@@ -113,12 +113,11 @@ export function clearAuth() {
 /** Decode a JWT payload without verifying signature (client-side only). */
 export function decodeJwt(token: string): DecodedToken | null {
   try {
-    if (token.startsWith('demo.')) {
-      const [, payload] = token.split('.');
-      return JSON.parse(atob(payload)) as DecodedToken;
-    }
+    if (token.startsWith('demo.') || token.split('.').length !== 3) return null;
     const [, payload] = token.split('.');
-    return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as DecodedToken;
+    const decoded = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload.replace(/-/g, '+').replace(/_/g, '/')), character => character.charCodeAt(0))));
+    if (typeof decoded.sub !== 'string' || !Array.isArray(decoded.roles) || !decoded.roles.every((role: unknown) => typeof role === 'string') || typeof decoded.exp !== 'number' || !Number.isFinite(decoded.exp)) return null;
+    return decoded as DecodedToken;
   } catch {
     return null;
   }
@@ -137,9 +136,7 @@ export function inferDashboardType(roles: string[]): DashboardType {
 }
 
 export function isTokenExpired(token: string): boolean {
-  // Demo tokens are always valid
-  if (token.startsWith('demo.')) return false;
   const decoded = decodeJwt(token);
   if (!decoded) return true;
-  return decoded.exp * 1000 < Date.now();
+  return decoded.exp * 1000 <= Date.now();
 }

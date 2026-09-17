@@ -1,4 +1,6 @@
 'use client';
+import { Input, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -22,18 +24,19 @@ export function InvoiceDetail({ id }: { id: string }) {
   const { data: inv, isLoading, error, refetch } = useInvoice(id);
   const [tab, setTab] = useState<TabKey>('overview');
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invoice…
       </div>
     );
   }
   if (error || !inv) {
     return (
-      <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-        <p className="text-sm text-red-500">Invoice not found</p>
+      <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
+        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+        <p className="text-sm text-red-700">Invoice not found</p>
         <Link href="/finance" className="text-xs text-brand-500 hover:underline mt-3 inline-block">← Back to finance</Link>
       </div>
     );
@@ -43,18 +46,19 @@ export function InvoiceDetail({ id }: { id: string }) {
   const currency = inv.currency ?? 'SAR';
   const totalCents = Number(inv.totalAmountCents ?? inv.totalCents ?? 0);
 
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => router.push('/finance')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
-          <ArrowLeft className="h-4 w-4 text-gray-500" />
-        </button>
+        <Button variant="quiet" type="button" aria-label="Go back" onClick={() => router.push('/finance')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
+          <ArrowLeft className="h-4 w-4 text-gray-600" />
+        </Button>
         <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center">
           <Receipt className="h-6 w-6 text-brand-600" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 truncate">{invoiceNumber}</h1>
-          <p className="text-sm text-gray-500">
+        <div className="flex-1 min-w-0 basis-[calc(100%_-_140px)] sm:basis-auto">
+          <h1 className="text-2xl font-bold text-gray-900 ">{invoiceNumber}</h1>
+          <p className="text-sm text-gray-600">
             {formatMoney(totalCents, currency)}
             {inv.issuedToName || inv.customerName ? ` · ${inv.issuedToName ?? inv.customerName}` : ''}
           </p>
@@ -62,18 +66,18 @@ export function InvoiceDetail({ id }: { id: string }) {
         <StatusBadge status={inv.status} />
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-1.5 flex gap-1 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {(['overview', 'payments', 'edit'] as TabKey[]).map((t) => (
-          <button
+          <Button variant="quiet" type="button"
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               'capitalize px-3 py-2 rounded-xl text-sm font-medium transition-colors',
-              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-500 hover:bg-gray-50',
+              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50',
             )}
           >
             {t}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -108,9 +112,9 @@ function StatusBadge({ status }: { status: string }) {
     status === 'PARTIALLY_PAID' ? 'bg-yellow-50 text-yellow-700' :
     status === 'DRAFT' ? 'bg-gray-100 text-gray-600' :
     status === 'OVERDUE' ? 'bg-red-50 text-red-600' :
-    status === 'CANCELLED' || status === 'VOID' ? 'bg-gray-100 text-gray-500' :
-    'bg-gray-100 text-gray-500';
-  return <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full', color)}>{(status ?? '—').replace(/_/g, ' ')}</span>;
+    status === 'CANCELLED' || status === 'VOID' ? 'bg-gray-100 text-gray-600' :
+    'bg-gray-100 text-gray-600';
+  return <span className={cn('text-xs font-medium px-2 py-1 rounded-full', color)}>{(status ?? '—').replace(/_/g, ' ')}</span>;
 }
 
 function Overview({ inv }: { inv: any }) {
@@ -131,7 +135,7 @@ function Overview({ inv }: { inv: any }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:col-span-2 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <ListChecks className="h-4 w-4" /> Invoice details
         </h3>
@@ -151,15 +155,15 @@ function Overview({ inv }: { inv: any }) {
             <Wallet className="h-3.5 w-3.5" /> Amounts
           </p>
           <dl className="grid grid-cols-2 gap-y-2 text-sm">
-            <dt className="text-gray-500">Subtotal</dt>
+            <dt className="text-gray-600">Subtotal</dt>
             <dd className="text-right text-gray-900 font-medium">{formatMoney(subtotalCents, currency)}</dd>
 
-            <dt className="text-gray-500">Tax</dt>
+            <dt className="text-gray-600">Tax</dt>
             <dd className="text-right text-gray-900 font-medium">{formatMoney(taxCents, currency)}</dd>
 
             {discountCents > 0 && (
               <>
-                <dt className="text-gray-500">Discount</dt>
+                <dt className="text-gray-600">Discount</dt>
                 <dd className="text-right text-gray-900 font-medium">-{formatMoney(discountCents, currency)}</dd>
               </>
             )}
@@ -171,7 +175,7 @@ function Overview({ inv }: { inv: any }) {
             <dd className="text-right text-green-700 font-medium">{formatMoney(paidCents, currency)}</dd>
 
             <dt className="text-gray-700 font-semibold">Outstanding</dt>
-            <dd className={cn('text-right font-bold', outstandingCents > 0 ? 'text-red-600' : 'text-gray-500')}>
+            <dd className={cn('text-right font-bold', outstandingCents > 0 ? 'text-red-600' : 'text-gray-600')}>
               {formatMoney(outstandingCents, currency)}
             </dd>
           </dl>
@@ -186,21 +190,21 @@ function Overview({ inv }: { inv: any }) {
       </div>
 
       <div className="space-y-3">
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1">
             <User className="h-3.5 w-3.5" /> Customer
           </p>
           <div className="space-y-1.5 text-sm">
             <p className="font-medium text-gray-900">{customerName}</p>
-            {customerEmail && <p className="text-xs text-gray-500">{customerEmail}</p>}
+            {customerEmail && <p className="text-xs text-gray-600">{customerEmail}</p>}
             {inv.issuedToAddress && (
-              <p className="text-xs text-gray-500 whitespace-pre-wrap">{formatAddress(inv.issuedToAddress)}</p>
+              <p className="text-xs text-gray-600 whitespace-pre-wrap">{formatAddress(inv.issuedToAddress)}</p>
             )}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1">
             <Building2 className="h-3.5 w-3.5" /> Booking / Package
           </p>
           {bookingRef || packageName ? (
@@ -213,18 +217,18 @@ function Overview({ inv }: { inv: any }) {
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500">No booking linked</p>
+            <p className="text-xs text-gray-600">No booking linked</p>
           )}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-5">
-          <p className="text-xs font-semibold text-gray-500 mb-2 inline-flex items-center gap-1">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <p className="text-xs font-semibold text-gray-600 mb-2 inline-flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" /> Key dates
           </p>
           <ul className="space-y-1.5 text-xs">
-            <li><span className="text-gray-500">Issued:</span> <span className="text-gray-700">{issueDate ? new Date(issueDate).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-500">Due:</span> <span className="text-gray-700">{dueDate ? new Date(dueDate).toLocaleDateString() : '—'}</span></li>
-            <li><span className="text-gray-500">Paid:</span> <span className="text-gray-700">{inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-600">Issued:</span> <span className="text-gray-700">{issueDate ? new Date(issueDate).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-600">Due:</span> <span className="text-gray-700">{dueDate ? new Date(dueDate).toLocaleDateString() : '—'}</span></li>
+            <li><span className="text-gray-600">Paid:</span> <span className="text-gray-700">{inv.paidAt ? new Date(inv.paidAt).toLocaleDateString() : '—'}</span></li>
           </ul>
         </div>
       </div>
@@ -272,63 +276,63 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       />
 
       {/* Record payment form */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><CreditCard className="h-4 w-4" /> Record a payment</h3>
-          <span className="text-xs text-gray-500">Outstanding: <span className="font-semibold text-gray-900">{formatMoney(outstandingCents, currency)}</span></span>
+          <span className="text-xs text-gray-600">Outstanding: <span className="font-semibold text-gray-900">{formatMoney(outstandingCents, currency)}</span></span>
         </div>
         {isSettled ? (
-          <p className="text-sm text-gray-500 py-2">This invoice is {String(inv.status).toLowerCase()} — no further payments needed.</p>
+          <p className="text-sm text-gray-600 py-2">This invoice is {String(inv.status).toLowerCase()} — no further payments needed.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="sm:col-span-1">
-              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Amount ({currency})</label>
-              <input type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Amount ({currency})</label>
+              <Input aria-label="Amount" type="number" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}
                 placeholder={(outstandingCents / 100).toString()}
                 className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
             </div>
             <div className="sm:col-span-1">
-              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Method</label>
-              <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none bg-white focus:border-brand-400">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Method</label>
+              <Select aria-label="Method" value={method} onChange={(e) => setMethod(e.target.value)} className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none bg-white focus:border-brand-400">
                 <option value="bank_transfer">Bank transfer</option>
                 <option value="cash">Cash</option>
                 <option value="card">Card</option>
                 <option value="cheque">Cheque</option>
                 <option value="online">Online</option>
-              </select>
+              </Select>
             </div>
             <div className="sm:col-span-1">
-              <label className="block text-[11px] font-semibold text-gray-500 mb-1">Reference</label>
-              <input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. TXN-1234"
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Reference</label>
+              <Input aria-label="Reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. TXN-1234"
                 className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
             </div>
             <div className="sm:col-span-1 flex items-end">
-              <button onClick={submit} disabled={record.isPending}
+              <Button variant="quiet" type="button" onClick={submit} disabled={record.isPending}
                 className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-60">
                 {record.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Record
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </div>
 
-    <div className="bg-white rounded-2xl border border-gray-100">
-      <div className="p-4 border-b border-gray-100">
+    <div className="bg-white rounded-xl border border-gray-200">
+      <div className="p-4 border-b border-gray-200">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <CreditCard className="h-4 w-4" /> Payments ({payments.length})
         </h3>
       </div>
       {payments.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-500">No payments recorded yet — use the form above.</div>
+        <div className="py-10 text-center text-sm text-gray-600">No payments recorded yet — use the form above.</div>
       ) : (
-        <table className="w-full">
+        <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100">
-              <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Date</th>
-              <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Method</th>
-              <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden md:table-cell">Reference</th>
-              <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3">Amount</th>
-              <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Status</th>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Date</th>
+              <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Method</th>
+              <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden md:table-cell">Reference</th>
+              <th className="text-right text-xs font-semibold text-gray-600 px-5 py-3">Amount</th>
+              <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -344,24 +348,24 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
                     {at ? new Date(at).toLocaleString() : '—'}
                   </td>
                   <td className="px-5 py-3.5 text-sm text-gray-700 capitalize">{String(method).replace(/_/g, ' ')}</td>
-                  <td className="px-5 py-3.5 text-xs text-gray-500 hidden md:table-cell font-mono truncate max-w-[200px]" title={ref}>{ref}</td>
+                  <td className="px-5 py-3.5 text-xs text-gray-600 hidden md:table-cell font-mono truncate max-w-[200px]" title={ref}>{ref}</td>
                   <td className="px-5 py-3.5 text-sm text-gray-900 font-semibold text-right">
                     {formatMoney(amountCents, p.currency ?? currency)}
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={cn(
-                      'text-[11px] font-medium px-2 py-1 rounded-full',
+                      'text-xs font-medium px-2 py-1 rounded-full',
                       status === 'COMPLETED' ? 'bg-green-50 text-green-700' :
                       status === 'PENDING' ? 'bg-yellow-50 text-yellow-700' :
                       status === 'FAILED' ? 'bg-red-50 text-red-600' :
-                      'bg-gray-100 text-gray-500',
+                      'bg-gray-100 text-gray-600',
                     )}>{String(status).replace(/_/g, ' ')}</span>
                   </td>
                 </tr>
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       )}
     </div>
     </div>
@@ -371,7 +375,7 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
 function Field({ label, value }: { label: string; value: any }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold text-gray-500">{label}</dt>
+      <dt className="text-xs font-semibold text-gray-600">{label}</dt>
       <dd className="text-sm text-gray-900 font-medium">{value ?? '—'}</dd>
     </div>
   );
@@ -452,60 +456,60 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
 
   return (
     <div className="space-y-4 max-w-3xl">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Quick actions
         </h3>
         <div className="flex flex-wrap gap-2">
-          <button
+          <Button variant="quiet" type="button"
             onClick={handleMarkPaid}
             disabled={markPaid.isPending || outstandingCents <= 0}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-green-500 text-white rounded-lg disabled:opacity-50 hover:bg-green-600"
           >
             {markPaid.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Mark paid
-          </button>
-          <button
+          </Button>
+          <Button variant="quiet" type="button"
             onClick={handleCancel}
             disabled={update.isPending || inv.status === 'VOID' || inv.status === 'CANCELLED'}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-200"
           >
             <XCircle className="h-4 w-4" /> Mark cancelled
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Edit invoice
         </h3>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
+            <Select aria-label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
               {INVOICE_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-            </select>
+            </Select>
           </FormField>
           <FormField label="Due date">
-            <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
+            <Input aria-label="Due Date" type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
           </FormField>
           <FormField label="Notes" full>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none focus:border-brand-400" />
+            <Textarea aria-label="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none focus:border-brand-400" />
           </FormField>
         </div>
         <div className="flex justify-end pt-2">
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50 hover:bg-brand-600">
+          <Button variant="quiet" type="button" onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50 hover:bg-brand-600">
             {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save invoice
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-red-100 p-5">
+      <div className="bg-white rounded-xl border border-red-100 p-5">
         <h3 className="text-sm font-bold text-red-700 inline-flex items-center gap-2">
           <Trash2 className="h-4 w-4" /> Archive invoice
         </h3>
-        <p className="text-xs text-gray-500 my-2">Removes the invoice from the active list. Past payments are preserved.</p>
-        <button onClick={archive} disabled={remove.isPending} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg disabled:opacity-50">
+        <p className="text-xs text-gray-600 my-2">Removes the invoice from the active list. Past payments are preserved.</p>
+        <Button variant="quiet" type="button" onClick={archive} disabled={remove.isPending} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg disabled:opacity-50">
           {remove.isPending ? 'Archiving…' : 'Archive'}
-        </button>
+        </Button>
       </div>
     </div>
   );

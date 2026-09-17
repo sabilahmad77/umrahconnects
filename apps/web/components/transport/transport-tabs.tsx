@@ -1,4 +1,6 @@
 'use client';
+import { ModalSurface, Input, Select , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -19,7 +21,7 @@ const VEHICLE_STATUS: Record<string, { label: string; color: string; dot: string
   BOOKED:            { label: 'Booked',        color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
   IN_SERVICE:        { label: 'In Service',    color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
   UNDER_MAINTENANCE: { label: 'Maintenance',   color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  INACTIVE:          { label: 'Inactive',      color: 'bg-gray-100 text-gray-500',    dot: 'bg-gray-400' },
+  INACTIVE:          { label: 'Inactive',      color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
 };
 
 const DRIVER_STATUS: Record<string, { label: string; color: string }> = {
@@ -50,10 +52,10 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
   const [tab, setTab] = useState<SectionKey>(fixedSection ?? 'vehicles');
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data: vehicles, isLoading: vl, refetch: rv } = useTransportVehicles();
-  const { data: drivers, isLoading: dl, refetch: rd } = useTransportDrivers();
-  const { data: routes, isLoading: rl, refetch: rr } = useTransportRoutes();
-  const { data: stats, isLoading: sl } = useTransportStats();
+  const { data: vehicles, isLoading: vl, refetch: rv , error: transportVehiclesError} = useTransportVehicles();
+  const { data: drivers, isLoading: dl, refetch: rd , error: transportDriversError} = useTransportDrivers();
+  const { data: routes, isLoading: rl, refetch: rr , error: transportRoutesError} = useTransportRoutes();
+  const { data: stats, isLoading: sl , error: transportStatsError, refetch: retryTransportStats} = useTransportStats();
   const createVehicle = useCreateVehicle();
   const createDriver  = useCreateDriver();
   const createRoute   = useCreateRoute();
@@ -77,47 +79,48 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
     else if (tab === 'routes') rr();
   };
 
+  if (transportVehiclesError || transportDriversError || transportRoutesError || transportStatsError) return <QueryFailure error={transportVehiclesError || transportDriversError || transportRoutesError || transportStatsError} onRetry={() => { rv(); rd(); rr(); retryTransportStats(); }} />;
   return (
     <div className="space-y-5 pb-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{meta.title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{meta.subtitle}</p>
+          <p className="text-sm text-gray-600 mt-0.5">{meta.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={refreshActive} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500 transition-colors">
+          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={refreshActive} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
             <RefreshCw className="h-4 w-4" />
-          </button>
+          </Button>
           {showAdd && (
-            <button
+            <Button variant="quiet" type="button"
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm shadow-brand-500/30"
+              className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
             >
               <Plus className="h-4 w-4" />
               {addLabel}
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Tabs — hidden when rendered as a fixed single section */}
       {!fixedSection && (
-        <div className="flex gap-1 bg-white border border-gray-200 rounded-2xl p-1 w-fit">
+        <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 w-fit">
           {TABS.map((t) => (
-            <button
+            <Button variant="quiet" type="button"
               key={t.id}
               onClick={() => setTab(t.id as SectionKey)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
                 tab === t.id
                   ? 'bg-brand-500 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
+                  : 'text-gray-600 hover:text-gray-700 hover:bg-gray-50',
               )}
             >
               <t.icon className="h-4 w-4" />
               {t.label}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -127,16 +130,16 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {vl ? (
             Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse space-y-3">
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3">
                 <div className="w-10 h-10 bg-gray-100 rounded-xl" />
                 <div className="h-4 w-32 bg-gray-100 rounded" />
                 <div className="h-3 w-24 bg-gray-100 rounded" />
               </div>
             ))
           ) : vehicleItems.length === 0 ? (
-            <div className="col-span-3 py-16 text-center bg-white rounded-2xl border border-gray-100">
+            <div className="col-span-3 py-16 text-center bg-white rounded-xl border border-gray-200">
               <Bus className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500">No vehicles found</p>
+              <p className="text-sm text-gray-600">No vehicles found</p>
             </div>
           ) : vehicleItems.map((v: any) => {
             const cfg = VEHICLE_STATUS[v.status] ?? { label: v.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
@@ -145,7 +148,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
               <Link
                 key={v.id}
                 href={`/transport/vehicles/${v.id}`}
-                className="block bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-brand-200 transition-all"
+                className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -156,7 +159,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                       <p className="text-sm font-semibold text-gray-900 truncate">
                         {v.name ?? v.plateNumber ?? '—'}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-gray-600 truncate">
                         {v.brand ?? ''} {v.model ?? ''} {v.year ? `· ${v.year}` : ''}
                       </p>
                     </div>
@@ -166,15 +169,15 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                   <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
                   {cfg.label}
                 </span>
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
-                  <div><span className="text-gray-500">Plate:</span> <span className="font-medium text-gray-700">{v.plateNumber ?? '—'}</span></div>
-                  <div><span className="text-gray-500">Type:</span> <span className="font-medium text-gray-700">{v.type ?? '—'}</span></div>
-                  <div><span className="text-gray-500">Seats:</span> <span className="font-medium text-gray-700">{(v.capacity - (v.bookedSeats ?? 0))} / {v.capacity ?? '—'}</span></div>
-                  <div><span className="text-gray-500">A/C:</span> <span className="font-medium text-gray-700">{v.hasAc ? 'Yes' : 'No'}</span></div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                  <div><span className="text-gray-600">Plate:</span> <span className="font-medium text-gray-700">{v.plateNumber ?? '—'}</span></div>
+                  <div><span className="text-gray-600">Type:</span> <span className="font-medium text-gray-700">{v.type ?? '—'}</span></div>
+                  <div><span className="text-gray-600">Seats:</span> <span className="font-medium text-gray-700">{(v.capacity - (v.bookedSeats ?? 0))} / {v.capacity ?? '—'}</span></div>
+                  <div><span className="text-gray-600">A/C:</span> <span className="font-medium text-gray-700">{v.hasAc ? 'Yes' : 'No'}</span></div>
                 </div>
                 {primaryDriver && (
-                  <div className="text-xs text-gray-500 mt-3 pt-3 border-t border-gray-50">
-                    <span className="text-gray-500">Driver:</span> <span className="font-medium text-gray-700">{primaryDriver.firstName} {primaryDriver.lastName}</span>
+                  <div className="text-xs text-gray-600 mt-3 pt-3 border-t border-gray-50">
+                    <span className="text-gray-600">Driver:</span> <span className="font-medium text-gray-700">{primaryDriver.firstName} {primaryDriver.lastName}</span>
                   </div>
                 )}
               </Link>
@@ -185,7 +188,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
 
       {/* ── Drivers ── */}
       {tab === 'drivers' && (
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           {dl ? (
             <div className="divide-y divide-gray-50">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -201,17 +204,17 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
           ) : driverItems.length === 0 ? (
             <div className="py-16 text-center">
               <User className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500">No drivers found</p>
+              <p className="text-sm text-gray-600">No drivers found</p>
             </div>
           ) : (
-            <table className="w-full">
+            <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Driver</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden md:table-cell">License</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-5 py-3 hidden lg:table-cell">Vehicle</th>
-                  <th className="text-right text-xs font-semibold text-gray-500 px-5 py-3">Actions</th>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Driver</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden md:table-cell">License</th>
+                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden lg:table-cell">Vehicle</th>
+                  <th className="text-right text-xs font-semibold text-gray-600 px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -228,7 +231,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                           </div>
                           <div>
                             <p className="text-sm font-semibold text-gray-800">{name}</p>
-                            <p className="text-xs text-gray-500">{d.phone ?? '—'}</p>
+                            <p className="text-xs text-gray-600">{d.phone ?? '—'}</p>
                           </div>
                         </div>
                       </td>
@@ -248,7 +251,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       )}
@@ -258,12 +261,12 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {rl ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse h-28" />
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse h-28" />
             ))
           ) : !routes || (routes as any[]).length === 0 ? (
-            <div className="col-span-2 py-16 text-center bg-white rounded-2xl border border-gray-100">
+            <div className="col-span-2 py-16 text-center bg-white rounded-xl border border-gray-200">
               <Map className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500">No routes defined</p>
+              <p className="text-sm text-gray-600">No routes defined</p>
             </div>
           ) : (((routes as any).items ?? routes) as any[]).map((r: any) => {
             const seats = (r.totalSeats ?? 0) - (r.bookedSeats ?? 0);
@@ -271,7 +274,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
               <Link
                 key={r.id}
                 href={`/transport/routes/${r.id}`}
-                className="block bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-brand-200 transition-all"
+                className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all"
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold text-gray-900">{r.name ?? `Route ${r.id?.slice(0, 6)}`}</p>
@@ -279,21 +282,21 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                     {r.movementType ?? r.type ?? 'Transfer'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="flex items-center gap-2 text-xs text-gray-600">
                   <span className="font-medium text-gray-700">{r.originCity ?? r.origin ?? '—'}</span>
                   <span>→</span>
                   <span className="font-medium text-gray-700">{r.destCity ?? r.destination ?? '—'}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50 text-[11px]">
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50 text-xs">
                   {r.pricePerSeatCents != null && (
-                    <span><span className="text-gray-500">From:</span> <span className="font-medium text-gray-700">{r.currency ?? 'SAR'} {(Number(r.pricePerSeatCents) / 100).toLocaleString()}</span></span>
+                    <span><span className="text-gray-600">From:</span> <span className="font-medium text-gray-700">{r.currency ?? 'SAR'} {(Number(r.pricePerSeatCents) / 100).toLocaleString()}</span></span>
                   )}
                   {r.totalSeats != null && (
-                    <span><span className="text-gray-500">Seats:</span> <span className="font-medium text-gray-700">{seats} / {r.totalSeats}</span></span>
+                    <span><span className="text-gray-600">Seats:</span> <span className="font-medium text-gray-700">{seats} / {r.totalSeats}</span></span>
                   )}
                 </div>
                 {r.distanceKm && (
-                  <p className="text-xs text-gray-500 mt-1.5">{r.distanceKm} km · ~{r.durationMins ?? '?'} mins</p>
+                  <p className="text-xs text-gray-600 mt-1.5">{r.distanceKm} km · ~{r.durationMins ?? '?'} mins</p>
                 )}
               </Link>
             );
@@ -306,16 +309,16 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {sl ? (
             Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse h-40" />
+              <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse h-40" />
             ))
           ) : !stats ? (
-            <div className="col-span-2 py-16 text-center bg-white rounded-2xl border border-gray-100">
+            <div className="col-span-2 py-16 text-center bg-white rounded-xl border border-gray-200">
               <BarChart3 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-500">No stats available</p>
+              <p className="text-sm text-gray-600">No stats available</p>
             </div>
           ) : (
             <>
-              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <h3 className="font-semibold text-gray-900 mb-4">🚌 Vehicle Fleet Status</h3>
                 <div className="space-y-2.5">
                   {Object.entries((stats as any).vehicles?.byStatus ?? {}).map(([status, count]) => {
@@ -332,7 +335,7 @@ export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
                   })}
                 </div>
               </div>
-              <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <h3 className="font-semibold text-gray-900 mb-4">👨‍✈️ Driver Status</h3>
                 <div className="space-y-2.5">
                   {Object.entries((stats as any).drivers?.byStatus ?? {}).map(([status, count]) => {
@@ -392,16 +395,16 @@ const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg f
 
 function ModalShell({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+    <ModalSurface title={title} onClose={onClose}   >
+      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-500" /></button>
+          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-600" /></Button>
         </div>
         <div className="space-y-3">{children}</div>
         <div className="flex justify-end gap-2 mt-5">{footer}</div>
       </div>
-    </div>
+    </ModalSurface>
   );
 }
 
@@ -418,30 +421,30 @@ function AddVehicleModal({ onClose, onCreate, pending }: { onClose: () => void; 
       title="Add vehicle"
       onClose={onClose}
       footer={<>
-        <button onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-        <button onClick={submit} disabled={pending || !plateNumber.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
+        <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
+        <Button variant="quiet" type="button" onClick={submit} disabled={pending || !plateNumber.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
           {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Add vehicle
-        </button>
+        </Button>
       </>}
     >
       <div className="grid grid-cols-2 gap-3">
         <label className="block col-span-2">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Plate number *</span>
-          <input autoFocus value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} placeholder="MKA-3421" className={inputCls} />
+          <Input  autoFocus value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} placeholder="MKA-3421" className={inputCls} />
         </label>
         <label className="block">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-          <select value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
+          <Select  value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
             {VEHICLE_TYPES.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
-          </select>
+          </Select>
         </label>
         <label className="block">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Capacity</span>
-          <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className={inputCls} />
+          <Input  type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className={inputCls} />
         </label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Make</span><input value={make} onChange={(e) => setMake(e.target.value)} placeholder="Mercedes" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Model</span><input value={model} onChange={(e) => setModel(e.target.value)} placeholder="Tourismo" className={inputCls} /></label>
-        <label className="block col-span-2"><span className="block text-xs font-semibold text-gray-600 mb-1">Year</span><input type="number" min="1990" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2024" className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Make</span><Input  value={make} onChange={(e) => setMake(e.target.value)} placeholder="Mercedes" className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Model</span><Input  value={model} onChange={(e) => setModel(e.target.value)} placeholder="Tourismo" className={inputCls} /></label>
+        <label className="block col-span-2"><span className="block text-xs font-semibold text-gray-600 mb-1">Year</span><Input  type="number" min="1990" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2024" className={inputCls} /></label>
       </div>
     </ModalShell>
   );
@@ -467,19 +470,19 @@ function AddDriverModal({ onClose, onCreate, pending }: { onClose: () => void; o
       title="Add driver"
       onClose={onClose}
       footer={<>
-        <button onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-        <button onClick={submit} disabled={pending || !firstName.trim() || !lastName.trim() || !phone.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
+        <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
+        <Button variant="quiet" type="button" onClick={submit} disabled={pending || !firstName.trim() || !lastName.trim() || !phone.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
           {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Add driver
-        </button>
+        </Button>
       </>}
     >
       <div className="grid grid-cols-2 gap-3">
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">First name *</span><input autoFocus value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Last name *</span><input value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Phone *</span><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+966 5..." className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Email</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">License #</span><input value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">License expiry</span><input type="date" value={licenseExpiry} onChange={(e) => setLicenseExpiry(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">First name *</span><Input  autoFocus value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Last name *</span><Input  value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Phone *</span><Input  value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+966 5..." className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Email</span><Input  type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">License #</span><Input  value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">License expiry</span><Input  type="date" value={licenseExpiry} onChange={(e) => setLicenseExpiry(e.target.value)} className={inputCls} /></label>
       </div>
     </ModalShell>
   );
@@ -508,24 +511,24 @@ function AddRouteModal({ onClose, onCreate, pending }: { onClose: () => void; on
       title="Add route"
       onClose={onClose}
       footer={<>
-        <button onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-        <button onClick={submit} disabled={pending || !name.trim() || !origin.trim() || !destination.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
+        <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
+        <Button variant="quiet" type="button" onClick={submit} disabled={pending || !name.trim() || !origin.trim() || !destination.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
           {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Add route
-        </button>
+        </Button>
       </>}
     >
       <div className="grid grid-cols-2 gap-3">
-        <label className="block col-span-2"><span className="block text-xs font-semibold text-gray-600 mb-1">Route name *</span><input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="JED Airport → Makkah" className={inputCls} /></label>
+        <label className="block col-span-2"><span className="block text-xs font-semibold text-gray-600 mb-1">Route name *</span><Input  autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="JED Airport → Makkah" className={inputCls} /></label>
         <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-          <select value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
+          <Select  value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
             {MOVEMENT_TYPES.map((m) => <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>)}
-          </select>
+          </Select>
         </label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Price per pax (SAR)</span><input type="number" min="0" value={pricePerPax} onChange={(e) => setPricePerPax(e.target.value)} placeholder="150" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Origin *</span><input value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Jeddah" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Destination *</span><input value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Makkah" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Distance (km)</span><input type="number" min="0" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Duration (min)</span><input type="number" min="0" value={estimatedDuration} onChange={(e) => setEstimatedDuration(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Price per pax (SAR)</span><Input  type="number" min="0" value={pricePerPax} onChange={(e) => setPricePerPax(e.target.value)} placeholder="150" className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Origin *</span><Input  value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Jeddah" className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Destination *</span><Input  value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Makkah" className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Distance (km)</span><Input  type="number" min="0" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} className={inputCls} /></label>
+        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Duration (min)</span><Input  type="number" min="0" value={estimatedDuration} onChange={(e) => setEstimatedDuration(e.target.value)} className={inputCls} /></label>
       </div>
     </ModalShell>
   );

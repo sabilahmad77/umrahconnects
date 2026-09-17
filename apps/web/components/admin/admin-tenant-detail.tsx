@@ -1,4 +1,6 @@
 'use client';
+import { Select , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -19,7 +21,7 @@ const apiError = (e: any) =>
 
 export function AdminTenantDetail({ id }: { id: string }) {
   const { data: t, isLoading, error, refetch } = useAdminTenant(id);
-  const { data: logs } = useAdminAuditLogs({ resource: 'tenant', limit: 100 });
+  const { data: logs , error: adminAuditLogsError, refetch: retryAdminAuditLogs} = useAdminAuditLogs({ resource: 'tenant', limit: 100 });
   const setStatus = useSetTenantStatus();
   const archive = useArchiveTenant();
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
@@ -29,9 +31,10 @@ export function AdminTenantDetail({ id }: { id: string }) {
     catch (e: any) { toast.error(apiError(e)); }
   };
 
+  if (error || adminAuditLogsError) return <QueryFailure error={error || adminAuditLogsError} onRetry={() => { refetch(); retryAdminAuditLogs(); }} />;
   if (isLoading) {
     return (
-      <div className="py-24 text-center text-sm text-gray-500">
+      <div className="py-24 text-center text-sm text-gray-600">
         <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading tenant…
       </div>
     );
@@ -39,8 +42,8 @@ export function AdminTenantDetail({ id }: { id: string }) {
   if (error || !t) {
     return (
       <div className="py-24 text-center">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-        <p className="text-sm text-red-500 mb-2">This tenant could not be loaded</p>
+        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+        <p className="text-sm text-red-700 mb-2">This tenant could not be loaded</p>
         <Link href="/admin-tenants" className="text-xs text-brand-500 hover:underline">Back to all tenants</Link>
       </div>
     );
@@ -49,13 +52,14 @@ export function AdminTenantDetail({ id }: { id: string }) {
   const meta = TENANT_STATUS_META[t.status] ?? { label: t.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
   const trail = (logs?.items ?? []).filter((l: any) => l.resourceId === id || l.tenantId === id);
 
+
   return (
     <div className="space-y-5 pb-10">
-      <Link href="/admin-tenants" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
+      <Link href="/admin-tenants" className="inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-gray-700">
         <ArrowLeft className="h-4 w-4" /> All tenants
       </Link>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -70,7 +74,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
               )}
             </div>
             <h1 className="text-xl font-bold text-gray-900 mt-2">{t.name}</h1>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-500">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs text-gray-600">
               <span className="inline-flex items-center gap-1"><Hash className="h-3 w-3" /> {t.slug}</span>
               <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {t.email ?? '—'}</span>
               <span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" /> {t.country ?? '—'}</span>
@@ -79,10 +83,10 @@ export function AdminTenantDetail({ id }: { id: string }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <select
+            <Select disabled={setStatus.isPending}
               value={t.status}
               aria-label="Tenant status"
-              onChange={(e) => {
+              onChange={(e) => { try {
                 const next = e.target.value;
                 const blocking = next !== 'ACTIVE';
                 setConfirm({
@@ -94,12 +98,12 @@ export function AdminTenantDetail({ id }: { id: string }) {
                   tone: blocking ? 'danger' : 'default',
                   onConfirm: () => run(() => setStatus.mutateAsync({ id, status: next }), 'Status updated'),
                 });
-              }}
+              } catch (error) { toast.error((error as any)?.response?.data?.error?.message ?? (error as any)?.response?.data?.message ?? 'This action could not be completed. Try again.'); } }}
               className="text-sm px-3 py-2 border border-gray-200 rounded-xl bg-white outline-none"
             >
               {TENANT_STATUSES.map((s) => <option key={s} value={s}>{TENANT_STATUS_META[s].label}</option>)}
-            </select>
-            <button
+            </Select>
+            <Button variant="quiet" type="button"
               disabled={!!t.deletedAt}
               onClick={() => setConfirm({
                 title: `Archive ${t.name}?`,
@@ -112,19 +116,19 @@ export function AdminTenantDetail({ id }: { id: string }) {
               className="inline-flex items-center gap-1.5 text-sm px-3 py-2 border border-red-200 text-red-600 rounded-xl hover:bg-red-50 disabled:opacity-40"
             >
               <Archive className="h-3.5 w-3.5" /> Archive
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-              <Users className="h-4 w-4 text-gray-500" /> Users ({t._count?.users ?? (t.users?.length ?? 0)})
+              <Users className="h-4 w-4 text-gray-600" /> Users ({t._count?.users ?? (t.users?.length ?? 0)})
             </h2>
             {(t.users ?? []).length === 0 ? (
-              <p className="text-xs text-gray-500 py-4 text-center">This tenant has no users yet.</p>
+              <p className="text-xs text-gray-600 py-4 text-center">This tenant has no users yet.</p>
             ) : (
               <div className="divide-y divide-gray-50">
                 {t.users.map((u: any) => {
@@ -133,9 +137,9 @@ export function AdminTenantDetail({ id }: { id: string }) {
                     <div key={u.id} className="flex items-center justify-between py-2.5">
                       <div>
                         <p className="text-sm font-medium text-gray-800">{u.firstName} {u.lastName}</p>
-                        <p className="text-[11px] text-gray-500">{u.email ?? '—'}</p>
+                        <p className="text-xs text-gray-600">{u.email ?? '—'}</p>
                       </div>
-                      <span className={cn('inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full font-medium', um.color)}>
+                      <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium', um.color)}>
                         <span className={cn('w-1.5 h-1.5 rounded-full', um.dot)} />{um.label}
                       </span>
                     </div>
@@ -148,12 +152,12 @@ export function AdminTenantDetail({ id }: { id: string }) {
             </Link>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-              <History className="h-4 w-4 text-gray-500" /> Audit trail
+              <History className="h-4 w-4 text-gray-600" /> Audit trail
             </h2>
             {trail.length === 0 ? (
-              <p className="text-xs text-gray-500 py-4 text-center">
+              <p className="text-xs text-gray-600 py-4 text-center">
                 No administrative actions recorded against this tenant yet.
               </p>
             ) : (
@@ -166,7 +170,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
                         {humanizeStatus(l.action)} · {l.resource}
                         {l.afterState?.status ? ` → ${l.afterState.status}` : ''}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-600">
                         {new Date(l.occurredAt).toLocaleString()}{l.actorEmail ? ` · ${l.actorEmail}` : ''}
                         {l.metadata?.reason ? ` · ${l.metadata.reason}` : ''}
                       </p>
@@ -179,12 +183,12 @@ export function AdminTenantDetail({ id }: { id: string }) {
         </div>
 
         <div className="space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-gray-500" /> KYC
+              <ShieldCheck className="h-4 w-4 text-gray-600" /> KYC
             </h2>
             {(t.kycRecords ?? []).length === 0 ? (
-              <p className="text-xs text-gray-500">No KYC record submitted.</p>
+              <p className="text-xs text-gray-600">No KYC record submitted.</p>
             ) : (
               <div className="space-y-2">
                 {t.kycRecords.map((k: any) => (
@@ -192,7 +196,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
                     <p className="text-gray-700 font-medium">
                       {k.verifiedAt ? 'Approved' : k.rejectionReason ? 'Rejected' : 'Pending review'}
                     </p>
-                    <p className="text-gray-500">
+                    <p className="text-gray-600">
                       {k.registrySource ?? '—'} · {new Date(k.createdAt).toLocaleDateString()}
                     </p>
                     {k.rejectionReason && <p className="text-red-600 mt-1">{k.rejectionReason}</p>}
@@ -202,7 +206,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h2 className="text-sm font-bold text-gray-900 mb-3">At a glance</h2>
             <dl className="space-y-1.5 text-xs">
               <Row label="Users" value={String(t._count?.users ?? 0)} />
@@ -222,7 +226,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-gray-500">{label}</dt>
+      <dt className="text-gray-600">{label}</dt>
       <dd className="text-gray-700 text-right">{value}</dd>
     </div>
   );

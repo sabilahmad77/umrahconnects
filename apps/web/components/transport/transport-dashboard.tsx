@@ -1,4 +1,6 @@
 'use client';
+import { LinkedStatBlock as KPI, CountTile as Tile } from '@/components/ui/system';
+import { Button , QueryFailure } from '@/components/ui/system';
 
 import Link from 'next/link';
 import {
@@ -13,37 +15,34 @@ import { useTransportVehicles, useTransportDrivers, useTransportRoutes } from '@
 
 export function TransportDashboard() {
   const { data: stats, isLoading, error, refetch } = useTransportStatsFull();
-  const { data: upcoming } = useAssignments({ status: 'SCHEDULED', limit: 6 });
+  const { data: upcoming , error: assignmentsError, refetch: retryAssignments} = useAssignments({ status: 'SCHEDULED', limit: 6 });
 
+  if (error || assignmentsError) return <QueryFailure error={error || assignmentsError} onRetry={() => { refetch(); retryAssignments(); }} />;
   return (
     <div className="space-y-5 pb-10">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transport operations</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Real-time view of your fleet, drivers, routes and bookings</p>
+          <p className="text-sm text-gray-600 mt-0.5">Current records for of your fleet, drivers, routes and bookings</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500">
+          <Button variant="quiet" type="button" aria-label="Refresh dashboard" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-          </button>
-          <Link href="/transport/assignments" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm shadow-brand-500/30">
+          </Button>
+          <Link href="/transport/assignments" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
             <Plus className="h-4 w-4" /> New assignment
           </Link>
         </div>
       </div>
 
-      {error ? (
-        <div className="py-10 text-center bg-white rounded-2xl border border-gray-100">
-          <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-          <p className="text-sm text-red-500">Failed to load transport stats</p>
-        </div>
-      ) : isLoading ? (
-        <div className="flex items-center justify-center py-12 text-gray-500 text-sm">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12 text-gray-600 text-sm">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading dashboard…
         </div>
       ) : (
         <>
+          <section className="border-l-4 border-brand-500 bg-white p-5"><h2 className="text-base font-semibold text-gray-900">Assignments and resource availability</h2><p className="mt-2 text-sm text-gray-600">Review scheduled trips and confirm vehicle and driver availability before dispatch.</p><Link href="/transport/assignments" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">Open work queue</Link></section>
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KPI label="Vehicles" value={stats.vehicles.total} sub={`${stats.vehicles.available} available`} icon={Bus} color="bg-brand-50 text-brand-700" href="/transport/vehicles" />
@@ -63,7 +62,7 @@ export function TransportDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Revenue */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
                 <Wallet className="h-4 w-4 text-brand-600" /> Revenue
               </h3>
@@ -71,7 +70,7 @@ export function TransportDashboard() {
                 <p className="text-2xl font-bold text-gray-900">
                   {stats.revenue.currency} {(stats.revenue.collectedCents / 100).toLocaleString()}
                 </p>
-                <p className="text-xs text-green-600 inline-flex items-center gap-1 mt-1">
+                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1">
                   <CheckCircle2 className="h-3 w-3" /> Collected
                 </p>
               </div>
@@ -79,7 +78,7 @@ export function TransportDashboard() {
                 <p className="text-lg font-semibold text-gray-700">
                   {stats.revenue.currency} {(stats.revenue.pendingCents / 100).toLocaleString()}
                 </p>
-                <p className="text-xs text-orange-500 inline-flex items-center gap-1 mt-1">
+                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1">
                   <PauseCircle className="h-3 w-3" /> Pending payments
                 </p>
               </div>
@@ -89,13 +88,13 @@ export function TransportDashboard() {
             </div>
 
             {/* Marketplace */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
                 <Store className="h-4 w-4 text-purple-600" /> Marketplace
               </h3>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.marketplace.listings}</p>
-                <p className="text-xs text-gray-500 mt-1">Active listings</p>
+                <p className="text-xs text-gray-600 mt-1">Active listings</p>
               </div>
               <div className="pt-2 border-t border-gray-50">
                 <p className="text-lg font-semibold text-gray-700">{stats.marketplace.openInquiries}</p>
@@ -107,21 +106,21 @@ export function TransportDashboard() {
             </div>
 
             {/* Upcoming trips */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
               <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-blue-600" /> Upcoming trips
               </h3>
               {(stats.assignments.upcoming ?? []).length === 0 ? (
-                <p className="text-xs text-gray-500">No upcoming trips</p>
+                <p className="text-xs text-gray-600">No upcoming trips</p>
               ) : (
                 <ul className="space-y-2">
                   {stats.assignments.upcoming.slice(0, 5).map((u: any) => (
                     <li key={u.id} className="flex items-center justify-between text-xs">
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{u.route?.name ?? '—'}</p>
-                        <p className="text-[11px] text-gray-500 truncate">{u.vehicle?.plateNumber ?? '—'}</p>
+                        <p className="text-xs text-gray-600 truncate">{u.vehicle?.plateNumber ?? '—'}</p>
                       </div>
-                      <p className="text-[11px] text-gray-500 shrink-0">{new Date(u.scheduledAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-600 shrink-0">{new Date(u.scheduledAt).toLocaleDateString()}</p>
                     </li>
                   ))}
                 </ul>
@@ -133,17 +132,17 @@ export function TransportDashboard() {
           </div>
 
           {/* Quick navigation */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <QuickAction href="/transport/vehicles" label="Vehicles" icon={Bus} bg="bg-brand-50 text-brand-600" />
               <QuickAction href="/transport/drivers" label="Drivers" icon={UserCircle2} bg="bg-blue-50 text-blue-600" />
               <QuickAction href="/transport/routes" label="Routes" icon={MapIcon} bg="bg-purple-50 text-purple-600" />
-              <QuickAction href="/transport/assignments" label="Assignments" icon={ClipboardList} bg="bg-yellow-50 text-yellow-600" />
+              <QuickAction href="/transport/assignments" label="Assignments" icon={ClipboardList} bg="bg-yellow-50 text-yellow-800" />
               <QuickAction href="/transport/bookings" label="Bookings" icon={CheckCircle2} bg="bg-blue-50 text-blue-700" />
               <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-pink-50 text-pink-600" />
-              <QuickAction href="/finance" label="Finance" icon={DollarSign} bg="bg-green-50 text-green-600" />
-              <QuickAction href="/transport/bookings?status=IN_PROGRESS" label="Active trips" icon={CheckCircle2} bg="bg-orange-50 text-orange-600" />
+              <QuickAction href="/finance" label="Finance" icon={DollarSign} bg="bg-green-50 text-green-800" />
+              <QuickAction href="/transport/bookings?status=IN_PROGRESS" label="Active trips" icon={CheckCircle2} bg="bg-orange-50 text-orange-800" />
               <QuickAction href="/transport/vehicles?status=UNDER_MAINTENANCE" label="Maintenance" icon={Wrench} bg="bg-yellow-50 text-yellow-700" />
               <QuickAction href="/social" label="Social Hub" icon={AlertTriangle} bg="bg-saudi-50 text-saudi-700" />
               <QuickAction href="/connections" label="Connections" icon={ListChecks} bg="bg-blue-50 text-blue-700" />
@@ -157,36 +156,13 @@ export function TransportDashboard() {
   );
 }
 
-function KPI({ label, value, sub, icon: Icon, color, href }: { label: string; value: number; sub?: string; icon: any; color: string; href: string }) {
-  return (
-    <Link href={href} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-md hover:border-brand-200 transition-all flex items-start gap-3">
-      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', color)}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="flex-1">
-        <p className="text-xs font-semibold text-gray-500">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 leading-tight mt-1">{value.toLocaleString()}</p>
-        {sub && <p className="text-[11px] text-gray-500 mt-0.5">{sub}</p>}
-      </div>
-    </Link>
-  );
-}
 
-function Tile({ label, value, dot }: { label: string; value: number; dot: string }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-3">
-      <div className="flex items-center gap-2">
-        <span className={cn('w-2 h-2 rounded-full', dot)} />
-        <p className="text-xs text-gray-500">{label}</p>
-      </div>
-      <p className="text-xl font-bold text-gray-900 mt-1">{value}</p>
-    </div>
-  );
-}
+
+
 
 function QuickAction({ href, label, icon: Icon, bg }: { href: string; label: string; icon: any; bg: string }) {
   return (
-    <Link href={href} className="group flex flex-col items-center text-center bg-white border border-gray-100 rounded-xl p-3 hover:border-brand-200 hover:shadow-sm transition-all">
+    <Link href={href} className="group flex flex-col items-center text-center bg-white border border-gray-200 rounded-xl p-3 hover:border-brand-200 hover:shadow-sm transition-all">
       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-2', bg)}>
         <Icon className="h-5 w-5" />
       </div>

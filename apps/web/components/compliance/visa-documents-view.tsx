@@ -1,4 +1,5 @@
 'use client';
+import { Button , QueryFailure } from '@/components/ui/system';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -22,35 +23,36 @@ const FILTERS = ['ALL', ...VISA_DOCUMENT_STATUSES] as const;
 export function VisaDocumentsView() {
   const [filter, setFilter] = useState<string>('ALL');
   const { data: docs = [], isLoading, error, refetch } = useAllVisaDocuments(filter !== 'ALL' ? filter : undefined);
-  const { data: stats } = useVisaDocumentStats();
+  const { data: stats , error: visaDocumentStatsError, refetch: retryVisaDocumentStats} = useVisaDocumentStats();
 
   const storage = stats?.storage;
   const tiles = [
-    { label: 'Verified', value: stats?.byStatus?.VERIFIED ?? 0, color: 'text-green-600',  Icon: CheckCircle2 },
+    { label: 'Verified', value: stats?.byStatus?.VERIFIED ?? 0, color: 'text-green-800',  Icon: CheckCircle2 },
     { label: 'Received', value: stats?.byStatus?.RECEIVED ?? 0, color: 'text-blue-600',   Icon: FileText },
     { label: 'Missing',  value: stats?.byStatus?.MISSING ?? 0,  color: 'text-gray-600',   Icon: XCircle },
-    { label: 'Expired',  value: stats?.expired ?? 0,            color: 'text-orange-600', Icon: CalendarClock },
+    { label: 'Expired',  value: stats?.expired ?? 0,            color: 'text-orange-800', Icon: CalendarClock },
   ];
 
+  if (error || visaDocumentStatsError) return <QueryFailure error={error || visaDocumentStatsError} onRetry={() => { refetch(); retryVisaDocumentStats(); }} />;
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Document management</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-600 mt-0.5">
             {(stats?.total ?? docs.length).toLocaleString()} documents across every visa application
             {stats?.expiringSoon ? ` · ${stats.expiringSoon} expiring within 30 days` : ''}
           </p>
         </div>
-        <button onClick={() => refetch()} aria-label="Refresh documents" className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-500">
+        <Button variant="quiet" type="button" onClick={() => refetch()} aria-label="Refresh documents" className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
           <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
-        </button>
+        </Button>
       </div>
 
       {/* Storage truth — never imply files are durable when they are not. */}
       {storage && (
         <div className={cn(
-          'flex items-start gap-2.5 rounded-2xl border p-3.5 text-xs',
+          'flex items-start gap-2.5 rounded-xl border p-3.5 text-xs',
           storage.ephemeral || !storage.configured
             ? 'bg-gold-50 border-gold-200 text-gold-800'
             : 'bg-green-50 border-green-200 text-green-800',
@@ -69,7 +71,7 @@ export function VisaDocumentsView() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {tiles.map((t) => (
-          <div key={t.label} className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div key={t.label} className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-2xl font-bold text-gray-900">{Number(t.value).toLocaleString()}</p>
             <div className={cn('inline-flex items-center gap-1.5 text-xs font-medium mt-1', t.color)}>
               <t.Icon className="h-3.5 w-3.5" /> {t.label}
@@ -80,33 +82,27 @@ export function VisaDocumentsView() {
 
       <div className="flex gap-1.5 flex-wrap">
         {FILTERS.map((f) => (
-          <button
+          <Button variant="quiet" type="button"
             key={f}
             onClick={() => setFilter(f)}
             className={cn('text-xs px-3 py-1.5 rounded-full border font-medium transition-all',
-              filter === f ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-500 hover:border-gray-300')}
+              filter === f ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
           >
             {f === 'ALL' ? 'All' : VISA_DOCUMENT_STATUS_META[f]?.label ?? f}
-          </button>
+          </Button>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {isLoading ? (
-          <div className="py-16 text-center text-sm text-gray-500">
+          <div className="py-16 text-center text-sm text-gray-600">
             <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" /> Loading documents…
-          </div>
-        ) : error ? (
-          <div className="py-16 text-center">
-            <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-            <p className="text-sm text-red-500 mb-2">Failed to load documents</p>
-            <button onClick={() => refetch()} className="text-xs text-brand-500 hover:underline">Retry</button>
           </div>
         ) : docs.length === 0 ? (
           <div className="py-16 text-center px-6">
             <FolderOpen className="h-12 w-12 mx-auto mb-3 text-gray-200" />
             <p className="text-sm font-semibold text-gray-700">No documents match this view</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-600 mt-1">
               Documents are added from a visa application — open one and use its Documents tab.
             </p>
             <Link href="/compliance" className="text-xs text-brand-500 hover:underline mt-2 inline-block">
@@ -115,8 +111,8 @@ export function VisaDocumentsView() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-gray-500 bg-gray-50 border-b border-gray-100">
+            <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full text-sm">
+              <thead className="text-xs text-gray-600 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left p-3">Document</th>
                   <th className="text-left p-3">Applicant</th>
@@ -135,18 +131,18 @@ export function VisaDocumentsView() {
                       <td className="p-3">
                         <Link href={`/compliance/${d.applicationId}`} className="hover:underline">
                           <p className="font-medium text-gray-900">{d.name}</p>
-                          <p className="text-[11px] text-gray-500">{humanizeStatus(d.type)}</p>
+                          <p className="text-xs text-gray-600">{humanizeStatus(d.type)}</p>
                         </Link>
                       </td>
                       <td className="p-3 text-xs text-gray-600">
                         {d.application?.applicantName ?? d.application?.applicationNumber ?? '—'}
                       </td>
                       <td className="p-3">
-                        <span className={cn('inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full font-medium', meta.color)}>
+                        <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium', meta.color)}>
                           <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />{meta.label}
                         </span>
                         {d.rejectionReason && (
-                          <p className="text-[11px] text-red-600 mt-1 max-w-xs truncate">{d.rejectionReason}</p>
+                          <p className="text-xs text-red-600 mt-1 max-w-xs truncate">{d.rejectionReason}</p>
                         )}
                       </td>
                       <td className="p-3 hidden md:table-cell text-xs text-gray-600 font-mono">
@@ -154,10 +150,10 @@ export function VisaDocumentsView() {
                       </td>
                       <td className="p-3 hidden lg:table-cell">
                         {d.expiresAt ? (
-                          <span className={cn('text-xs inline-flex items-center gap-1', d.isExpired ? 'text-orange-600 font-semibold' : 'text-gray-600')}>
+                          <span className={cn('text-xs inline-flex items-center gap-1', d.isExpired ? 'text-orange-800 font-semibold' : 'text-gray-600')}>
                             <Clock className="h-3 w-3" />{new Date(d.expiresAt).toLocaleDateString()}
                           </span>
-                        ) : <span className="text-xs text-gray-500">—</span>}
+                        ) : <span className="text-xs text-gray-600">—</span>}
                       </td>
                       <td className="p-3 text-right">
                         {d.url ? (
@@ -165,14 +161,14 @@ export function VisaDocumentsView() {
                             <Download className="h-3 w-3" /> Open
                           </a>
                         ) : (
-                          <Link href={`/compliance/${d.applicationId}`} className="text-xs text-gray-500 hover:underline">Attach →</Link>
+                          <Link href={`/compliance/${d.applicationId}`} className="text-xs text-gray-600 hover:underline">Attach →</Link>
                         )}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </table></div>
           </div>
         )}
       </div>

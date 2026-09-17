@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getToken, setToken } from '@/lib/auth';
+import { getToken, setToken, clearAuth } from '@/lib/auth';
 
 // Default to the same-origin proxy (see next.config rewrites) so the app works
 // on localhost AND through any tunnel/device without rebuilding when URLs rotate.
@@ -47,18 +47,12 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Auto-refresh on 401 — skip for demo tokens to avoid redirect loops
+// Coalesce refresh for expired real sessions.
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    const currentToken = getToken();
-
-    // In demo mode, silently ignore 401s (backend doesn't accept demo tokens)
-    if (currentToken?.startsWith('demo.')) {
-      return Promise.reject(error);
-    }
-
+    if (!original || original.url?.startsWith('/auth/') || !getToken()) return Promise.reject(error);
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       // Coalesced refresh — shared with the auth-provider nav gate.
@@ -70,12 +64,8 @@ apiClient.interceptors.response.use(
       // Genuine auth failure (no/invalid refresh token). Redirect with returnTo so
       // the user resumes their page after re-login, instead of a silent bounce.
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        try { localStorage.clear(); } catch {}
-        try { sessionStorage.clear(); } catch {}
-        document.cookie.split(';').forEach((c) => {
-          document.cookie = c.trim().split('=')[0] + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        });
-        const returnTo = encodeURIComponent(window.location.pathname);
+        clearAuth();
+        const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
         window.location.href = `/login?returnTo=${returnTo}`;
       }
     }

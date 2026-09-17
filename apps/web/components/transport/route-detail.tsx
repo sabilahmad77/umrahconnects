@@ -1,4 +1,7 @@
 'use client';
+import { FieldInput as LabeledInput } from '@/components/ui/system';
+import { Select, Textarea, Input , Button , QueryFailure } from '@/components/ui/system';
+
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -17,18 +20,19 @@ export function RouteDetail({ id }: { id: string }) {
   const { data: r, isLoading, error, refetch } = useRoute(id);
   const [tab, setTab] = useState<'overview' | 'edit'>('overview');
 
+  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-500 text-sm">
+      <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading route…
       </div>
     );
   }
   if (error || !r) {
     return (
-      <div className="py-20 text-center bg-white rounded-2xl border border-gray-100">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-400 opacity-60" />
-        <p className="text-sm text-red-500">Route not found</p>
+      <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
+        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
+        <p className="text-sm text-red-700">Route not found</p>
         <Link href="/transport" className="text-xs text-brand-500 hover:underline mt-3 inline-block">← Back to transport</Link>
       </div>
     );
@@ -36,46 +40,47 @@ export function RouteDetail({ id }: { id: string }) {
 
   const seatsLeft = (r.totalSeats ?? 0) - (r.bookedSeats ?? 0);
 
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={() => router.push('/transport')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
-          <ArrowLeft className="h-4 w-4 text-gray-500" />
-        </button>
+        <Button variant="quiet" type="button" aria-label="Go back" onClick={() => router.push('/transport')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
+          <ArrowLeft className="h-4 w-4 text-gray-600" />
+        </Button>
         <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
           <MapIcon className="h-6 w-6 text-purple-600" />
         </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-gray-900 truncate">{r.name}</h1>
-          <p className="text-sm text-gray-500 flex items-center gap-1">
+        <div className="flex-1 min-w-0 basis-[calc(100%_-_140px)] sm:basis-auto">
+          <h1 className="text-2xl font-bold text-gray-900 ">{r.name}</h1>
+          <p className="text-sm text-gray-600 flex items-center gap-1">
             {r.originCity} <ArrowRight className="h-3 w-3" /> {r.destCity}
           </p>
         </div>
-        <span className={cn('text-[11px] font-medium px-2 py-1 rounded-full',
+        <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
           r.status === 'ACTIVE' ? 'bg-green-50 text-green-700' :
           r.status === 'FULLY_BOOKED' ? 'bg-blue-50 text-blue-700' :
           r.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
-          'bg-gray-100 text-gray-500')}>{r.status?.replace(/_/g, ' ')}</span>
+          'bg-gray-100 text-gray-600')}>{r.status?.replace(/_/g, ' ')}</span>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-1.5 flex gap-1 overflow-x-auto">
+      <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {(['overview', 'edit'] as const).map((t) => (
-          <button
+          <Button variant="quiet" type="button"
             key={t}
             onClick={() => setTab(t)}
             className={cn(
               'capitalize px-3 py-2 rounded-xl text-sm font-medium transition-colors',
-              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-500 hover:bg-gray-50',
+              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50',
             )}
           >
             {t}
-          </button>
+          </Button>
         ))}
       </div>
 
       {tab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5 lg:col-span-2 space-y-3">
+          <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
             <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Route details</h3>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <Field label="From" value={r.originCity} />
@@ -100,29 +105,29 @@ export function RouteDetail({ id }: { id: string }) {
           </div>
 
           <div className="space-y-3">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-2">
-              <p className="text-xs font-semibold text-gray-500">Assigned</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-2">
+              <p className="text-xs font-semibold text-gray-600">Assigned</p>
               {r.vehicle ? (
                 <Link href={`/transport/vehicles/${r.vehicle.id}`} className="block text-sm font-medium text-gray-900 hover:underline">
-                  {r.vehicle.plateNumber} <span className="text-[11px] text-gray-500">({r.vehicle.type})</span>
+                  {r.vehicle.plateNumber} <span className="text-xs text-gray-600">({r.vehicle.type})</span>
                 </Link>
-              ) : <p className="text-xs text-gray-500">No vehicle assigned</p>}
+              ) : <p className="text-xs text-gray-600">No vehicle assigned</p>}
               {r.driver ? (
                 <Link href={`/transport/drivers/${r.driver.id}`} className="block text-sm font-medium text-gray-900 hover:underline">
                   {r.driver.firstName} {r.driver.lastName}
                 </Link>
-              ) : <p className="text-xs text-gray-500">No driver assigned</p>}
+              ) : <p className="text-xs text-gray-600">No driver assigned</p>}
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <p className="text-xs font-semibold text-gray-500 mb-2">Recent assignments ({r.assignments?.length ?? 0})</p>
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Recent assignments ({r.assignments?.length ?? 0})</p>
               {(r.assignments ?? []).length === 0 ? (
-                <p className="text-xs text-gray-500">No assignments on this route yet — create one from Transport → Assignments</p>
+                <p className="text-xs text-gray-600">No assignments on this route yet — create one from Transport → Assignments</p>
               ) : (
                 <ul className="space-y-1 text-xs">
                   {r.assignments.slice(0, 5).map((a: any) => (
                     <li key={a.id}>
                       <p className="font-medium text-gray-800">{a.customerName ?? '—'}</p>
-                      <p className="text-[11px] text-gray-500">{new Date(a.scheduledAt).toLocaleString()}</p>
+                      <p className="text-xs text-gray-600">{new Date(a.scheduledAt).toLocaleString()}</p>
                     </li>
                   ))}
                 </ul>
@@ -140,7 +145,7 @@ export function RouteDetail({ id }: { id: string }) {
 function Field({ label, value }: { label: string; value: any }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold text-gray-500">{label}</dt>
+      <dt className="text-xs font-semibold text-gray-600">{label}</dt>
       <dd className="text-sm text-gray-900 font-medium">{value ?? '—'}</dd>
     </div>
   );
@@ -150,8 +155,8 @@ function EditTab({ r, refetch }: { r: any; refetch: () => void }) {
   const router = useRouter();
   const update = useUpdateRoute();
   const remove = useDeleteRoute();
-  const { data: vehicles } = useTransportVehicles({ limit: 100 });
-  const { data: drivers } = useTransportDrivers({ limit: 100 });
+  const { data: vehicles , error: transportVehiclesError, refetch: retryTransportVehicles} = useTransportVehicles({ limit: 100 });
+  const { data: drivers , error: transportDriversError, refetch: retryTransportDrivers} = useTransportDrivers({ limit: 100 });
   const [form, setForm] = useState({
     name: r.name ?? '',
     movementType: r.movementType ?? 'AIRPORT_PICKUP',
@@ -205,76 +210,68 @@ function EditTab({ r, refetch }: { r: any; refetch: () => void }) {
   const vehicleItems = vehicles?.items ?? [];
   const driverItems = drivers?.items ?? [];
 
+  if (transportVehiclesError || transportDriversError) return <QueryFailure error={transportVehiclesError || transportDriversError} onRetry={() => { retryTransportVehicles(); retryTransportDrivers(); }} />;
   return (
     <div className="space-y-4 max-w-3xl">
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
         <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit route</h3>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} full />
-          <Input label="From city" value={form.originCity} onChange={(v) => setForm({ ...form, originCity: v })} />
-          <Input label="To city" value={form.destCity} onChange={(v) => setForm({ ...form, destCity: v })} />
-          <Input label="Pickup point" value={form.pickupPoint} onChange={(v) => setForm({ ...form, pickupPoint: v })} />
-          <Input label="Drop-off point" value={form.dropoffPoint} onChange={(v) => setForm({ ...form, dropoffPoint: v })} />
-          <Input label="Departure" type="datetime-local" value={form.departureAt} onChange={(v) => setForm({ ...form, departureAt: v })} />
-          <Input label="Arrival" type="datetime-local" value={form.arrivalAt} onChange={(v) => setForm({ ...form, arrivalAt: v })} />
-          <Input label="Distance (km)" value={String(form.distanceKm)} onChange={(v) => setForm({ ...form, distanceKm: v as any })} type="number" />
-          <Input label="Duration (min)" value={String(form.durationMins)} onChange={(v) => setForm({ ...form, durationMins: v as any })} type="number" />
-          <Input label="Total seats" value={String(form.totalSeats)} onChange={(v) => setForm({ ...form, totalSeats: v as any })} type="number" />
-          <Input label="Booked seats" value={String(form.bookedSeats)} onChange={(v) => setForm({ ...form, bookedSeats: v as any })} type="number" />
-          <Input label={`Price per seat (${form.currency})`} value={form.pricePerSeat} onChange={(v) => setForm({ ...form, pricePerSeat: v })} type="number" />
-          <Input label={`Price per vehicle (${form.currency})`} value={form.pricePerVehicle} onChange={(v) => setForm({ ...form, pricePerVehicle: v })} type="number" />
+          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} full />
+          <LabeledInput label="From city" value={form.originCity} onChange={(v) => setForm({ ...form, originCity: v })} />
+          <LabeledInput label="To city" value={form.destCity} onChange={(v) => setForm({ ...form, destCity: v })} />
+          <LabeledInput label="Pickup point" value={form.pickupPoint} onChange={(v) => setForm({ ...form, pickupPoint: v })} />
+          <LabeledInput label="Drop-off point" value={form.dropoffPoint} onChange={(v) => setForm({ ...form, dropoffPoint: v })} />
+          <LabeledInput label="Departure" type="datetime-local" value={form.departureAt} onChange={(v) => setForm({ ...form, departureAt: v })} />
+          <LabeledInput label="Arrival" type="datetime-local" value={form.arrivalAt} onChange={(v) => setForm({ ...form, arrivalAt: v })} />
+          <LabeledInput label="Distance (km)" value={String(form.distanceKm)} onChange={(v) => setForm({ ...form, distanceKm: v as any })} type="number" />
+          <LabeledInput label="Duration (min)" value={String(form.durationMins)} onChange={(v) => setForm({ ...form, durationMins: v as any })} type="number" />
+          <LabeledInput label="Total seats" value={String(form.totalSeats)} onChange={(v) => setForm({ ...form, totalSeats: v as any })} type="number" />
+          <LabeledInput label="Booked seats" value={String(form.bookedSeats)} onChange={(v) => setForm({ ...form, bookedSeats: v as any })} type="number" />
+          <LabeledInput label={`Price per seat (${form.currency})`} value={form.pricePerSeat} onChange={(v) => setForm({ ...form, pricePerSeat: v })} type="number" />
+          <LabeledInput label={`Price per vehicle (${form.currency})`} value={form.pricePerVehicle} onChange={(v) => setForm({ ...form, pricePerVehicle: v })} type="number" />
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Movement type</span>
-            <select value={form.movementType} onChange={(e) => setForm({ ...form, movementType: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={form.movementType} onChange={(e) => setForm({ ...form, movementType: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               {MOVEMENT_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
-            </select>
+            </Select>
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               {ROUTE_STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
-            </select>
+            </Select>
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Vehicle</span>
-            <select value={form.vehicleId} onChange={(e) => setForm({ ...form, vehicleId: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={form.vehicleId} onChange={(e) => setForm({ ...form, vehicleId: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               <option value="">—</option>
               {vehicleItems.map((v: any) => <option key={v.id} value={v.id}>{v.plateNumber} ({v.type})</option>)}
-            </select>
+            </Select>
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Driver</span>
-            <select value={form.driverId} onChange={(e) => setForm({ ...form, driverId: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={form.driverId} onChange={(e) => setForm({ ...form, driverId: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
               <option value="">—</option>
               {driverItems.map((d: any) => <option key={d.id} value={d.id}>{d.firstName} {d.lastName}</option>)}
-            </select>
+            </Select>
           </label>
           <label className="block col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
+            <Textarea  value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
           </label>
         </div>
         <div className="flex justify-end pt-2">
-          <button onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
+          <Button variant="quiet" type="button" onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
             {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save route
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-red-100 p-5">
+      <div className="bg-white rounded-xl border border-red-100 p-5">
         <h3 className="text-sm font-bold text-red-700 inline-flex items-center gap-2"><Trash2 className="h-4 w-4" /> Archive route</h3>
-        <p className="text-xs text-gray-500 my-2">Hides the route from active operations.</p>
-        <button onClick={archive} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg">Archive</button>
+        <p className="text-xs text-gray-600 my-2">Hides the route from active operations.</p>
+        <Button variant="quiet" type="button" onClick={archive} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg">Archive</Button>
       </div>
     </div>
-  );
-}
-
-function Input({ label, value, onChange, full, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; full?: boolean; type?: string }) {
-  return (
-    <label className={cn('block', full && 'col-span-2')}>
-      <span className="block text-xs font-semibold text-gray-600 mb-1">{label}</span>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400" />
-    </label>
   );
 }

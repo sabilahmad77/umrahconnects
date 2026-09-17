@@ -1,9 +1,13 @@
 'use client';
+import { Input , Button } from '@/components/ui/system';
+
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Search, Hotel, Bus, FileCheck2, Package, Star, MapPin, Lock, ArrowRight, Sparkles } from 'lucide-react';
 import { PublicHeader, PublicFooter } from '@/components/public/public-chrome';
+import { useQuery } from '@tanstack/react-query';
+import { ErrorState, LoadingState } from '@/components/ui/system';
 import { apiClient } from '@/lib/api';
 
 const CATEGORIES = [
@@ -17,21 +21,14 @@ const CATEGORIES = [
 const fmt = (cents?: number, cur = 'SAR') => cents != null ? `${cur} ${(cents / 100).toLocaleString()}` : 'On request';
 
 export default function MarketplacePreviewPage() {
-  const [listings, setListings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: listings = [], isLoading: loading, error, refetch } = useQuery({ queryKey: ['public-marketplace'], queryFn: async () => { const r = await apiClient.get('/marketplace/listings', { params: { limit: 60 } }); const d = r.data?.data; return (Array.isArray(d) ? d : d?.items) ?? []; } });
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
-
-  useEffect(() => {
-    apiClient.get('/marketplace/listings?limit=60')
-      .then((r) => { const d = r.data?.data; setListings((Array.isArray(d) ? d : d?.items) ?? []); })
-      .catch(() => setListings([]))
-      .finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { const category = new URLSearchParams(window.location.search).get('category'); if (category && CATEGORIES.some(c => c.key === category)) setCat(category); }, []);
 
   const filtered = useMemo(() => {
     const c = CATEGORIES.find((x) => x.key === cat)!;
-    return listings.filter((l) =>
+    return listings.filter((l: any) =>
       c.match((l.type ?? '').toLowerCase()) &&
       (!q || (l.name ?? '').toLowerCase().includes(q.toLowerCase())),
     );
@@ -40,7 +37,7 @@ export default function MarketplacePreviewPage() {
   return (
     <div className="min-h-screen bg-ivory text-gray-900 flex flex-col">
       <PublicHeader />
-      <main className="flex-1">
+      <main id="public-main" tabIndex={-1} className="flex-1">
         {/* Guest banner */}
         <div className="bg-brand-600 text-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-8 py-2.5 flex items-center justify-center gap-2 text-[12.5px]">
@@ -54,21 +51,21 @@ export default function MarketplacePreviewPage() {
             UMRAH MARKETPLACE
           </span>
           <h1 className="mt-5 font-heading text-4xl lg:text-[48px] font-extrabold text-brand-600 leading-tight">Find. Compare. Book.</h1>
-          <p className="mt-4 text-[16px] text-gray-600 max-w-2xl mx-auto">Browse verified hotels, transport, visa services and complete Umrah packages — all in one marketplace.</p>
+          <p className="mt-4 text-[16px] text-gray-600 max-w-2xl mx-auto">Browse hotels, transport, visa services and complete Umrah packages — all in one marketplace.</p>
         </section>
 
         {/* Search + filters */}
         <section className="max-w-7xl mx-auto px-6 lg:px-8 pb-8">
           <div className="bg-white rounded-2xl border border-sandstone/60 p-3 flex flex-col sm:flex-row gap-3">
             <div className="flex-1 flex items-center gap-2 px-3 bg-ivory rounded-xl border border-sandstone/60">
-              <Search className="h-4 w-4 text-gray-500" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search hotels, transport, visa, packages…" className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
+              <Search className="h-4 w-4 text-gray-600" />
+              <Input aria-label="Q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search hotels, transport, visa, packages…" className="flex-1 bg-transparent py-2.5 text-sm outline-none" />
             </div>
             <div className="flex items-center gap-2 overflow-x-auto">
               {CATEGORIES.map(({ key, label, Icon }) => (
-                <button key={key} onClick={() => setCat(key)} className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-colors ${cat === key ? 'bg-brand-500 text-white' : 'bg-ivory text-gray-600 hover:bg-sandstone/40 border border-sandstone/60'}`}>
+                <Button variant="quiet" type="button" aria-pressed={cat === key} key={key} onClick={() => setCat(key)} className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold whitespace-nowrap transition-colors ${cat === key ? 'bg-brand-500 text-white' : 'bg-ivory text-gray-600 hover:bg-sandstone/40 border border-sandstone/60'}`}>
                   <Icon className="h-4 w-4" /> {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -76,33 +73,33 @@ export default function MarketplacePreviewPage() {
 
         {/* Listings */}
         <section className="max-w-7xl mx-auto px-6 lg:px-8 pb-16">
-          {loading ? (
+          {error ? <ErrorState title="Marketplace listings unavailable" description={(error as any)?.response?.status === 401 ? 'Sign in to browse protected listings. Public listing access is not currently available.' : 'The listings could not be loaded. Try again; unavailable data is not an empty marketplace.'} onRetry={() => refetch()} /> : loading ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-64 rounded-2xl bg-white border border-sandstone/60 animate-pulse" />)}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-gray-500">No listings match your search yet.</p>
+              <p className="text-gray-600">No listings match your search yet.</p>
               <Link href="/signup" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 mt-3">Sign up to list or request services <ArrowRight className="h-4 w-4" /></Link>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filtered.map((l) => (
+              {filtered.map((l: any) => (
                 <div key={l.id} className="bg-white rounded-2xl border border-sandstone/60 overflow-hidden hover:shadow-lg hover:shadow-brand-900/5 transition-all flex flex-col">
                   <div className="h-40 bg-gradient-to-br from-brand-500 to-brand-700 relative flex items-center justify-center">
                     {l.imageUrls?.[0]
                       // eslint-disable-next-line @next/next/no-img-element
-                      ? <img src={l.imageUrls[0]} alt={l.name} className="w-full h-full object-cover" />
+                      ? <img loading="lazy" src={l.imageUrls[0]} alt={l.name} className="w-full h-full object-cover" />
                       : <Hotel className="h-10 w-10 text-white/60" />}
                     <span className="absolute top-3 left-3 text-[10px] font-bold tracking-wide text-brand-900 bg-gold-400 px-2 py-1 rounded-full uppercase">{(l.type ?? 'service').replace(/_/g, ' ')}</span>
                   </div>
                   <div className="p-4 flex-1 flex flex-col">
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-heading font-bold text-gray-900 leading-snug">{l.name ?? 'Umrah service'}</p>
-                      <span className="flex items-center gap-0.5 text-[12px] text-gold-600 font-semibold shrink-0"><Star className="h-3.5 w-3.5 fill-gold-400 text-gold-400" /> 4.7</span>
+                      {l.rating != null && Number(l.reviewCount) > 0 && <span className="text-xs font-semibold text-gray-700">{Number(l.rating).toFixed(1)} ({l.reviewCount} reviews)</span>}
                     </div>
-                    {l.vendor?.displayName && <p className="text-[12px] text-gray-500 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {l.vendor.displayName}</p>}
-                    <p className="text-[13px] text-gray-500 mt-2 line-clamp-2 flex-1">{l.description ?? 'Verified Umrah service available through the marketplace.'}</p>
+                    {l.vendor?.displayName && <p className="text-[12px] text-gray-600 mt-1 flex items-center gap-1"><MapPin className="h-3 w-3" /> {l.vendor.displayName}</p>}
+                    <p className="text-[13px] text-gray-600 mt-2 line-clamp-2 flex-1">{l.description ?? 'Review the service details with its provider.'}</p>
                     <div className="mt-3 pt-3 border-t border-sandstone/50 flex items-center justify-between">
                       <p className="font-heading font-bold text-brand-600">{fmt(l.priceCents, l.currency)}</p>
                       <Link href="/login" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-brand-500 hover:bg-brand-600 px-3 py-1.5 rounded-lg transition-colors">

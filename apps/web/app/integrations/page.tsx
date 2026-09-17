@@ -5,9 +5,9 @@ import { PublicShell, PublicHero, CTASection } from '@/components/public/public-
 export const metadata = { title: 'Integrations — Umrah Connect' };
 
 const INTEGRATIONS = [
-  { Icon: FileCheck2, t: 'Visa systems', d: 'Nusuk & Masar-ready visa pipeline and document workflows.', status: 'Available' },
+  { Icon: FileCheck2, t: 'Visa workflows', d: 'Application and document management within the platform. Direct Nusuk and Masar connectors are on the roadmap.', status: 'Platform workflow' },
   { Icon: CreditCard, t: 'Payments & invoicing', d: 'SAR-native invoicing, payment recording and reconciliation. Live gateway connectors on the roadmap.', status: 'Available' },
-  { Icon: MessageSquare, t: 'Messaging & notifications', d: 'In-platform messaging and a real-time notification engine across bookings, finance and social events.', status: 'Available' },
+  { Icon: MessageSquare, t: 'Messaging & notifications', d: 'In-platform messaging and notifications across bookings, finance and social events.', status: 'Available' },
   { Icon: Plane, t: 'Flights & travel data', d: 'Itinerary and travel updates surfaced to pilgrims and operators.', status: 'Roadmap' },
   { Icon: Database, t: 'Partner API', d: 'A public partner API for deeper integration with your own systems.', status: 'Coming soon' },
   { Icon: Plug, t: 'Custom connectors', d: 'Bespoke integrations for enterprise operators and platform partners.', status: 'On request' },
@@ -26,7 +26,7 @@ export default function IntegrationsPage() {
                 <span className={`text-[10.5px] font-bold px-2 py-1 rounded-full ${status === 'Available' ? 'bg-brand-50 text-brand-700' : 'bg-gold-50 text-gold-700'}`}>{status}</span>
               </div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
-              <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">{d}</p>
+              <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>
             </div>
           ))}
         </div>

@@ -27,8 +27,8 @@ const SOLUTIONS = [
   },
   {
     id: 'visa', Icon: FileCheck2, role: 'Visa Services',
-    headline: 'Faster visa processing with higher approval rates.',
-    points: ['Nusuk & Masar-ready application pipeline and document checklist', 'Track submission, review, approval and rejection statuses', 'Manage applicant documents and service requests', 'Compliance reporting and approval-rate analytics'],
+    headline: 'A clear workspace for visa applications and documents.',
+    points: ['Application pipeline and document checklist; official connectors are on the roadmap', 'Track submission, review, approval and rejection statuses', 'Manage applicant documents and service requests', 'Compliance reporting and approval-rate analytics'],
   },
   {
     id: 'finance', Icon: Wallet, role: 'Finance / Payments',
@@ -57,7 +57,7 @@ export default function SolutionsPage() {
               <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center mb-4">
                 <Icon className="h-6 w-6 text-brand-600" />
               </div>
-              <p className="text-[11px] font-bold tracking-[0.14em] text-gold-600">{role.toUpperCase()}</p>
+              <p className="text-[11px] font-bold tracking-[0.14em] text-gold-800">{role.toUpperCase()}</p>
               <p className="font-heading font-bold text-xl text-gray-900 mt-2 leading-snug">{headline}</p>
             </div>
             <div className="lg:col-span-2 grid sm:grid-cols-2 gap-3 content-center">

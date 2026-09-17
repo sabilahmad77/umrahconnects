@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-17",
+  "origin": "http://localhost:3106",
+  "viewports": {
+    "desktop": "1440 \u00d7 900",
+    "tablet": "768 \u00d7 1024",
+    "mobile": "390 \u00d7 844"
+  },
+  "routeFamilies": 79,
+  "routeViewportChecks": 237,
+  "overflowFlags": 0,
+  "unnamedInputFlags": 0,
+  "unnamedButtonFlags": 0,
+  "consoleErrorsOrWarnings": 0,
+  "tests": 39,
+  "gate": "BLOCKED",
+  "scope": "Real API read paths, actual empty/error/capability states, existing operator authentication and safe overlay interactions; no domain write/financial/signup/reset transactions."
+}

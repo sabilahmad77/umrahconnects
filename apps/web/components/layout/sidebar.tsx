@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui/system';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -205,21 +206,22 @@ const ROLE_CONFIG: Record<DashboardType, { label: string; Icon: any; gradient: s
 
 // ─── Sidebar Component ────────────────────────────────────────────────────────
 
-export function Sidebar() {
+export function Sidebar({ mobile = false }: { mobile?: boolean }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthContext();
 
   const dashboardType = user?.dashboardType ?? 'operator';
-  const navSections = NAV[dashboardType] ?? NAV.operator;
+  const seen = new Set<string>();
+  const navSections = (NAV[dashboardType] ?? NAV.operator).map(section => ({ ...section, items: section.items.filter(item => { if (seen.has(item.href)) return false; seen.add(item.href); return true; }) }));
   const roleCfg = ROLE_CONFIG[dashboardType] ?? ROLE_CONFIG.operator;
   const initials = (user?.displayName ?? 'UC').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <aside
       className={cn(
-        'relative flex flex-col bg-brand-600 text-white transition-all duration-300 ease-in-out shrink-0',
-        collapsed ? 'w-[68px]' : 'w-[244px]',
+        'relative flex h-full flex-col text-white transition-[width] duration-150 shrink-0', dashboardType === 'admin' ? 'bg-midnight' : 'bg-brand-600',
+        mobile ? 'w-full min-h-[75dvh]' : collapsed ? 'w-[68px]' : 'w-[240px]',
       )}
     >
       {/* ── Logo ── */}
@@ -234,7 +236,7 @@ export function Sidebar() {
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-sm font-heading font-bold leading-none text-white truncate">Umrah Connect</p>
-            <p className="text-[9px] tracking-[0.18em] text-gold-400 mt-1 truncate">CONNECTED JOURNEYS</p>
+            <p className="text-xs tracking-[0.18em] text-gold-400 mt-1 truncate">CONNECTED JOURNEYS</p>
           </div>
         )}
       </div>
@@ -242,7 +244,7 @@ export function Sidebar() {
       {/* ── Role badge (expanded only) ── */}
       {!collapsed && (
         <div className="px-3 py-2.5 border-b border-white/10">
-          <span className={cn('inline-flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full', roleCfg.badge)}>
+          <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full', roleCfg.badge)}>
             <roleCfg.Icon className="h-3 w-3" />
             {roleCfg.label}
           </span>
@@ -254,36 +256,38 @@ export function Sidebar() {
         {navSections.map((section) => (
           <div key={section.section} className="mb-2">
             {!collapsed && (
-              <p className="px-4 py-1 text-[9px] font-bold text-white/35 uppercase tracking-widest">
+              <p className="px-4 py-1 text-xs font-bold text-white/70 uppercase tracking-widest">
                 {section.section}
               </p>
             )}
             {section.items.map((item) => {
               const active =
                 pathname === item.href ||
-                (item.href !== '/' && pathname?.startsWith(item.href));
+                (item.href !== '/' && pathname?.startsWith(item.href + '/'));
               return (
                 <Link
                   key={item.href + item.label}
                   href={item.href}
+                  aria-label={item.label}
+                  aria-current={active ? "page" : undefined}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    'relative flex items-center gap-3 mx-2 px-2.5 py-2 rounded-xl text-[13px] transition-all duration-150',
+                    'relative flex items-center gap-3 mx-2 px-2.5 py-3 rounded-lg text-sm transition-all duration-150',
                     collapsed && 'justify-center',
                     active
                       ? 'bg-white/12 text-white font-semibold'
-                      : 'text-white/60 hover:bg-white/5 hover:text-white',
+                      : 'text-white/80 hover:bg-white/5 hover:text-white',
                   )}
                 >
                   {active && !collapsed && (
                     <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r bg-gold-400" />
                   )}
                   <item.icon
-                    className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-gold-300' : 'text-white/55')}
+                    className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-gold-300' : 'text-white/75')}
                   />
                   {!collapsed && <span className="truncate">{item.label}</span>}
                   {!collapsed && item.badge && (
-                    <span className="ml-auto text-[10px] font-bold bg-gold-500 text-brand-900 px-1.5 py-0.5 rounded-full">
+                    <span className="ml-auto text-xs font-bold bg-gold-500 text-brand-900 px-1.5 py-0.5 rounded-full">
                       {item.badge}
                     </span>
                   )}
@@ -303,43 +307,46 @@ export function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white truncate">{user.displayName}</p>
-              <p className="text-[10px] text-white/45 truncate">{user.email || 'Demo mode'}</p>
+              <p className="text-xs text-white/70 truncate">{user.email || 'Demo mode'}</p>
             </div>
           </div>
         )}
         <Link
           href="/settings"
-          title={collapsed ? 'Settings' : undefined}
+          aria-label="Settings" title={collapsed ? 'Settings' : undefined}
           className={cn(
-            'flex items-center gap-3 px-2.5 py-2 rounded-xl text-[13px] text-white/60 hover:bg-white/5 hover:text-white transition-colors',
+            'flex items-center gap-3 px-2.5 py-3 rounded-lg text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors',
             collapsed && 'justify-center',
           )}
         >
           <Settings className="h-[18px] w-[18px] shrink-0" />
           {!collapsed && 'Settings'}
         </Link>
-        <button
+        <Button variant="quiet" type="button"
           onClick={logout}
-          title={collapsed ? 'Sign out' : undefined}
+          aria-label="Sign out" title={collapsed ? 'Sign out' : undefined}
           className={cn(
-            'flex items-center gap-3 px-2.5 py-2 w-full rounded-xl text-[13px] text-white/60 hover:bg-white/10 hover:text-white transition-colors',
+            'flex items-center gap-3 px-2.5 py-2 w-full rounded-xl text-[13px] text-white/80 hover:bg-white/10 hover:text-white transition-colors',
             collapsed && 'justify-center',
           )}
         >
           <LogOut className="h-[18px] w-[18px] shrink-0" />
           {!collapsed && 'Sign out'}
-        </button>
+        </Button>
       </div>
 
       {/* ── Collapse toggle ── */}
-      <button
+      <Button variant="quiet" type="button"
+        hidden={mobile}
+        aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+        aria-expanded={!collapsed}
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[72px] w-6 h-6 rounded-full border border-sandstone bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors z-20"
+        className="absolute -right-5 top-[72px] w-11 h-11 p-0 rounded-full border border-sandstone bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors z-20"
       >
         {collapsed
           ? <ChevronRight className="h-3 w-3 text-brand-500" />
           : <ChevronLeft className="h-3 w-3 text-brand-500" />}
-      </button>
+      </Button>
     </aside>
   );
 }

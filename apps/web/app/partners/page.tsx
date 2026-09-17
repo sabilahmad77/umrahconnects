@@ -23,7 +23,7 @@ export default function PartnersPage() {
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-5">
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center mb-3"><Icon className="h-5 w-5 text-brand-600" /></div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
-              <p className="text-[13px] text-gray-500 mt-1.5 leading-relaxed">{d}</p>
+              <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>
             </div>
           ))}
         </div>
@@ -31,7 +31,7 @@ export default function PartnersPage() {
       <section className="max-w-2xl mx-auto px-6 lg:px-8 pb-16">
         <div className="text-center mb-6">
           <h2 className="font-heading font-bold text-2xl text-gray-900">Become a partner</h2>
-          <p className="text-[14px] text-gray-500 mt-2">Tell us about your business and how you&apos;d like to partner. Our partnerships team will get back to you.</p>
+          <p className="text-[14px] text-gray-600 mt-2">Tell us about your business and how you&apos;d like to partner. Our partnerships team will get back to you.</p>
         </div>
         <InquiryForm
           type="PARTNER"
