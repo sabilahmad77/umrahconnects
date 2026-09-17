@@ -75,8 +75,11 @@ export class ConnectionsService {
   }
 
   async respond(currentUserId: string, connectionId: string, decision: 'ACCEPTED' | 'REJECTED') {
-    const conn = await this.prisma.connection.findUnique({ where: { id: connectionId } });
-    if (!conn) throw new NotFoundException('Connection request not found');
+    const conn = await this.prisma.connection.findUnique({ where: { id: requireId(connectionId, 'Connection') } });
+    // Outsiders get the same answer as for an unknown id.
+    if (!conn || (conn.recipientId !== currentUserId && conn.requesterId !== currentUserId)) {
+      throw new NotFoundException('Connection request not found');
+    }
     if (conn.recipientId !== currentUserId) {
       throw new BadRequestException('Only the recipient can respond to this request');
     }
@@ -110,7 +113,8 @@ export class ConnectionsService {
         ],
       },
     });
-    if (!conn) return { removed: false };
+    // A block is permanent: neither party can erase it (and then send a fresh request).
+    if (!conn || conn.status === 'BLOCKED') return { removed: false };
     await this.prisma.connection.delete({ where: { id: conn.id } });
     return { removed: true };
   }

@@ -25,6 +25,13 @@ test-results
 Design.jpg
 Logo icon Umrah Connect
 docs
-.env
-.env.*
-!.env.example
+# Secrets: every env file at any depth (only templates may enter the build context)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.local.example
+!**/.env.production.example
+platform/api/uploads
+platform/api/test
+**/*.spec.ts
+infrastructure/kvm/backups

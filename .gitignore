@@ -92,3 +92,7 @@ audit/*.png
 
 # Locally stored uploads — user content, never committed
 uploads/
+
+# KVM production secrets and local backups — never committed
+infrastructure/kvm/.env.production
+infrastructure/kvm/backups/

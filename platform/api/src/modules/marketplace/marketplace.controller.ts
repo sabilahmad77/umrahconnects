@@ -213,7 +213,7 @@ export class MarketplaceController {
   }
 
   @Post('vendors')
-  @RequirePermissions('marketplace:listing:read')
+  @RequirePermissions('marketplace:listing:manage')
   @ApiOperation({ summary: 'Register as vendor' })
   async createVendor(@TenantId() tenantId: string, @Body() dto: CreateVendorDto) {
     const data = await this.marketplaceService.createVendor(tenantId, dto);

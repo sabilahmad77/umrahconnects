@@ -155,8 +155,7 @@ export class MarketplaceRequestsService {
 
   async close(travelerUserId: string, id: string) {
     const r = await this.prisma.marketplaceRequest.findUnique({ where: { id } });
-    if (!r) throw new NotFoundException('Request not found');
-    if (r.travelerId !== travelerUserId) throw new BadRequestException('Not your request');
+    if (!r || r.travelerId !== travelerUserId) throw new NotFoundException('Request not found');
     return this.normalize(
       await this.prisma.marketplaceRequest.update({ where: { id }, data: { status: 'CLOSED' as any } }),
     );
@@ -221,11 +220,15 @@ export class MarketplaceRequestsService {
   // ─── Traveler accepts an offer ───────────────────────────────────────────
   async acceptOffer(travelerUserId: string, requestId: string, offerId: string) {
     const req = await this.prisma.marketplaceRequest.findUnique({ where: { id: requestId } });
-    if (!req) throw new NotFoundException('Request not found');
-    if (req.travelerId !== travelerUserId) throw new BadRequestException('Not your request');
+    if (!req || req.travelerId !== travelerUserId) throw new NotFoundException('Request not found');
+    if (!['OPEN', 'IN_NEGOTIATION'].includes(String(req.status))) {
+      throw new BadRequestException(`Request is ${String(req.status).toLowerCase()} and can no longer accept offers`);
+    }
+    if (req.expiresAt && req.expiresAt < new Date()) throw new BadRequestException('Request has expired');
     const offer = await this.prisma.requestOffer.findUnique({ where: { id: offerId } });
     if (!offer || offer.requestId !== requestId) throw new NotFoundException('Offer not found');
     if (offer.status !== 'PENDING') throw new BadRequestException(`Offer is already ${offer.status.toLowerCase()}`);
+    if (offer.validUntil && offer.validUntil < new Date()) throw new BadRequestException('Offer has expired');
 
     // Accept the chosen offer; auto-reject the rest
     const [accepted] = await this.prisma.$transaction([
@@ -259,11 +262,15 @@ export class MarketplaceRequestsService {
 
   async rejectOffer(travelerUserId: string, requestId: string, offerId: string) {
     const req = await this.prisma.marketplaceRequest.findUnique({ where: { id: requestId } });
-    if (!req) throw new NotFoundException('Request not found');
-    if (req.travelerId !== travelerUserId) throw new BadRequestException('Not your request');
+    if (!req || req.travelerId !== travelerUserId) throw new NotFoundException('Request not found');
+    if (!['OPEN', 'IN_NEGOTIATION'].includes(String(req.status))) {
+      throw new BadRequestException(`Request is ${String(req.status).toLowerCase()} and can no longer accept offers`);
+    }
+    if (req.expiresAt && req.expiresAt < new Date()) throw new BadRequestException('Request has expired');
     const offer = await this.prisma.requestOffer.findUnique({ where: { id: offerId } });
     if (!offer || offer.requestId !== requestId) throw new NotFoundException('Offer not found');
     if (offer.status !== 'PENDING') throw new BadRequestException(`Offer is already ${offer.status.toLowerCase()}`);
+    if (offer.validUntil && offer.validUntil < new Date()) throw new BadRequestException('Offer has expired');
 
     const res = await this.prisma.requestOffer.updateMany({
       where: { id: offerId, status: OfferStatus.PENDING },

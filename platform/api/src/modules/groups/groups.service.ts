@@ -126,6 +126,7 @@ export class GroupsService {
   }
 
   async create(tenantId: string, createdBy: string, dto: any) {
+    if (dto.leadGuideId) await this.assertTenantUser(tenantId, dto.leadGuideId, 'Lead guide');
     const group = await this.prisma.tripGroup.create({
       data: {
         tenantId,
@@ -245,12 +246,28 @@ export class GroupsService {
 
   async removeMember(tenantId: string, groupId: string, userId: string) {
     await this.manageGroup(tenantId, groupId);
-    await this.prisma.groupMember.delete({ where: { groupId_userId: { groupId, userId } } }).catch(() => undefined);
-    await this.prisma.tripGroup.update({
-      where: { id: groupId },
-      data: { enrolledCount: { decrement: 1 } },
-    }).catch(() => undefined);
+    await this.deleteMembership(groupId, userId);
     return { success: true };
+  }
+
+  /**
+   * Removes a membership and keeps the enrolment counter in step: it moves only
+   * when a counted (non-owner) membership really existed, and never below zero.
+   */
+  private async deleteMembership(groupId: string, userId: string): Promise<boolean> {
+    const existing = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+      select: { role: true },
+    });
+    if (!existing) return false;
+    const removed = await this.prisma.groupMember.deleteMany({ where: { groupId, userId } });
+    if (removed.count && existing.role !== 'OWNER') {
+      await this.prisma.tripGroup.updateMany({
+        where: { id: groupId, enrolledCount: { gt: 0 } },
+        data: { enrolledCount: { decrement: 1 } },
+      });
+    }
+    return removed.count > 0;
   }
 
   // ─── Self-service join/leave — travelers, PUBLIC groups only ─────────
@@ -271,8 +288,8 @@ export class GroupsService {
   }
 
   async selfLeave(groupId: string, userId: string) {
-    await this.prisma.groupMember.delete({ where: { groupId_userId: { groupId, userId } } }).catch(() => undefined);
-    await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { decrement: 1 } } }).catch(() => undefined);
+    // Leaving a group the caller is not in changes nothing (and reveals nothing).
+    await this.deleteMembership(groupId, userId);
     return { left: true };
   }
 

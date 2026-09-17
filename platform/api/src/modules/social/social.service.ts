@@ -582,7 +582,8 @@ export class SocialService {
     const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
     if (!conv) throw new NotFoundException('Conversation not found');
     const ps = Array.isArray(conv.participants) ? (conv.participants as string[]) : [];
-    if (!ps.includes(account.id)) throw new BadRequestException('Not a participant');
+    // Same answer as an unknown id: non-participants learn nothing about the conversation.
+    if (!ps.includes(account.id)) throw new NotFoundException('Conversation not found');
 
     const page = Math.max(1, Number(params.page ?? 1));
     const limit = Math.min(100, Math.max(1, Number(params.limit ?? 50)));
@@ -605,7 +606,8 @@ export class SocialService {
     const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
     if (!conv) throw new NotFoundException('Conversation not found');
     const ps = Array.isArray(conv.participants) ? (conv.participants as string[]) : [];
-    if (!ps.includes(account.id)) throw new BadRequestException('Not a participant');
+    // Same answer as an unknown id: non-participants learn nothing about the conversation.
+    if (!ps.includes(account.id)) throw new NotFoundException('Conversation not found');
 
     const msg = await this.prisma.message.create({
       data: { conversationId, senderId: account.id, body: body.trim() },

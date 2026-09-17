@@ -117,17 +117,34 @@ export class FinanceService {
   }
 
   async issueInvoice(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    if (current.status === 'ISSUED') return current;
+    // A voided, cancelled or paid invoice cannot be re-issued.
+    this.assertInvoiceTransition(current, 'ISSUED');
     return this.normalizeInvoice(await this.prisma.invoice.update({ where: { id }, data: { status: 'ISSUED', issuedAt: new Date() } }));
   }
 
   async voidInvoice(tenantId: string, id: string) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    if (current.status === 'VOID') return current;
+    this.assertInvoiceTransition(current, 'VOID');
     return this.normalizeInvoice(await this.prisma.invoice.update({ where: { id }, data: { status: 'VOID' } }));
   }
 
   async recordPayment(tenantId: string, invoiceId: string, dto: any) {
     const inv = await this.findOne(tenantId, invoiceId);
+    if (['VOID', 'CANCELLED'].includes(String(inv.status))) {
+      throw new BadRequestException(`Invoice is ${inv.status} and cannot take payments`);
+    }
+    // Gateway payments are created only by the payments module (they are refundable through the provider).
+    const gateway = String(dto.gateway ?? dto.method ?? 'cash');
+    if (PROVIDER_GATEWAYS.has(gateway.toLowerCase())) {
+      throw new BadRequestException('A manual payment cannot be recorded as a provider payment');
+    }
+    const currency = String(inv.currency ?? 'SAR');
+    if (dto.currency && String(dto.currency).toUpperCase() !== currency.toUpperCase()) {
+      throw new BadRequestException(`Currency must be ${currency}`);
+    }
     const amountCents = BigInt(Math.round((dto.amount ?? dto.amountCents ?? 0) * (dto.amount ? 100 : 1)));
 
     // FIX-06: server-authoritative validation — amount > 0 and ≤ outstanding.
@@ -151,8 +168,8 @@ export class FinanceService {
         tenantId,
         invoiceId,
         amountCents,
-        currency: dto.currency ?? inv.currency ?? 'SAR',
-        gateway: dto.gateway ?? dto.method ?? 'cash',
+        currency,
+        gateway,
         gatewayRef: dto.gatewayRef ?? dto.referenceNumber,
         status: 'COMPLETED',
         paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
@@ -310,9 +327,12 @@ export class FinanceService {
   }
 
   async setInvoiceStatus(tenantId: string, id: string, status: string) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    if (status === current.status) return current;
+    // Same lifecycle rules as PUT /finance/invoices/:id — PAID / PARTIALLY_PAID are derived from payments.
+    this.assertInvoiceTransition(current, status);
     const patch: any = { status };
-    if (status === 'PAID') patch.paidAt = new Date();
+    if (status === 'ISSUED' && !current.issuedAt) patch.issuedAt = new Date();
     return this.normalizeInvoice(await this.prisma.invoice.update({ where: { id }, data: patch }));
   }
 

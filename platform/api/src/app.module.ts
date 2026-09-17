@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './common/guards/throttler.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { TenantModule } from './modules/tenant/tenant.module';
@@ -39,6 +40,8 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      // Production configuration comes from the process environment only.
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
     }),
 
     // Rate limiting. `default` is per client IP (see TRUST_PROXY); `account`
@@ -51,13 +54,14 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
             name: 'default',
             ttl: Number(config.get<string>('THROTTLE_TTL_MS', '60000')),
             limit: Number(config.get<string>('THROTTLE_LIMIT', '600')),
+            getTracker: (req: Record<string, any>) => req.clientIp ?? req.ip,
           },
           {
             name: 'account',
             ttl: 60_000,
             limit: Number.MAX_SAFE_INTEGER,
             getTracker: (req: Record<string, any>) =>
-              `${req.ip}|${String(req.body?.email ?? '').trim().toLowerCase().slice(0, 255)}`,
+              `${req.clientIp ?? req.ip}|${String(req.body?.email ?? '').trim().toLowerCase().slice(0, 255)}`,
           },
         ],
         skipIf: () => config.get<string>('THROTTLE_DISABLED') === 'true',
@@ -100,7 +104,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
   ],
   providers: [
     // Order matters: rate limit → authenticate → authorize (deny-by-default).
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],

@@ -131,6 +131,19 @@ export class PaymentsService {
     return p;
   }
 
+  /** Amount already promised to open (unsettled) intents for the same invoice / booking in the last 24 h. */
+  private async reserved(where: Prisma.PaymentWhereInput): Promise<bigint> {
+    const agg = await this.prisma.payment.aggregate({
+      where: {
+        ...where,
+        status: { in: [PaymentStatus.PENDING, PaymentStatus.PROCESSING, PaymentStatus.AUTHORIZED] },
+        createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+      _sum: { amountCents: true },
+    });
+    return BigInt(agg._sum.amountCents ?? 0);
+  }
+
   // ── intents (organization staff) ───────────────────────────────────────
 
   /**
@@ -184,7 +197,11 @@ export class PaymentsService {
         if (!p) throw new NotFoundException('Pilgrim not found');
       }
     }
-    if (outstanding <= BigInt(0)) throw new BadRequestException('Nothing is outstanding');
+    const pending = await this.reserved(dto.invoiceId ? { invoiceId: dto.invoiceId, tenantId } : { bookingId, invoiceId: null, tenantId });
+    outstanding -= pending;
+    if (outstanding <= BigInt(0)) {
+      throw new BadRequestException(pending > BigInt(0) ? 'The outstanding balance is already covered by open payment attempts' : 'Nothing is outstanding');
+    }
     if (dto.currency && dto.currency.toUpperCase() !== currency.toUpperCase()) {
       throw new BadRequestException(`Currency must be ${currency}`);
     }
@@ -257,6 +274,7 @@ export class PaymentsService {
     if (payment.status === PaymentStatus.FAILED) throw new BadRequestException('Payment already failed — create a new intent');
 
     const provider = this.providerFor(payment.gateway);
+    if (provider.name === 'sandbox') await this.assertStillPayable(payment);
     const res = await provider.confirm(payment.gatewayRef ?? '', provider.name === 'sandbox' ? scenario : undefined);
 
     if (res.status === 'PENDING') {
@@ -270,6 +288,33 @@ export class PaymentsService {
       return this.markFailed(payment, provider.name, res.failureReason ?? 'capture_failed', res.raw, actor);
     }
     return this.settle(payment.id, provider.name, res.providerRef, res.raw, { amountCents: res.amountCents, currency: res.currency }, actor);
+  }
+
+  /** Server-side captures must not push an invoice / booking past its total. */
+  private async assertStillPayable(payment: Prisma.PaymentGetPayload<{}>) {
+    const settledSum = async (where: Prisma.PaymentWhereInput) => {
+      const agg = await this.prisma.payment.aggregate({ where: { ...where, status: { in: SETTLED } }, _sum: { amountCents: true, refundedCents: true } });
+      return BigInt(agg._sum.amountCents ?? 0) - BigInt(agg._sum.refundedCents ?? 0);
+    };
+    let total: bigint | undefined;
+    let paid = BigInt(0);
+    if (payment.invoiceId) {
+      const inv = await this.prisma.invoice.findUnique({ where: { id: payment.invoiceId } });
+      total = inv ? BigInt(inv.totalCents) : undefined;
+      paid = await settledSum({ invoiceId: payment.invoiceId });
+    } else if (payment.listingBookingId) {
+      const lb = await this.prisma.listingBooking.findUnique({ where: { id: payment.listingBookingId } });
+      total = lb ? BigInt(lb.totalAmountCents) : undefined;
+      paid = await settledSum({ listingBookingId: payment.listingBookingId });
+    } else if (payment.bookingId) {
+      const b = await this.prisma.booking.findUnique({ where: { id: payment.bookingId } });
+      total = b ? BigInt(b.totalAmountCents) : undefined;
+      paid = await settledSum({ bookingId: payment.bookingId, invoiceId: null });
+    }
+    if (total !== undefined && paid + BigInt(payment.amountCents) > total) {
+      await this.markFailed(payment, payment.gateway, 'balance already settled by another payment', {});
+      throw new ConflictException('This payment would exceed the outstanding balance and was cancelled');
+    }
   }
 
   private async markFailed(
@@ -626,6 +671,11 @@ export class PaymentsService {
       ? await this.prisma.payment.findFirst({ where: { gateway: provider.name, gatewayRef: verified.providerRef } })
       : null;
 
+    const seen = await this.prisma.paymentWebhookEvent.findUnique({
+      where: { provider_eventId: { provider: provider.name, eventId: verified.eventId } },
+    });
+    if (seen) return { received: true, duplicate: true, eventId: verified.eventId, result: seen.result ?? null };
+
     let event;
     try {
       event = await this.prisma.paymentWebhookEvent.create({
@@ -658,6 +708,10 @@ export class PaymentsService {
   }
 
   private async applyWebhook(providerName: string, payment: Prisma.PaymentGetPayload<{}>, ev: WebhookVerification): Promise<string> {
+    if (providerName === 'stripe' && ev.livemode !== undefined && ev.livemode === this.stripe.testMode) {
+      this.logger.warn(`Ignoring Stripe event ${ev.eventId}: livemode=${ev.livemode} does not match the configured key`);
+      return 'ignored: livemode mismatch';
+    }
     await this.record(this.prisma, payment.tenantId, payment.id, providerName, 'WEBHOOK_RECEIVED', {
       providerRef: ev.providerRef, status: ev.type, message: `webhook ${ev.type}`, payload: ev.raw,
     });

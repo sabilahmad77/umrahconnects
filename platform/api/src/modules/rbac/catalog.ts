@@ -181,7 +181,7 @@ export const SYSTEM_ROLES: Record<RoleCode, SystemRoleDef> = {
     permissions: [
       ...orgSelf, 'core:tenant:update', 'core:user:create', 'core:user:update', 'core:role:manage',
       'hotel:allotment:read', 'hotel:allotment:manage', 'hotel:room:assign', 'hotel:assignment:manage',
-      'finance:invoice:read', 'finance:invoice:create', 'finance:payment:read', 'finance:report:read',
+      'finance:invoice:read', 'finance:invoice:create', 'finance:invoice:approve', 'finance:payment:read', 'finance:report:read',
       ...marketplaceProvider, ...social, 'reporting:report:read',
     ],
   },
@@ -192,7 +192,7 @@ export const SYSTEM_ROLES: Record<RoleCode, SystemRoleDef> = {
     permissions: [
       ...orgSelf, 'core:tenant:update', 'core:user:create', 'core:user:update', 'core:role:manage',
       'transport:vehicle:read', 'transport:vehicle:manage', 'transport:assignment:manage', 'transport:tasreeh:manage',
-      'finance:invoice:read', 'finance:invoice:create', 'finance:payment:read', 'finance:report:read',
+      'finance:invoice:read', 'finance:invoice:create', 'finance:invoice:approve', 'finance:payment:read', 'finance:report:read',
       ...marketplaceProvider, ...social, 'reporting:report:read',
     ],
   },

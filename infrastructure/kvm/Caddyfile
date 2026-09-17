@@ -1,0 +1,43 @@
+# Automatic HTTPS (Let's Encrypt) for the API host, e.g. api.umrahconnect.io.
+{
+	email {$ACME_EMAIL}
+	servers {
+		# Real client IPs only from this proxy; the API trusts exactly one hop (TRUST_PROXY=1).
+		trusted_proxies static private_ranges
+	}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+
+	# Request size ceiling (documents are ≤ 15 MB).
+	request_body {
+		max_size 20MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	# Swagger is disabled in production by the API; never expose it through the proxy either.
+	@docs path /api/docs*
+	respond @docs 404
+
+	reverse_proxy api:4000 {
+		header_up X-Request-Id {http.request.uuid}
+		health_uri /api/v1/health/ready
+		health_interval 15s
+		transport http {
+			read_timeout 60s
+			write_timeout 60s
+		}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

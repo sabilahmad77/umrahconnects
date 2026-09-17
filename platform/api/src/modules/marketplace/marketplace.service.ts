@@ -49,6 +49,15 @@ const toPublicVendor = <T extends { verifiedAt?: Date | null; status?: string }>
 
 const dateOnly = (iso: string) => iso.slice(0, 10);
 
+/** CreateVendorDto.type → Vendor.type (TenantType). OTHER keeps the caller organization's type. */
+const VENDOR_TYPE_TO_TENANT_TYPE: Record<string, string> = {
+  HOTEL: 'VENDOR_HOTEL',
+  TRANSPORT: 'VENDOR_TRANSPORT',
+  GUIDE: 'VENDOR_GUIDE',
+  CATERING: 'VENDOR_CATERING',
+  VISA_AGENT: 'VENDOR_VISA',
+};
+
 @Injectable()
 export class MarketplaceService {
   constructor(
@@ -72,12 +81,13 @@ export class MarketplaceService {
   async findAllListings(query: any, tenantId?: string) {
     const { page = 1, limit = 20, type, category, search, vendorId, status, includeInactive } = query;
     const skip = (+page - 1) * +limit;
-    const where: any = {};
-    if (!includeInactive) where.isActive = true;
+    // Public catalogue: only live listings. Owners manage drafts through /marketplace/listings/mine.
+    const where: any = { isActive: true, status: 'PUBLISHED' };
+    void includeInactive;
     if (type) where.type = type;
     if (category) where.type = category;
     if (vendorId) where.vendorId = vendorId;
-    if (status) where.status = status;
+    void status;
     if (search) where.OR = [
       { name: { contains: search, mode: 'insensitive' } },
       { description: { contains: search, mode: 'insensitive' } },
@@ -97,7 +107,7 @@ export class MarketplaceService {
 
   async findOneListing(id: string) {
     const listing = await this.prisma.listing.findFirst({
-      where: { id: requireId(id, 'Listing') },
+      where: { id: requireId(id, 'Listing'), isActive: true, status: 'PUBLISHED' },
       include: {
         vendor: { select: PUBLIC_VENDOR_SELECT },
         _count: { select: { inquiries: true, bookings: true } },
@@ -440,9 +450,13 @@ export class MarketplaceService {
   }
 
   async createVendor(tenantId: string, dto: any) {
+    // The public vendor type (HOTEL, TRANSPORT, …) maps onto the organization type the column stores.
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { type: true } });
+    const type = VENDOR_TYPE_TO_TENANT_TYPE[String(dto.type ?? '').toUpperCase()] ?? tenant?.type;
+    if (!type) throw new BadRequestException('Unknown vendor type');
     return this.prisma.vendor.create({
       data: {
-        name: dto.name, nameAr: dto.nameAr, type: dto.type,
+        name: dto.name, nameAr: dto.nameAr, type: type as any,
         email: dto.email ?? `vendor+${Date.now()}@umrahconnects.com`,
         phone: dto.phone, country: dto.country ?? 'SA', city: dto.city,
         description: dto.description, status: 'PENDING_KYC',

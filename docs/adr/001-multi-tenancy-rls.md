@@ -32,3 +32,20 @@ Umrah Connects must isolate data between operator tenants (Indonesian PPIUs, Sau
 - RLS adds ~5-10% query overhead per row scan. Acceptable at this scale.
 - Enterprise tenants requiring physical isolation must wait until Phase 3 (sovereign deployment with dedicated cluster).
 - Schema-per-tenant and database-per-tenant are explicitly rejected and must not be introduced without CTO approval.
+
+---
+
+## Amendment — 2026-09-17 (core finalization loop)
+
+**Status of the original decision: not implemented.** Row-Level Security was never enabled on any table (`pg_class.relrowsecurity = false` everywhere), and `setTenantContext()` was never called (audit finding AUD-041). Isolation has always depended on per-query tenant filters, which is how AUD-003 (hotels) and the SEC-0xx findings happened.
+
+**Decision for launch:** tenant isolation is enforced in the service layer, with guard rails that make omissions visible:
+
+1. The tenant is taken only from the verified principal (`@TenantId()`), never from request bodies.
+2. Every client-supplied id is resolved inside the caller's tenant (`src/common/tenant-scope.ts`), and unknown and foreign ids get the same 404.
+3. Capabilities are declared per route and checked server-side, deny-by-default; the API refuses to boot if a route has no policy.
+4. Automated cross-tenant tests (`platform/api/test/*.e2e-spec.ts`) attack every tenant-owned domain.
+
+The dead `setTenantContext` / `withTenant` helpers were removed so nothing suggests a protection that does not exist.
+
+**RLS remains the intended defence in depth**, deferred to a dedicated loop. It needs: a non-owner application role, `FORCE ROW LEVEL SECURITY`, every query in a transaction with `SET LOCAL app.current_tenant_id`, explicit policies for the shared rows (community organization, shared hotels, marketplace), and a bypass role for platform administration and migrations. Enabling it partially would give false assurance.

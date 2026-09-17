@@ -9,6 +9,7 @@ import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
+import { makeClientIpResolver } from './client-ip';
 
 // BigInt → JSON string (money is stored as bigint minor units).
 (BigInt.prototype as any).toJSON = function () {
@@ -49,7 +50,12 @@ export function configureApp(app: INestApplication) {
   expressApp.disable('x-powered-by');
 
   // Correlation id: accept a sane inbound id (from the reverse proxy) or mint one.
+  const clientIp = makeClientIpResolver({
+    PROXY_SHARED_SECRET: config.get<string>('PROXY_SHARED_SECRET'),
+    CLIENT_IP_HEADER: config.get<string>('CLIENT_IP_HEADER'),
+  });
   app.use((req: any, res: any, next: () => void) => {
+    req.clientIp = clientIp(req);
     const inbound = req.headers['x-request-id'];
     const id = typeof inbound === 'string' && /^[\w.-]{8,100}$/.test(inbound) ? inbound : randomUUID();
     req.requestId = id;

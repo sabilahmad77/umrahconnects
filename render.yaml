@@ -1,3 +1,8 @@
+# DEPRECATED — Render is the legacy API host (unresponsive since 2026-08-22, AUD-001).
+# The target backend host is Hostinger KVM 8: see infrastructure/kvm/README.md.
+# Kept until the KVM cutover is complete. NOTE: this branch's API refuses to start in
+# production with CORS_ORIGINS="*", a localhost WEB_URL, the sandbox payment provider or
+# ephemeral local storage, so this blueprint only works with the values below plus R2.
 # Render Blueprint for the Umrah Connect API (backend only).
 # In Render: New → Blueprint → connect the GitHub repo → it reads this file.
 # The database is provisioned separately on Neon (free) — paste its URL into
@@ -22,17 +27,17 @@ services:
         sync: false          # paste your Neon connection string in the dashboard
       - key: JWT_SECRET
         generateValue: true  # Render generates a strong secret
-      - key: JWT_REFRESH_SECRET
-        generateValue: true
       - key: JWT_EXPIRES_IN
         value: 15m
       - key: JWT_REFRESH_EXPIRES_IN
         value: 7d
       - key: CORS_ORIGINS
-        # comma-separated; add your Vercel URL later. * allows all (testing only).
-        value: "*"
+        value: "https://umrahconnect.io,https://www.umrahconnect.io"
       - key: WEB_URL
-        # used for password-reset links; set to your web URL once deployed
-        value: "http://localhost:3000"
+        value: "https://umrahconnect.io"
+      - key: STORAGE_DRIVER
+        value: r2
+      - key: PAYMENT_PROVIDER
+        value: stripe
       - key: KAFKA_ENABLED
         value: "false"

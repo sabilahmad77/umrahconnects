@@ -1,0 +1,333 @@
+{
+  "base": "http://localhost:3200",
+  "timestamp": "2026-09-17T16:25:52Z",
+  "passed": 65,
+  "total": 65,
+  "results": [
+    {
+      "check": "login super_admin",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login operator_admin",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login operator_staff",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login finance",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login hotel",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login transport",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login visa",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login traveler",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "login operator_b",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "API health through web proxy",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "/auth/me super_admin has server role SUPER_ADMIN",
+      "result": "PASS",
+      "detail": "roles=['SUPER_ADMIN']"
+    },
+    {
+      "check": "/auth/me operator_admin has server role OPERATOR_ADMIN",
+      "result": "PASS",
+      "detail": "roles=['Operator Admin', 'OPERATOR_ADMIN']"
+    },
+    {
+      "check": "/auth/me operator_staff has server role OPERATOR_STAFF",
+      "result": "PASS",
+      "detail": "roles=['OPERATOR_STAFF']"
+    },
+    {
+      "check": "/auth/me finance has server role FINANCE_MANAGER",
+      "result": "PASS",
+      "detail": "roles=['FINANCE_MANAGER']"
+    },
+    {
+      "check": "/auth/me hotel has server role HOTEL_MANAGER",
+      "result": "PASS",
+      "detail": "roles=['HOTEL_MANAGER']"
+    },
+    {
+      "check": "/auth/me transport has server role TRANSPORT_MANAGER",
+      "result": "PASS",
+      "detail": "roles=['TRANSPORT_MANAGER']"
+    },
+    {
+      "check": "/auth/me visa has server role VISA_OFFICER",
+      "result": "PASS",
+      "detail": "roles=['VISA_OFFICER']"
+    },
+    {
+      "check": "/auth/me traveler has server role PILGRIM",
+      "result": "PASS",
+      "detail": "roles=['PILGRIM']"
+    },
+    {
+      "check": "super_admin GET /admin/users -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "super_admin GET /admin/tenants -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "super_admin GET /pilgrims -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "operator_admin GET /admin/users -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "operator_admin GET /admin/users/export -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "operator_admin GET /admin/finance -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "operator_admin GET /pilgrims -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "operator_admin GET /bookings -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "operator_admin GET /hotels -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "operator_staff GET /pilgrims -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "operator_staff GET /finance/summary -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "finance GET /finance/invoices -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "finance GET /pilgrims -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "hotel GET /hotels -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "hotel GET /pilgrims -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "hotel GET /transport/vehicles -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "transport GET /transport/vehicles -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "transport GET /hotels -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "visa GET /compliance/visas -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "visa GET /hotels -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "traveler GET /social/feed -> 200",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "traveler GET /pilgrims -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "traveler GET /admin/stats -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "operator_b GET /admin/users -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "anonymous GET /admin/users -> 401",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "check": "AUD-003 other operator reads hotel -> 404",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "check": "AUD-003 other operator updates hotel -> 404",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "check": "other operator reads pilgrim -> 404",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "check": "assignable roles exclude SUPER_ADMIN",
+      "result": "PASS",
+      "detail": "['FINANCE_MANAGER', 'HOTEL_MANAGER', 'Operator Admin', 'OPERATOR_ADMIN', 'OPERATOR_STAFF', 'TRANSPORT_MANAGER', 'VISA_OFFICER']"
+    },
+    {
+      "check": "custom role with platform capability -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "AUD-008 anonymous tenant creation -> 401",
+      "result": "PASS",
+      "detail": "HTTP 401"
+    },
+    {
+      "check": "AUD-007 repeated bad logins are throttled (429)",
+      "result": "PASS",
+      "detail": "codes=[401, 401, 401, 401, 401, 401, 401, 401, 429, 429, 429, 429]"
+    },
+    {
+      "check": "signup with client tenantId -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "check": "signup -> 201",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "check": "AUD-005 new traveler can read feed and marketplace",
+      "result": "PASS",
+      "detail": "feed 200 listings 200"
+    },
+    {
+      "check": "refresh token issued as httpOnly cookie through the proxy",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "forgot-password responds without leaking a link",
+      "result": "PASS",
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "AUD-006 /uploads/visa-documents/x/y.png not served",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "check": "AUD-006 /uploads/private/kyc/a.pdf not served",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "check": "intent above outstanding -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "check": "intent without invoice/booking -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    },
+    {
+      "check": "sandbox intent created",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "check": "other operator confirms payment -> 403/404",
+      "result": "PASS",
+      "detail": "HTTP 404"
+    },
+    {
+      "check": "sandbox capture -> COMPLETED",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "check": "staff refund (no finance:payment:refund) -> 403",
+      "result": "PASS",
+      "detail": "HTTP 403"
+    },
+    {
+      "check": "finance manager refund -> REFUNDED",
+      "result": "PASS",
+      "detail": "HTTP 201"
+    },
+    {
+      "check": "forged webhook -> 400",
+      "result": "PASS",
+      "detail": "HTTP 400"
+    }
+  ]
+}

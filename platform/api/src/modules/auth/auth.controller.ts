@@ -53,7 +53,7 @@ export class AuthController {
   }
 
   private ctx(req: Request): SessionContext {
-    return { ip: req.ip, userAgent: req.headers['user-agent'] };
+    return { ip: (req as any).clientIp ?? req.ip, userAgent: req.headers['user-agent'] };
   }
 
   private issue(res: Response, tokens: AuthTokens) {
