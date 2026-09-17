@@ -33,7 +33,11 @@ tenants = gd(requests.get(f"{API}/admin/tenants?limit=100", headers=H))["items"]
 users   = gd(requests.get(f"{API}/admin/users?limit=100", headers=H))["items"]
 roles   = gd(requests.get(f"{API}/admin/roles", headers=H))
 HOME    = next(t for t in tenants if t["slug"] == "al-haramain-ksa")
-OTHER   = next(t for t in tenants if t["id"] != HOME["id"])
+# Only the seeded operator tenants are usable fixtures: tenants can be created
+# with no user via the public POST /tenants, and the shared community tenant's
+# users are self-signups whose passwords this script does not know.
+_with_users = {u["tenantId"] for u in users if str(u.get("email", "")).startswith("admin@")}
+OTHER   = next(t for t in tenants if t["id"] != HOME["id"] and t["id"] in _with_users)
 officer = next(u for u in users if u.get("email") == "visa.officer@alharamain.sa")
 foreign = next(u for u in users if u["tenantId"] != HOME["id"])
 home_role = next((r for r in roles if r.get("tenantId") == HOME["id"]), None)
@@ -47,7 +51,7 @@ def audit_rows(resource, rid):
 
 # ── TENANTS: status lifecycle (on a tenant that is NOT the caller's own) ──
 a_before = len(audit_rows("tenant", OTHER["id"]))
-other_admin = next(u for u in users if u["tenantId"] == OTHER["id"] and u.get("email"))
+other_admin = next(u for u in users if u["tenantId"] == OTHER["id"] and str(u.get("email", "")).startswith("admin@"))
 r = requests.put(f"{API}/admin/tenants/{OTHER['id']}/status", headers=H,
                  json={"status": "SUSPENDED", "reason": "BP-07 verification"})
 chk("tenant → SUSPENDED", r.status_code == 200 and gd(r).get("status") == "SUSPENDED", f"({r.status_code})")
@@ -74,7 +78,7 @@ chk("tenant status changes are audited", len(audit_rows("tenant", OTHER["id"])) 
     f"({len(audit_rows('tenant', OTHER['id']))} rows)")
 
 # archive round-trip on a throwaway tenant (was a guaranteed 500 before)
-THIRD = next(t for t in tenants if t["id"] not in (HOME["id"], OTHER["id"]))
+THIRD = next(t for t in tenants if t["id"] not in (HOME["id"], OTHER["id"]) and t["id"] in _with_users)
 detail = gd(requests.get(f"{API}/admin/tenants/{THIRD['id']}", headers=H))
 chk("tenant detail returns users + kyc + counts",
     "users" in detail and "_count" in detail, f"({detail.get('_count', {}).get('users')} users)")
