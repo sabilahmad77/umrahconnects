@@ -104,3 +104,6 @@ infrastructure/kvm/backups/
 # Engineering 100 loop — private local QA material: generated demo credentials,
 # browser storage state and any trace that could carry a token. Never tracked.
 .project/local/
+
+# TypeScript incremental build state — rewritten on every tsc run.
+*.tsbuildinfo
