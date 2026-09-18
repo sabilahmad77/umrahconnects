@@ -26,68 +26,84 @@ async function main() {
   const booking  = await prisma.booking.findFirst({ where: { tenantId: tenant.id } });
 
   // ── HOTELS ─────────────────────────────────────────────────────────────────
+  // Idempotent, and every hotel gets real rooms for each room type (AUD-028:
+  // hotels used to be seeded with room types but no rooms).
   console.log('🏨 Seeding hotels...');
 
-  const h1 = await prisma.hotel.create({
-    data: {
-      tenantId:        tenant.id,
-      name:            'Makkah Clock Royal Tower',
-      nameAr:          'برج ساعة مكة الملكي',
-      city:            'MAKKAH',
-      country:         'SA',
-      starRating:      5,
-      distanceToHaram: 200,
-      amenities:       ['wifi', 'pool', 'spa', 'gym', 'restaurant', 'valet'],
-      isVerified:      true,
-      description:     '5-star luxury hotel directly overlooking the Masjid al-Haram. Premium Zamzam Tower suites with Kaaba views.',
+  const hotelSeeds = [
+    {
+      name: 'Makkah Clock Royal Tower', nameAr: 'برج ساعة مكة الملكي', city: 'MAKKAH', starRating: 5, distanceToHaram: 200,
+      amenities: ['wifi', 'pool', 'spa', 'gym', 'restaurant', 'valet'],
+      description: '5-star luxury hotel directly overlooking the Masjid al-Haram. Premium Zamzam Tower suites with Kaaba views.',
+      types: [
+        { name: 'Standard Double', occupancy: 2, bedConfig: '1 King Bed', amenities: ['haram_view', 'wifi', 'minibar'], priceCents: 180000, rooms: ['1201', '1202', '1203'] },
+        { name: 'Superior Suite', occupancy: 4, bedConfig: '2 King Beds', amenities: ['kaaba_view', 'lounge', 'butler'], priceCents: 420000, rooms: ['1501', '1502'] },
+      ],
     },
-  });
-
-  const h2 = await prisma.hotel.create({
-    data: {
-      tenantId:        tenant.id,
-      name:            'Hilton Suites Makkah',
-      nameAr:          'هيلتون سويتس مكة',
-      city:            'MAKKAH',
-      country:         'SA',
-      starRating:      4,
-      distanceToHaram: 600,
-      amenities:       ['wifi', 'restaurant', 'shuttle', 'laundry'],
-      isVerified:      true,
-      description:     'Premium suites 600m from the Haram. Shuttle service every 30 minutes.',
+    {
+      name: 'Hilton Suites Makkah', nameAr: 'هيلتون سويتس مكة', city: 'MAKKAH', starRating: 4, distanceToHaram: 600,
+      amenities: ['wifi', 'restaurant', 'shuttle', 'laundry'],
+      description: 'Premium suites 600m from the Haram. Shuttle service every 30 minutes.',
+      types: [
+        { name: 'Deluxe Twin', occupancy: 2, bedConfig: '2 Twin Beds', amenities: ['wifi', 'ac'], priceCents: 95000, rooms: ['801', '802', '803'] },
+        { name: 'Family Suite', occupancy: 6, bedConfig: '3 Beds', amenities: ['kitchenette', 'wifi'], priceCents: 210000, rooms: ['901', '902'] },
+      ],
     },
-  });
-
-  const h3 = await prisma.hotel.create({
-    data: {
-      tenantId:        tenant.id,
-      name:            'Anwar Al Madinah Movenpick',
-      nameAr:          'أنوار المدينة موفنبيك',
-      city:            'MADINAH',
-      country:         'SA',
-      starRating:      5,
-      distanceToHaram: 100,
-      amenities:       ['wifi', 'pool', 'restaurant', 'gym', 'meeting_rooms'],
-      isVerified:      true,
-      description:     'Iconic Madinah hotel 100m from Masjid an-Nabawi.',
+    {
+      name: 'Anwar Al Madinah Movenpick', nameAr: 'أنوار المدينة موفنبيك', city: 'MADINAH', starRating: 5, distanceToHaram: 100,
+      amenities: ['wifi', 'pool', 'restaurant', 'gym', 'meeting_rooms'],
+      description: 'Iconic Madinah hotel 100m from Masjid an-Nabawi.',
+      types: [
+        { name: 'Standard Room', occupancy: 2, bedConfig: '1 Queen Bed', amenities: ['masjid_view', 'wifi'], priceCents: 110000, rooms: ['301', '302', '303'] },
+        { name: 'Executive Room', occupancy: 2, bedConfig: '1 King Bed', amenities: ['masjid_view', 'lounge_access', 'wifi'], priceCents: 160000, rooms: ['701', '702'] },
+      ],
     },
-  });
+  ];
 
-  // Room types (RoomType only has: hotelId, name, occupancy, bedConfig, amenities, images)
-  await prisma.roomType.createMany({
-    data: [
-      { hotelId: h1.id, name: 'Standard Double',  occupancy: 2, bedConfig: '1 King Bed',  amenities: ['haram_view', 'wifi', 'minibar'] },
-      { hotelId: h1.id, name: 'Superior Suite',    occupancy: 4, bedConfig: '2 King Beds', amenities: ['kaaba_view', 'lounge', 'butler'] },
-      { hotelId: h2.id, name: 'Deluxe Twin',       occupancy: 2, bedConfig: '2 Twin Beds', amenities: ['wifi', 'ac'] },
-      { hotelId: h2.id, name: 'Family Suite',      occupancy: 6, bedConfig: '3 Beds',      amenities: ['kitchenette', 'wifi'] },
-      { hotelId: h3.id, name: 'Standard Room',     occupancy: 2, bedConfig: '1 Queen Bed', amenities: ['masjid_view', 'wifi'] },
-      { hotelId: h3.id, name: 'Executive Room',    occupancy: 2, bedConfig: '1 King Bed',  amenities: ['masjid_view', 'lounge_access', 'wifi'] },
-    ],
-  });
+  let roomCount = 0;
+  for (const h of hotelSeeds) {
+    const hotel =
+      (await prisma.hotel.findFirst({ where: { tenantId: tenant.id, name: h.name } })) ??
+      (await prisma.hotel.create({
+        data: {
+          tenantId: tenant.id, name: h.name, nameAr: h.nameAr, city: h.city, country: 'SA', starRating: h.starRating,
+          distanceToHaram: h.distanceToHaram, amenities: h.amenities, isVerified: true, description: h.description,
+        },
+      }));
+    let total = 0;
+    for (const t of h.types) {
+      const roomType =
+        (await prisma.roomType.findFirst({ where: { hotelId: hotel.id, name: t.name } })) ??
+        (await prisma.roomType.create({
+          data: { hotelId: hotel.id, name: t.name, occupancy: t.occupancy, bedConfig: t.bedConfig, amenities: t.amenities },
+        }));
+      for (const roomNumber of t.rooms) {
+        const exists = await prisma.room.findFirst({ where: { hotelId: hotel.id, roomNumber } });
+        if (!exists) {
+          await prisma.room.create({
+            data: {
+              tenantId: tenant.id, hotelId: hotel.id, roomTypeId: roomType.id, roomNumber, floor: roomNumber.slice(0, -2),
+              capacity: t.occupancy, bedType: t.bedConfig, bedCount: t.occupancy, availableBeds: t.occupancy,
+              pricePerNightCents: BigInt(t.priceCents), status: 'AVAILABLE',
+            },
+          });
+        }
+      }
+      const typeRooms = await prisma.room.count({ where: { hotelId: hotel.id, roomTypeId: roomType.id } });
+      await prisma.roomType.update({ where: { id: roomType.id }, data: { totalCount: typeRooms, basePriceCents: BigInt(t.priceCents) } });
+      total += typeRooms;
+    }
+    await prisma.hotel.update({ where: { id: hotel.id }, data: { totalRooms: await prisma.room.count({ where: { hotelId: hotel.id } }) } });
+    roomCount += total;
+  }
 
-  console.log('   ✓ 3 hotels + 6 room types created\n');
+  console.log(`   ✓ ${hotelSeeds.length} hotels, 6 room types, ${roomCount} typed rooms\n`);
 
   // ── TRANSPORT ──────────────────────────────────────────────────────────────
+  // Transport and visa cases have no natural unique keys: an earlier run is detected
+  // by its first vehicle and the two sections are skipped rather than duplicated.
+  const transportSeeded = !!(await prisma.vehicle.findFirst({ where: { tenantId: tenant.id, plateNumber: 'KSA-12345-A' } }));
+  if (!transportSeeded) {
   console.log('🚌 Seeding transport...');
 
   const v1 = await prisma.vehicle.create({
@@ -246,7 +262,11 @@ async function main() {
       { status: VisaStatus.REJECTED,              pilgrim: pilgrims[4], extRef: 'NUSUK-2026-00104',  approvedAt: undefined },
     ];
 
+    const statusFromVisa: Record<string, 'VISA_APPROVED' | 'VISA_PENDING' | 'DOCUMENTS_PENDING' | 'VISA_REJECTED'> = {
+      APPROVED: 'VISA_APPROVED', SUBMITTED: 'VISA_PENDING', DOCUMENTS_COLLECTING: 'DOCUMENTS_PENDING', REJECTED: 'VISA_REJECTED',
+    };
     for (const v of visaItems) {
+      await prisma.pilgrim.update({ where: { id: v.pilgrim.id }, data: { status: statusFromVisa[v.status] } });
       await prisma.visaApplication.create({
         data: {
           tenantId:         tenant.id,
@@ -282,6 +302,9 @@ async function main() {
   }
 
   console.log('   ✓ 5 visa applications created\n');
+  } else {
+    console.log('   ✓ transport and visa cases already seeded — skipped\n');
+  }
 
   // ── FINANCE ────────────────────────────────────────────────────────────────
   console.log('💰 Seeding finance...');
@@ -414,6 +437,8 @@ async function main() {
   console.log('   ✓ 5 invoices + 3 payments created\n');
 
   // ── TRIP GROUPS ─────────────────────────────────────────────────────────────
+  const groupsSeeded = !!(await prisma.tripGroup.findFirst({ where: { tenantId: tenant.id, name: 'Ramadan Group A — Makkah Priority' } }));
+  if (!groupsSeeded) {
   console.log('👥 Seeding trip groups...');
 
   await prisma.tripGroup.create({
@@ -527,6 +552,9 @@ async function main() {
   });
 
   console.log('   ✓ 1 vendor + 3 listings created\n');
+  } else {
+    console.log('   ✓ trip groups and marketplace vendor already seeded — skipped\n');
+  }
 
   console.log('═══════════════════════════════════════════════════════');
   console.log('✅  Module seed complete!');
