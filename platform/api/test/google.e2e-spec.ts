@@ -78,6 +78,7 @@ describe('Google Sign-In (provider token exchange stubbed)', () => {
     expect(callback.origin + callback.pathname).toBe('http://web.test/auth/callback');
     expect(callback.search).toBe('');
     expect(new URLSearchParams(callback.hash.slice(1)).get('returnTo')).toBe('/marketplace');
+    expect(new URLSearchParams(callback.hash.slice(1)).get('outcome')).toBe('created');
     expect(lastVerifier).toMatch(/^[\w-]{64}$/);
 
     const res = await exchange(callback);
@@ -101,7 +102,8 @@ describe('Google Sign-In (provider token exchange stubbed)', () => {
 
   it('links to an existing verified account without touching its password', async () => {
     const { callback } = await signIn({ sub: `sub-${uniq()}`, email: w.opA.email, emailVerified: true });
-    const res = await exchange(callback);
+    expect(new URLSearchParams(callback!.hash.slice(1)).get('outcome')).toBe('linked');
+    const res = await exchange(callback!);
     expect(res.status).toBe(200);
     const me = await ctx.http().get(api('/auth/me')).set('Authorization', `Bearer ${res.body.data.accessToken}`);
     expect(me.body.data.sub).toBe(w.opA.id);
@@ -114,7 +116,10 @@ describe('Google Sign-In (provider token exchange stubbed)', () => {
     const reg = await ctx.http().post(api('/auth/register')).send({ email, password: 'Attacker-Pass-1', firstName: 'Evil', lastName: 'Twin' });
     const attackerToken = reg.body.data.accessToken;
     await new Promise((r) => setTimeout(r, 1100));
-    const res = await exchange((await signIn({ sub: `sub-${uniq()}`, email, emailVerified: true })).callback!);
+    const { callback } = await signIn({ sub: `sub-${uniq()}`, email, emailVerified: true });
+    // The web tells the person their unverified account's password was removed.
+    expect(new URLSearchParams(callback!.hash.slice(1)).get('outcome')).toBe('linked_password_removed');
+    const res = await exchange(callback!);
     expect(res.status).toBe(200);
     expect((await ctx.http().post(api('/auth/login')).send({ email, password: 'Attacker-Pass-1' })).status).toBe(401);
     expect((await ctx.http().get(api('/auth/me')).set('Authorization', `Bearer ${attackerToken}`)).status).toBe(401);
@@ -148,12 +153,16 @@ describe('Google Sign-In (provider token exchange stubbed)', () => {
     expect((await signIn(profile, { tamperState: true })).callback!.href).toBe('http://web.test/login?error=google_state');
     expect((await signIn(profile, { dropCookie: true })).callback!.href).toBe('http://web.test/login?error=google_state');
     expect((await signIn(new GoogleSignInError('google_failed'))).callback!.href).toBe('http://web.test/login?error=google_failed');
+    // Cancelling on Google's screen is not a failure; other provider errors are.
     const denied = await ctx.http().get(api('/auth/google/callback?error=access_denied&state=x'));
-    expect(denied.headers.location).toBe('http://web.test/login?error=google_failed');
+    expect(denied.headers.location).toBe('http://web.test/login?error=google_cancelled');
+    const broken = await ctx.http().get(api('/auth/google/callback?error=server_error&state=x'));
+    expect(broken.headers.location).toBe('http://web.test/login?error=google_failed');
 
     for (const evil of ['https://evil.test/x', '//evil.test', '/\\evil.test', 'javascript:alert(1)']) {
       const { callback } = await signIn({ ...profile, sub: `sub-${uniq()}` }, { returnTo: evil });
-      expect(new URLSearchParams(callback!.hash.slice(1)).get('returnTo')).toBe('/dashboard');
+      // No destination is forced: the web sends the account to its own workspace.
+      expect(new URLSearchParams(callback!.hash.slice(1)).get('returnTo')).toBeNull();
     }
   });
 
@@ -167,11 +176,14 @@ describe('Google Sign-In (provider token exchange stubbed)', () => {
 
     const again = await ctx.http().post(api('/auth/google/link-intent')).set(bearer(w.transportA));
     const stolen = await signIn({ sub, email: `other.${uniq()}@gmail.test`, emailVerified: true }, { intent: again.body.data.intent });
-    expect(stolen.callback!.href).toBe('http://web.test/login?error=google_already_linked');
+    // Linking failures return to account settings, where the signed-in person started.
+    expect(stolen.callback!.href).toBe('http://web.test/settings?linkError=google_already_linked');
 
     const reused = await ctx.http().get(api(`/auth/google/start?intent=${intent.body.data.intent}`));
-    expect(reused.headers.location).toBe('http://web.test/login?error=google_state');
+    expect(reused.headers.location).toBe('http://web.test/settings?linkError=google_state');
 
-    expect((await ctx.http().post(api('/auth/google/link-intent')).set(bearer(w.superAdmin))).status).toBe(401);
+    const platform = await ctx.http().post(api('/auth/google/link-intent')).set(bearer(w.superAdmin));
+    expect(platform.status).toBe(403);
+    expect(platform.body.error.code).toBe('GOOGLE_NOT_ALLOWED');
   });
 });
