@@ -1,14 +1,119 @@
 'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/components/providers/auth-provider';
-import { apiClient } from '@/lib/api';
-import { clearAuth } from '@/lib/auth';
-import { validPassword } from '@/lib/password-policy';
-import { Card, PageHeader, Alert, Button, Input } from '@/components/ui/system';
-export default function SettingsPage(){
- const {user}=useAuthContext();const [currentPassword,setCurrent]=useState('');const [newPassword,setNew]=useState('');const [busy,setBusy]=useState(false);const [error,setError]=useState('');
- const changePassword=async(e:React.FormEvent)=>{e.preventDefault();setError('');if(!validPassword(newPassword)){setError('Use 8–128 characters, including a letter and a number.');return;}setBusy(true);try{await apiClient.post('/auth/change-password',{currentPassword,newPassword});clearAuth();window.location.href='/login?passwordChanged=1';}catch(e:any){setError(e?.response?.data?.error?.message||'Password could not be changed.');}finally{setBusy(false);}};
- const logoutAll=async()=>{setBusy(true);setError('');try{await apiClient.post('/auth/logout-all',{});clearAuth();window.location.href='/login';}catch(e:any){setError(e?.response?.data?.error?.message||'Sessions could not be signed out.');}finally{setBusy(false);}};
- return <div className="max-w-4xl space-y-6"><PageHeader title="Account settings" description="Your profile and workspace information." /><Card><h2 className="text-lg font-semibold">Profile</h2><p className="mt-2 text-sm text-gray-600">Manage your name, photo, contact details and profile privacy using your saved profile.</p><Link href="/profile" className="uc-button uc-button-primary mt-5">Edit profile</Link></Card><Card><h2 className="text-lg font-semibold">Workspace</h2><dl className="mt-4 grid gap-4 sm:grid-cols-2">{[['Account',user?.email],['Workspace',user?.tenantName],['Workspace type',user?.tenantType],['Account role',user?.dashboardType]].map(([label,value])=><div key={label}><dt className="text-xs font-medium text-gray-600">{label}</dt><dd className="mt-1 break-words text-sm">{value||'Not provided'}</dd></div>)}</dl><Link href="/onboarding" className="uc-button uc-button-secondary mt-5">Organization onboarding and verification</Link></Card><Card><h2 className="text-lg font-semibold">Account security</h2>{user?.hasPassword&&<form method="post" onSubmit={changePassword} className="mt-4 max-w-md space-y-4"><label className="block space-y-2 text-sm font-medium">Current password<Input required type="password" autoComplete="current-password" maxLength={128} value={currentPassword} onChange={e=>setCurrent(e.target.value)} /></label><label className="block space-y-2 text-sm font-medium">New password<Input required type="password" autoComplete="new-password" minLength={8} maxLength={128} value={newPassword} onChange={e=>setNew(e.target.value)} /></label><p className="text-xs text-gray-600">Use 8–128 characters, including a letter and a number. Changing your password signs out all sessions.</p><Button type="submit" busy={busy}>Change password</Button></form>}<Button className="mt-5" variant="secondary" busy={busy} onClick={logoutAll}>Sign out all devices</Button>{error&&<Alert title="Account action failed">{error}</Alert>}</Card><Alert tone="info" title="Notification preferences and API keys unavailable">These controls are not connected to a supported account-settings endpoint. No preferences or keys are shown as saved. <Link href="/help" className="underline">Contact support</Link> for workspace changes.</Alert></div>;
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { useAccountProfile, useGoogleSignInStatus, usePreferences } from '@/hooks/use-auth';
+import { googleErrorMessage, type GoogleMessage } from '@/lib/google-sign-in';
+import { formatInTimeZone } from '@/lib/preferences';
+import { Alert, Badge, Card, LoadingState, PageHeader, QueryFailure } from '@/components/ui/system';
+import { ChangePasswordForm, SetPasswordPanel, SignOutEverywhere } from '@/components/settings/security-section';
+import { LinkedAccounts } from '@/components/settings/linked-accounts';
+import { PreferencesSection } from '@/components/settings/preferences-section';
+
+const COMMUNITY_SLUG = 'umrah-connect-travelers';
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const { user } = useAuthContext();
+  const { ready, can, isPlatform } = useCapabilities();
+  const profile = useAccountProfile();
+  const preferences = usePreferences();
+  const google = useGoogleSignInStatus();
+  const [notice, setNotice] = useState<GoogleMessage | null>(null);
+
+  // Result of a Google linking round trip (/settings?linked=google or ?linkError=…),
+  // shown once and removed from the address so a reload does not repeat it.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('linked') === 'google') {
+      setNotice({ tone: 'info', title: 'Google account linked', body: 'You can now sign in with Google as well.' });
+    } else if (params.get('linkError')) {
+      setNotice(googleErrorMessage(params.get('linkError'), 'link'));
+    }
+    if (params.has('linked') || params.has('linkError')) router.replace('/settings');
+  }, [router]);
+
+  const timeZone = preferences.data?.timezone ?? 'Asia/Riyadh';
+
+  return (
+    <div className="max-w-4xl space-y-6">
+      <PageHeader title="Account settings" description="Your sign-in methods, security and preferences." />
+
+      {notice && (
+        <Alert tone={notice.tone} title={notice.title}>
+          {notice.body}
+        </Alert>
+      )}
+
+      <Card>
+        <h2 className="text-lg font-semibold">Profile</h2>
+        <p className="mt-2 text-sm text-gray-600">Manage your name, photo, contact details and profile privacy using your saved profile.</p>
+        <Link href="/profile" className="uc-button uc-button-primary mt-5">
+          Edit profile
+        </Link>
+      </Card>
+
+      <Card className="space-y-8">
+        <div>
+          <h2 className="text-lg font-semibold">Sign-in and security</h2>
+          {profile.data && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+              <span>{profile.data.email}</span>
+              <Badge tone={profile.data.emailVerified ? 'success' : 'warning'}>{profile.data.emailVerified ? 'Email confirmed' : 'Email not confirmed'}</Badge>
+              <span>· Account created {formatInTimeZone(profile.data.createdAt, timeZone)}</span>
+            </p>
+          )}
+        </div>
+        {profile.isLoading && <LoadingState label="Loading your account…" />}
+        {profile.error && <QueryFailure error={profile.error} onRetry={() => void profile.refetch()} />}
+        {profile.data && (
+          <>
+            {profile.data.hasPassword ? <ChangePasswordForm /> : <SetPasswordPanel email={profile.data.email ?? ''} />}
+            <LinkedAccounts profile={profile.data} timeZone={timeZone} google={google.data} canLinkGoogle={ready && !isPlatform} />
+            <SignOutEverywhere />
+          </>
+        )}
+      </Card>
+
+      <Card>
+        <h2 id="preferences-title" className="mb-5 text-lg font-semibold">
+          Preferences
+        </h2>
+        <PreferencesSection />
+      </Card>
+
+      <Card>
+        <h2 className="text-lg font-semibold">Workspace</h2>
+        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+          {[
+            ['Account', user?.email],
+            ['Workspace', user?.tenantName],
+            ['Workspace type', user?.tenantType],
+            ['Account role', user?.dashboardType],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs font-medium text-gray-600">{label}</dt>
+              <dd className="mt-1 break-words text-sm">{value || 'Not provided'}</dd>
+            </div>
+          ))}
+        </dl>
+        {ready && can('core:tenant:update') && (
+          <Link href="/onboarding" className="uc-button uc-button-secondary mt-5">
+            Organization profile and verification
+          </Link>
+        )}
+        {ready && user?.tenantSlug === COMMUNITY_SLUG && (
+          <div className="mt-5 space-y-2">
+            <Link href="/onboarding" className="uc-button uc-button-secondary">
+              Register an organization
+            </Link>
+            {!user.emailVerified && <p className="text-xs text-gray-600">Confirm your email address first — registering an organization requires it.</p>}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
 }

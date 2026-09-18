@@ -51,12 +51,37 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Endpoints that establish or end a session, or redeem an emailed link. Their
+ * 401 means "those credentials / that link are not valid", never "your access
+ * token expired", so they must not trigger a refresh-and-retry or a bounce.
+ * Every other /auth/* call (me, change-password, logout-all, verify-email
+ * resend, Google link intent) is an ordinary authenticated request: skipping
+ * the refresh for them failed those actions for anyone who had kept a page
+ * open past the 15-minute access-token lifetime.
+ */
+const CREDENTIAL_ENDPOINTS = [
+  '/auth/login', '/auth/register', '/auth/refresh', '/auth/logout', '/auth/google/exchange',
+  '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email/confirm', '/auth/otp/',
+];
+
+export function isCredentialEndpoint(url: string | undefined): boolean {
+  const path = (url ?? '').split('?')[0];
+  return CREDENTIAL_ENDPOINTS.some((endpoint) => (endpoint.endsWith('/') ? path.startsWith(endpoint) : path === endpoint));
+}
+
+/** The sign-in URL after a session truly ended: back to this page afterwards, with the reason shown. */
+export function expiredSessionUrl(location: Pick<Location, 'pathname' | 'search'>): string {
+  const returnTo = encodeURIComponent(location.pathname + location.search);
+  return `/login?reason=session-expired&returnTo=${returnTo}`;
+}
+
 // Coalesce refresh for expired real sessions.
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (!original || original.url?.startsWith('/auth/') || !getToken()) return Promise.reject(error);
+    if (!original || isCredentialEndpoint(original.url) || !getToken()) return Promise.reject(error);
     if (error.response?.status === 401 && error.response?.data?.error?.message?.includes('Organization verification is not complete')) return Promise.reject(error);
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
@@ -70,8 +95,7 @@ apiClient.interceptors.response.use(
       // the user resumes their page after re-login, instead of a silent bounce.
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         clearAuth();
-        const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?returnTo=${returnTo}`;
+        window.location.href = expiredSessionUrl(window.location);
       }
     }
     return Promise.reject(error);

@@ -32,6 +32,7 @@ import { InquiriesModule } from './modules/inquiries/inquiries.module';
 import { HealthModule } from './modules/health/health.module';
 import { MailModule } from './modules/mail/mail.module';
 import { TravelersModule } from './modules/travelers/travelers.module'; // eng100-a07
+import { PreferencesModule } from './modules/preferences/preferences.module'; // eng100-a02
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -103,6 +104,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     InquiriesModule,
     HealthModule,
     TravelersModule, // eng100-a07
+    PreferencesModule, // eng100-a02
   ],
   providers: [
     // Order matters: rate limit → authenticate → authorize (deny-by-default).

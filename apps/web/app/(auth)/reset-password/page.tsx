@@ -1,15 +1,24 @@
 'use client';
-import { PASSWORD_HINT, passwordProblem } from '@/lib/password-policy';
-import { apiErrorMessage } from '@/lib/api-error';
-import Link from 'next/link';
-import { Input, LoadingState , Button } from '@/components/ui/system';
-
 
 import { Suspense, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { KeyRound, CheckCircle2 } from 'lucide-react';
+import { PASSWORD_HINT, passwordProblem } from '@/lib/password-policy';
+import { apiErrorMessage } from '@/lib/api-error';
 import { apiClient } from '@/lib/api';
+import { clearAuth } from '@/lib/auth';
+import { Alert, Button, Input, LoadingState } from '@/components/ui/system';
+
+/** Messages for the API's single-use link codes (auth.service.ts `redeemLink`). */
+const LINK_PROBLEMS: Record<string, { title: string; body: string }> = {
+  RESET_LINK_USED: {
+    title: 'This link was already used',
+    body: 'Each reset link works once, and a newer request replaces older links. Request a new link from the sign-in page if you still need one.',
+  },
+  RESET_LINK_EXPIRED: { title: 'This link has expired', body: 'Reset links work for 30 minutes. Request a new one from the sign-in page.' },
+  RESET_LINK_INVALID: { title: 'This link is not valid', body: 'Check that you opened the complete link from the email, or request a new one.' },
+};
 
 function ResetForm() {
   const params = useSearchParams();
@@ -18,55 +27,90 @@ function ResetForm() {
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [fieldError, setFieldError] = useState('');
+  const [linkProblem, setLinkProblem] = useState<{ title: string; body: string } | null>(null);
+  const [error, setError] = useState('');
 
-  const submit = async () => {
-    const problem = passwordProblem(password);
-    if (problem) { toast.error(problem); return; }
-    if (password !== confirm) { toast.error('Passwords do not match'); return; }
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (busy) return;
+    setError('');
+    const problem = passwordProblem(password) || (password !== confirm ? 'The passwords do not match.' : '');
+    setFieldError(problem);
+    if (problem) return;
     setBusy(true);
     try {
       await apiClient.post('/auth/reset-password', { token, password });
+      // The server signed out every session of the account; drop any local copy.
+      clearAuth();
       setDone(true);
-      toast.success('Password updated');
     } catch (e: any) {
-      toast.error(apiErrorMessage(e, 'Reset link is invalid or expired'));
-    } finally { setBusy(false); }
+      const code = e?.response?.data?.error?.code;
+      if (code && LINK_PROBLEMS[code]) setLinkProblem(LINK_PROBLEMS[code]);
+      else setError(apiErrorMessage(e, 'Your password could not be updated. Try again.'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-ivory flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 w-full max-w-md">
-        <div className="w-12 h-12 rounded-xl bg-brand-500 flex items-center justify-center mb-4">
+    <div className="flex min-h-screen items-center justify-center bg-ivory p-6">
+      <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500">
           {done ? <CheckCircle2 className="h-6 w-6 text-white" /> : <KeyRound className="h-6 w-6 text-white" />}
         </div>
-        <h1 className="text-xl font-heading font-bold text-gray-900">Set a new password</h1>
-        <p className="text-sm text-gray-600 mt-1 mb-6">Choose a strong password for your Umrah Connect account.</p>
-        <Link href="/login" className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">Back to sign in</Link>
+        <h1 className="font-heading text-xl font-bold text-gray-900">Choose a new password</h1>
+        <p className="mb-6 mt-1 text-sm text-gray-600">Choose a strong password for your Umrah Connect account.</p>
+
         {done ? (
-          <p className="text-sm text-emerald-600 font-medium">Password updated. You can sign in with your new password.</p>
-        ) : !token ? (
-          <p className="text-sm text-red-700">Missing reset token. Use the link from your reset email.</p>
-        ) : (
           <div className="space-y-4">
-            <label className="block text-sm font-medium">New password<Input aria-describedby="reset-password-hint"
-              autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="New password"
-              className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
-            />
-            </label>
-            <p id="reset-password-hint" className="-mt-2 text-xs text-gray-600">{PASSWORD_HINT}</p>
-            <label className="block text-sm font-medium">Confirm new password<Input
-              autoComplete="new-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Confirm new password"
-              className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
-            />
-            </label><Button variant="quiet" type="button"
-              onClick={submit} disabled={busy}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm rounded-xl disabled:opacity-60"
-            >
-              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Update password
-            </Button>
+            <Alert tone="info" title="Password saved">
+              Every session of your account was signed out. Sign in with your new password.
+            </Alert>
+            <Link href="/login?reason=password-set" className="uc-button uc-button-primary">
+              Sign in
+            </Link>
           </div>
+        ) : !token ? (
+          <div className="space-y-4">
+            <Alert title="Reset link required">Open the link from your password email. The link is missing from this address.</Alert>
+            <Link href="/login" className="uc-button uc-button-secondary">
+              Back to sign in
+            </Link>
+          </div>
+        ) : linkProblem ? (
+          <div className="space-y-4">
+            <Alert title={linkProblem.title}>{linkProblem.body}</Alert>
+            <Link href="/login" className="uc-button uc-button-primary">
+              Back to sign in
+            </Link>
+          </div>
+        ) : (
+          <form method="post" onSubmit={submit} className="space-y-4" noValidate>
+            <div>
+              <label htmlFor="reset-password" className="mb-2 block text-sm font-medium">
+                New password
+              </label>
+              <Input id="reset-password" aria-describedby="reset-password-hint" autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={!!fieldError} />
+              <p id="reset-password-hint" className="mt-1 text-xs text-gray-600">
+                {PASSWORD_HINT}
+              </p>
+            </div>
+            <div>
+              <label htmlFor="reset-confirm" className="mb-2 block text-sm font-medium">
+                Confirm new password
+              </label>
+              <Input id="reset-confirm" autoComplete="new-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-invalid={!!fieldError} />
+            </div>
+            {fieldError && <p className="text-sm text-red-700">{fieldError}</p>}
+            {error && <Alert title="Password not updated">{error}</Alert>}
+            <Button type="submit" busy={busy} className="w-full">
+              Save new password
+            </Button>
+            <Link href="/login" className="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">
+              Back to sign in
+            </Link>
+          </form>
         )}
       </div>
     </div>
@@ -74,5 +118,9 @@ function ResetForm() {
 }
 
 export default function ResetPasswordPage() {
-  return <Suspense fallback={<LoadingState />}><ResetForm /></Suspense>;
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ResetForm />
+    </Suspense>
+  );
 }

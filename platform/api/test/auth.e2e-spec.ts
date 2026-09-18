@@ -220,6 +220,7 @@ describe('authentication & sessions', () => {
       expect(reset.status).toBe(200);
       const reuse = await ctx.http().post(api('/auth/reset-password')).send({ token, password: 'Another-New-2026' });
       expect(reuse.status).toBe(401);
+      expect(reuse.body.error.code).toBe('RESET_LINK_USED');
       expect((await ctx.http().get(api('/auth/me')).set('Authorization', `Bearer ${reg.body.data.accessToken}`)).status).toBe(401);
       expect((await ctx.http().post(api('/auth/login')).send({ email, password: 'Brand-New-2026' })).status).toBe(200);
     });
@@ -232,7 +233,9 @@ describe('authentication & sessions', () => {
     });
 
     it('a reset token cannot be used as an access token and a forged reset token is refused', async () => {
-      expect((await ctx.http().post(api('/auth/reset-password')).send({ token: 'x'.repeat(43), password: 'Brand-New-2026' })).status).toBe(401);
+      const forged = await ctx.http().post(api('/auth/reset-password')).send({ token: 'x'.repeat(43), password: 'Brand-New-2026' });
+      expect(forged.status).toBe(401);
+      expect(forged.body.error.code).toBe('RESET_LINK_INVALID');
     });
 
     it('email verification activates the account; tokens are single-use', async () => {
@@ -245,7 +248,10 @@ describe('authentication & sessions', () => {
       const user = await ctx.prisma.user.findFirstOrThrow({ where: { email } });
       expect(user.emailVerifiedAt).not.toBeNull();
       expect(user.status).toBe('ACTIVE');
-      expect((await ctx.http().post(api('/auth/verify-email/confirm')).send({ token })).status).toBe(401);
+      const replay = await ctx.http().post(api('/auth/verify-email/confirm')).send({ token });
+      expect(replay.status).toBe(401);
+      expect(replay.body.error.code).toBe('VERIFICATION_LINK_USED');
+      expect(replay.body.error.details).toEqual({ emailVerified: true });
     });
 
     it('change-password requires the current password and revokes other sessions', async () => {
@@ -254,7 +260,9 @@ describe('authentication & sessions', () => {
       const other = reg.body.data.accessToken;
       const bad = await ctx.http().post(api('/auth/change-password')).set('Authorization', `Bearer ${other}`)
         .send({ currentPassword: 'nope-nope-1', newPassword: 'Changed-Pass-2026' });
-      expect(bad.status).toBe(401);
+      // A wrong current password is bad input, not an expired session (401 made the web refresh and retry).
+      expect(bad.status).toBe(400);
+      expect(bad.body.error.code).toBe('CURRENT_PASSWORD_INCORRECT');
       await new Promise((r) => setTimeout(r, 1100));
       const ok = await ctx.http().post(api('/auth/change-password')).set('Authorization', `Bearer ${other}`)
         .send({ currentPassword: 'Traveler-2026', newPassword: 'Changed-Pass-2026' });
@@ -281,6 +289,11 @@ describe('authentication & sessions', () => {
       expect(cb.headers.location).toBe('http://web.test/login?error=google_unavailable');
       const ex = await ctx.http().post(api('/auth/google/exchange')).send({ ticket: 'a'.repeat(43) });
       expect(ex.status).toBe(401);
+      expect(ex.body.error.code).toBe('OAUTH_TICKET_INVALID');
+      // Linking started from account settings returns there, not to the sign-in page.
+      const link = await ctx.http().get(api('/auth/google/start?intent=' + 'b'.repeat(43)));
+      expect(link.headers.location).toBe('http://web.test/settings?linkError=google_unavailable');
+      expect((await ctx.http().post(api('/auth/google/link-intent')).set(bearer(w.travelerA))).status).toBe(503);
     });
   });
 

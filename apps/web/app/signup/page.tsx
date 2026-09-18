@@ -1,9 +1,7 @@
 'use client';
 import { PASSWORD_HINT, passwordProblem } from '@/lib/password-policy';
 import { apiErrorMessage } from '@/lib/api-error';
-import { Input , Button } from '@/components/ui/system';
-
-
+import { Input, Button } from '@/components/ui/system';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -13,8 +11,12 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicHeader, PublicFooter } from '@/components/public/public-chrome';
-import { validPassword } from '@/lib/password-policy';
 import { apiClient } from '@/lib/api';
+import { acceptSession } from '@/lib/session';
+import { googleStartUrl } from '@/lib/google-sign-in';
+import { useGoogleSignInStatus } from '@/hooks/use-auth';
+import { useAuthContext, getDashboardPath } from '@/components/providers/auth-provider';
+import { GoogleButton, OrDivider, StubGoogleNotice } from '@/components/settings/google-button';
 
 // Role interest is sent to registration; it does not assign permissions or activate a workspace.
 const ROLES = [
@@ -28,6 +30,8 @@ const ROLES = [
 
 export default function SignupPage() {
   const router = useRouter();
+  const { setUser } = useAuthContext();
+  const google = useGoogleSignInStatus();
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState('');
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', password: '' });
@@ -51,20 +55,32 @@ export default function SignupPage() {
     setTouched({ firstName: true, email: true, password: true });
     if (fieldErrors.firstName || fieldErrors.email || fieldErrors.password) return;
     setBusy(true);
+    let accessToken: string | undefined;
     try {
-      await apiClient.post('/auth/register', {
+      const { data } = await apiClient.post('/auth/register', {
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim() || form.firstName.trim(),
         email: form.email.trim(),
         password: form.password,
         roleInterest: role,
       });
-      toast.success('Traveler account created. Sign in to continue.');
-      router.push(`/login?email=${encodeURIComponent(form.email.trim())}`);
+      accessToken = data?.data?.accessToken;
     } catch (e: any) {
       setErr(apiErrorMessage(e, 'Could not create your account. This email may already be registered.'));
-    } finally {
       setBusy(false);
+      return;
+    }
+    // Registration already opened a session (httpOnly refresh cookie + access
+    // token): use it instead of asking the person to sign in again. The
+    // workspace then shows the "confirm your email" banner.
+    try {
+      const user = await acceptSession(accessToken ?? '');
+      setUser(user);
+      toast.success('Account created. We sent you an email to confirm your address.');
+      router.push(getDashboardPath(user.dashboardType));
+    } catch {
+      toast.success('Account created. Sign in to continue.');
+      router.push('/login');
     }
   };
 
@@ -128,6 +144,14 @@ export default function SignupPage() {
                   <div className="flex items-start gap-2 bg-gold-50 border border-gold-200 rounded-xl p-3 mb-4">
                     <CheckCircle2 className="h-4 w-4 text-gold-800 shrink-0 mt-0.5" />
                     <p className="text-[12px] text-gold-800">Every new account starts as a Traveler. Provider workspaces require verified email and organization onboarding. Finance access is assigned by your organization.</p>
+                  </div>
+                )}
+                {google.data?.enabled && (
+                  <div className="mb-1">
+                    {/* Google always creates a Traveler account, like the form below. */}
+                    <GoogleButton href={googleStartUrl(null)} label="Sign up with Google" />
+                    {google.data.mode === 'local-stub' && <StubGoogleNotice />}
+                    <OrDivider />
                   </div>
                 )}
                 <form onSubmit={event => { event.preventDefault(); void submit(); }} method="post" className="space-y-3.5">

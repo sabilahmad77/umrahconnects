@@ -380,6 +380,7 @@ model User {
   identities    UserIdentity[]
   socialAccount SocialAccount?
   pilgrimLinks  PilgrimAccountLink[] // eng100-a07
+  preferences   UserPreference? // eng100-a02
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -439,6 +440,20 @@ model OtpCode {
   @@index([phone])
   @@index([email])
   @@map("otp_codes")
+  @@schema("core")
+}
+
+/// eng100-a02 — per-user notification preferences (P07 / XT-005). Language and
+/// time zone reuse User.locale and User.timezone.
+model UserPreference {
+  userId        String   @id @map("user_id") @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// { "inApp": { "<category>": false } } — only explicit opt-outs are stored; absent means on.
+  notifications Json     @default("{}") @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("user_preferences")
   @@schema("core")
 }
 

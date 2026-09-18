@@ -49,7 +49,7 @@ const PUBLIC_PATHS = [
 
 // Paths a logged-in user should be PUSHED AWAY from (back to their dashboard).
 // Critically: '/' is NOT here — landing must stay reachable for everyone.
-const AUTH_ONLY_PUBLIC = ['/login', '/register', '/forgot-password'];
+const AUTH_ONLY_PUBLIC = ['/login', '/register', '/signup', '/forgot-password'];
 
 const isPublicPath = (pathname?: string | null) =>
   PUBLIC_PATHS.some((p) => (p === '/' ? pathname === '/' : (pathname === p || pathname?.startsWith(p + '/'))));
@@ -107,16 +107,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const bounceToLogin = () => {
       if (cancelled) return;
-      if (token || storedUser) clearAuth();
+      const hadSession = !!(token || storedUser);
+      if (hadSession) clearAuth();
       setUserState(null);
       setIsLoaded(true);
       if (!isPublic && !redirected.current) {
         redirected.current = true;
-        // FIX-02: preserve intended destination instead of a silent bounce
-        const returnTo = pathname && pathname !== '/login' ? `?returnTo=${encodeURIComponent(pathname + window.location.search)}` : '';
-        router.push(`/login${returnTo}`);
+        // FIX-02: preserve intended destination instead of a silent bounce, and
+        // say why when a session this browser held has ended.
+        const query = new URLSearchParams();
+        if (hadSession) query.set('reason', 'session-expired');
+        if (pathname && pathname !== '/login') query.set('returnTo', pathname + window.location.search);
+        const qs = query.toString();
+        router.push(qs ? `/login?${qs}` : '/login');
       }
     };
+
+    // The callback page establishes the Google session itself. Restoring an
+    // older session here at the same time could race it and leave the page
+    // showing the previous account.
+    if (pathname === '/auth/callback') {
+      setIsLoaded(true);
+      return () => { cancelled = true; };
+    }
 
     if (token && !isTokenExpired(token)) {
       void settleLoggedIn();
