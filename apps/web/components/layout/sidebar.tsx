@@ -12,6 +12,7 @@ import {
   ChevronLeft, ChevronRight, Globe, LogOut, Map, Shield, BedDouble, ClipboardList,
   FolderOpen, Inbox, Building2, Zap, User, Package,
 } from 'lucide-react';
+import { canOpenWorkspaceRoute } from '@/lib/workspace-access';
 import type { DashboardType } from '@/lib/auth';
 
 // ─── Navigation configs per role ─────────────────────────────────────────────
@@ -166,7 +167,7 @@ const NAV: Record<DashboardType, { section: string; items: { label: string; href
         { label: 'Discover',          href: '/discover',     icon: Globe },
         { label: 'Connections',       href: '/connections',  icon: Users },
         { label: 'Messages',          href: '/messages',     icon: BookOpen },
-        { label: 'Groups',            href: '/groups',       icon: Users2 },
+        { label: 'My Groups',         href: '/travel-plan#my-groups',       icon: Users2 },
       ],
     },
     {
@@ -213,7 +214,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
 
   const dashboardType = user?.dashboardType ?? 'operator';
   const seen = new Set<string>();
-  const navSections = (NAV[dashboardType] ?? NAV.operator).map(section => ({ ...section, items: section.items.filter(item => { if (seen.has(item.href)) return false; seen.add(item.href); return true; }) }));
+  const navSections = (NAV[dashboardType] ?? NAV.operator).map(section => ({ ...section, items: section.items.filter(item => { if (!canOpenWorkspaceRoute(item.href, user?.roles ?? [], user?.permissions)) return false; if (seen.has(item.href)) return false; seen.add(item.href); return true; }) }));
   const roleCfg = ROLE_CONFIG[dashboardType] ?? ROLE_CONFIG.operator;
   const initials = (user?.displayName ?? 'UC').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 

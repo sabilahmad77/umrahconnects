@@ -1,0 +1,9 @@
+{
+  "tab9": [],
+  "tab8FinalPassWarningsAndErrors": [],
+  "historicalDefect": {
+    "route": "/admin-settings",
+    "error": "Stale policies response mapping caused runtime exception",
+    "resolution": "Read-only enforced configuration mapping; real API and final Super Admin browser pass plus regression test"
+  }
+}

@@ -1,0 +1,397 @@
+[
+  {
+    "route": "/login",
+    "role": "AUTH",
+    "source": "apps/web/app/(auth)/login/page.tsx"
+  },
+  {
+    "route": "/reset-password",
+    "role": "AUTH",
+    "source": "apps/web/app/(auth)/reset-password/page.tsx"
+  },
+  {
+    "route": "/admin-dashboard",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-dashboard/page.tsx"
+  },
+  {
+    "route": "/admin-inquiries",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-inquiries/page.tsx"
+  },
+  {
+    "route": "/admin-kyc",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-kyc/page.tsx"
+  },
+  {
+    "route": "/admin-listings",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-listings/page.tsx"
+  },
+  {
+    "route": "/admin-logs",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-logs/page.tsx"
+  },
+  {
+    "route": "/admin-roles",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-roles/page.tsx"
+  },
+  {
+    "route": "/admin-settings",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-settings/page.tsx"
+  },
+  {
+    "route": "/admin-support",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-support/page.tsx"
+  },
+  {
+    "route": "/admin-tenants/[id]",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-tenants/[id]/page.tsx"
+  },
+  {
+    "route": "/admin-tenants",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-tenants/page.tsx"
+  },
+  {
+    "route": "/admin-users",
+    "role": "SUPER ADMIN",
+    "source": "apps/web/app/(dashboard)/admin-users/page.tsx"
+  },
+  {
+    "route": "/bookings/[id]",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/bookings/[id]/page.tsx"
+  },
+  {
+    "route": "/bookings",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/bookings/page.tsx"
+  },
+  {
+    "route": "/budget-plans",
+    "role": "OTHER CONFIRMED MODULES \u2014 FINANCE",
+    "source": "apps/web/app/(dashboard)/budget-plans/page.tsx"
+  },
+  {
+    "route": "/compliance/[id]",
+    "role": "VISA AGENCY",
+    "source": "apps/web/app/(dashboard)/compliance/[id]/page.tsx"
+  },
+  {
+    "route": "/compliance",
+    "role": "VISA AGENCY",
+    "source": "apps/web/app/(dashboard)/compliance/page.tsx"
+  },
+  {
+    "route": "/connections",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/connections/page.tsx"
+  },
+  {
+    "route": "/dashboard",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/dashboard/page.tsx"
+  },
+  {
+    "route": "/discover",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/discover/page.tsx"
+  },
+  {
+    "route": "/finance/invoices/[id]",
+    "role": "OTHER CONFIRMED MODULES \u2014 FINANCE",
+    "source": "apps/web/app/(dashboard)/finance/invoices/[id]/page.tsx"
+  },
+  {
+    "route": "/finance",
+    "role": "OTHER CONFIRMED MODULES \u2014 FINANCE",
+    "source": "apps/web/app/(dashboard)/finance/page.tsx"
+  },
+  {
+    "route": "/finance-dashboard",
+    "role": "OTHER CONFIRMED MODULES \u2014 FINANCE",
+    "source": "apps/web/app/(dashboard)/finance-dashboard/page.tsx"
+  },
+  {
+    "route": "/finance-payments",
+    "role": "OTHER CONFIRMED MODULES \u2014 FINANCE",
+    "source": "apps/web/app/(dashboard)/finance-payments/page.tsx"
+  },
+  {
+    "route": "/groups/[id]",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/groups/[id]/page.tsx"
+  },
+  {
+    "route": "/groups",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/groups/page.tsx"
+  },
+  {
+    "route": "/hotel-bookings",
+    "role": "HOTEL",
+    "source": "apps/web/app/(dashboard)/hotel-bookings/page.tsx"
+  },
+  {
+    "route": "/hotel-dashboard",
+    "role": "HOTEL",
+    "source": "apps/web/app/(dashboard)/hotel-dashboard/page.tsx"
+  },
+  {
+    "route": "/hotels/[id]",
+    "role": "HOTEL",
+    "source": "apps/web/app/(dashboard)/hotels/[id]/page.tsx"
+  },
+  {
+    "route": "/hotels",
+    "role": "HOTEL",
+    "source": "apps/web/app/(dashboard)/hotels/page.tsx"
+  },
+  {
+    "route": "/marketplace/[id]",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/marketplace/[id]/page.tsx"
+  },
+  {
+    "route": "/marketplace",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/marketplace/page.tsx"
+  },
+  {
+    "route": "/messages",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/messages/page.tsx"
+  },
+  {
+    "route": "/my-bookings",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/my-bookings/page.tsx"
+  },
+  {
+    "route": "/my-offers",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/my-offers/page.tsx"
+  },
+  {
+    "route": "/packages",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/packages/page.tsx"
+  },
+  {
+    "route": "/pilgrims/[id]",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/pilgrims/[id]/page.tsx"
+  },
+  {
+    "route": "/pilgrims",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/pilgrims/page.tsx"
+  },
+  {
+    "route": "/profile",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/profile/page.tsx"
+  },
+  {
+    "route": "/reports",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/reports/page.tsx"
+  },
+  {
+    "route": "/requests/[id]",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/requests/[id]/page.tsx"
+  },
+  {
+    "route": "/requests",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/requests/page.tsx"
+  },
+  {
+    "route": "/settings",
+    "role": "OPERATOR / SHARED",
+    "source": "apps/web/app/(dashboard)/settings/page.tsx"
+  },
+  {
+    "route": "/social",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/social/page.tsx"
+  },
+  {
+    "route": "/transport/assignments",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/assignments/page.tsx"
+  },
+  {
+    "route": "/transport/bookings",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/bookings/page.tsx"
+  },
+  {
+    "route": "/transport/drivers/[id]",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/drivers/[id]/page.tsx"
+  },
+  {
+    "route": "/transport/drivers",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/drivers/page.tsx"
+  },
+  {
+    "route": "/transport",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/page.tsx"
+  },
+  {
+    "route": "/transport/routes/[id]",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/routes/[id]/page.tsx"
+  },
+  {
+    "route": "/transport/routes",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/routes/page.tsx"
+  },
+  {
+    "route": "/transport/vehicles/[id]",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/vehicles/[id]/page.tsx"
+  },
+  {
+    "route": "/transport/vehicles",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport/vehicles/page.tsx"
+  },
+  {
+    "route": "/transport-dashboard",
+    "role": "TRANSPORT",
+    "source": "apps/web/app/(dashboard)/transport-dashboard/page.tsx"
+  },
+  {
+    "route": "/travel-plan",
+    "role": "TRAVELER",
+    "source": "apps/web/app/(dashboard)/travel-plan/page.tsx"
+  },
+  {
+    "route": "/visa-dashboard",
+    "role": "VISA AGENCY",
+    "source": "apps/web/app/(dashboard)/visa-dashboard/page.tsx"
+  },
+  {
+    "route": "/visa-documents",
+    "role": "VISA AGENCY",
+    "source": "apps/web/app/(dashboard)/visa-documents/page.tsx"
+  },
+  {
+    "route": "/visa-requests/[id]",
+    "role": "VISA AGENCY",
+    "source": "apps/web/app/(dashboard)/visa-requests/[id]/page.tsx"
+  },
+  {
+    "route": "/visa-requests",
+    "role": "VISA AGENCY",
+    "source": "apps/web/app/(dashboard)/visa-requests/page.tsx"
+  },
+  {
+    "route": "/about",
+    "role": "PUBLIC",
+    "source": "apps/web/app/about/page.tsx"
+  },
+  {
+    "route": "/api-docs",
+    "role": "PUBLIC",
+    "source": "apps/web/app/api-docs/page.tsx"
+  },
+  {
+    "route": "/careers",
+    "role": "PUBLIC",
+    "source": "apps/web/app/careers/page.tsx"
+  },
+  {
+    "route": "/contact",
+    "role": "PUBLIC",
+    "source": "apps/web/app/contact/page.tsx"
+  },
+  {
+    "route": "/help",
+    "role": "PUBLIC",
+    "source": "apps/web/app/help/page.tsx"
+  },
+  {
+    "route": "/integrations",
+    "role": "PUBLIC",
+    "source": "apps/web/app/integrations/page.tsx"
+  },
+  {
+    "route": "/marketplace-preview",
+    "role": "PUBLIC",
+    "source": "apps/web/app/marketplace-preview/page.tsx"
+  },
+  {
+    "route": "/",
+    "role": "PUBLIC",
+    "source": "apps/web/app/page.tsx"
+  },
+  {
+    "route": "/partners",
+    "role": "PUBLIC",
+    "source": "apps/web/app/partners/page.tsx"
+  },
+  {
+    "route": "/pricing",
+    "role": "PUBLIC",
+    "source": "apps/web/app/pricing/page.tsx"
+  },
+  {
+    "route": "/privacy",
+    "role": "PUBLIC",
+    "source": "apps/web/app/privacy/page.tsx"
+  },
+  {
+    "route": "/resources/[slug]",
+    "role": "PUBLIC",
+    "source": "apps/web/app/resources/[slug]/page.tsx"
+  },
+  {
+    "route": "/resources",
+    "role": "PUBLIC",
+    "source": "apps/web/app/resources/page.tsx"
+  },
+  {
+    "route": "/security",
+    "role": "PUBLIC",
+    "source": "apps/web/app/security/page.tsx"
+  },
+  {
+    "route": "/signup",
+    "role": "AUTH",
+    "source": "apps/web/app/signup/page.tsx"
+  },
+  {
+    "route": "/social-preview",
+    "role": "PUBLIC",
+    "source": "apps/web/app/social-preview/page.tsx"
+  },
+  {
+    "route": "/solutions",
+    "role": "PUBLIC",
+    "source": "apps/web/app/solutions/page.tsx"
+  },
+  {
+    "route": "/terms",
+    "role": "PUBLIC",
+    "source": "apps/web/app/terms/page.tsx"
+  },
+  {
+    "route": "/workflow",
+    "role": "PUBLIC",
+    "source": "apps/web/app/workflow/page.tsx"
+  }
+]

@@ -1,0 +1,167 @@
+{
+  "scope": "HTTP checks of observed homepage assets and current public route fixtures; browser console captured separately",
+  "checks": [
+    {
+      "url": "http://localhost:3107/_next/static/css/d315ae46312e2852.css",
+      "status": 200,
+      "bytes": 67477,
+      "type": "text/css; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/_next/static/chunks/5b8f0dd8-638719a5f19f89cf.js",
+      "status": 200,
+      "bytes": 172838,
+      "type": "application/javascript; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/_next/static/chunks/2749-b3833dbfd114ac3c.js",
+      "status": 200,
+      "bytes": 124749,
+      "type": "application/javascript; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/_next/static/chunks/main-app-ae0605ab3ce50448.js",
+      "status": 200,
+      "bytes": 474,
+      "type": "application/javascript; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/_next/static/chunks/6780-bbf3f4d6c1b3bd05.js",
+      "status": 200,
+      "bytes": 27544,
+      "type": "application/javascript; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/_next/static/chunks/polyfills-42372ed130431b0a.js",
+      "status": 200,
+      "bytes": 112594,
+      "type": "application/javascript; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/logo-mark-light.png",
+      "status": 200,
+      "bytes": 325095,
+      "type": "image/png"
+    },
+    {
+      "url": "http://localhost:3107/logo-mark-light.png",
+      "status": 200,
+      "bytes": 325095,
+      "type": "image/png"
+    },
+    {
+      "url": "http://localhost:3107/_next/static/chunks/webpack-dfdb205832db0db9.js",
+      "status": 200,
+      "bytes": 4006,
+      "type": "application/javascript; charset=UTF-8"
+    },
+    {
+      "url": "http://localhost:3107/about",
+      "status": 200,
+      "bytes": 40456,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/api-docs",
+      "status": 200,
+      "bytes": 38453,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/careers",
+      "status": 200,
+      "bytes": 38600,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/contact",
+      "status": 200,
+      "bytes": 30818,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/help",
+      "status": 200,
+      "bytes": 46812,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/integrations",
+      "status": 200,
+      "bytes": 42783,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/marketplace-preview",
+      "status": 200,
+      "bytes": 33344,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/",
+      "status": 200,
+      "bytes": 71240,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/partners",
+      "status": 200,
+      "bytes": 43319,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/pricing",
+      "status": 200,
+      "bytes": 53467,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/privacy",
+      "status": 200,
+      "bytes": 32563,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/resources/best-times-to-visit-rawdah",
+      "status": 200,
+      "bytes": 42242,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/resources",
+      "status": 200,
+      "bytes": 52107,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/security",
+      "status": 200,
+      "bytes": 40375,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/social-preview",
+      "status": 200,
+      "bytes": 32356,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/solutions",
+      "status": 200,
+      "bytes": 80901,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/terms",
+      "status": 200,
+      "bytes": 33913,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "url": "http://localhost:3107/workflow",
+      "status": 200,
+      "bytes": 46323,
+      "type": "text/html; charset=utf-8"
+    }
+  ]
+}

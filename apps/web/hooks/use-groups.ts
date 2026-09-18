@@ -272,3 +272,7 @@ export function useGroupRelated(id?: string) {
     enabled: !!id,
   });
 }
+
+export function useMyGroups() {
+  return useQuery({ queryKey: ['groups', 'mine'], queryFn: async () => (await apiClient.get('/groups/mine')).data.data as any[] });
+}

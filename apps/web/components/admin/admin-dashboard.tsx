@@ -1,6 +1,6 @@
 'use client';
 import { LinkedStatBlock as KPI } from '@/components/ui/system';
-import { Button , QueryFailure } from '@/components/ui/system';
+import { Button , QueryFailure, StatBlock } from '@/components/ui/system';
 
 import Link from 'next/link';
 import {
@@ -39,9 +39,8 @@ export function AdminDashboard() {
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KPI label="Tenants" value={stats.tenants.total} sub={`across ${Object.keys(stats.tenants.byType).length} types`} icon={Building2} color="bg-brand-50 text-brand-700" href="/admin-tenants" />
-            <KPI label="Users" value={stats.users} sub="active users" icon={Users} color="bg-blue-50 text-blue-700" href="/admin-users" />
-            <KPI label="Bookings" value={stats.bookings} sub="all roles" icon={BookOpen} color="bg-green-50 text-green-700" href="/admin-tenants" />
-            <KPI label="Revenue" value={fmt(stats.revenue.collectedCents)} sub={`${fmt(stats.revenue.outstandingCents)} outstanding`} icon={Wallet} color="bg-saudi-50 text-saudi-700" href="/finance" />
+            <KPI label="Users" value={stats.users} sub="current accounts" icon={Users} color="bg-blue-50 text-blue-700" href="/admin-users" />
+            <StatBlock label="Bookings" value={stats.bookings} description="Across organizations" />
           </div>
 
           {/* Inventory tiles */}
@@ -101,14 +100,9 @@ export function AdminDashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <QuickAction href="/admin-tenants" label="All Tenants" icon={Building2} bg="bg-brand-50 text-brand-600" />
               <QuickAction href="/admin-users" label="All Users" icon={Users} bg="bg-blue-50 text-blue-600" />
-              <QuickAction href="/pilgrims" label="All Pilgrims" icon={UserCircle2} bg="bg-green-50 text-green-800" />
-              <QuickAction href="/bookings" label="All Bookings" icon={BookOpen} bg="bg-yellow-50 text-yellow-800" />
-              <QuickAction href="/groups" label="All Groups" icon={Users} bg="bg-purple-50 text-purple-600" />
               <QuickAction href="/admin-listings" label="All Listings" icon={Store} bg="bg-pink-50 text-pink-600" />
               <QuickAction href="/admin-kyc" label="KYC Verification" icon={ShieldCheck} bg="bg-yellow-50 text-yellow-700" />
               <QuickAction href="/admin-roles" label="Roles & Permissions" icon={Cog} bg="bg-blue-50 text-blue-700" />
-              <QuickAction href="/reports" label="Reports" icon={BarChart3} bg="bg-saudi-50 text-saudi-700" />
-              <QuickAction href="/finance" label="Finance" icon={Wallet} bg="bg-green-50 text-green-700" />
               <QuickAction href="/admin-logs" label="System Logs" icon={FileBarChart} bg="bg-gray-50 text-gray-700" />
               <QuickAction href="/admin-settings" label="Settings" icon={Cog} bg="bg-gray-50 text-gray-700" />
               <QuickAction href="/admin-support" label="Support / Issues" icon={LifeBuoy} bg="bg-red-50 text-red-600" />

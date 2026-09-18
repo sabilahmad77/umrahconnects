@@ -18,17 +18,17 @@ export function AdminSupportView() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SupportTile
-          href="/marketplace"
+          href="/admin-inquiries"
           icon={MessageSquare}
-          title="Marketplace inquiries"
-          subtitle="Customer questions about listings"
+          title="Platform inquiries"
+          subtitle="Contact, support, partner and demo submissions"
           color="bg-blue-50 text-blue-700"
         />
         <SupportTile
-          href="/requests"
+          href="/admin-listings"
           icon={Inbox}
-          title="Marketplace requests"
-          subtitle="Open service requests from travelers"
+          title="Listing moderation"
+          subtitle="Review marketplace listings across organizations"
           color="bg-purple-50 text-purple-700"
         />
         <SupportTile
@@ -48,10 +48,9 @@ export function AdminSupportView() {
       </div>
 
       <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
-        <p className="text-sm font-semibold text-yellow-800 mb-1">Dedicated support tickets — coming soon</p>
+        <p className="text-sm font-semibold text-yellow-800 mb-1">Dedicated support inbox unavailable</p>
         <p className="text-xs text-yellow-700">
-          A first-class <code>SupportTicket</code> model with status workflow, SLA tracking and assignment will be added here.
-          For now the four surfaces above are the working inbound channels.
+          No dedicated support inbox is connected. Use the supported platform inquiries, listing moderation, organization verification and audit channels above.
         </p>
       </div>
     </div>

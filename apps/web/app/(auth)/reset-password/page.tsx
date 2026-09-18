@@ -48,20 +48,19 @@ function ResetForm() {
           <p className="text-sm text-red-700">Missing reset token. Use the link from your reset email.</p>
         ) : (
           <div className="space-y-4">
-            <div>
-              <Input aria-label="Password" aria-describedby="reset-password-hint"
-                autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="New password"
-                className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
-              />
-              <p id="reset-password-hint" className="text-xs text-gray-600 mt-1">{PASSWORD_HINT}</p>
-            </div>
-            <Input aria-label="Confirm"
+            <label className="block text-sm font-medium">New password<Input aria-describedby="reset-password-hint"
+              autoComplete="new-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder="New password"
+              className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
+            />
+            </label>
+            <p id="reset-password-hint" className="-mt-2 text-xs text-gray-600">{PASSWORD_HINT}</p>
+            <label className="block text-sm font-medium">Confirm new password<Input
               autoComplete="new-password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
               placeholder="Confirm new password"
               className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none focus:border-brand-400"
             />
-            <Button variant="quiet" type="button"
+            </label><Button variant="quiet" type="button"
               onClick={submit} disabled={busy}
               className="w-full flex items-center justify-center gap-2 py-3 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm rounded-xl disabled:opacity-60"
             >

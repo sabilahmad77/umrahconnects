@@ -4,21 +4,23 @@ import Link from 'next/link';
 import { Loader2, Users2, CalendarCheck2, FileCheck2, Bus, MapPin } from 'lucide-react';
 import { Alert, ErrorState , QueryFailure } from '@/components/ui/system';
 import { useMyMarketplaceBookings } from '@/hooks/use-marketplace';
+import { useMyGroups } from '@/hooks/use-groups';
 import { useMyRequests } from '@/hooks/use-platform';
 
 export function TravelPlanView() {
   const { data: bookings = [], isLoading: bl, error: bookingError, refetch: retryBookings } = useMyMarketplaceBookings();
   const { data: requests, isLoading: rl, error: requestError, refetch: retryRequests } = useMyRequests();
 
+  const { data: groups = [], isLoading: gl, error: groupError, refetch: retryGroups } = useMyGroups();
   const myRequests = requests?.items ?? [];
-  const isLoading = bl || rl;
+  const isLoading = bl || rl || gl;
 
-  if (bookingError || requestError) return <QueryFailure error={bookingError || requestError} onRetry={() => { retryBookings(); retryRequests(); }} />;
+  if (bookingError || requestError || groupError) return <QueryFailure error={bookingError || requestError || groupError} onRetry={() => { retryBookings(); retryRequests(); retryGroups(); }} />;
   if (isLoading) {
     return <div className="flex items-center justify-center py-20 text-gray-600 text-sm"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Building your travel plan…</div>;
   }
 
-  if (bookingError || requestError) return <ErrorState onRetry={() => { retryBookings(); retryRequests(); }} />;
+
 
 
   return (
@@ -83,7 +85,7 @@ export function TravelPlanView() {
         )}
       </Section>
 
-      <Alert tone="info" title="Group and visa tracking"><p>Personal group membership and visa tracking are not available in this workspace yet. Contact your operator for your itinerary and application updates.</p></Alert>
+      <section id="my-groups" className="space-y-3"><h2 className="text-sm font-semibold">My groups</h2>{groups.length ? <ul className="space-y-2">{groups.map((group: any) => <li key={group.id} className="uc-card"><p className="font-semibold">{group.name}</p><p className="mt-1 text-sm text-gray-600">{group.description || group.status || "Group membership"}</p></li>)}</ul> : <Empty>You are not a member of any groups yet.</Empty>}</section><Alert tone="info" title="Personal visa tracking unavailable"><p>Personal visa status is not linked to your account yet. Contact your operator for application updates.</p></Alert>
     </div>
   );
 }

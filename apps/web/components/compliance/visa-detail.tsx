@@ -197,7 +197,7 @@ function Overview({ v }: { v: any }) {
               <p className="font-medium text-gray-900">{pkg.name ?? pkg.title ?? '—'}</p>
               {pkg.code && <p className="text-xs text-gray-600">Code: {pkg.code}</p>}
               {pkg.id && (
-                <Link href={`/packages/${pkg.id}`} className="text-xs text-brand-600 hover:underline inline-block mt-1">
+                <Link href="/packages" className="text-xs text-brand-600 hover:underline inline-block mt-1">
                   View package →
                 </Link>
               )}

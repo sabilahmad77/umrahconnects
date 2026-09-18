@@ -1,0 +1,7 @@
+'use client';
+import { useState } from 'react';
+import { useAuthContext } from '@/components/providers/auth-provider';
+import { loadSessionUser } from '@/lib/session';
+import { apiClient } from '@/lib/api';
+import { Alert, Button } from '@/components/ui/system';
+export function EmailVerificationNotice(){const {user,setUser}=useAuthContext();const [busy,setBusy]=useState(false);const [message,setMessage]=useState('');const [error,setError]=useState('');if(user?.emailVerified!==false)return null;const request=async()=>{setBusy(true);setError('');try{const {data}=await apiClient.post('/auth/verify-email/request',{});if(data.data.alreadyVerified){setUser(await loadSessionUser());setMessage('Your email is already verified.');}else{setMessage(data.data.delivered===true?'Verification instructions have been requested. Contact support if they do not arrive.':'Verification delivery is unavailable. Contact support.');}}catch(e:any){setError(e?.response?.data?.error?.message||'Verification email could not be requested.');}finally{setBusy(false);}};return <div className="mb-6 space-y-3"><Alert tone="info" title="Verify your email"><p>Email verification is required before provider onboarding.</p><Button variant="secondary" busy={busy} onClick={request} className="mt-3">Resend verification email</Button>{message&&<p role="status" className="mt-3">{message}</p>}</Alert>{error&&<Alert title="Unable to send verification email">{error}</Alert>}</div>;}

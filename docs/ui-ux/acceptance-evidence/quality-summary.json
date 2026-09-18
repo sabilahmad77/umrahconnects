@@ -1,0 +1,24 @@
+{
+  "at": "2026-09-17T21:43:06.850666+00:00",
+  "frontendHead": "91ad20d2c98e0c709ce0c56cf2f812baa998cbfd",
+  "backendHead": "83bc3d52b3a282068cb984d0b605ecaea5b0d9e6",
+  "frontendOrigin": "http://localhost:3107",
+  "apiOrigin": "http://localhost:4201/api/v1",
+  "activeRouteFamilies": 82,
+  "requiredViewportWidths": [
+    1440,
+    1280,
+    768,
+    390
+  ],
+  "minimumRouteViewportPairs": 328,
+  "recordedVisits": 683,
+  "latestRoleRouteViewportChecks": 399,
+  "missingRequiredPairs": [],
+  "latestDocumentOverflow": 0,
+  "latestUnnamedControls": 0,
+  "testsPassed": 45,
+  "finalConsoleWarningsAndErrors": 0,
+  "gate": "PASS",
+  "scope": "Frontend implementation gate; external provider and positive fixture coverage exclusions documented"
+}

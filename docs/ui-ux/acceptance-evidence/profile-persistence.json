@@ -1,0 +1,19 @@
+{
+  "role": "Traveler",
+  "temporaryBioPersisted": true,
+  "originalBio": "",
+  "restoreSubmitted": true,
+  "nationalityPaddingDefect": "API CHAR(2) empty value reloads as spaces; frontend normalization required",
+  "originalBioRestoredAfterReload": true,
+  "normalizedEmptyNationalitySaveSucceeded": true,
+  "reloadedValues": [
+    {
+      "label": "Nationality",
+      "value": ""
+    },
+    {
+      "label": "Bio",
+      "value": ""
+    }
+  ]
+}

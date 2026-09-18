@@ -1,5 +1,6 @@
 'use client';
 import { apiErrorMessage } from '@/lib/api-error';
+import { bookingTransitions } from '@/lib/booking-transitions';
 import { Input, Select, Textarea, ModalSurface , Button , QueryFailure } from '@/components/ui/system';
 
 
@@ -38,16 +39,6 @@ const TYPE_ICON: Record<string, any> = {
   other: Building2,
 };
 
-// Mirrors BOOKING_TRANSITIONS in the marketplace service: the server refuses any
-// other move, so the UI must not offer one.
-const BOOKING_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['COMPLETED', 'CANCELLED'],
-  PAID: ['COMPLETED'],
-  COMPLETED: [],
-  CANCELLED: [],
-  REFUNDED: [],
-};
 
 export function ListingDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -367,7 +358,7 @@ function BookingsTab({ listingId }: { listingId: string }) {
                 <td className="p-3">{b.partySize}</td>
                 <td className="p-3 font-medium">{b.currency} {(b.totalAmountCents / 100).toLocaleString()}</td>
                 <td className="p-3">
-                  <Select disabled={update.isPending} aria-label={`Status for ${b.id ?? 'record'}`}
+                  <Select disabled={update.isPending || bookingTransitions(b.status).length===0} aria-label={`Status for ${b.id ?? 'record'}`}
                     value={b.status}
                     onChange={async (e) => { try {
                       await update.mutateAsync({ id: b.id, status: e.target.value });
@@ -378,7 +369,7 @@ function BookingsTab({ listingId }: { listingId: string }) {
                     {/* Only the transitions the server will actually accept from the
                         current state. PAID and REFUNDED are owned by the payments
                         module and are rejected here, so they are never offered. */}
-                    {[b.status, ...(BOOKING_TRANSITIONS[String(b.status).toUpperCase()] ?? [])]
+                    {[b.status, ...bookingTransitions(b.status)]
                       .filter((s, i, a) => s && a.indexOf(s) === i)
                       .map((s: string) => <option key={s} value={s}>{s}</option>)}
                   </Select>

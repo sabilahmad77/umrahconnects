@@ -2,16 +2,8 @@
 
 import { useState, useCallback } from 'react';
 import { apiClient } from '@/lib/api';
-import {
-  decodeJwt,
-  inferDashboardType,
-  setStoredUser,
-  setToken,
-  clearAuth,
-  getStoredUser,
-  type StoredUser,
-  type DashboardType,
-} from '@/lib/auth';
+import { acceptSession } from '@/lib/session';
+import { clearAuth, getStoredUser, type StoredUser, type DashboardType } from '@/lib/auth';
 
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -28,32 +20,11 @@ export function useAuth() {
       setIsLoading(true);
       try {
         const { data } = await apiClient.post('/auth/login', { email, password, ...(tenantId ? { tenantId } : {}) });
-        const { accessToken } = data.data;
-
-        const decoded = decodeJwt(accessToken);
-        const roles = decoded?.roles ?? [];
-        if (!accessToken || !decoded?.sub || !roles.length) throw new Error('Your account workspace is not ready. Contact support to complete account setup.');
-        const dashboardType = inferDashboardType(roles);
-
-        const user: StoredUser = {
-          id: decoded?.sub ?? '',
-          email,
-          tenantId: decoded?.tenantId ?? tenantId ?? '',
-          tenantName: '',
-          tenantSlug: '',
-          // No default: claiming OPERATOR for an unclassified workspace showed a
-          // made-up "Workspace type" in Settings. Empty renders "Not provided".
-          tenantType: decoded?.tenantType ?? '',
-          roles,
-          dashboardType,
-          displayName: decoded?.email?.split('@')[0] ?? email.split('@')[0],
-        };
-
-        setToken(accessToken);
-        // The refresh token is never stored by the page: the API returns it as an
-        // httpOnly cookie that scripts cannot read.
-        setStoredUser(user);
-        return user;
+        // The profile (roles, capabilities, verification state) comes from
+        // /auth/me, not from the token claims, so the UI is bound to what the
+        // server currently grants. The refresh token is an httpOnly cookie that
+        // page scripts never see.
+        return await acceptSession(data.data.accessToken);
       } finally {
         setIsLoading(false);
       }
@@ -63,8 +34,9 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     // Empty body: the API revokes whichever refresh token the httpOnly cookie
-    // carries, and clears the cookie.
-    await apiClient.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
+    // carries, and clears the cookie. A failure is surfaced to the caller rather
+    // than hidden, because the cookie would otherwise silently resume the session.
+    await apiClient.post('/auth/logout', {});
     clearAuth();
     window.location.href = '/login';
   }, []);

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PublicHeader, PublicFooter } from '@/components/public/public-chrome';
+import { validPassword } from '@/lib/password-policy';
 import { apiClient } from '@/lib/api';
 
 // Role interest is sent to registration; it does not assign permissions or activate a workspace.
@@ -58,7 +59,7 @@ export default function SignupPage() {
         password: form.password,
         roleInterest: role,
       });
-      toast.success('Account created. Sign in to check your account setup.');
+      toast.success('Traveler account created. Sign in to continue.');
       router.push(`/login?email=${encodeURIComponent(form.email.trim())}`);
     } catch (e: any) {
       setErr(apiErrorMessage(e, 'Could not create your account. This email may already be registered.'));
@@ -126,7 +127,7 @@ export default function SignupPage() {
                 {role && (
                   <div className="flex items-start gap-2 bg-gold-50 border border-gold-200 rounded-xl p-3 mb-4">
                     <CheckCircle2 className="h-4 w-4 text-gold-800 shrink-0 mt-0.5" />
-                    <p className="text-[12px] text-gold-800">Role interest does not grant workspace access. Contact support if your account setup is incomplete.</p>
+                    <p className="text-[12px] text-gold-800">Every new account starts as a Traveler. Provider workspaces require verified email and organization onboarding. Finance access is assigned by your organization.</p>
                   </div>
                 )}
                 <form onSubmit={event => { event.preventDefault(); void submit(); }} method="post" className="space-y-3.5">

@@ -1,0 +1,62 @@
+- link "Skip to content":
+  - /url: "#workspace-main"
+- banner:
+  - button "Open workspace navigation":
+  - paragraph: Operator workspace
+  - paragraph: Al-Haramain Ground Services
+  - button "Notifications":
+  - button "Account menu":
+    - generic "Sara Operations": SO
+- main:
+  - button "Go back":
+  - heading "INV-2026-52321" [level=1]
+  - paragraph: SAR 500 · BP09 Browser Payer
+  - generic: PARTIALLY PAID
+  - button "overview"
+  - button "payments" [active]
+  - heading "Card payment" [level=2]
+  - status:
+    - paragraph: Payment permission required
+    - generic: Your account can view the invoice but cannot collect payments.
+  - heading "Record a payment" [level=2]:
+    - text: Record a payment
+  - generic: "Outstanding: SAR 470"
+  - paragraph: Your account cannot record payments.
+  - heading "Payments (5)" [level=2]:
+    - text: Payments (5)
+  - region "Scrollable records":
+    - table:
+      - rowgroup:
+        - row "Date Method Amount Status":
+          - columnheader "Date"
+          - columnheader "Method"
+          - columnheader "Amount"
+          - columnheader "Status"
+      - rowgroup:
+        - row "9/17/2026, 4:11:28 PM sandbox SAR 25 FAILED":
+          - cell "9/17/2026, 4:11:28 PM"
+          - cell "sandbox"
+          - cell "SAR 25"
+          - cell "FAILED"
+        - row "9/17/2026, 4:11:29 PM sandbox SAR 30 COMPLETED":
+          - cell "9/17/2026, 4:11:29 PM"
+          - cell "sandbox"
+          - cell "SAR 30"
+          - cell "COMPLETED"
+        - row "9/17/2026, 4:11:31 PM sandbox SAR 20 REFUNDED":
+          - cell "9/17/2026, 4:11:31 PM"
+          - cell "sandbox"
+          - cell "SAR 20"
+          - cell "REFUNDED"
+        - row "9/17/2026, 9:25:52 PM sandbox SAR 10 REFUNDED":
+          - cell "9/17/2026, 9:25:52 PM"
+          - cell "sandbox"
+          - cell "SAR 10"
+          - cell "REFUNDED"
+        - row "9/17/2026, 10:07:21 PM sandbox SAR 10 REFUNDED":
+          - cell "9/17/2026, 10:07:21 PM"
+          - cell "sandbox"
+          - cell "SAR 10"
+          - cell "REFUNDED"
+- region "Notifications alt+T"
+- alert

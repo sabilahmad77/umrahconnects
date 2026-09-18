@@ -1,0 +1,286 @@
+{
+  "Traveler": {
+    "roles": [
+      "PILGRIM"
+    ],
+    "tenantType": "OPERATOR",
+    "routes": {
+      "/social/feed": [
+        {
+          "id": "4c2521ab-26b6-498b-bc44-5c70d3de99b1",
+          "name": null
+        },
+        {
+          "id": "c9be1e0d-1391-4052-a2b5-067417a8eee0",
+          "name": null
+        },
+        {
+          "id": "331edb77-e679-40cc-b3ce-235d31f445eb",
+          "name": null
+        }
+      ]
+    }
+  },
+  "Operator": {
+    "roles": [
+      "Operator Admin",
+      "OPERATOR_ADMIN"
+    ],
+    "tenantType": "MU_ASSASA",
+    "routes": {
+      "/pilgrims": [
+        {
+          "id": "7e28780b-80c6-4bf1-9b46-790823be7d17",
+          "name": null
+        },
+        {
+          "id": "ec778eb6-1357-425b-8cdf-ed77f77be3ce",
+          "name": null
+        },
+        {
+          "id": "76d53416-e749-423e-9682-8be8ed00036d",
+          "name": null
+        }
+      ],
+      "/bookings": [
+        {
+          "id": "4e46e167-838a-4175-9db2-ece23e910ce6",
+          "name": null
+        }
+      ],
+      "/groups": [
+        {
+          "id": "88ea3e1b-a188-4952-aa76-b0f03bf62ff6",
+          "name": "Hajj Delegation 1447H"
+        },
+        {
+          "id": "0661949a-2fdb-4751-a2b6-d59d9fdbdb20",
+          "name": "Ramadan Group B \u2014 Economy Package"
+        },
+        {
+          "id": "0affb832-d971-44d0-b81e-7a209deedc33",
+          "name": "Ramadan Group A \u2014 Makkah Priority"
+        }
+      ],
+      "/marketplace/listings": [
+        {
+          "id": "d2f6dddd-0348-4634-949f-bd12dfd35cc0",
+          "name": "Umrah Visa Processing \u2014 Nusuk"
+        },
+        {
+          "id": "b895d0cd-a20a-47b1-bd99-330c8bacf72d",
+          "name": "Makkah \u2194 Madinah Coach (per seat)"
+        },
+        {
+          "id": "c4222e0e-4f47-4ff0-ad4f-dc5ac7b2e7b4",
+          "name": "Jeddah Airport \u2192 Makkah Transfer (Private)"
+        }
+      ],
+      "/hotels": [
+        {
+          "id": "a3ef8a38-5bef-4a58-a3e6-dca08b6168c1",
+          "name": "Dar Al Eiman Grand"
+        },
+        {
+          "id": "1c16aa0a-1623-4b0e-a2c1-4b486844c6e8",
+          "name": "Al Safwah Royale Orchid"
+        },
+        {
+          "id": "b309b8c5-bfba-4f70-8856-d3ec8f056194",
+          "name": "Anwar Al Madinah Movenpick"
+        }
+      ],
+      "/transport/vehicles": [
+        {
+          "id": "c7106f6a-4496-45d4-bf38-6b95af2a76fa",
+          "name": null
+        },
+        {
+          "id": "debd4fa6-ce9c-4618-8a3e-6dad38a0b307",
+          "name": null
+        },
+        {
+          "id": "ba24e59b-532f-4508-b327-5787ad79c33f",
+          "name": null
+        }
+      ],
+      "/transport/drivers": [
+        {
+          "id": "1dea87c0-a41e-4c03-b708-d1750b75df34",
+          "name": null
+        },
+        {
+          "id": "88eeaa58-0c26-4e4b-9fdf-c52414475a04",
+          "name": null
+        },
+        {
+          "id": "1e5fdf75-f12b-4089-9152-b9207dbaec21",
+          "name": null
+        }
+      ],
+      "/transport/routes": [
+        {
+          "id": "2c758c70-e203-4558-bec3-abbcef5309ca",
+          "name": "Makkah \u2192 Madinah Express"
+        },
+        {
+          "id": "eed91c6c-6351-4bfa-8219-fbee0a78ebb2",
+          "name": "Jeddah Airport \u2192 Makkah Hotels"
+        },
+        {
+          "id": "715e6bbe-b6c6-45a7-ad70-e1f761e6efe6",
+          "name": "Makkah \u2192 Mina (Hajj Mashaa'er)"
+        }
+      ],
+      "/compliance/visas": [
+        {
+          "id": "70849914-03b1-45a7-9540-7ed39d190070",
+          "name": null
+        },
+        {
+          "id": "5863b9da-a9a1-43bb-85f6-da2aac51461d",
+          "name": null
+        },
+        {
+          "id": "6cc162ca-2c81-4a45-84c6-936cb0fac6e3",
+          "name": null
+        }
+      ],
+      "/packages": [
+        {
+          "id": "1e31d52e-9a8b-46cb-ab86-307bb83b41ab",
+          "name": "Ramadan VIP Umrah Package 2026"
+        }
+      ]
+    }
+  },
+  "Staff": {
+    "roles": [
+      "OPERATOR_STAFF"
+    ],
+    "tenantType": "MU_ASSASA",
+    "routes": {
+      "/pilgrims": [
+        {
+          "id": "7e28780b-80c6-4bf1-9b46-790823be7d17",
+          "name": null
+        },
+        {
+          "id": "ec778eb6-1357-425b-8cdf-ed77f77be3ce",
+          "name": null
+        },
+        {
+          "id": "76d53416-e749-423e-9682-8be8ed00036d",
+          "name": null
+        }
+      ],
+      "/groups": [
+        {
+          "id": "88ea3e1b-a188-4952-aa76-b0f03bf62ff6",
+          "name": "Hajj Delegation 1447H"
+        },
+        {
+          "id": "0661949a-2fdb-4751-a2b6-d59d9fdbdb20",
+          "name": "Ramadan Group B \u2014 Economy Package"
+        },
+        {
+          "id": "0affb832-d971-44d0-b81e-7a209deedc33",
+          "name": "Ramadan Group A \u2014 Makkah Priority"
+        }
+      ]
+    }
+  },
+  "Finance": {
+    "roles": [
+      "FINANCE_MANAGER"
+    ],
+    "tenantType": "MU_ASSASA",
+    "routes": {
+      "/finance/invoices": [
+        {
+          "id": "1fde6e8f-1cd5-4075-a4c6-cebef4699f06",
+          "name": null
+        },
+        {
+          "id": "ad6cd73c-d15a-4a38-943b-70b783d91709",
+          "name": null
+        },
+        {
+          "id": "6923c50e-f4c0-48ba-beb6-9901c58e8e9c",
+          "name": null
+        }
+      ],
+      "/finance/payments": [
+        {
+          "id": "7254c93a-7409-4c30-b11f-bf7d8e3fb10c",
+          "name": null
+        },
+        {
+          "id": "21cbdecb-5e8c-4315-a43e-f61c0536b1f2",
+          "name": null
+        },
+        {
+          "id": "67ad988f-21e2-4588-94db-2af684aabbe8",
+          "name": null
+        }
+      ]
+    }
+  },
+  "Hotel": {
+    "roles": [
+      "HOTEL_MANAGER"
+    ],
+    "tenantType": "VENDOR_HOTEL",
+    "routes": {}
+  },
+  "Transport": {
+    "roles": [
+      "TRANSPORT_MANAGER"
+    ],
+    "tenantType": "VENDOR_TRANSPORT",
+    "routes": {}
+  },
+  "Visa": {
+    "roles": [
+      "VISA_OFFICER"
+    ],
+    "tenantType": "VENDOR_VISA",
+    "routes": {}
+  },
+  "Super Admin": {
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "tenantType": "PLATFORM",
+    "routes": {
+      "/admin/tenants": [
+        {
+          "id": "201dc101-687e-4635-9b31-561bc5957b68",
+          "name": "FastVisa Agency (demo)"
+        },
+        {
+          "id": "addfaf9c-76cf-4644-8fc4-e0c1d8b1ea3f",
+          "name": "Haramain Transport Co. (demo)"
+        },
+        {
+          "id": "ca4eb0e2-421e-4dfb-8174-e142caacadea",
+          "name": "Makkah Grand Hotels (demo)"
+        }
+      ],
+      "/admin/users": [
+        {
+          "id": "ff9e4d4b-9751-4ad0-88e7-ff706ab87f6c",
+          "name": null
+        },
+        {
+          "id": "79ec7d57-1bce-4331-ad67-aebac7602de9",
+          "name": null
+        },
+        {
+          "id": "a4bef62c-55d0-4ba1-a88d-b56cd730a62b",
+          "name": null
+        }
+      ]
+    }
+  }
+}

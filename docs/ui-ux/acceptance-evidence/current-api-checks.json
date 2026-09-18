@@ -1,0 +1,548 @@
+{
+  "at": "2026-09-17T21:05:54Z",
+  "origin": "http://localhost:4201/api/v1",
+  "checks": [
+    {
+      "role": "Traveler",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Traveler",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "PILGRIM"
+      ],
+      "tenantType": "OPERATOR",
+      "tenantSlug": "umrah-connect-travelers",
+      "permissionsCount": 3
+    },
+    {
+      "role": "Traveler",
+      "action": "/groups/mine",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Traveler",
+      "action": "/marketplace/bookings/mine",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Traveler",
+      "action": "/payments/providers",
+      "status": 200,
+      "count": 0,
+      "message": null,
+      "providers": {
+        "active": "sandbox",
+        "providers": [
+          {
+            "name": "sandbox",
+            "configured": true,
+            "missing": [],
+            "sandbox": true
+          },
+          {
+            "name": "stripe",
+            "configured": false,
+            "missing": [
+              "STRIPE_SECRET_KEY",
+              "STRIPE_WEBHOOK_SECRET"
+            ],
+            "sandbox": false,
+            "publishableKey": null,
+            "testMode": false
+          }
+        ]
+      }
+    },
+    {
+      "role": "Traveler",
+      "action": "/social/feed",
+      "status": 200,
+      "count": 14,
+      "message": null
+    },
+    {
+      "role": "Traveler",
+      "action": "/compliance/visas",
+      "status": 403,
+      "count": 0,
+      "message": "Missing required permissions: visa:application:read"
+    },
+    {
+      "role": "Traveler",
+      "action": "/admin/tenants",
+      "status": 403,
+      "count": 0,
+      "message": "Missing required permissions: platform:tenant:read"
+    },
+    {
+      "role": "Traveler",
+      "action": "/auth/verify-email/request (safe validation/recovery)",
+      "status": 200,
+      "message": null
+    },
+    {
+      "role": "Traveler",
+      "action": "/onboarding/organization (safe validation/recovery)",
+      "status": 400,
+      "message": [
+        "type must be one of the following values: OPERATOR, MU_ASSASA, VENDOR_HOTEL, VENDOR_TRANSPORT, VENDOR_VISA",
+        "name must be shorter than or equal to 255 characters",
+        "name must be longer than or equal to 2 characters",
+        "name must be a string",
+        "country must be a valid ISO31661 Alpha2 code"
+      ]
+    },
+    {
+      "role": "Traveler",
+      "action": "/auth/reset-password (safe validation/recovery)",
+      "status": 401,
+      "message": "Reset link is invalid or has expired."
+    },
+    {
+      "role": "Traveler",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Traveler",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Operator",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Operator",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "Operator Admin",
+        "OPERATOR_ADMIN"
+      ],
+      "tenantType": "MU_ASSASA",
+      "tenantSlug": "al-haramain-ksa",
+      "permissionsCount": 46
+    },
+    {
+      "role": "Operator",
+      "action": "/pilgrims",
+      "status": 200,
+      "count": 5,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/bookings",
+      "status": 200,
+      "count": 1,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/groups",
+      "status": 200,
+      "count": 3,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/marketplace/listings",
+      "status": 200,
+      "count": 9,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/admin/tenants",
+      "status": 403,
+      "count": 0,
+      "message": "Missing required permissions: platform:tenant:read"
+    },
+    {
+      "role": "Operator",
+      "action": "/tenants/me/kyc",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/hotels",
+      "status": 200,
+      "count": 5,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/transport/vehicles",
+      "status": 200,
+      "count": 4,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/transport/drivers",
+      "status": 200,
+      "count": 3,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/transport/routes",
+      "status": 200,
+      "count": 3,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/compliance/visas",
+      "status": 200,
+      "count": 20,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "/packages",
+      "status": 200,
+      "count": 1,
+      "message": null
+    },
+    {
+      "role": "Operator",
+      "action": "server price mismatch rejection (non-creating)",
+      "status": 400,
+      "message": "The booking total has changed. Refresh the listing and try again."
+    },
+    {
+      "role": "Operator",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Operator",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Staff",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Staff",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "OPERATOR_STAFF"
+      ],
+      "tenantType": "MU_ASSASA",
+      "tenantSlug": "al-haramain-ksa",
+      "permissionsCount": 22
+    },
+    {
+      "role": "Staff",
+      "action": "/pilgrims",
+      "status": 200,
+      "count": 5,
+      "message": null
+    },
+    {
+      "role": "Staff",
+      "action": "/groups",
+      "status": 200,
+      "count": 3,
+      "message": null
+    },
+    {
+      "role": "Staff",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Staff",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Finance",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Finance",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "FINANCE_MANAGER"
+      ],
+      "tenantType": "MU_ASSASA",
+      "tenantSlug": "al-haramain-ksa",
+      "permissionsCount": 13
+    },
+    {
+      "role": "Finance",
+      "action": "/finance/invoices",
+      "status": 200,
+      "count": 12,
+      "message": null
+    },
+    {
+      "role": "Finance",
+      "action": "/finance/payments",
+      "status": 200,
+      "count": 20,
+      "message": null
+    },
+    {
+      "role": "Finance",
+      "action": "/payments/providers",
+      "status": 200,
+      "count": 0,
+      "message": null,
+      "providers": {
+        "active": "sandbox",
+        "providers": [
+          {
+            "name": "sandbox",
+            "configured": true,
+            "missing": [],
+            "sandbox": true
+          },
+          {
+            "name": "stripe",
+            "configured": false,
+            "missing": [
+              "STRIPE_SECRET_KEY",
+              "STRIPE_WEBHOOK_SECRET"
+            ],
+            "sandbox": false,
+            "publishableKey": null,
+            "testMode": false
+          }
+        ]
+      }
+    },
+    {
+      "role": "Finance",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Finance",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Hotel",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Hotel",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "HOTEL_MANAGER"
+      ],
+      "tenantType": "VENDOR_HOTEL",
+      "tenantSlug": "makkah-grand-hotels",
+      "permissionsCount": 21
+    },
+    {
+      "role": "Hotel",
+      "action": "/hotels",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Hotel",
+      "action": "/hotels/bookings",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Hotel",
+      "action": "/hotels/stats",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Hotel",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Hotel",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Transport",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Transport",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "TRANSPORT_MANAGER"
+      ],
+      "tenantType": "VENDOR_TRANSPORT",
+      "tenantSlug": "haramain-transport",
+      "permissionsCount": 21
+    },
+    {
+      "role": "Transport",
+      "action": "/transport/vehicles",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Transport",
+      "action": "/transport/assignments",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Transport",
+      "action": "/transport/stats",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Transport",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Transport",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Visa",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Visa",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "VISA_OFFICER"
+      ],
+      "tenantType": "VENDOR_VISA",
+      "tenantSlug": "fastvisa-agency",
+      "permissionsCount": 18
+    },
+    {
+      "role": "Visa",
+      "action": "/compliance/visas",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Visa",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Visa",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Super Admin",
+      "action": "login",
+      "status": 200
+    },
+    {
+      "role": "Super Admin",
+      "action": "authoritative profile",
+      "status": 200,
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "tenantType": "PLATFORM",
+      "tenantSlug": "umrah-connect-platform",
+      "permissionsCount": 12
+    },
+    {
+      "role": "Super Admin",
+      "action": "/admin/tenants",
+      "status": 200,
+      "count": 9,
+      "message": null
+    },
+    {
+      "role": "Super Admin",
+      "action": "/admin/users",
+      "status": 200,
+      "count": 18,
+      "message": null
+    },
+    {
+      "role": "Super Admin",
+      "action": "/admin/stats",
+      "status": 200,
+      "count": 0,
+      "message": null
+    },
+    {
+      "role": "Super Admin",
+      "action": "cookie-only refresh",
+      "status": 200,
+      "httpOnlyCookiePresent": true
+    },
+    {
+      "role": "Super Admin",
+      "action": "cookie logout",
+      "status": 200
+    },
+    {
+      "role": "Public",
+      "action": "/auth/google/status",
+      "status": 200,
+      "data": {
+        "enabled": false
+      }
+    },
+    {
+      "role": "Public",
+      "action": "/health",
+      "status": 200,
+      "data": {
+        "status": "ok",
+        "service": "umrah-connect-api",
+        "db": "connected",
+        "uptime": 1016,
+        "timestamp": "2026-09-17T21:05:54.128Z"
+      }
+    }
+  ]
+}

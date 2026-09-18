@@ -254,13 +254,15 @@ function PostCard({ post }: { post: any }) {
         </Button>
         <Button variant="quiet" type="button"
           onClick={async () => {
-            try { const res = await toggleSave(post.id); setSaved(res.saved); } catch { /* no-op */ }
+            try { const res = await toggleSave(post.id); setSaved(res.saved); } catch (error:any) { toast.error(error?.response?.data?.error?.message || 'This post could not be saved. Try again.'); }
           }}
           className={cn(
             'p-2 rounded-xl transition-colors',
             saved ? 'text-brand-600 bg-brand-50' : 'text-gray-600 hover:text-gray-600 hover:bg-gray-50',
           )}
           title={saved ? 'Saved' : 'Save'}
+          aria-label={saved ? 'Unsave post' : 'Save post'}
+          aria-pressed={saved}
         >
           <BookmarkPlus className={cn('h-[18px] w-[18px]', saved && 'fill-current')} />
         </Button>

@@ -1,13 +1,11 @@
-# Responsive QA
+# Current responsive acceptance
 
-Local Next production build with real API on isolated port 4101. Final browser origin: http://localhost:3106. Desktop 1440×900, tablet 768×1024, mobile 390×844. All 79 route families were rendered at all three sizes (237 checks), including authentic logged-out auth pages. Viewport override was reset after testing.
+Current API 4201; frontend production build 3107. All **82 route families × four required widths = 328 minimum combinations** visited, plus role/negative/fix-retest variants. 683 recorded visits; 399 latest role/route/viewport checks. No latest document-level horizontal overflow. Data tables intentionally use labelled scroll regions; table overflow is contained.
 
-Results: zero document/content-canvas overflow flags; zero unnamed rendered inputs/buttons in final observations. Comparison-table overflow is contained in named keyboard-accessible regions. A DOM overflow result alone is insufficient: original screenshots were also reviewed for major public, operator, provider, traveler, community, profile, finance, auth and permission-denied surfaces.
+Widths: 1440, 1280, 768 and 390, height 900. Additional 360px checks: landing, login, signup, Traveler profile, settings, onboarding and travel plan. Header, hero, sidebar/drawer controls, cards/KPIs, tables, forms, filters, long content and footer checked on their applicable routes. Operator booking dialog has separate native mobile evidence and keyboard-focus proof. Viewport override reset after QA.
 
-Fixed during visual QA: mobile workspace context lost to header icons; small sidebar collapse control with squeezed icon; long record-detail headings squeezed into near-vertical words across 11 detail pages; booking-list actions escaping the mobile header. Details now wrap with sufficient title width; actions move beneath titles where needed. Mobile forms retain 16px controls and 44px button/control height. The booking dialog was opened and photographed without submitting a booking. Signup details were captured at all three sizes.
+The exact hero photograph is absent; current hero fallback is verified, exact-image crop/readability remains excluded until the asset is supplied. Provider detail negative fixtures and additional Operator-owned positive fixtures are differentiated in the matrix.
 
-Drawer keyboard focus, Escape and opener restoration were checked for both public and workspace navigation. Mobile booking modal focus and Escape restoration were checked. Final samples and every route frame are linked by the completion matrix.
+`route-checks.json` preserves chronological checks, including pre-fix results; `final-route-checks.json` selects latest role/route/width results. Early workspace full-page screenshots sometimes returned a blank backing surface; final workspace captures use native viewport screenshots with matching AX/DOM records. Native screenshots are viewport captures, not claims of full-page raster coverage; public full-page captures and route scroll review supplement them.
 
-Limitations: provider/traveler/finance routes were read with the existing operator account, not genuine role-specific accounts. Super Admin frames show the operator access boundary, not a legitimate Super Admin walkthrough. No tablet/mobile hardware testing, full RTL, landscape or exhaustive zoom/device matrix. No claim of end-to-end transactional acceptance.
-
-Evidence: [final-route-checks.json](release-evidence/final-route-checks.json), [interaction-checks.json](release-evidence/interaction-checks.json), [matrix](ROUTE_UI_COMPLETION_MATRIX.md).
+[Quality summary](acceptance-evidence/quality-summary.json) · [Final checks](acceptance-evidence/final-route-checks.json) · [360px landing](acceptance-evidence/Public-narrow-home.png).

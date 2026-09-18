@@ -1,35 +1,39 @@
-# Frontend release evidence
+# Frontend acceptance release evidence
 
-Branch `codex/web-frontend-finalization`; worktree `/Users/macbook/Projects/umrah-connects-web-finalization`; baseline `65ce3dce0a53f957cfbcbe3bdb3bcfb9468dbe0d`. Canonical main work and backend/security track files are preserved. No push or deploy.
+Completed locally at 2026-09-17T21:43:06.850666+00:00. This supersedes the earlier 4101 backend snapshot and earlier finalization gate; historical evidence remains in its original directories. Current acceptance artifacts are in `acceptance-evidence/`.
 
-## Validation
+Canonical `/Users/macbook/Projects/umrah-connects`, main `65ce3dce0a53f957cfbcbe3bdb3bcfb9468dbe0d`; user pre-existing .claude launch configuration and untracked project/control-tower/UI/scripts preserved. Dedicated frontend worktree `/Users/macbook/Projects/umrah-connects-web-finalization`, branch `codex/web-frontend-finalization`, baseline HEAD `91ad20d2c98e0c709ce0c56cf2f812baa998cbfd`; acceptance changes remain local and uncommitted. Backend read-only worktree `claude/core-finalization`, HEAD `83bc3d52b3a282068cb984d0b605ecaea5b0d9e6`, clean on final ownership check.
 
-- `pnpm typecheck`: PASS.
-- `pnpm lint`: PASS, zero ESLint errors/warnings. Next 14 rules are made compatible with ESLint 9 using @eslint/compat; no rules disabled to hide failures.
-- `pnpm test`: PASS, 39 tests in two files (31 contract/auth/access tests and eight component semantic tests). Vitest emits an upstream Vite CommonJS API deprecation notice; tests pass.
-- `API_PROXY_ORIGIN=http://localhost:4101 pnpm build`: PASS, Next 14.2.35. Shared first-load JS 87.6 kB; 76 generated static pages. The inventory contains 79 route families, including dynamic families.
-- Browser production walkthrough: 79 families × three viewport sizes = 237 final checks; no document/canvas overflow or unnamed controls.
-- Console: no error/warning entries reported for the final build walkthrough. Historical development cache/chunk errors are not final-build errors.
-- Actual existing operator login/logout, protected booking return path, password visibility, missing-email recovery, missing reset token, signup blur validation, drawers/dialog focus restoration and native FAQ keyboard disclosure verified.
+Build/run reproducibly from the frontend worktree:
 
-Real API reads use existing compiled canonical API on isolated port 4101. This avoided unavailable 4100 without changing backend source, applying seeds/migrations or interfering with other services. Returned development records remain development evidence, not production user counts/testimonials. No domain write, purchase/payment, external inquiry/newsletter, account-creation, permission grant or password-reset transaction was submitted.
+```sh
+pnpm --dir apps/web typecheck
+pnpm --dir apps/web lint
+pnpm --dir apps/web test
+API_PROXY_ORIGIN=http://localhost:4201 pnpm --dir apps/web build
+API_PROXY_ORIGIN=http://localhost:4201 pnpm --dir apps/web exec next start -p 3107
+```
 
-## Performance and network limits
+Current backend is its existing compiled runtime started on isolated port 4201 with the existing isolated local database. No backend source edits, backend build/migrations/seeding or production configuration changes. Local dev HTTP refresh cookies are HttpOnly; production backend cookie contract remains backend-owned. Frontend cookie refresh/logout sends {} with credentials; access/capabilities come from real /auth/me; no fabricated personas or stored refresh token.
 
-Public informational home renders on the server; real marketplace querying is isolated to its discovery route. Removed fake panels and duplicate helpers; shared query errors avoid a broad query-cache subscription. Avatars load lazily through Next Image with failure fallback; listing images use lazy loading. Auth refresh calls are coalesced. Public unauthenticated 401s do not trigger refresh loops. No architecture or backend churn.
+Checks: typecheck PASS; lint PASS; 45 tests in four files PASS; production build PASS; browser route/role smoke PASS for observed states. Test scope: transaction/pricing/status shapes, session contracts, component semantics and regression for actual read-only platform-settings response. Browser walk-through is separate evidence, not an automated Playwright suite. No end-to-end financial/provider/credential-change/KYC success claimed.
 
-Build route bundle output is preserved. Performance timing/Lighthouse, device profiling, layout-shift scores and complete browser network waterfalls were not available through the browser interface. Network validation is limited to actual API-backed rendered results/failures, frontend contract inspection and local runtime responses. No claim of full network or performance certification.
+Build shared first-load JS 87.7kB; homepage first-load 131kB. Stripe form is lazy loaded for eligible configured card flows; no global SDK script on landing. Refresh requests are coalesced; payment polling is bounded; no broad new chart/animation dependency. Optimized hero slot reserves dimensions and responsive sizes; exact image weight cannot be measured before approved asset exists. No formal Lighthouse/Core Web Vitals certification was run.
 
-## Artifacts
+Runtime evidence:
 
-- [Inventory](ROUTE_INVENTORY.md), [design system](FINAL_DESIGN_SYSTEM.md), [components](IMPLEMENTED_COMPONENT_SYSTEM.md).
-- [Completion matrix](ROUTE_UI_COMPLETION_MATRIX.md), [backend dependencies](BACKEND_DEPENDENCIES.md).
-- [Responsive QA](RESPONSIVE_QA.md), [accessibility QA](ACCESSIBILITY_QA.md).
-- [QA summary](release-evidence/qa-summary.json), [final observations](release-evidence/final-route-checks.json), [interactions](release-evidence/interaction-checks.json), [console](release-evidence/console-checks.json), [build log](release-evidence/production-build.log).
-- [Frontend files changed](release-evidence/frontend-files-changed.json): 106 source/config/test paths. pnpm-lock.yaml changes only add the lint compatibility dependency.
+- `api-route-inventory.json`: 325 current runtime-mapped route patterns extracted without retaining mail/credential log contents.
+- `current-api-checks.json`: 71 safe checks across all eight real account roles, current endpoints, denial, cookie refresh/logout, pricing mismatch and auth recovery validation.
+- `signup-provisioning.json`: one normal real local signup 201; authoritative PILGRIM access and unverified organization-create 403 before write.
+- `credential-session-checks.json`: invalid password validation 400/401, QA logout-all 200, revoked old access/refresh 401; no password changed.
+- `proxy-document-settings-checks.json`: real same-origin proxy and current enforced platform settings; signed-file metadata fixture has explicit no-upload 404.
+- `profile-persistence.json`: temporary Bio saved and persisted after reload, restored and verified empty; nationality padding normalization saved and reloaded correctly.
+- `route-inventory.json`, `route-plan.json`, `route-checks.json`, `final-route-checks.json`: all current route/role/viewport coverage and native images.
+- `interaction-checks.json`: actual dialog focus and keyboard tabs.
+- `final-console.json`: final tabs have zero warnings/errors; earlier stale settings crash recorded as fixed, with regression test.
+- `network-smoke.json`: all 27 observed homepage asset/public route HTTP checks returned 200. Auth/ownership denial and no-file 404 remain expected backend results; no full HAR capture claimed.
+- `typecheck.log`, `lint.log`, `tests.log`, `build.log`: final check outputs.
 
-Every screenshot is an original browser capture. Discovery image-generation mockups remain separate historical concepts. No generated image stands in for runtime evidence.
+QA effects: one retained unverified Traveler account in isolated community tenant; no manual roles/organizations created; temporary profile field restored; QA-account sessions revoked; temporary credential file removed. Existing local backend fixtures such as sandbox payment rows and organization names containing “demo” are authentic API fixture data, not frontend-injected production data. No purchase/refund/password-change or KYC document mutation was submitted by browser QA. Local audit/auth logging is expected.
 
-## Gate
-
-BLOCKED. Implemented frontend read/recovery UX is reviewable, but trustworthy booking price validation, account role provisioning, server platform-admin scope and genuine role-specific/transaction acceptance remain unresolved. This gate is deliberately stricter than compilation or screenshot success. Native mobile is excluded.
+No push, deployment, production, infrastructure or mobile action. Frontend review preview remains at http://localhost:3107/ while the local process is running. Backend/configuration and positive fixture limits are recorded rather than hidden.

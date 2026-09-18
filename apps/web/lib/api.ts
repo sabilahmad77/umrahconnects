@@ -23,6 +23,7 @@ export function refreshAccessToken(): Promise<string | null> {
       if (!accessToken) return null;
       setToken(accessToken);
       try { sessionStorage.setItem('accessToken', accessToken); } catch {}
+      try { localStorage.removeItem('refreshToken'); } catch {}
       return accessToken;
     } catch {
       return null;
@@ -37,6 +38,7 @@ export function refreshAccessToken(): Promise<string | null> {
 export const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 30_000,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -55,6 +57,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     const original = error.config;
     if (!original || original.url?.startsWith('/auth/') || !getToken()) return Promise.reject(error);
+    if (error.response?.status === 401 && error.response?.data?.error?.message?.includes('Organization verification is not complete')) return Promise.reject(error);
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       // Coalesced refresh — shared with the auth-provider nav gate.

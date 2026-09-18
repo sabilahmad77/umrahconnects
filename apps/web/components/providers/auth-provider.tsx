@@ -2,20 +2,22 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getStoredUser, getToken, clearAuth, isTokenExpired, decodeJwt, inferDashboardType, setStoredUser, type StoredUser, type DashboardType } from '@/lib/auth';
+import { getStoredUser, getToken, clearAuth, isTokenExpired, type StoredUser, type DashboardType } from '@/lib/auth';
+import { loadSessionUser } from '@/lib/session';
+import { toast } from 'sonner';
 import { apiClient, refreshAccessToken } from '@/lib/api';
 
 interface AuthContextValue {
   user: StoredUser | null;
   isLoaded: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   setUser: (u: StoredUser | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoaded: false,
-  logout: () => {},
+  logout: async () => {},
   setUser: () => {},
 });
 
@@ -42,7 +44,7 @@ const PUBLIC_PATHS = [
   // Public marketing & guest-browse website (Step 1)
   '/solutions', '/pricing', '/about', '/workflow', '/resources', '/security', '/integrations',
   '/help', '/api-docs', '/careers', '/partners', '/contact', '/privacy', '/terms',
-  '/marketplace-preview', '/social-preview',
+  '/marketplace-preview', '/social-preview', '/verify-email', '/auth/callback',
 ];
 
 // Paths a logged-in user should be PUSHED AWAY from (back to their dashboard).
@@ -71,9 +73,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     // Empty body — the httpOnly refresh cookie identifies the session to revoke.
-    void apiClient.post('/auth/logout', {}, { withCredentials: true }).catch(() => {});
+    // If the server call fails the cookie survives and would silently restore the
+    // session on the next page, so the user is told instead of shown a false
+    // "signed out".
+    try {
+      await apiClient.post('/auth/logout', {});
+    } catch {
+      toast.error('Your server session could not be signed out. Try again.');
+      return;
+    }
     clearAuth();
     setUserState(null);
     redirected.current = false;
@@ -86,24 +96,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const storedUser = getStoredUser();
     const isPublic = isPublicPath(pathname);
 
-    const settleLoggedIn = (u: StoredUser) => {
-      if (cancelled) return;
-      const decoded = decodeJwt(getToken() || '');
-      if (!decoded?.sub || !decoded.roles?.length) { bounceToLogin(); return; }
-      const boundUser: StoredUser = { ...u, id: decoded.sub, email: decoded.email || u.email, tenantId: decoded.tenantId, tenantType: decoded.tenantType, roles: decoded.roles, dashboardType: inferDashboardType(decoded.roles), displayName: decoded.email?.split('@')[0] || 'Account' };
-      setStoredUser(boundUser);
-      setUserState(boundUser);
-      setIsLoaded(true);
-      // Only bounce off /login, /register, /forgot-password — let / (landing) stay reachable
-      if (shouldBounceLoggedInUser(pathname) && !redirected.current) {
-        redirected.current = true;
-        router.push(getDashboardPath(boundUser.dashboardType));
-      }
+    const settleLoggedIn = async () => {
+      try {
+        const boundUser = await loadSessionUser();
+        if (cancelled) return;
+        setUserState(boundUser); setIsLoaded(true); redirected.current = false;
+        if (shouldBounceLoggedInUser(pathname)) router.push(getDashboardPath(boundUser.dashboardType));
+      } catch { bounceToLogin(); }
     };
 
     const bounceToLogin = () => {
       if (cancelled) return;
       if (token || storedUser) clearAuth();
+      setUserState(null);
       setIsLoaded(true);
       if (!isPublic && !redirected.current) {
         redirected.current = true;
@@ -113,21 +118,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    if (token && !isTokenExpired(token) && storedUser) {
-      settleLoggedIn(storedUser);
+    if (token && !isTokenExpired(token)) {
+      void settleLoggedIn();
       return () => { cancelled = true; };
     }
 
     // FIX-02: access token expired/missing but a refresh token + user exist →
     // try a silent refresh BEFORE bouncing (this is the 15-min hard-nav bounce).
-    // The refresh token is an httpOnly cookie now, so the page cannot inspect it.
-    // A stored user is the signal that a session may be resumable; the refresh
-    // call itself decides, and returns null when there is nothing to resume.
-    if (storedUser) {
+    // The refresh token is an httpOnly cookie, so the page cannot inspect it. A
+    // stored user, or any protected page opened without an access token (a new
+    // tab, a return from Google), is a reason to try; the refresh call decides and
+    // returns null when there is nothing to resume.
+    if (storedUser || (!isPublic && !token)) {
       setIsLoaded(false);
       (async () => {
         const accessToken = await refreshAccessToken(); // shared/coalesced with apiClient
-        if (accessToken) settleLoggedIn(storedUser);
+        if (accessToken) void settleLoggedIn();
         else bounceToLogin();
       })();
       return () => { cancelled = true; };

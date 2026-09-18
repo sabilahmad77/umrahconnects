@@ -23,6 +23,14 @@ describe('stored authentication claims', () => {
 
 import { canOpenWorkspaceRoute } from '../lib/workspace-access';
 describe('frontend workspace boundary', () => {
-  it.each(['/admin-dashboard','/admin-tenants','/admin-tenants/record','/admin-roles','/admin-support'])('reserves %s for the existing Super Admin navigation role', route => { expect(canOpenWorkspaceRoute(route,['OPERATOR_ADMIN'])).toBe(false); expect(canOpenWorkspaceRoute(route,['SUPER_ADMIN'])).toBe(true); });
-  it('retains operator operational routes', () => { expect(canOpenWorkspaceRoute('/bookings',['OPERATOR_ADMIN'])).toBe(true); });
+  it.each(['/admin-dashboard','/admin-tenants','/admin-tenants/record','/admin-roles','/admin-support'])('reserves %s for the existing Super Admin navigation role', route => { expect(canOpenWorkspaceRoute(route,['OPERATOR_ADMIN'])).toBe(false); expect(canOpenWorkspaceRoute(route,['SUPER_ADMIN'],['platform:tenant:read'])).toBe(true); });
+  it('retains operator operational routes', () => { expect(canOpenWorkspaceRoute('/bookings',['OPERATOR_ADMIN'],['booking:booking:read'])).toBe(true); });
+});
+
+import { validPassword } from '../lib/password-policy';
+import { bookingTransitions } from '../lib/booking-transitions';
+describe('current backend acceptance contracts',()=>{
+ it('rejects passwords the API rejects, including line breaks',()=>{expect(validPassword('Travel2026')).toBe(true);for(const value of ['short1','abcdefgh','12345678','Travel2026\n','a1'.repeat(65)])expect(validPassword(value)).toBe(false);});
+ it('keeps captured/refunded states out of provider-controlled transitions',()=>{expect(bookingTransitions('PENDING')).toEqual(['CONFIRMED','CANCELLED']);expect(bookingTransitions('PAID')).toEqual(['COMPLETED']);for(const status of ['COMPLETED','CANCELLED','REFUNDED','unknown'])expect(bookingTransitions(status)).toEqual([]);});
+ it('requires server-resolved permissions for operational and platform screens',()=>{expect(canOpenWorkspaceRoute('/pilgrims',['HOTEL_MANAGER'],['hotel:allotment:read'])).toBe(false);expect(canOpenWorkspaceRoute('/pilgrims',['OPERATOR_ADMIN'],['crm:pilgrim:read'])).toBe(true);expect(canOpenWorkspaceRoute('/admin-tenants',['SUPER_ADMIN'],[])).toBe(false);});
 });

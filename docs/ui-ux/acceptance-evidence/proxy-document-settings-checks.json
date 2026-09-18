@@ -1,0 +1,78 @@
+[
+  {
+    "action": "operator login through frontend proxy",
+    "status": 200
+  },
+  {
+    "action": "/compliance/visas",
+    "status": 200,
+    "count": 20
+  },
+  {
+    "action": "owned visa documents",
+    "status": 200,
+    "count": 2
+  },
+  {
+    "action": "authorized signed document reference",
+    "status": 404,
+    "expiresAt": null,
+    "message": "No file has been uploaded for this document"
+  },
+  {
+    "action": "/visa-requests",
+    "status": 200,
+    "count": 20
+  },
+  {
+    "action": "proxy cookie logout",
+    "status": 200
+  },
+  {
+    "action": "current platform settings contract",
+    "status": 200,
+    "data": {
+      "editable": false,
+      "source": "runtime-configuration",
+      "enforced": {
+        "kycRequiredBeforeActivation": true,
+        "organizationTypesRequiringKyc": [
+          "OPERATOR",
+          "MU_ASSASA",
+          "SUB_AGENT",
+          "VENDOR_HOTEL",
+          "VENDOR_TRANSPORT",
+          "VENDOR_VISA"
+        ],
+        "paymentProvider": "sandbox",
+        "storageDriver": "local",
+        "mailDriver": "log",
+        "googleSignIn": false
+      },
+      "marketplaceCategories": [
+        {
+          "category": "visa_service",
+          "count": 1
+        },
+        {
+          "category": "transport_service",
+          "count": 3
+        },
+        {
+          "category": "hotel_room",
+          "count": 4
+        },
+        {
+          "category": "guide",
+          "count": 1
+        }
+      ],
+      "regulatorySystems": [
+        {
+          "system": "NUSUK_MASAR",
+          "count": 20
+        }
+      ]
+    }
+  }
+]

@@ -7,7 +7,7 @@ const KEY = ['payments'];
 
 export interface ProviderStatus {
   active: string;
-  providers: { name: string; configured: boolean; missing: string[]; sandbox: boolean }[];
+  providers: { name: string; configured: boolean; missing: string[]; sandbox: boolean; publishableKey?: string | null; testMode?: boolean }[];
 }
 
 export function usePaymentProviders() {

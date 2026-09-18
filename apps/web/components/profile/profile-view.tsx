@@ -43,7 +43,7 @@ export function ProfileView() {
         avatarUrl: profile.avatarUrl ?? '',
         coverUrl: profile.coverUrl ?? '',
         phone: profile.phone ?? '',
-        nationality: profile.nationality ?? '',
+        nationality: profile.nationality?.trim() ?? '',
         city: profile.city ?? '',
         travelInterests: profile.travelInterests ?? [],
         preferredDateFrom: profile.preferredDateFrom?.slice(0, 10) ?? '',
@@ -78,6 +78,7 @@ export function ProfileView() {
     try {
       await update.mutateAsync({
         ...form,
+        nationality: form.nationality.trim().toUpperCase(),
         preferredDateFrom: form.preferredDateFrom || null,
         preferredDateTo: form.preferredDateTo || null,
       } as any);
@@ -148,15 +149,15 @@ export function ProfileView() {
 
       {/* Basic info */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <UserIcon className="h-4 w-4" /> Basic info
-        </h3>
+        </h2>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Display name">
             <Input aria-label="Display Name" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} className="input" />
           </Field>
           <Field label="Email (read only)">
-            <Input aria-label="Cover URL" value={user?.email ?? ''} readOnly className="input bg-gray-50 text-gray-600" />
+            <Input aria-label="Email (read only)" value={user?.email ?? ''} readOnly className="input bg-gray-50 text-gray-600" />
           </Field>
           <Field label="Phone">
             <Input aria-label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" placeholder="+966 5xx xxx xxx" />
@@ -175,9 +176,9 @@ export function ProfileView() {
 
       {/* Travel interests */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Heart className="h-4 w-4" /> Travel interests
-        </h3>
+        </h2>
         <div className="flex flex-wrap gap-2">
           {INTEREST_OPTIONS.map((i) => {
             const active = form.travelInterests.includes(i);
@@ -207,9 +208,9 @@ export function ProfileView() {
 
       {/* Privacy */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Shield className="h-4 w-4" /> Privacy
-        </h3>
+        </h2>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Who can see my profile">
             <Select aria-label="Profile Visibility" value={form.profileVisibility} onChange={(e) => setForm({ ...form, profileVisibility: e.target.value })} className="input bg-white">

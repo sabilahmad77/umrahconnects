@@ -1,0 +1,20 @@
+{
+  "modal": {
+    "role": "Operator",
+    "route": "/bookings",
+    "tabFocusStayedInside": true,
+    "escapeClosed": true,
+    "focusReturnedTo": "New Booking",
+    "mutationSubmitted": false
+  },
+  "visaTabs": {
+    "focused": "Marketplace demand",
+    "selected": [
+      "Marketplace demand"
+    ]
+  },
+  "profile": {
+    "persistedAfterReload": true,
+    "temporaryBioRestoredAfterReload": true
+  }
+}

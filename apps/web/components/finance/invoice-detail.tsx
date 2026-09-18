@@ -3,6 +3,7 @@ import { apiErrorMessage } from '@/lib/api-error';
 import { Input, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
+import { useAuthContext } from '@/components/providers/auth-provider';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,13 +31,13 @@ const INVOICE_TRANSITIONS: Record<string, string[]> = {
   VOID: [],
 };
 
-/** An invoice only accepts a card payment once it has been issued. */
-const PAYABLE_INVOICE_STATUSES = ['ISSUED', 'SENT', 'PARTIALLY_PAID', 'OVERDUE'];
 
 type TabKey = 'overview' | 'payments' | 'edit';
 
 export function InvoiceDetail({ id }: { id: string }) {
   const router = useRouter();
+  const {user}=useAuthContext();
+  const canEdit=!!user?.permissions?.includes('finance:invoice:create');
   const { data: inv, isLoading, error, refetch } = useInvoice(id);
   const [tab, setTab] = useState<TabKey>('overview');
 
@@ -83,7 +84,7 @@ export function InvoiceDetail({ id }: { id: string }) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
-        {(['overview', 'payments', 'edit'] as TabKey[]).map((t) => (
+        {(['overview', 'payments', 'edit'] as TabKey[]).filter(t => t !== 'edit' || canEdit).map((t) => (
           <Button variant="quiet" type="button"
             key={t}
             onClick={() => setTab(t)}
@@ -99,7 +100,7 @@ export function InvoiceDetail({ id }: { id: string }) {
 
       {tab === 'overview' && <Overview inv={inv} />}
       {tab === 'payments' && <PaymentsTab inv={inv} refetch={refetch} />}
-      {tab === 'edit' && <EditTab inv={inv} refetch={refetch} />}
+      {tab === 'edit' && canEdit && <EditTab inv={inv} refetch={refetch} />}
     </div>
   );
 }
@@ -152,9 +153,9 @@ function Overview({ inv }: { inv: any }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <ListChecks className="h-4 w-4" /> Invoice details
-        </h3>
+        </h2>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <Field label="Invoice #" value={inv.invoiceNumber ?? inv.invoiceRef ?? '—'} />
           <Field label="Status" value={(inv.status ?? '—').replace(/_/g, ' ')} />
@@ -253,12 +254,14 @@ function Overview({ inv }: { inv: any }) {
 }
 
 function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
+  const {user}=useAuthContext();
+  const canCollect=!!user?.permissions?.includes('finance:payment:process');
   const payments: any[] = Array.isArray(inv.payments) ? inv.payments : [];
   const currency = inv.currency ?? 'SAR';
   const totalCents = Number(inv.totalCents ?? 0);
   const paidCents = Number(inv.paidCents ?? 0);
   const outstandingCents = Math.max(0, totalCents - paidCents);
-  const isSettled = inv.status === 'PAID' || inv.status === 'CANCELLED' || inv.status === 'VOID';
+  const isSettled = !canCollect || ['DRAFT','PAID','CANCELLED','VOID'].includes(inv.status);
 
   // FIX-06: record a payment against this invoice. Backend derives invoice status
   // (DRAFT→SENT→PARTIAL→PAID) from the cumulative paid total and recalculates outstanding.
@@ -283,33 +286,22 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
   return (
     <div className="space-y-4">
       {/* Gateway payments — sits above manual recording, which stays for
-          cash and bank transfers. The server refuses a payment intent against a
-          DRAFT, VOID, CANCELLED or already-PAID invoice, so the panel is only
-          offered once the invoice is actually payable. */}
-      {PAYABLE_INVOICE_STATUSES.includes(String(inv.status).toUpperCase()) ? (
-        <PaymentGatewayPanel
-          invoiceId={inv.id}
-          currency={currency}
-          outstandingCents={outstandingCents}
-          onChanged={refetch}
-        />
-      ) : String(inv.status).toUpperCase() === 'DRAFT' ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><CreditCard className="h-4 w-4" /> Card payment</h3>
-          <p className="text-xs text-gray-600 mt-1">
-            This invoice is still a draft. Issue it before taking a card payment.
-          </p>
-        </div>
-      ) : null}
+          cash and bank transfers. */}
+      <PaymentGatewayPanel invoiceStatus={inv.status}
+        invoiceId={inv.id}
+        currency={currency}
+        outstandingCents={outstandingCents}
+        onChanged={refetch}
+      />
 
       {/* Record payment form */}
       <div className="bg-white rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><CreditCard className="h-4 w-4" /> Record a payment</h3>
+          <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><CreditCard className="h-4 w-4" /> Record a payment</h2>
           <span className="text-xs text-gray-600">Outstanding: <span className="font-semibold text-gray-900">{formatMoney(outstandingCents, currency)}</span></span>
         </div>
         {isSettled ? (
-          <p className="text-sm text-gray-600 py-2">This invoice is {String(inv.status).toLowerCase()} — no further payments needed.</p>
+          <p className="text-sm text-gray-600 py-2">{!canCollect ? 'Your account cannot record payments.' : inv.status === 'DRAFT' ? 'Issue this invoice before recording a payment.' : `This invoice is ${String(inv.status).toLowerCase()} and cannot accept further payments.`}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="sm:col-span-1">
@@ -345,12 +337,12 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
 
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="p-4 border-b border-gray-200">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <CreditCard className="h-4 w-4" /> Payments ({payments.length})
-        </h3>
+        </h2>
       </div>
       {payments.length === 0 ? (
-        <div className="py-10 text-center text-sm text-gray-600">No payments recorded yet — use the form above.</div>
+        <div className="py-10 text-center text-sm text-gray-600">No payments recorded yet.</div>
       ) : (
         <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
           <thead>
@@ -409,6 +401,8 @@ function Field({ label, value }: { label: string; value: any }) {
 }
 
 function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
+  const {user}=useAuthContext();
+  const canCollect=!!user?.permissions?.includes('finance:payment:process');
   const router = useRouter();
   const update = useUpdateInvoice();
   const remove = useDeleteInvoice();
@@ -484,13 +478,13 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Quick actions
-        </h3>
+        </h2>
         <div className="flex flex-wrap gap-2">
           <Button variant="quiet" type="button"
             onClick={handleMarkPaid}
-            disabled={markPaid.isPending || outstandingCents <= 0}
+            disabled={markPaid.isPending || !canCollect || outstandingCents <= 0 || inv.status==='DRAFT'}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-green-500 text-white rounded-lg disabled:opacity-50 hover:bg-green-600"
           >
             {markPaid.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Mark paid
@@ -506,9 +500,9 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
           <Edit3 className="h-4 w-4" /> Edit invoice
-        </h3>
+        </h2>
         <div className="grid grid-cols-2 gap-3">
           <FormField label="Status">
             <Select aria-label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white outline-none focus:border-brand-400">
@@ -533,9 +527,9 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       </div>
 
       <div className="bg-white rounded-xl border border-red-100 p-5">
-        <h3 className="text-sm font-bold text-red-700 inline-flex items-center gap-2">
+        <h2 className="text-sm font-bold text-red-700 inline-flex items-center gap-2">
           <Trash2 className="h-4 w-4" /> Archive invoice
-        </h3>
+        </h2>
         <p className="text-xs text-gray-600 my-2">Removes the invoice from the active list. Past payments are preserved.</p>
         <Button variant="quiet" type="button" onClick={archive} disabled={remove.isPending} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg disabled:opacity-50">
           {remove.isPending ? 'Archiving…' : 'Archive'}

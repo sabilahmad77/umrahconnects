@@ -1,0 +1,39 @@
+- main:
+  - link "Umrah Connect Umrah Connect CONNECTED JOURNEYS":
+    - /url: /
+    - img "Umrah Connect"
+    - paragraph: Umrah Connect
+    - paragraph: CONNECTED JOURNEYS
+  - paragraph: Connected journeys
+  - paragraph:
+    - text: Your journey.
+    - text: Your workspace.
+  - paragraph: Sign in to continue your bookings, requests and conversations. Your account determines the workspace you can access.
+  - link "Explore the platform":
+    - /url: /solutions
+  - region "Sign in to Umrah Connect":
+    - heading "Sign in to Umrah Connect" [level=1]
+    - paragraph: Enter your account email and password.
+    - generic: Email address
+    - textbox "Email address"
+    - generic: Password
+    - textbox "Password"
+    - button "Show password":
+    - button "Forgot password?"
+    - alert:
+      - paragraph: Unable to continue
+      - generic: Invalid credentials
+    - button "Sign in"
+    - status: Google sign-in is unavailable. Use your account email and password.
+    - paragraph:
+      - text: New to Umrah Connect?
+      - link "Create an account":
+        - /url: /signup
+    - link "Help center":
+      - /url: /help
+    - link "Privacy":
+      - /url: /privacy
+    - link "Terms":
+      - /url: /terms
+- region "Notifications alt+T"
+- alert

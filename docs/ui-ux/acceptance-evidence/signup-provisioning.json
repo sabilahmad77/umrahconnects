@@ -1,0 +1,43 @@
+{
+  "scope": "isolated local core database; normal public signup; no role grants performed by QA; one retained unverified Traveler test account",
+  "account": "frontend.acceptance.1789680136@umrahconnect.dev",
+  "checks": [
+    {
+      "action": "register with hotel interest",
+      "status": 201
+    },
+    {
+      "action": "new account authoritative profile",
+      "status": 200,
+      "id": "dc221d8e-0263-4344-ab62-9ee606542b35",
+      "roles": [
+        "PILGRIM"
+      ],
+      "permissions": [
+        "marketplace:listing:read",
+        "social:post:create",
+        "social:post:read"
+      ],
+      "emailVerified": false,
+      "tenantSlug": "umrah-connect-travelers"
+    },
+    {
+      "action": "new account login",
+      "status": 200
+    },
+    {
+      "action": "unverified account onboarding rejected before write",
+      "status": 403,
+      "message": "Confirm your email address before registering an organization"
+    },
+    {
+      "action": "invalid verification token",
+      "status": 401,
+      "message": "Verification link is invalid or has expired."
+    },
+    {
+      "action": "new account cookie logout",
+      "status": 200
+    }
+  ]
+}

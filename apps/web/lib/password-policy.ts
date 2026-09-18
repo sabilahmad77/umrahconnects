@@ -13,3 +13,8 @@ export const PASSWORD_MESSAGE = 'Password must be 8–128 characters and include
 export function passwordProblem(password: string): string {
   return PASSWORD_RULE.test(password) ? '' : PASSWORD_MESSAGE;
 }
+
+/** Boolean form of the same rule, used by the account settings forms. */
+export function validPassword(value: string): boolean {
+  return PASSWORD_RULE.test(value);
+}

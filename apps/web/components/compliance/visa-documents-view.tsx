@@ -1,4 +1,5 @@
 'use client';
+import { DocumentLink } from '@/components/ui/document-link';
 import { Button , QueryFailure } from '@/components/ui/system';
 
 import { useState } from 'react';

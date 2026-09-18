@@ -2,16 +2,23 @@
 import { QueryFailure } from '@/components/ui/system';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { Button, Dialog } from '@/components/ui/system';
+import { BookingCheckout } from './booking-checkout';
 import { Loader2, AlertCircle, CalendarCheck2, Wallet, Hotel, Bus, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMyMarketplaceBookings } from '@/hooks/use-marketplace';
 
 export function MyBookingsView() {
+  const [selectedBooking,setSelectedBooking]=useState<string>();
+  const [returnCheckout]=useState(()=> typeof window!=='undefined' && new URLSearchParams(window.location.search).has('checkout'));
   const { data: bookings = [], isLoading, error , refetch: retryMyMarketplaceBookings} = useMyMarketplaceBookings();
 
   if (error) return <QueryFailure error={error} onRetry={() => { retryMyMarketplaceBookings(); }} />;
   return (
     <div className="space-y-5 pb-6">
+      {returnCheckout && <BookingCheckout onChanged={()=>{void retryMyMarketplaceBookings();}} />}
+      <Dialog open={!!selectedBooking} onOpenChange={open=>{if(!open)setSelectedBooking(undefined);}} title="Booking payment"><BookingCheckout bookingId={selectedBooking} onChanged={()=>{void retryMyMarketplaceBookings();}} /></Dialog>
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My bookings</h1>
         <p className="text-sm text-gray-600 mt-0.5">Bookings you’ve placed on marketplace listings.</p>
@@ -67,6 +74,7 @@ export function MyBookingsView() {
                     </div>
                   </div>
                 </div>
+                {b.paymentStatus!=='PAID' && !['CANCELLED','REFUNDED','COMPLETED'].includes(b.status) && <Button className="mt-3" variant="secondary" onClick={()=>setSelectedBooking(b.id)}>Pay booking</Button>}
                 {b.notes && <p className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-50">{b.notes}</p>}
               </li>
             );

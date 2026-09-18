@@ -3,8 +3,10 @@
 export type UserRole =
   | 'OPERATOR_ADMIN'
   | 'OPERATOR_STAFF'
+  | 'HOTEL_MANAGER'
   | 'HOTEL_OWNER'
   | 'TRANSPORT_MANAGER'
+  | 'VISA_OFFICER'
   | 'COMPLIANCE_OFFICER'
   | 'FINANCE_MANAGER'
   | 'SUB_AGENT'
@@ -32,6 +34,10 @@ export interface StoredUser {
   roles: string[];
   dashboardType: DashboardType;
   displayName: string;
+  permissions?: string[];
+  emailVerified?: boolean;
+  tenantStatus?: string;
+  hasPassword?: boolean;
 }
 
 export type DashboardType =
@@ -65,6 +71,7 @@ function deleteCookie(name: string) {
 // ─── Token storage (cookie-primary, localStorage fallback) ────────────────────
 
 export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
   return getCookie('accessToken') || localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken') || null;
 }
 

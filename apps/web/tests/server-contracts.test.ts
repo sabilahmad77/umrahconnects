@@ -71,7 +71,7 @@ describe('status vocabularies match the server enums', () => {
 
   it('listing-booking transitions mirror the marketplace service', () => {
     const svc = readFileSync(join(API, 'src/modules/marketplace/marketplace.service.ts'), 'utf8');
-    const web = readFileSync(join(__dirname, '..', 'components/marketplace/listing-detail.tsx'), 'utf8');
+    const web = readFileSync(join(__dirname, '..', 'lib/booking-transitions.ts'), 'utf8');
     const grab = (src: string) => {
       const m = src.match(/BOOKING_TRANSITIONS: Record<string, string\[\]> = \{([\s\S]*?)\};/);
       return m ? m[1].replace(/\s/g, '') : null;
