@@ -33,6 +33,8 @@ export interface PaymentView {
   /** Only in a response to the payer's own start/resume request; never stored. */
   clientSecret?: string;
   publishableKey?: string | null;
+  /** Traveler checkout: the marketplace booking being paid. */
+  listingBookingId?: string | null;
   bookingPaymentStatus?: string;
   bookingStatus?: string;
 }
@@ -99,7 +101,12 @@ export type CheckoutEvent =
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'RESET' };
 
-export const initialCheckoutState: CheckoutState = { phase: 'idle', polls: 0, awaitingOutcome: false, gaveUp: false };
+export const initialCheckoutState: CheckoutState = {
+  phase: 'idle',
+  polls: 0,
+  awaitingOutcome: false,
+  gaveUp: false,
+};
 
 /** How many "still PENDING" reads after a submit before concluding the payment did not go through. */
 export const PENDING_READS_BEFORE_RETRY = 6;
@@ -111,7 +118,8 @@ const DECLINE_MESSAGES: Record<string, string> = {
   invalid_cvc: 'The security code is incorrect. Check it and try again.',
   incorrect_number: 'The card number is incorrect. Check it and try again.',
   processing_error: 'The card could not be processed. Try again in a moment.',
-  authentication_required: 'Your bank needs you to verify this payment. Try again and complete the verification.',
+  authentication_required:
+    'Your bank needs you to verify this payment. Try again and complete the verification.',
   card_velocity_exceeded: 'The card has reached its limit. Try another card.',
 };
 
@@ -146,7 +154,12 @@ export function phaseFromServer(view: PaymentView): CheckoutPhase {
 }
 
 /** Phases in which the payment form is on screen. */
-export const FORM_PHASES: CheckoutPhase[] = ['collecting', 'submitting', 'declined', 'action_required'];
+export const FORM_PHASES: CheckoutPhase[] = [
+  'collecting',
+  'submitting',
+  'declined',
+  'action_required',
+];
 /** Phases that finish the flow: nothing more to poll. */
 export const FINAL_PHASES: CheckoutPhase[] = ['succeeded', 'refunded', 'failed', 'on_hold'];
 
@@ -161,7 +174,8 @@ export function interpretConfirmResult(result: {
   if (!error) return { kind: 'verify' };
   if (error.type === 'card_error' || error.type === 'validation_error') {
     const message =
-      error.message || (error.type === 'card_error' ? declineMessage(error.decline_code ?? error.code) : '');
+      error.message ||
+      (error.type === 'card_error' ? declineMessage(error.decline_code ?? error.code) : '');
     return { kind: 'retry', message: message || 'Check the payment details and try again.' };
   }
   if (error.code === 'payment_intent_unexpected_state') {
@@ -170,7 +184,8 @@ export function interpretConfirmResult(result: {
   }
   return {
     kind: 'verify',
-    message: 'The payment provider did not answer clearly. Checking the payment status before anything else…',
+    message:
+      'The payment provider did not answer clearly. Checking the payment status before anything else…',
   };
 }
 
@@ -196,24 +211,43 @@ export function checkoutReducer(state: CheckoutState, event: CheckoutEvent): Che
       };
     }
     case 'START_FAILED':
-      return { ...state, phase: event.unavailable ? 'unavailable' : 'error', message: event.message };
+      return {
+        ...state,
+        phase: event.unavailable ? 'unavailable' : 'error',
+        message: event.message,
+      };
     case 'SUBMIT':
       if (!FORM_PHASES.includes(state.phase) || state.phase === 'submitting') return state;
       return { ...state, phase: 'submitting', message: undefined, gaveUp: false };
     case 'CONFIRM_RESULT':
       if (event.outcome.kind === 'retry') {
-        return { ...state, phase: 'declined', message: event.outcome.message, awaitingOutcome: false };
+        return {
+          ...state,
+          phase: 'declined',
+          message: event.outcome.message,
+          awaitingOutcome: false,
+        };
       }
-      return { ...state, phase: 'verifying', message: event.outcome.message, polls: 0, awaitingOutcome: true };
+      return {
+        ...state,
+        phase: 'verifying',
+        message: event.outcome.message,
+        polls: 0,
+        awaitingOutcome: true,
+      };
     case 'AWAIT_OUTCOME':
       return { ...state, phase: 'verifying', polls: 0, awaitingOutcome: true, gaveUp: false };
     case 'SERVER': {
-      const view = { ...event.view, clientSecret: event.view.clientSecret ?? state.view?.clientSecret };
+      const view = {
+        ...event.view,
+        clientSecret: event.view.clientSecret ?? state.view?.clientSecret,
+      };
       const phase = phaseFromServer(view);
       const polls = state.polls + 1;
       if (phase === 'collecting' && state.awaitingOutcome) {
         // Right after a submit the server may not have heard from the provider yet.
-        if (polls < PENDING_READS_BEFORE_RETRY) return { ...state, view, polls, phase: 'verifying' };
+        if (polls < PENDING_READS_BEFORE_RETRY)
+          return { ...state, view, polls, phase: 'verifying' };
         return {
           ...state,
           view,
@@ -223,7 +257,6 @@ export function checkoutReducer(state: CheckoutState, event: CheckoutEvent): Che
           message: 'The payment was not completed. No money was taken; you can try again.',
         };
       }
-      if (phase === 'collecting' && state.phase === 'submitting') return { ...state, view };
       const message =
         phase === 'declined'
           ? declineMessage(view.failureReason)
@@ -242,11 +275,13 @@ export function checkoutReducer(state: CheckoutState, event: CheckoutEvent): Che
         polls,
         phase,
         message,
-        awaitingOutcome: phase === 'processing' || phase === 'action_required' ? state.awaitingOutcome : false,
+        awaitingOutcome:
+          phase === 'processing' || phase === 'action_required' ? state.awaitingOutcome : false,
       };
     }
     case 'SERVER_ERROR':
-      return { ...state, message: event.message };
+      // Counted as a read, so a failing server ends in "still confirming", not an endless loop.
+      return { ...state, message: event.message, polls: state.polls + 1 };
     case 'GIVE_UP':
       return {
         ...state,
@@ -280,7 +315,11 @@ export function nextPollDelay(state: CheckoutState): number | null {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Query parameters Stripe appends to `return_url`. The client secret must not linger in the address bar. */
-const PROVIDER_RETURN_PARAMS = ['payment_intent', 'payment_intent_client_secret', 'redirect_status'];
+const PROVIDER_RETURN_PARAMS = [
+  'payment_intent',
+  'payment_intent_client_secret',
+  'redirect_status',
+];
 
 /** `return_url` for confirmPayment: the current page, carrying only our payment id. */
 export function returnUrlFor(href: string, param: string, paymentId: string): string {
@@ -292,7 +331,10 @@ export function returnUrlFor(href: string, param: string, paymentId: string): st
 }
 
 /** Our payment id from a return URL (validated), and whether provider params were present. */
-export function readReturn(search: string, param: string): { paymentId?: string; redirected: boolean } {
+export function readReturn(
+  search: string,
+  param: string,
+): { paymentId?: string; redirected: boolean } {
   const params = new URLSearchParams(search);
   const id = params.get(param);
   return {
@@ -321,7 +363,13 @@ export function withoutPaymentParam(search: string, param: string): string {
 
 export interface ProviderStatusLike {
   active: string;
-  providers: { name: string; configured: boolean; publishableKey?: string | null; sandbox?: boolean; testMode?: boolean }[];
+  providers: {
+    name: string;
+    configured: boolean;
+    publishableKey?: string | null;
+    sandbox?: boolean;
+    testMode?: boolean;
+  }[];
 }
 
 /**
@@ -329,20 +377,26 @@ export interface ProviderStatusLike {
  * development servers (the API never registers it in production), so the page
  * can offer it whenever the server reports it as the active provider.
  */
-export function paymentPath(status?: ProviderStatusLike | null):
+export function paymentPath(
+  status?: ProviderStatusLike | null,
+):
   | { kind: 'stripe'; publishableKey: string; testMode: boolean }
   | { kind: 'sandbox' }
   | { kind: 'unavailable'; reason: string } {
   if (!status) return { kind: 'unavailable', reason: 'Checking the payment provider…' };
   const active = status.providers.find((p) => p.name === status.active);
-  if (!active) return { kind: 'unavailable', reason: 'Online payments are not enabled on this deployment.' };
+  if (!active)
+    return { kind: 'unavailable', reason: 'Online payments are not enabled on this deployment.' };
   if (!active.configured) {
     return { kind: 'unavailable', reason: 'Card payments are not set up on this deployment yet.' };
   }
   if (active.name === 'sandbox') return { kind: 'sandbox' };
   if (active.name === 'stripe') {
     if (!active.publishableKey) {
-      return { kind: 'unavailable', reason: 'Card payments are not set up on this deployment yet.' };
+      return {
+        kind: 'unavailable',
+        reason: 'Card payments are not set up on this deployment yet.',
+      };
     }
     return { kind: 'stripe', publishableKey: active.publishableKey, testMode: !!active.testMode };
   }

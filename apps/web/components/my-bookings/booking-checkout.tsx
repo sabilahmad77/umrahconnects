@@ -1,17 +1,113 @@
 'use client';
-import { useState } from 'react';
-import dynamic from 'next/dynamic';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api';
-import { usePaymentProviders } from '@/hooks/use-payments';
-import { Alert, Button, LoadingState, QueryFailure } from '@/components/ui/system';
-const CardPayment=dynamic(()=>import('@/components/finance/card-payment'),{ssr:false,loading:()=> <LoadingState label="Loading secure payment form…" />});
-export function BookingCheckout({bookingId,onChanged}:{bookingId?:string;onChanged:()=>void}){
- const providers=usePaymentProviders();const [intent,setIntent]=useState<any>(null);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
- const [paymentId,setPaymentId]=useState<string|undefined>(()=>{if(typeof window==='undefined')return;const id=new URLSearchParams(window.location.search).get('checkout');return id&&/^[a-f\d-]{36}$/i.test(id)?id:undefined;});
- const status=useQuery({queryKey:['checkout',paymentId],enabled:!!paymentId,queryFn:async()=> (await apiClient.get(`/payments/checkout/${paymentId}`)).data.data,refetchInterval:query=>query.state.dataUpdateCount<40 && ['PENDING','PROCESSING'].includes(query.state.data?.status)?15000:false});
- const provider=providers.data?.providers.find(p=>p.name===providers.data.active);const usable=provider?.name==='stripe'&&provider.configured&&!!provider.publishableKey;
- const start=async()=>{setBusy(true);setError('');try{const {data}=await apiClient.post('/payments/checkout',{listingBookingId:bookingId});const next=data.data;if(!next.clientSecret||!next.publishableKey)throw new Error('The secure card form is unavailable. Check payment status before retrying.');setPaymentId(next.paymentId);setIntent(next);}catch(e:any){setError(e?.response?.data?.error?.message||e.message||'Payment could not be started.');}finally{setBusy(false);}};
- if(providers.error||status.error)return <QueryFailure error={providers.error||status.error} onRetry={()=>{void providers.refetch();void status.refetch();}} />;
- return <section className="space-y-4">{status.data&&<Alert tone="info" title="Server payment status"><p>{status.data.status} · {status.data.currency} {(status.data.amountCents/100).toLocaleString()}</p><Button variant="secondary" busy={status.isFetching} onClick={()=>{void status.refetch();onChanged();}}>Check payment and booking status</Button></Alert>}{providers.isLoading?<LoadingState label="Checking payment provider…" />: !usable?<Alert tone="info" title="Card payments unavailable">A configured card payment provider is required. No payment has been submitted by this screen.</Alert>: intent?<CardPayment publishableKey={intent.publishableKey} clientSecret={intent.clientSecret} paymentId={intent.paymentId} checkout onReconciled={()=>{void status.refetch();onChanged();}} />:bookingId&&<><p className="text-sm text-gray-600">The server calculates your outstanding booking balance. {provider?.testMode?'The payment provider is in test mode.':''}</p><Button busy={busy} onClick={start}>Continue to secure payment</Button></>}{error&&<Alert title="Payment requires attention">{error}</Alert>}</section>;
+
+import { useEffect, useRef } from 'react';
+import { LoadingState, QueryFailure } from '@/components/ui/system';
+import { checkoutApi, usePaymentFlow, usePaymentProviders } from '@/hooks/use-payments';
+import {
+  interpretConfirmResult,
+  paymentPath,
+  returnUrlFor,
+} from '@/components/finance/checkout-machine';
+import { PaymentFlowPanel } from '@/components/finance/payment-flow-panel';
+
+export const CHECKOUT_PARAM = 'checkout';
+
+/**
+ * Traveler checkout for one marketplace booking (XT-R09).
+ *
+ * Opening it asks the server to open — or resume — the booking's payment
+ * attempt; the amount is always the server's outstanding balance. Stripe runs
+ * through the Payment Element; a development deployment offers the labelled
+ * sandbox instead. The booking shows as paid only when the server says so.
+ *
+ * The attempt id rides in the address bar (`?checkout=`), so a reload or the
+ * return from a bank page picks the same attempt up again from the server.
+ */
+export function BookingCheckout({
+  listingBookingId,
+  resumePaymentId,
+  redirected = false,
+  onOutcome,
+}: {
+  listingBookingId?: string;
+  /** Load this attempt instead of starting one (reload, return from a bank page). */
+  resumePaymentId?: string;
+  /** The page was reached through a provider redirect: wait for the server's outcome. */
+  redirected?: boolean;
+  /** Called when the server reports an outcome, e.g. to refresh the bookings list. */
+  onOutcome: () => void;
+}) {
+  const providers = usePaymentProviders();
+  const path = paymentPath(providers.data);
+  // The booking is known up front, or — after a reload / bank redirect — from the loaded attempt.
+  const bookingRef = useRef<string | undefined>(listingBookingId);
+  const flow = usePaymentFlow(
+    checkoutApi(() => bookingRef.current),
+    { onOutcome: () => onOutcome() },
+  );
+  const { state } = flow;
+  bookingRef.current = listingBookingId ?? state.view?.listingBookingId ?? undefined;
+
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || providers.isLoading) return;
+    if (resumePaymentId) {
+      started.current = true;
+      // Only a return from the provider waits for an outcome; a plain reload just shows the status.
+      void flow.load(resumePaymentId, redirected);
+      return;
+    }
+    if (!listingBookingId || providers.error) return;
+    started.current = true;
+    if (path.kind === 'unavailable') {
+      flow.send({ type: 'START_FAILED', message: path.reason, unavailable: true });
+      return;
+    }
+    void flow.start();
+  }, [
+    providers.isLoading,
+    providers.error,
+    resumePaymentId,
+    redirected,
+    listingBookingId,
+    path,
+    flow,
+  ]);
+
+  // Keep the attempt id (never the client secret) in the address bar so a reload resumes it.
+  const paymentId = state.view?.paymentId;
+  useEffect(() => {
+    if (!paymentId) return;
+    const next = returnUrlFor(window.location.href, CHECKOUT_PARAM, paymentId);
+    if (next !== window.location.href) window.history.replaceState(window.history.state, '', next);
+  }, [paymentId]);
+
+  if (providers.error && !resumePaymentId) {
+    return <QueryFailure error={providers.error} onRetry={() => void providers.refetch()} />;
+  }
+  if (providers.isLoading) return <LoadingState label="Checking the payment provider…" />;
+
+  return (
+    <PaymentFlowPanel
+      state={state}
+      path={path}
+      returnUrl={
+        paymentId && typeof window !== 'undefined'
+          ? returnUrlFor(window.location.href, CHECKOUT_PARAM, paymentId)
+          : undefined
+      }
+      subject="booking"
+      onStripeSubmit={() => flow.send({ type: 'SUBMIT' })}
+      onStripeResult={(result) =>
+        flow.send({ type: 'CONFIRM_RESULT', outcome: interpretConfirmResult(result) })
+      }
+      onLoadError={(message) => flow.send({ type: 'LOAD_ERROR', message })}
+      onSandbox={(scenario) => void flow.sandbox(scenario)}
+      onRefresh={() => void flow.refresh()}
+      // "Try again" re-enters checkout for the same booking: the server resumes or reopens the attempt.
+      onStartOver={() => {
+        if (bookingRef.current) void flow.start();
+      }}
+    />
+  );
 }

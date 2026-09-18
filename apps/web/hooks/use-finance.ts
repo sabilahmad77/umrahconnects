@@ -15,22 +15,11 @@ export function useInvoice(id?: string) {
   });
 }
 
-// ── Update invoice ──
-// Routes status changes to dedicated endpoints when available
-// (issue, void), otherwise falls through to a generic PUT.
+// ── Update invoice fields (customer, dates, notes; amounts while DRAFT) ──
 export function useUpdateInvoice() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...body }: { id: string } & Record<string, any>) => {
-      const status = body.status;
-      if (status === 'VOID' || status === 'CANCELLED') {
-        const { data } = await apiClient.put(`/finance/invoices/${id}/void`);
-        return data.data;
-      }
-      if (status === 'ISSUED' || status === 'SENT') {
-        const { data } = await apiClient.put(`/finance/invoices/${id}/issue`);
-        return data.data;
-      }
       const { data } = await apiClient.put(`/finance/invoices/${id}`, body);
       return data.data;
     },
@@ -38,30 +27,60 @@ export function useUpdateInvoice() {
   });
 }
 
-// ── Mark invoice paid ──
-// Records a payment for the outstanding balance.
-export function useMarkInvoicePaid() {
+/**
+ * Invoice lifecycle moves (finance:invoice:approve). Issuing and voiding have
+ * their own endpoints; SENT / OVERDUE / CANCELLED go through /status, which
+ * applies the same transition rules. PAID is never set by hand.
+ */
+export function useInvoiceTransition() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, amountCents, method, referenceNumber }: {
+    mutationFn: async ({
+      id,
+      status,
+    }: {
       id: string;
-      amountCents: number;
-      method?: string;
-      referenceNumber?: string;
+      status: 'ISSUED' | 'SENT' | 'OVERDUE' | 'VOID' | 'CANCELLED';
     }) => {
-      const { data } = await apiClient.post(`/finance/invoices/${id}/payments`, {
-        amount: amountCents / 100,
-        method: method ?? 'cash',
-        referenceNumber,
-        paidAt: new Date().toISOString(),
-      });
-      return data.data;
+      if (status === 'ISSUED')
+        return (await apiClient.put(`/finance/invoices/${id}/issue`)).data.data;
+      if (status === 'VOID') return (await apiClient.put(`/finance/invoices/${id}/void`)).data.data;
+      return (await apiClient.put(`/finance/invoices/${id}/status`, { status })).data.data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
   });
 }
 
-// ── Delete (archive) invoice ──
+/**
+ * Record a manual payment (cash, bank transfer, card terminal…). Amount in
+ * major units; the idempotency key makes a repeated submit return the first
+ * recording instead of a second payment.
+ */
+export function useRecordPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...body
+    }: {
+      id: string;
+      amount: number;
+      method: string;
+      referenceNumber?: string;
+      paidAt?: string;
+      idempotencyKey: string;
+    }) => {
+      const { data } = await apiClient.post(`/finance/invoices/${id}/payments`, body);
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance'] });
+      qc.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+}
+
+// ── Cancel a draft invoice (DELETE; issued invoices are voided instead) ──
 export function useDeleteInvoice() {
   const qc = useQueryClient();
   return useMutation({
@@ -96,7 +115,7 @@ export function useFinanceDashboardStats() {
 }
 
 // ── Payments ──
-export function useFinancePayments(params?: { page?: number; limit?: number }) {
+export function useFinancePayments(params?: { page?: number; limit?: number; status?: string }) {
   return useQuery({
     queryKey: ['finance', 'payments', params],
     queryFn: async () => {
@@ -117,14 +136,40 @@ export function useUpdatePayment() {
   });
 }
 
+/** Refund a manual payment (amount in major units; omitted = the whole refundable balance). */
 export function useRefundPayment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, amount }: { id: string; amount?: number }) => {
-      const { data } = await apiClient.post(`/finance/payments/${id}/refund`, { amount });
+    mutationFn: async ({
+      id,
+      amount,
+      reason,
+    }: {
+      id: string;
+      amount?: number;
+      reason?: string;
+    }) => {
+      const { data } = await apiClient.post(`/finance/payments/${id}/refund`, { amount, reason });
       return data.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance'] });
+      qc.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+}
+
+/** Invoices linked to one operator booking. */
+export function useBookingInvoices(bookingId?: string) {
+  return useQuery({
+    queryKey: ['finance', 'invoices', 'booking', bookingId],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/finance/invoices', {
+        params: { bookingId, limit: 20 },
+      });
+      return data.data as { items: any[]; total: number };
+    },
+    enabled: !!bookingId,
   });
 }
 
