@@ -28,9 +28,17 @@ No real messaging channel to Codex exists, so none was claimed.
 | A04 | Booking, Stripe checkout, finance (W16) | ad331e5a81107a4aa | 17:14 | `…/eng100/a04` / `eng100/a04` | running | — | — |
 | A05 | Social, comments, groups, notifications | a8b2d0e572037466b | 17:14 | `…/eng100/a05` / `eng100/a05` | running | — | — |
 | A06 | Listings, media, uploads, storage, O04 | a61186878f8268378 | 17:14 | `…/eng100/a06` / `eng100/a06` | running | — | — |
-| A07 | Traveler linkage (P06), seeds (D08), QA identities | a753066d747b73adb | 17:14 | `…/eng100/a07` / `eng100/a07` | running | — | — |
+| A07 | Traveler linkage (P06), seeds (D08), QA identities | a753066d747b73adb | 17:14 (interrupted by the account usage limit), resumed 20:52 | `…/eng100/a07` / `eng100/a07` | **completed 21:22** (82 tool uses, 567k tokens) | 09207dd 170d8fb 319c06f 72a6c1c 20d3458 9fed6fc 4393138 → merged `ce5e142` | P06 + D08 done; e2e 164/164 in its worktree; browser 15/15 steps; migration `20260918170000_pilgrim_account_links` |
 | A09 | Render retirement, KVM, backups, monitoring (I08) | ab88b88c8089253bb | 17:14 | `…/eng100/a09` / `eng100/a09` | running | — | — |
 
 Not yet launched (wave 2, after wave 1 integrates): A08 security + RLS (R05) +
 envelope (P08), A10 browser QA, A11 accessibility + responsive, A12 independent
 acceptance reviewer.
+
+## Interruptions
+
+- 2026-09-18 ~17:45–20:50: every wave-1 agent stopped with HTTP 429 "session limit"
+  (account 5-hour usage window). Work in their worktrees was preserved. Resumed
+  20:52 with SendMessage (context intact): A02, A03, A04, A05, A07. A03b, A06 and
+  A09 were held back to keep the next window from being exhausted mid-task
+  (5 agents consumed 68 % of a 5-hour window in 30 minutes).

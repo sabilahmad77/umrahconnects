@@ -28,3 +28,17 @@ session resumes from here — nothing below is inferred.
 1. As each worker reports: review its diff, merge `eng100/<id>` into `engineering/100-loop` (resolve schema/app.module merges), apply migrations to `umrah_connects_integration`, run the full gate.
 2. Launch wave 2: A08 (RLS R05, envelope P08, security regression), A10 (browser matrix), A11 (accessibility incl. Orca attempt, responsive), A12 (independent reviewer).
 3. Candidate snapshot, full regression, register update, final report.
+
+## Checkpoint 2 — 2026-09-18 21:25 +0500
+
+- Account usage: 5-hour window 72 % at 21:22 (resets 01:50 +0500), weekly 21 %. Burn rate
+  with five Opus agents ≈ 68 % of a window per 30 minutes — pace concurrency accordingly.
+- A07 finished and is merged: `ce5e142` (+ `e22a796` untracks `apps/web/tsconfig.tsbuildinfo`).
+  Migration `20260918170000_pilgrim_account_links` applied to `umrah_connects_integration`.
+  API and web `tsc` exit 0 on the merged tree.
+- Running when the window closes: A02, A03, A04, A05 (expect 429 interruptions; their
+  worktrees commit after every step now). Not started: A03b, A06, A09.
+- A one-shot scheduled prompt (session cron, 01:53 +0500) resumes the coordinator.
+- Pending coordinator items: D-022 into DECISIONS.md; XT-003/BLK-08 closed; P08 envelope
+  (connections, marketplace-requests) during integration; A02 request: `referrer: no-referrer`
+  on /login (returnTo may carry an invitation token).
