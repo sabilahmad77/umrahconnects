@@ -40,7 +40,7 @@ const ICONS: Record<NavKey, LucideIcon> = {
 
 // Single deep-green sidebar across all roles (matches design references); the
 // workspace is shown by a gold-accented badge. Platform accounts get the
-// midnight variant so the console is never mistaken for an organization.
+// navy variant so the console is never mistaken for an organization.
 const WORKSPACE_BADGE: Record<DashboardType, { label: string; Icon: LucideIcon }> = {
   operator: { label: 'Umrah Operator / Agency', Icon: Building2 },
   admin: { label: 'Super Admin', Icon: Zap },
@@ -74,7 +74,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
     <aside
       className={cn(
         'relative flex h-full shrink-0 flex-col text-white transition-[width] duration-150',
-        platform ? 'bg-midnight' : 'bg-brand-600',
+        platform ? 'bg-navy' : 'bg-brand-600',
         mobile ? 'min-h-[75dvh] w-full' : collapsed ? 'w-[68px]' : 'w-[240px]',
       )}
     >
