@@ -12,7 +12,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import {
   useAdminUsers, useSetUserStatus, useForceLogout, useAssignUserRole,
-  useRemoveUserRole, useAdminRoles, useAdminTenants, useAdminExport, useAdminStats } from '@/hooks/use-admin';
+  useRemoveUserRole, useAdminTenants, useAdminExport, useAdminStats } from '@/hooks/use-admin';
+import { useAuthContext } from '@/components/providers/auth-provider';
 import { USER_STATUSES, USER_STATUS_META } from '@/lib/statuses';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 
@@ -23,6 +24,7 @@ const PAGE_SIZE = 20;
 const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
 
 export function AdminUsersView() {
+  const { user } = useAuthContext();
   const [status, setStatus] = useState<string>('ALL');
   const [tenantId, setTenantId] = useState('');
   const [search, setSearch] = useState('');
@@ -37,7 +39,6 @@ export function AdminUsersView() {
     limit: PAGE_SIZE,
   };
   const { data, isLoading, error, refetch } = useAdminUsers(params);
-  const { data: roles = [] , error: adminRolesError, refetch: retryAdminRoles} = useAdminRoles();
   const { data: tenantsData , error: adminTenantsError, refetch: retryAdminTenants} = useAdminTenants({ limit: 200 });
   const setUserStatus = useSetUserStatus();
   const forceLogout = useForceLogout();
@@ -68,7 +69,7 @@ export function AdminUsersView() {
 
   const nameOf = (u: any) => `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || u.email || u.id.slice(0, 8);
 
-  if (error || adminRolesError || adminTenantsError) return <QueryFailure error={error || adminRolesError || adminTenantsError} onRetry={() => { refetch(); retryAdminRoles(); retryAdminTenants(); }} />;
+  if (error || adminTenantsError) return <QueryFailure error={error || adminTenantsError} onRetry={() => { refetch(); retryAdminTenants(); }} />;
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -162,9 +163,10 @@ export function AdminUsersView() {
               <tbody className="divide-y divide-gray-50">
                 {items.map((u: any) => {
                   const meta = USER_STATUS_META[u.status] ?? { label: u.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-                  const grantable = roles.filter((r: any) =>
-                    !(u.roles ?? []).some((ur: any) => ur.id === r.id) &&
-                    (!r.tenantId || r.tenantId === u.tenantId));
+                  // The server lists what it would accept for this account (organization
+                  // type, platform separation, custom roles of its own organization).
+                  const grantable: any[] = u.assignableRoles ?? [];
+                  const self = u.id === user?.id;
                   return (
                     <tr key={u.id} className="hover:bg-gray-50/60">
                       <td className="p-3">
@@ -177,7 +179,7 @@ export function AdminUsersView() {
                           {(u.roles ?? []).map((r: any) => (
                             <span key={r.id} className="inline-flex items-center gap-1 text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full">
                               {r.name}
-                              <Button variant="quiet" type="button"
+                              {!self && <Button variant="quiet" type="button"
                                 aria-label={`Revoke ${r.name} from ${nameOf(u)}`}
                                 onClick={() => setConfirm({
                                   title: `Revoke “${r.name}”?`,
@@ -189,16 +191,16 @@ export function AdminUsersView() {
                                     `${r.name} revoked`),
                                 })}
                                 className="hover:text-red-600"
-                              >×</Button>
+                              >×</Button>}
                             </span>
                           ))}
-                          <Select disabled={assignRole.isPending}
+                          {grantable.length > 0 && <Select disabled={assignRole.isPending}
                             value=""
                             aria-label={`Grant a role to ${nameOf(u)}`}
                             onChange={(e) => { try {
                               const roleId = e.target.value;
                               if (!roleId) return;
-                              const role = roles.find((r: any) => r.id === roleId);
+                              const role = grantable.find((r: any) => r.id === roleId);
                               setConfirm({
                                 title: `Grant “${role?.name}”?`,
                                 body: `${nameOf(u)} immediately gains every permission attached to this role.`,
@@ -212,7 +214,7 @@ export function AdminUsersView() {
                           >
                             <option value="">+ Add role</option>
                             {grantable.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                          </Select>
+                          </Select>}
                         </div>
                       </td>
                       <td className="p-3 text-xs text-gray-600">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : '—'}</td>
@@ -221,7 +223,8 @@ export function AdminUsersView() {
                           <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium', meta.color)}>
                             <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />{meta.label}
                           </span>
-                          <Select disabled={setUserStatus.isPending}
+                          <Select disabled={setUserStatus.isPending || self}
+                            title={self ? 'You cannot change the status of your own account' : undefined}
                             value={u.status}
                             aria-label={`Status for ${nameOf(u)}`}
                             onChange={(e) => { try {

@@ -107,10 +107,20 @@ export function useRemoveUserRole() {
 }
 
 // ── KYC ──
-export function useAdminKyc(status?: string) {
+/** A reviewer's decision on a KYC submission, from the audit trail. */
+export interface KycDecision {
+  decision: 'APPROVED' | 'REJECTED';
+  by?: string | null;
+  at: string;
+  reason?: string;
+  notes?: string;
+}
+
+/** KYC submissions for review, optionally for one state and/or one organization. */
+export function useAdminKyc(params: { status?: string; tenantId?: string } = {}) {
   return useQuery({
-    queryKey: ['admin', 'kyc', status],
-    queryFn: async () => (await apiClient.get('/admin/kyc', { params: { status } })).data.data as any[],
+    queryKey: ['admin', 'kyc', params],
+    queryFn: async () => (await apiClient.get('/admin/kyc', { params })).data.data as any[],
   });
 }
 export function useApproveKyc() {

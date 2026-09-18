@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useCapabilities } from '@/hooks/use-capabilities';
 import { LifeBuoy, MessageSquare, AlertTriangle, Inbox, ArrowRight } from 'lucide-react';
 
 /**
@@ -9,6 +10,7 @@ import { LifeBuoy, MessageSquare, AlertTriangle, Inbox, ArrowRight } from 'lucid
  * Future iteration: a dedicated SupportTicket model.
  */
 export function AdminSupportView() {
+  const { canOpen } = useCapabilities();
   return (
     <div className="space-y-5 pb-10 max-w-4xl">
       <div>
@@ -19,6 +21,7 @@ export function AdminSupportView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SupportTile
           href="/admin-inquiries"
+          visible={canOpen('/admin-inquiries')}
           icon={MessageSquare}
           title="Platform inquiries"
           subtitle="Contact, support, partner and demo submissions"
@@ -26,6 +29,7 @@ export function AdminSupportView() {
         />
         <SupportTile
           href="/admin-listings"
+          visible={canOpen('/admin-listings')}
           icon={Inbox}
           title="Listing moderation"
           subtitle="Review marketplace listings across organizations"
@@ -33,6 +37,7 @@ export function AdminSupportView() {
         />
         <SupportTile
           href="/admin-kyc"
+          visible={canOpen('/admin-kyc')}
           icon={AlertTriangle}
           title="KYC review"
           subtitle="Pending tenant verifications"
@@ -40,6 +45,7 @@ export function AdminSupportView() {
         />
         <SupportTile
           href="/admin-logs"
+          visible={canOpen('/admin-logs')}
           icon={LifeBuoy}
           title="System logs"
           subtitle="Audit trail of platform events"
@@ -57,7 +63,8 @@ export function AdminSupportView() {
   );
 }
 
-function SupportTile({ href, icon: Icon, title, subtitle, color }: { href: string; icon: any; title: string; subtitle: string; color: string }) {
+function SupportTile({ href, icon: Icon, title, subtitle, color, visible = true }: { href: string; icon: any; title: string; subtitle: string; color: string; visible?: boolean }) {
+  if (!visible) return null;
   return (
     <Link href={href} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all flex items-start gap-3">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}>

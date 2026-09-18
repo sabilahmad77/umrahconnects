@@ -6,6 +6,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Mail, Inbox, Handshake, Briefcase, BellRing, LifeBuoy, RefreshCw } from 'lucide-react';
 import { ErrorState } from '@/components/ui/system';
 import { apiClient } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api-error';
+import { toast } from 'sonner';
 
 const TYPE_META: Record<string, { label: string; Icon: any }> = {
   CONTACT: { label: 'Contact', Icon: Mail },
@@ -23,7 +25,7 @@ const STATUS_TINT: Record<string, string> = {
 export function AdminInquiriesView() {
   const [data, setData] = useState<any>({ items: [], total: 0, byType: {}, newCount: 0 });
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
 
@@ -37,9 +39,19 @@ export function AdminInquiriesView() {
 
   useEffect(() => { load(); }, [load]);
 
+  // A failed save is reported on its own; it must not replace the list with a load error.
   const setStatus = async (id: string, status: string) => {
-    if (saving) return; setSaving(true);
-    try { await apiClient.patch(`/inquiries/${id}/status`, { status }); load(); } catch { setError('The inquiry status could not be saved. Try again.'); } finally { setSaving(false); }
+    if (saving) return;
+    setSaving(id);
+    try {
+      await apiClient.patch(`/inquiries/${id}/status`, { status });
+      toast.success(`Inquiry marked ${status.replace(/_/g, ' ').toLowerCase()}`);
+      load();
+    } catch (e) {
+      toast.error(apiErrorMessage(e, 'The inquiry status could not be saved. Try again.'));
+    } finally {
+      setSaving(null);
+    }
   };
 
   const TABS = ['', 'CONTACT', 'PARTNER', 'CAREERS', 'NEWSLETTER', 'DEMO', 'SUPPORT'];
@@ -94,7 +106,7 @@ export function AdminInquiriesView() {
                     <td className="px-4 py-3 max-w-xs"><p className="text-[13px] text-gray-600 truncate">{it.subject ? <span className="font-medium">{it.subject}: </span> : ''}{it.message || <span className="text-gray-300">—</span>}</p></td>
                     <td className="px-4 py-3"><span className={`text-xs font-bold px-2 py-1 rounded-full ${STATUS_TINT[it.status] ?? STATUS_TINT.NEW}`}>{it.status}</span></td>
                     <td className="px-4 py-3">
-                      <Select aria-label={`Status for ${it.id ?? 'record'}`} value={it.status} onChange={(e) => setStatus(it.id, e.target.value)} className="text-[12px] border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-brand-400">
+                      <Select aria-label={`Status for inquiry from ${it.email ?? it.id}`} disabled={saving === it.id} value={it.status} onChange={(e) => setStatus(it.id, e.target.value)} className="text-[12px] border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-brand-400">
                         {['NEW', 'IN_REVIEW', 'RESOLVED', 'ARCHIVED'].map((s) => <option key={s} value={s}>{s}</option>)}
                       </Select>
                     </td>

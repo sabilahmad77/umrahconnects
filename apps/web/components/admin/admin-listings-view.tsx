@@ -4,7 +4,7 @@ import { Input , Button , QueryFailure } from '@/components/ui/system';
 
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { Store, RefreshCw, Loader2, AlertCircle, Search, Trash2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,18 @@ export function AdminListingsView() {
   const approve = useApproveListing();
   const remove = useAdminRemoveListing();
   const items = data?.items ?? [];
+  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
+
+  const run = async (action: () => Promise<unknown>, success: string) => {
+    try {
+      await action();
+      toast.success(success);
+      void refetch();
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.'));
+      throw error;
+    }
+  };
 
   if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
@@ -81,7 +93,11 @@ export function AdminListingsView() {
               {items.map((l: any) => (
                 <tr key={l.id} className="hover:bg-gray-50/60">
                   <td className="p-3">
-                    <Link href={`/marketplace/${l.id}`} className="text-brand-600 hover:underline font-medium">{l.name}</Link>
+                    {/* Listing pages belong to the marketplace workspace, which platform
+                        accounts do not have; the moderation facts are shown here instead. */}
+                    <p className="font-medium text-gray-900">{l.name}</p>
+                    {l.description && <p className="mt-0.5 max-w-md text-xs text-gray-600 line-clamp-2">{l.description}</p>}
+                    <p className="text-xs text-gray-600">Created {new Date(l.createdAt).toLocaleDateString()}</p>
                   </td>
                   <td className="p-3 text-xs text-gray-600">{l.type?.replace(/_/g, ' ')}</td>
                   <td className="p-3 text-xs text-gray-600">{l.vendor?.name ?? '—'} <span className="text-xs text-gray-600">{l.vendor?.status}</span></td>
@@ -97,7 +113,13 @@ export function AdminListingsView() {
                     <div className="flex items-center justify-end gap-1.5">
                       {l.status !== 'PUBLISHED' ? (
                         <Button busy={approve.isPending} variant="quiet" type="button"
-                          onClick={async () => { try { await approve.mutateAsync(l.id); toast.success('Listing approved + published'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
+                          aria-label={`Approve ${l.name}`}
+                          onClick={() => setConfirm({
+                            title: `Publish “${l.name}”?`,
+                            body: 'The listing becomes visible and bookable on the marketplace.',
+                            cta: 'Approve and publish',
+                            onConfirm: () => run(() => approve.mutateAsync(l.id), `“${l.name}” is published`),
+                          })}
                           className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700"
                         >
                           <CheckCircle2 className="h-3 w-3" /> Approve
@@ -110,7 +132,14 @@ export function AdminListingsView() {
                       <Button busy={remove.isPending} variant="quiet" type="button"
                         aria-label="Remove listing"
                         title="Archive (remove) this listing"
-                        onClick={async () => { try { if (!confirm('Archive (remove) this listing?')) return; await remove.mutateAsync(l.id); toast.success('Removed'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
+                        disabled={l.status === 'ARCHIVED'}
+                        onClick={() => setConfirm({
+                          title: `Remove “${l.name}”?`,
+                          body: 'The listing is archived: it disappears from the marketplace and cannot be booked. Existing bookings are kept.',
+                          cta: 'Remove listing',
+                          tone: 'danger',
+                          onConfirm: () => run(() => remove.mutateAsync(l.id), `“${l.name}” was removed`),
+                        })}
                         className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
                       >
                         <Trash2 className="h-3 w-3" /> Remove
@@ -123,6 +152,7 @@ export function AdminListingsView() {
           </table></div>
         </div>
       )}
+      {confirm && <ConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }

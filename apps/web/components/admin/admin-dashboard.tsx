@@ -10,11 +10,25 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAdminStats } from '@/hooks/use-admin';
+import { useCapabilities } from '@/hooks/use-capabilities';
 
 const fmt = (cents: number, cur = 'SAR') => `${cur} ${((cents ?? 0) / 100).toLocaleString()}`;
 
+/** Shortcuts into the console; each one is shown only when the account can open it. */
+const QUICK_ACTIONS = [
+  { href: '/admin-tenants', label: 'All Tenants', icon: Building2, bg: 'bg-brand-50 text-brand-600' },
+  { href: '/admin-users', label: 'All Users', icon: Users, bg: 'bg-blue-50 text-blue-600' },
+  { href: '/admin-listings', label: 'All Listings', icon: Store, bg: 'bg-pink-50 text-pink-600' },
+  { href: '/admin-kyc', label: 'KYC Verification', icon: ShieldCheck, bg: 'bg-yellow-50 text-yellow-700' },
+  { href: '/admin-roles', label: 'Roles & Permissions', icon: Cog, bg: 'bg-blue-50 text-blue-700' },
+  { href: '/admin-logs', label: 'System Logs', icon: FileBarChart, bg: 'bg-gray-50 text-gray-700' },
+  { href: '/admin-settings', label: 'Settings', icon: Cog, bg: 'bg-gray-50 text-gray-700' },
+  { href: '/admin-support', label: 'Support / Issues', icon: LifeBuoy, bg: 'bg-red-50 text-red-600' },
+];
+
 export function AdminDashboard() {
   const { data: stats, isLoading, error, refetch } = useAdminStats();
+  const { canOpen } = useCapabilities();
 
   if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
@@ -35,7 +49,7 @@ export function AdminDashboard() {
         </div>
       ) : (
         <>
-          <section className="border-l-4 border-brand-500 bg-white p-5"><h2 className="text-base font-semibold text-gray-900">Platform governance</h2><p className="mt-2 text-sm text-gray-600">Review organization verification, platform users and listing moderation across tenants.</p><Link href="/admin-tenants" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">Open work queue</Link></section>
+          <section className="border-l-4 border-brand-500 bg-white p-5"><h2 className="text-base font-semibold text-gray-900">Platform governance</h2><p className="mt-2 text-sm text-gray-600">Review organization verification, platform users and listing moderation across tenants.</p><Link href={stats.kyc.pending > 0 && canOpen('/admin-kyc') ? '/admin-kyc' : '/admin-tenants'} className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">{stats.kyc.pending > 0 ? `Review ${stats.kyc.pending} pending verification${stats.kyc.pending === 1 ? '' : 's'}` : 'Open work queue'}</Link></section>
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KPI label="Tenants" value={stats.tenants.total} sub={`across ${Object.keys(stats.tenants.byType).length} types`} icon={Building2} color="bg-brand-50 text-brand-700" href="/admin-tenants" />
@@ -98,15 +112,9 @@ export function AdminDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <QuickAction href="/admin-tenants" label="All Tenants" icon={Building2} bg="bg-brand-50 text-brand-600" />
-              <QuickAction href="/admin-users" label="All Users" icon={Users} bg="bg-blue-50 text-blue-600" />
-              <QuickAction href="/admin-listings" label="All Listings" icon={Store} bg="bg-pink-50 text-pink-600" />
-              <QuickAction href="/admin-kyc" label="KYC Verification" icon={ShieldCheck} bg="bg-yellow-50 text-yellow-700" />
-              <QuickAction href="/admin-roles" label="Roles & Permissions" icon={Cog} bg="bg-blue-50 text-blue-700" />
-              <QuickAction href="/admin-logs" label="System Logs" icon={FileBarChart} bg="bg-gray-50 text-gray-700" />
-              <QuickAction href="/admin-settings" label="Settings" icon={Cog} bg="bg-gray-50 text-gray-700" />
-              <QuickAction href="/admin-support" label="Support / Issues" icon={LifeBuoy} bg="bg-red-50 text-red-600" />
-              <QuickAction href="/social" label="Social Hub" icon={MessageSquare} bg="bg-pink-50 text-pink-700" />
+              {QUICK_ACTIONS.filter((action) => canOpen(action.href)).map((action) => (
+                <QuickAction key={action.href} {...action} />
+              ))}
             </div>
           </div>
         </>
