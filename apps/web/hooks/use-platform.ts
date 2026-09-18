@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 
 // ─── Notifications ───────────────────────────────────────────────────────
@@ -32,46 +32,116 @@ export function useMarkAllNotificationsRead() {
   });
 }
 
-// ─── Connections ─────────────────────────────────────────────────────────
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  link?: string | null;
+  data?: Record<string, unknown> | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** The full notification list as pages ("Load more"), optionally unread only. */
+export function useNotificationPages(unreadOnly = false, limit = 20) {
+  return useInfiniteQuery({
+    queryKey: ['notifications', 'pages', { unreadOnly, limit }],
+    queryFn: async ({ pageParam }) =>
+      (await apiClient.get('/notifications', { params: { page: pageParam, limit, ...(unreadOnly ? { unreadOnly: true } : {}) } })).data
+        .data as { items: AppNotification[]; total: number; unread: number; page: number; limit: number },
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page * last.limit < last.total ? last.page + 1 : undefined),
+    refetchInterval: 30_000,
+  });
+}
+
+/**
+ * Only in-app paths are followed from a notification: anything else (an absolute
+ * URL, a protocol-relative `//host`, a `javascript:` link) is ignored.
+ */
+export function safeNotificationLink(link?: string | null): string | null {
+  if (!link || !link.startsWith('/') || link.startsWith('//') || link.includes('\\')) return null;
+  return link;
+}
+
+// ─── Connections (standard { success, data } envelope) ───────────────────
+export interface ConnectionParty {
+  connectionId: string;
+  displayName?: string;
+  /** Present only when the other person's contact visibility allows it. */
+  email?: string;
+  avatarUrl?: string;
+  bio?: string;
+  verified?: boolean;
+}
+const refreshNetwork = (qc: ReturnType<typeof useQueryClient>) => {
+  qc.invalidateQueries({ queryKey: ['connections'] });
+  // Discover and the suggestions panel show each person's connection status.
+  qc.invalidateQueries({ queryKey: ['social', 'discover'] });
+};
 export function useConnections() {
   return useQuery({
     queryKey: ['connections'],
-    queryFn: async () => (await apiClient.get('/connections')).data as { items: any[]; total: number },
+    queryFn: async () =>
+      (await apiClient.get('/connections')).data.data as { items: (ConnectionParty & { otherUserId: string; since: string })[]; total: number },
   });
 }
 export function usePendingConnections() {
   return useQuery({
     queryKey: ['connections', 'pending'],
-    queryFn: async () => (await apiClient.get('/connections/pending')).data as { items: any[]; total: number },
+    queryFn: async () =>
+      (await apiClient.get('/connections/pending')).data.data as {
+        items: (ConnectionParty & { requesterId: string; createdAt: string; message?: string })[];
+        total: number;
+      },
+  });
+}
+export function useOutgoingConnections() {
+  return useQuery({
+    queryKey: ['connections', 'outgoing'],
+    queryFn: async () =>
+      (await apiClient.get('/connections/outgoing')).data.data as {
+        items: (ConnectionParty & { recipientId: string; createdAt: string; message?: string })[];
+        total: number;
+      },
   });
 }
 export function useConnectionStatus(otherUserId?: string) {
   return useQuery({
     queryKey: ['connections', 'status', otherUserId],
     enabled: !!otherUserId,
-    queryFn: async () => (await apiClient.get(`/connections/status/${otherUserId}`)).data,
+    queryFn: async () => (await apiClient.get(`/connections/status/${otherUserId}`)).data.data,
   });
 }
 export function useRequestConnection() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ recipientId, message }: { recipientId: string; message?: string }) =>
-      (await apiClient.post('/connections/request', { recipientId, message })).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['connections'] }),
+      (await apiClient.post('/connections/request', { recipientId, ...(message ? { message } : {}) })).data.data,
+    onSuccess: () => refreshNetwork(qc),
   });
 }
 export function useAcceptConnection() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => (await apiClient.post(`/connections/${id}/accept`)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['connections'] }),
+    mutationFn: async (id: string) => (await apiClient.post(`/connections/${id}/accept`)).data.data,
+    onSuccess: () => refreshNetwork(qc),
   });
 }
 export function useRejectConnection() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => (await apiClient.post(`/connections/${id}/reject`)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['connections'] }),
+    mutationFn: async (id: string) => (await apiClient.post(`/connections/${id}/reject`)).data.data,
+    onSuccess: () => refreshNetwork(qc),
+  });
+}
+/** Removes a connection, or withdraws a request you sent, with that user. */
+export function useRemoveConnection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (otherUserId: string) => (await apiClient.delete(`/connections/with/${otherUserId}`)).data.data as { removed: boolean },
+    onSuccess: () => refreshNetwork(qc),
   });
 }
 
@@ -168,11 +238,24 @@ export function useOpenConversation() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
   });
 }
+/**
+ * A conversation's messages, newest page first ("Load earlier messages" fetches
+ * older pages). Reading also settles the conversation's message notifications
+ * on the server, so the bell is refreshed after each load.
+ */
 export function useMessages(conversationId?: string) {
-  return useQuery({
+  const qc = useQueryClient();
+  return useInfiniteQuery({
     queryKey: ['messages', conversationId],
     enabled: !!conversationId,
-    queryFn: async () => (await apiClient.get(`/social/conversations/${conversationId}/messages`)).data?.data,
+    queryFn: async ({ pageParam }) => {
+      const data = (await apiClient.get(`/social/conversations/${conversationId}/messages`, { params: { page: pageParam, limit: 30 } })).data
+        .data as { items: any[]; total: number; page: number; limit: number; totalPages: number };
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+      return data;
+    },
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
     refetchInterval: 15_000,
   });
 }

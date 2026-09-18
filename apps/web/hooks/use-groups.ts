@@ -1,9 +1,91 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 
+/**
+ * Trip-group hooks. Management hooks call capability-gated routes (crm:pilgrim:*)
+ * inside the caller's organization; member hooks (my groups, invitations,
+ * discussion, polls, join/leave) work for travelers too. The server decides.
+ */
+
+// ── Lists ──
+export function useGroups(params?: { page?: number; limit?: number; search?: string; status?: string }, enabled = true) {
+  return useQuery({
+    queryKey: ['groups', 'list', params],
+    enabled,
+    queryFn: async () =>
+      (await apiClient.get('/groups', { params })).data.data as { items: any[]; total: number; page: number; limit: number; totalPages: number },
+  });
+}
+
+export function useGroupStats(enabled = true) {
+  return useQuery({
+    queryKey: ['groups', 'stats'],
+    enabled,
+    queryFn: async () =>
+      (await apiClient.get('/groups/stats')).data.data as { total: number; active: number; completed: number; incidents: number; openIncidents?: number },
+  });
+}
+
+/** PUBLIC groups (any organization) that anyone can join. */
+export function usePublicGroups(params?: { search?: string; page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: ['groups', 'public', params],
+    queryFn: async () => (await apiClient.get('/groups/public', { params })).data.data as { items: any[]; total: number },
+  });
+}
+
+export function useCreateGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (dto: Record<string, any>) => (await apiClient.post('/groups', dto)).data.data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+// ── Membership (self-service) ──
+export function useMyGroupInvites() {
+  return useQuery({
+    queryKey: ['groups', 'invites', 'mine'],
+    queryFn: async () => (await apiClient.get('/groups/invites/mine')).data.data as { id: string; message?: string; createdAt: string; group: any }[],
+  });
+}
+
+export function useRespondGroupInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ inviteId, accept }: { inviteId: string; accept: boolean }) =>
+      (await apiClient.post(`/groups/invites/${inviteId}/respond`, { accept })).data.data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['groups'] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+export function useJoinGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (groupId: string) => (await apiClient.post(`/groups/${groupId}/join`, {})).data.data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
+export function useLeaveGroup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (groupId: string) => (await apiClient.post(`/groups/${groupId}/leave`, {})).data.data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  });
+}
+
 // ── Detail ──
+/**
+ * One group. The managing organization receives the full record; members,
+ * invitees and link holders receive the public-safe view. `viewer` says what
+ * the caller may do (canManage, membership, pendingInvite, canJoin).
+ */
 export function useGroup(id?: string) {
   return useQuery({
     queryKey: ['groups', id, 'detail'],
@@ -12,6 +94,7 @@ export function useGroup(id?: string) {
       return data.data as any;
     },
     enabled: !!id,
+    retry: (count, error: any) => ![400, 403, 404].includes(error?.response?.status) && count < 2,
   });
 }
 
@@ -95,23 +178,39 @@ export function useCreateGroupInvite() {
   });
 }
 
+export function useRevokeGroupInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ inviteId }: { groupId: string; inviteId: string }) =>
+      (await apiClient.post(`/groups/invites/${inviteId}/revoke`)).data.data,
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'invites'] }),
+  });
+}
+
 // ── Discussion ──
-export function useGroupPosts(id?: string) {
-  return useQuery({
+/** The group's discussion, pinned first then newest, as pages ("Load more"). */
+export function useGroupPosts(id?: string, limit = 10) {
+  return useInfiniteQuery({
     queryKey: ['groups', id, 'posts'],
-    queryFn: async () => {
-      const { data } = await apiClient.get(`/groups/${id}/posts`);
-      return data.data as any[];
-    },
     enabled: !!id,
+    queryFn: async ({ pageParam }) =>
+      (await apiClient.get(`/groups/${id}/posts`, { params: { page: pageParam, limit } })).data.data as {
+        items: any[];
+        total: number;
+        page: number;
+        totalPages: number;
+      },
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined),
   });
 }
 
 export function useCreateGroupPost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ groupId, body, mediaUrls }: { groupId: string; body: string; mediaUrls?: string[] }) => {
-      const { data } = await apiClient.post(`/groups/${groupId}/posts`, { body, mediaUrls });
+    mutationFn: async ({ groupId, body, isPinned }: { groupId: string; body: string; isPinned?: boolean }) => {
+      // The server honours isPinned only for the managing organization.
+      const { data } = await apiClient.post(`/groups/${groupId}/posts`, { body, ...(isPinned ? { isPinned } : {}) });
       return data.data;
     },
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'posts'] }),
@@ -142,11 +241,26 @@ export function useGroupPostComments(postId?: string) {
 export function useCreateGroupPostComment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ postId, body }: { postId: string; body: string }) => {
+    mutationFn: async ({ postId, body }: { postId: string; body: string; groupId?: string }) => {
       const { data } = await apiClient.post(`/groups/posts/${postId}/comments`, { body });
       return data.data;
     },
-    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['groupPost', vars.postId, 'comments'] }),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['groupPost', vars.postId, 'comments'] });
+      if (vars.groupId) qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'posts'] });
+    },
+  });
+}
+
+export function useDeleteGroupPostComment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ postId, commentId }: { postId: string; commentId: string; groupId?: string }) =>
+      (await apiClient.delete(`/groups/posts/${postId}/comments/${commentId}`)).data.data,
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['groupPost', vars.postId, 'comments'] });
+      if (vars.groupId) qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'posts'] });
+    },
   });
 }
 
@@ -169,6 +283,14 @@ export function useCreateGroupPoll() {
       const { data } = await apiClient.post(`/groups/${groupId}/polls`, { question, options, isMultiple, closesAt });
       return data.data;
     },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'polls'] }),
+  });
+}
+
+export function useCloseGroupPoll() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ pollId }: { groupId: string; pollId: string }) => (await apiClient.post(`/groups/polls/${pollId}/close`)).data.data,
     onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'polls'] }),
   });
 }
@@ -270,6 +392,39 @@ export function useGroupRelated(id?: string) {
       return data.data as { bookings: any[]; transportAssignments: any[] };
     },
     enabled: !!id,
+  });
+}
+
+// ── Incidents ──
+export function useGroupIncidents(id?: string) {
+  return useQuery({
+    queryKey: ['groups', id, 'incidents'],
+    enabled: !!id,
+    queryFn: async () => (await apiClient.get(`/groups/${id}/incidents`)).data.data as any[],
+  });
+}
+
+export function useCreateGroupIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ groupId, ...body }: { groupId: string; type: string; severity: string; description: string; location?: string }) =>
+      (await apiClient.post(`/groups/${groupId}/incidents`, body)).data.data,
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['groups', vars.groupId] });
+      qc.invalidateQueries({ queryKey: ['groups', 'stats'] });
+    },
+  });
+}
+
+export function useResolveGroupIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ groupId, incidentId, resolution }: { groupId: string; incidentId: string; resolution: string }) =>
+      (await apiClient.put(`/groups/${groupId}/incidents/${incidentId}`, { resolution, resolvedAt: new Date().toISOString() })).data.data,
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['groups', vars.groupId] });
+      qc.invalidateQueries({ queryKey: ['groups', 'stats'] });
+    },
   });
 }
 

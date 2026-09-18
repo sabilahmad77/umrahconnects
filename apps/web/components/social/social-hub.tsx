@@ -1,540 +1,349 @@
 'use client';
-import { Textarea, Input , Button , QueryFailure } from '@/components/ui/system';
-
 
 import { useState } from 'react';
-import {
-  Heart, MessageCircle, Share2, MoreHorizontal, BadgeCheck,
-  Image, Hash, Globe, Send, Loader2, Users, TrendingUp,
-  BookmarkPlus, ThumbsUp, RefreshCw, Plus, Video, BarChart3,
-  Pencil, HelpCircle, Lightbulb, Star, AlertTriangle, Gift,
-} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, Globe, Hash, Loader2, MessageSquare, RefreshCw, TrendingUp, Users, Users2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { Alert, Button, QueryFailure } from '@/components/ui/system';
+import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useAuthContext } from '@/components/providers/auth-provider';
-import {
-  useSocialFeedPaginated,
-  useCreatePost,
-  useToggleReaction,
-  useAddComment,
-  useSocialAccount,
-  useToggleSavePost,
-  useDiscoverPeople,
-  useTrendingPosts,
-} from '@/hooks/use-social';
-import { useRequestConnection } from '@/hooks/use-platform';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { useDiscoverPeople, useSavedPosts, useSocialAccount, useSocialFeed, useSocialPost, useTrendingPosts, type DiscoverPerson } from '@/hooks/use-social';
+import { useOpenConversation, useRequestConnection } from '@/hooks/use-platform';
+import { PostCard } from './post-card';
+import { PostComposer } from './post-composer';
+import { dedupeById, initialsOf } from './social-utils';
 
-// ─── Post Composer ────────────────────────────────────────────────────────────
+type Tab = 'all' | 'following' | 'saved';
 
-function PostComposer() {
-  const [body, setBody] = useState('');
-  const [type, setType] = useState('UPDATE');
-  const { user } = useAuthContext();
-  const { mutateAsync: createPost, isPending } = useCreatePost();
-
-  const initials = (user?.displayName ?? 'U').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
-
-  const submit = async () => {
-    if (!body.trim()) return;
-    await createPost({ type, body, visibility: 'PUBLIC' });
-    setBody('');
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-          {initials}
-        </div>
-        <div className="flex-1">
-          <Textarea aria-label="Body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Share an update, tip, or experience with the Umrah community…"
-            rows={3}
-            className="w-full text-sm bg-gray-50 rounded-xl px-3 py-2.5 outline-none resize-none border border-gray-200 focus:border-brand-300 focus:ring-2 focus:ring-brand-100 transition-all placeholder:text-gray-600"
-          />
-          {/* Media actions (frontend-ready; upload backend pending) */}
-          <div className="flex items-center gap-1 mt-2 pb-2.5 border-b border-gray-50">
-            {[
-              { label: 'Photo', Icon: Image,     color: 'text-emerald-600' },
-              { label: 'Video', Icon: Video,     color: 'text-blue-600' },
-              { label: 'Poll',  Icon: BarChart3, color: 'text-gold-800' },
-            ].map((m) => (
-              <Button variant="quiet" type="button"
-                key={m.label}
-                onClick={() => toast.info(`${m.label} upload connects to the media backend when enabled.`)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                <m.Icon className={cn('h-4 w-4', m.color)} />
-                {m.label}
-              </Button>
-            ))}
-          </div>
-          <div className="flex items-center justify-between mt-2.5">
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { type: 'UPDATE',     label: 'Update',     Icon: Pencil },
-                { type: 'QUESTION',   label: 'Question',   Icon: HelpCircle },
-                { type: 'GUIDELINE',  label: 'Tip',        Icon: Lightbulb },
-                { type: 'STORY',      label: 'Experience', Icon: Star },
-                { type: 'OFFER',      label: 'Offer',      Icon: Gift },
-              ].map((t) => (
-                <Button variant="quiet" type="button"
-                  key={t.type}
-                  onClick={() => setType(t.type)}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border transition-colors',
-                    type === t.type
-                      ? 'bg-brand-50 text-brand-700 border-brand-300'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300',
-                  )}
-                >
-                  <t.Icon className="h-3 w-3" />
-                  {t.label}
-                </Button>
-              ))}
-            </div>
-            <Button variant="quiet" type="button"
-              onClick={submit}
-              disabled={!body.trim() || isPending}
-              className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors shadow-sm"
-            >
-              {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              Post
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Post Card ────────────────────────────────────────────────────────────────
-
-const POST_TYPE_CONFIG: Record<string, { label: string; color: string; Icon: any }> = {
-  UPDATE:      { label: 'Update',     color: 'bg-gray-100 text-gray-600',       Icon: Pencil },
-  QUESTION:    { label: 'Question',   color: 'bg-purple-100 text-purple-700',   Icon: HelpCircle },
-  GUIDELINE:   { label: 'Tip',        color: 'bg-yellow-100 text-yellow-700',   Icon: Lightbulb },
-  STORY:       { label: 'Experience', color: 'bg-blue-100 text-blue-700',       Icon: Star },
-  OFFER:       { label: 'Offer',      color: 'bg-green-100 text-green-700',     Icon: Gift },
-  EVENT:       { label: 'Event',      color: 'bg-indigo-100 text-indigo-700',   Icon: AlertTriangle },
-  PARTNERSHIP: { label: 'Partnership',color: 'bg-rose-100 text-rose-700',       Icon: Star },
-};
-
-function PostCard({ post }: { post: any }) {
-  // Server truth: the feed includes the viewer's own reactions, so liked state
-  // survives reloads. Local state only tracks the delta until the next refetch.
-  const serverLiked = Array.isArray(post.reactions) && post.reactions.some((r: any) => r.type === 'LIKE');
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  // Same server truth for the bookmark: the feed returns the viewer's own save.
-  const serverSaved = Array.isArray(post.savedBy) && post.savedBy.length > 0;
-  const [liked, setLiked] = useState(serverLiked);
-  const [saved, setSaved] = useState(serverSaved);
-  const { mutateAsync: toggleReaction } = useToggleReaction();
-  const { mutateAsync: addComment, isPending: commentPending } = useAddComment();
-  const { mutateAsync: toggleSave } = useToggleSavePost();
-
-  const displayName = post.author?.displayName ?? post.author?.account?.displayName ?? 'Umrah Community';
-  const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-  const timeAgo = post.createdAt ? formatTimeAgo(new Date(post.createdAt)) : '';
-  const typeCfg = POST_TYPE_CONFIG[post.type] ?? POST_TYPE_CONFIG.UPDATE;
-  const likeCount = (post._count?.reactions ?? post.likeCount ?? 0) + (liked === serverLiked ? 0 : liked ? 1 : -1);
-  const commentCount = post._count?.comments ?? post.commentCount ?? 0;
-  const shareCount = post._count?.shares ?? post.shareCount ?? 0;
-  const postImage = post.imageUrl ?? (Array.isArray(post.mediaUrls) ? post.mediaUrls[0] : undefined)
-    ?? (Array.isArray(post.media) ? post.media[0]?.url : undefined);
-
-  const handleLike = async () => {
-    setLiked(!liked);
-    await toggleReaction({ postId: post.id, type: 'LIKE' }).catch(() => setLiked(liked));
-  };
-
-  const handleComment = async () => {
-    if (!commentText.trim()) return;
-    await addComment({ postId: post.id, body: commentText });
-    setCommentText('');
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
-      {/* Header */}
-      <div className="flex items-start justify-between px-5 pt-4 pb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-            {initials}
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold text-gray-900">{displayName}</p>
-              {post.author?.verified && <BadgeCheck className="h-3.5 w-3.5 text-brand-500" />}
-            </div>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <p className="text-xs text-gray-600">{timeAgo}</p>
-              {post.type && (
-                <span className={cn('inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded-md', typeCfg.color)}>
-                  <typeCfg.Icon className="h-2.5 w-2.5" />
-                  {typeCfg.label}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <Button variant="quiet" type="button" aria-label="More options" className="p-1.5 hover:bg-gray-50 rounded-lg transition-colors">
-          <MoreHorizontal className="h-4 w-4 text-gray-600" />
-        </Button>
-      </div>
-
-      {/* Body */}
-      <div className="px-5 pb-3">
-        <p className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-line">{post.body}</p>
-
-        {/* Tags */}
-        {post.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {post.tags.map((tag: string) => (
-              <span key={tag} className="text-xs text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full font-medium cursor-pointer hover:bg-brand-100 transition-colors">
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Media (real image when present) */}
-      {postImage && (
-        <div className="border-y border-gray-50">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={postImage} alt="" className="w-full max-h-[460px] object-cover" />
-        </div>
-      )}
-
-      {/* Engagement summary */}
-      {(likeCount > 0 || commentCount > 0 || shareCount > 0) && (
-        <div className="flex items-center justify-between px-5 pt-3 text-[12px] text-gray-600">
-          <div className="flex items-center gap-1.5">
-            <span className="flex items-center justify-center w-4.5 h-4.5 rounded-full bg-red-500">
-              <Heart className="h-2.5 w-2.5 text-white fill-current" />
-            </span>
-            {likeCount > 0 && <span>{likeCount}</span>}
-          </div>
-          <div className="flex items-center gap-3">
-            {commentCount > 0 && <span>{commentCount} comments</span>}
-            {shareCount > 0 && <span>{shareCount} shares</span>}
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-1 px-3 py-1.5 mt-2 border-t border-gray-50">
-        <Button variant="quiet" type="button" aria-label="Heart"
-          onClick={handleLike}
-          className={cn(
-            'flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm transition-all font-medium',
-            liked ? 'text-red-700 bg-red-50' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-700',
-          )}
-        >
-          <Heart className={cn('h-[18px] w-[18px]', liked && 'fill-current')} />
-          <span>Like</span>
-        </Button>
-        <Button variant="quiet" type="button" aria-label="Message Circle"
-          onClick={() => setShowComments(!showComments)}
-          className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700 transition-all font-medium"
-        >
-          <MessageCircle className="h-[18px] w-[18px]" />
-          <span>Comment</span>
-        </Button>
-        <Button variant="quiet" type="button" aria-label="Share2"
-          onClick={() => toggleReaction({ postId: post.id, type: 'SHARE' }).catch(() => toast.error('Could not save your reaction. Try again.'))}
-          className="flex flex-1 items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700 transition-all font-medium"
-        >
-          <Share2 className="h-[18px] w-[18px]" />
-          <span>Share</span>
-        </Button>
-        <Button variant="quiet" type="button"
-          onClick={async () => {
-            try { const res = await toggleSave(post.id); setSaved(res.saved); } catch (error:any) { toast.error(error?.response?.data?.error?.message || 'This post could not be saved. Try again.'); }
-          }}
-          className={cn(
-            'p-2 rounded-xl transition-colors',
-            saved ? 'text-brand-600 bg-brand-50' : 'text-gray-600 hover:text-gray-600 hover:bg-gray-50',
-          )}
-          title={saved ? 'Saved' : 'Save'}
-          aria-label={saved ? 'Unsave post' : 'Save post'}
-          aria-pressed={saved}
-        >
-          <BookmarkPlus className={cn('h-[18px] w-[18px]', saved && 'fill-current')} />
-        </Button>
-      </div>
-
-      {/* Comments section */}
-      {showComments && (
-        <div className="px-5 pb-4 border-t border-gray-50 pt-3 space-y-3">
-          {post.comments?.slice(0, 3).map((c: any) => (
-            <div key={c.id} className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600 text-xs font-bold shrink-0">
-                {(c.author?.displayName ?? 'U').charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 bg-gray-50 rounded-xl px-3 py-2">
-                <p className="text-xs font-semibold text-gray-700">{c.author?.displayName ?? 'User'}</p>
-                <p className="text-xs text-gray-600 mt-0.5">{c.body}</p>
-              </div>
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <Input aria-label="Comment Text"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleComment()}
-              placeholder="Write a comment…"
-              className="flex-1 text-xs bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 outline-none focus:border-brand-300 transition-colors"
-            />
-            <Button variant="quiet" type="button"
-              onClick={handleComment}
-              disabled={!commentText.trim() || commentPending}
-              className="p-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors"
-            >
-              {commentPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Profile Panel ────────────────────────────────────────────────────────────
-
-function ProfilePanel() {
-  const { user } = useAuthContext();
-  const { data: account , error: socialAccountError, refetch: retrySocialAccount} = useSocialAccount();
-
-  const displayName = account?.displayName ?? user?.displayName ?? 'Community Member';
-  // No invented bio: an account that has not written one shows nothing.
-  const bio = account?.bio ?? '';
-  const initials = displayName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-
-  if (socialAccountError) return <QueryFailure error={socialAccountError} onRetry={() => { retrySocialAccount(); }} />;
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      {/* Cover */}
-      <div className="h-16 bg-gradient-to-r from-brand-500 to-brand-600" />
-      <div className="px-4 pb-4">
-        {/* Avatar */}
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-lg font-bold border-4 border-white -mt-7 mb-3 shadow-sm">
-          {initials}
-        </div>
-        <p className="font-bold text-gray-900 text-sm">{displayName}</p>
-        {bio && <p className="text-xs text-gray-600 mt-0.5">{bio}</p>}
-        {user?.tenantName && (
-          <p className="text-xs text-brand-600 font-medium mt-1">🏢 {user.tenantName}</p>
-        )}
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200">
-          {[
-            { label: 'Posts',      value: account?._count?.posts ?? 0 },
-            { label: 'Followers',  value: account?._count?.followers ?? 0 },
-            { label: 'Following',  value: account?._count?.following ?? 0 },
-          ].map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-base font-bold text-gray-900">{s.value}</p>
-              <p className="text-xs text-gray-600">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Trending Topics (real data) ────────────────────────────────────────────
-
-function TrendingPanel() {
-  const { data , error: trendingPostsError, refetch: retryTrendingPosts} = useTrendingPosts();
-  const posts: any[] = (data as any)?.items ?? (data as any) ?? [];
-  // Derive real hashtags from the trending posts' tags
-  const tags = Array.from(new Set(posts.flatMap((p) => p?.tags ?? []))).slice(0, 8) as string[];
-
-  if (trendingPostsError) return <QueryFailure error={trendingPostsError} onRetry={() => { retryTrendingPosts(); }} />;
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <TrendingUp className="h-4 w-4 text-brand-500" />
-        <h3 className="text-sm font-bold text-gray-900">Trending</h3>
-      </div>
-      {tags.length > 0 ? (
-        <div className="flex flex-col gap-1.5">
-          {tags.map((tag) => (
-            <Button variant="quiet" type="button" key={tag} className="text-left text-xs text-brand-600 hover:text-brand-700 hover:bg-brand-50 px-2 py-1.5 rounded-lg transition-colors font-medium">
-              #{String(tag).replace(/^#/, '')}
-            </Button>
-          ))}
-        </div>
-      ) : posts.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {posts.slice(0, 4).map((p) => (
-            <div key={p.id} className="text-xs text-gray-600 line-clamp-2 px-2 py-1.5 rounded-lg hover:bg-gray-50">
-              {p.body}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-gray-600 px-2 py-2">Topics will appear as the community posts.</p>
-      )}
-    </div>
-  );
-}
-
-// ─── Suggested Connections (real data) ───────────────────────────────────────
-
-function SuggestedPanel() {
-  const { data , error: discoverPeopleError, refetch: retryDiscoverPeople} = useDiscoverPeople();
-  const people: any[] = (data as any)?.items ?? (data as any) ?? [];
-  const requestConnection = useRequestConnection();
-  const [done, setDone] = useState<Record<string, boolean>>({});
-
-  const onConnect = async (p: any) => {
-    const recipientId = p.userId ?? p.id;
-    if (!recipientId) return;
-    try {
-      await requestConnection.mutateAsync({ recipientId, message: 'Let’s connect on Umrah Connect.' } as any);
-      setDone((prev) => ({ ...prev, [recipientId]: true }));
-    } catch { toast.error('Connection request could not be sent. Try again.'); }
-  };
-
-  if (discoverPeopleError) return <QueryFailure error={discoverPeopleError} onRetry={() => { retryDiscoverPeople(); }} />;
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Users className="h-4 w-4 text-brand-500" />
-        <h3 className="text-sm font-bold text-gray-900">Suggested connections</h3>
-      </div>
-      {people.length === 0 ? (
-        <p className="text-xs text-gray-600 px-2 py-2">No suggestions yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {people.slice(0, 6).map((u) => {
-            const id = u.userId ?? u.id;
-            const name = u.displayName ?? u.name ?? 'Community member';
-            const role = u.tenant?.name ?? u.tenantName ?? u.role ?? u.headline ?? 'Umrah Connect';
-            const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-            return (
-              <div key={id} className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                  {initials}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800 truncate">{name}</p>
-                  <p className="text-xs text-gray-600 truncate">{role}</p>
-                </div>
-                <Button variant="quiet" type="button"
-                  onClick={() => onConnect(u)}
-                  disabled={done[id]}
-                  className={cn(
-                    'text-xs font-semibold px-2.5 py-1 rounded-full border transition-colors',
-                    done[id]
-                      ? 'bg-gray-100 text-gray-600 border-gray-200'
-                      : 'bg-brand-50 text-brand-700 border-brand-200 hover:bg-brand-100',
-                  )}
-                >
-                  {done[id] ? 'Requested' : 'Connect'}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
-function formatTimeAgo(date: Date): string {
-  const diff = (Date.now() - date.getTime()) / 1000;
-  if (diff < 60)    return 'Just now';
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
-// ─── Main Social Hub ──────────────────────────────────────────────────────────
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'all', label: 'All posts' },
+  { key: 'following', label: 'Following' },
+  { key: 'saved', label: 'Saved' },
+];
 
 export function SocialHub() {
-  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useSocialFeedPaginated(10);
-
-  const posts = data?.pages.flatMap((p) => p.items) ?? [];
+  const params = useSearchParams();
+  const router = useRouter();
+  const { can, ready } = useCapabilities();
+  const postId = params.get('post') ?? undefined;
+  const tag = params.get('tag')?.replace(/^#/, '') || undefined;
+  const [tab, setTab] = useState<Tab>('all');
 
   return (
     <div className="space-y-4 pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Social Hub</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Umrah operator community · real-time updates</p>
+          <p className="mt-0.5 text-sm text-gray-600">Updates, questions and tips from the Umrah Connect community.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="quiet" type="button" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm">
-            <Globe className="h-4 w-4" />
-            Discover
-          </Button>
+          <Link href="/social/groups" className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50">
+            <Users2 aria-hidden="true" className="h-4 w-4" /> Groups
+          </Link>
+          <Link href="/discover" className="flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm text-white shadow-sm transition-colors hover:bg-brand-600">
+            <Globe aria-hidden="true" className="h-4 w-4" /> Discover
+          </Link>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px] gap-5">
-        {/* Feed */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="space-y-4">
-          <PostComposer />
-
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gray-100" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 w-32 bg-gray-100 rounded" />
-                    <div className="h-3 w-20 bg-gray-100 rounded" />
-                  </div>
-                </div>
-                <div className="h-3 w-full bg-gray-100 rounded" />
-                <div className="h-3 w-3/4 bg-gray-100 rounded" />
-                <div className="h-3 w-1/2 bg-gray-100 rounded" />
-              </div>
-            ))
-          ) : posts.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 py-20 text-center">
-              <Globe className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-600 mb-1">The feed is empty right now</p>
-              <p className="text-xs text-gray-600">Be the first to share an update!</p>
-            </div>
+          {postId ? (
+            <SinglePost postId={postId} onBack={() => router.push('/social')} />
           ) : (
-            posts.map((post) => <PostCard key={post.id} post={post} />)
-          )}
-
-          {/* Load More */}
-          {hasNextPage && (
-            <Button variant="quiet" type="button"
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="w-full py-3 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700 transition-colors flex items-center justify-center gap-2"
-            >
-              {isFetchingNextPage ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Loading…</>
-              ) : (
-                <><RefreshCw className="h-4 w-4" /> Load more posts</>
-              )}
-            </Button>
+            <>
+              {ready && can('social:post:create') && <PostComposer />}
+              <div role="tablist" aria-label="Feed" className="flex flex-wrap items-center gap-1.5">
+                {TABS.map((t) => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === t.key}
+                    onClick={() => setTab(t.key)}
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
+                      tab === t.key ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-300',
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+                {tag && (
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+                    <Hash aria-hidden="true" className="h-3 w-3" />
+                    {tag}
+                    <button type="button" aria-label="Clear tag filter" onClick={() => router.push('/social')} className="ml-0.5 rounded-full p-0.5 hover:bg-brand-100">
+                      <X aria-hidden="true" className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+              </div>
+              {tab === 'saved' ? <SavedList /> : <Feed followingOnly={tab === 'following'} tag={tag} />}
+            </>
           )}
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
+        <aside className="space-y-4" aria-label="Community">
           <ProfilePanel />
           <TrendingPanel />
           <SuggestedPanel />
-        </div>
+        </aside>
       </div>
+    </div>
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} aria-hidden="true" className="animate-pulse space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gray-100" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-32 rounded bg-gray-100" />
+              <div className="h-3 w-20 rounded bg-gray-100" />
+            </div>
+          </div>
+          <div className="h-3 w-full rounded bg-gray-100" />
+          <div className="h-3 w-3/4 rounded bg-gray-100" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function EmptyFeed({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white py-16 text-center">
+      <Globe aria-hidden="true" className="mx-auto mb-3 h-12 w-12 text-gray-200" />
+      <p className="mb-1 text-sm text-gray-700">{title}</p>
+      <p className="text-xs text-gray-600">{description}</p>
+    </div>
+  );
+}
+
+function Feed({ followingOnly, tag }: { followingOnly: boolean; tag?: string }) {
+  const feed = useSocialFeed({ followingOnly, tag });
+  const posts = dedupeById(feed.data?.pages.flatMap((p) => p.items) ?? []);
+
+  if (feed.isLoading) return <FeedSkeleton />;
+  if (feed.error) return <QueryFailure error={feed.error} onRetry={() => feed.refetch()} />;
+  if (!posts.length) {
+    return tag ? (
+      <EmptyFeed title={`No posts tagged #${tag} yet`} description="Posts appear here when someone uses this hashtag." />
+    ) : followingOnly ? (
+      <EmptyFeed title="Nothing from people you follow yet" description="Follow people from Discover to see their posts here." />
+    ) : (
+      <EmptyFeed title="The feed is empty right now" description="Be the first to share an update." />
+    );
+  }
+  return (
+    <>
+      {posts.map((post) => (
+        <PostCard key={post.id} post={post} />
+      ))}
+      {feed.hasNextPage ? (
+        <Button
+          variant="quiet"
+          onClick={() => feed.fetchNextPage()}
+          disabled={feed.isFetchingNextPage}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 py-3 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-700"
+        >
+          {feed.isFetchingNextPage ? (
+            <>
+              <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> Loading…
+            </>
+          ) : (
+            <>
+              <RefreshCw aria-hidden="true" className="h-4 w-4" /> Load more posts
+            </>
+          )}
+        </Button>
+      ) : (
+        <p className="py-2 text-center text-xs text-gray-600">You’re all caught up.</p>
+      )}
+    </>
+  );
+}
+
+function SavedList() {
+  const saved = useSavedPosts();
+  if (saved.isLoading) return <FeedSkeleton />;
+  if (saved.error) return <QueryFailure error={saved.error} onRetry={() => saved.refetch()} />;
+  if (!saved.data?.length) return <EmptyFeed title="No saved posts" description="Use the bookmark on a post to keep it here." />;
+  return (
+    <>
+      {saved.data.map((post) => (
+        <PostCard key={post.id} post={post} />
+      ))}
+    </>
+  );
+}
+
+/** One post opened from a link or a notification, with its comments open. */
+function SinglePost({ postId, onBack }: { postId: string; onBack: () => void }) {
+  const post = useSocialPost(postId);
+  const status = (post.error as any)?.response?.status;
+  return (
+    <div className="space-y-3">
+      <Button variant="quiet" onClick={onBack} className="flex items-center gap-2 px-0 text-sm font-medium text-brand-700">
+        <ArrowLeft aria-hidden="true" className="h-4 w-4" /> Back to the feed
+      </Button>
+      {post.isLoading ? (
+        <FeedSkeleton />
+      ) : status === 404 || status === 400 ? (
+        <Alert title="This post is not available">It may have been deleted, or it is shared only with a different audience.</Alert>
+      ) : post.error ? (
+        <QueryFailure error={post.error} onRetry={() => post.refetch()} />
+      ) : post.data ? (
+        <PostCard key={post.data.id} post={post.data} commentsOpen />
+      ) : null}
+    </div>
+  );
+}
+
+function ProfilePanel() {
+  const { user } = useAuthContext();
+  const account = useSocialAccount();
+  const displayName = account.data?.displayName ?? user?.displayName ?? 'Community member';
+  if (account.error) return <QueryFailure error={account.error} onRetry={() => account.refetch()} />;
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="h-16 bg-gradient-to-r from-brand-500 to-brand-600" />
+      <div className="px-4 pb-4">
+        <div aria-hidden="true" className="-mt-7 mb-3 flex h-14 w-14 items-center justify-center rounded-xl border-4 border-white bg-gradient-to-br from-brand-400 to-brand-600 text-lg font-bold text-white shadow-sm">
+          {initialsOf(displayName)}
+        </div>
+        <p className="text-sm font-bold text-gray-900">{displayName}</p>
+        {account.data?.bio && <p className="mt-0.5 text-xs text-gray-600">{account.data.bio}</p>}
+        {user?.tenantName && <p className="mt-1 text-xs font-medium text-brand-600">{user.tenantName}</p>}
+        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-gray-200 pt-3">
+          {[
+            { label: 'Posts', value: account.data?._count?.posts },
+            { label: 'Followers', value: account.data?._count?.followers },
+            { label: 'Following', value: account.data?._count?.following },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <dd className="text-base font-bold text-gray-900">{account.isLoading ? '…' : s.value ?? '—'}</dd>
+              <dt className="text-xs text-gray-600">{s.label}</dt>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+  );
+}
+
+function TrendingPanel() {
+  const trending = useTrendingPosts(20);
+  const tags = Array.from(new Set((trending.data ?? []).flatMap((p) => p.tags ?? []))).slice(0, 8);
+  if (trending.error) return <QueryFailure error={trending.error} onRetry={() => trending.refetch()} />;
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <TrendingUp aria-hidden="true" className="h-4 w-4 text-brand-500" />
+        <h2 className="text-sm font-bold text-gray-900">Trending tags</h2>
+      </div>
+      {trending.isLoading ? (
+        <p role="status" className="px-2 py-2 text-xs text-gray-600">Loading…</p>
+      ) : tags.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          {tags.map((tag) => (
+            <Link key={tag} href={`/social?tag=${encodeURIComponent(tag)}`} className="rounded-lg px-2 py-1.5 text-xs font-medium text-brand-600 transition-colors hover:bg-brand-50 hover:text-brand-700">
+              #{tag}
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="px-2 py-2 text-xs text-gray-600">Tags appear here as the community uses #hashtags.</p>
+      )}
+    </div>
+  );
+}
+
+function SuggestedPanel() {
+  const router = useRouter();
+  const people = useDiscoverPeople(undefined, 6);
+  const requestConnection = useRequestConnection();
+  const openConversation = useOpenConversation();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const connect = async (p: DiscoverPerson) => {
+    setBusyId(p.userId);
+    try {
+      await requestConnection.mutateAsync({ recipientId: p.userId });
+      toast.success(`Connection request sent to ${p.displayName}`);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'The connection request could not be sent. Try again.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+  const message = async (p: DiscoverPerson) => {
+    setBusyId(p.userId);
+    try {
+      const conv = await openConversation.mutateAsync(p.userId);
+      router.push(`/messages?c=${conv.id}`);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, 'The conversation could not be opened. Try again.'));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  if (people.error) return <QueryFailure error={people.error} onRetry={() => people.refetch()} />;
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <Users aria-hidden="true" className="h-4 w-4 text-brand-500" />
+        <h2 className="text-sm font-bold text-gray-900">People to connect with</h2>
+      </div>
+      {people.isLoading ? (
+        <p role="status" className="px-2 py-2 text-xs text-gray-600">Loading…</p>
+      ) : !people.data?.length ? (
+        <p className="px-2 py-2 text-xs text-gray-600">No suggestions yet.</p>
+      ) : (
+        <ul className="space-y-3">
+          {people.data.map((p) => {
+            const status = p.connection?.status ?? 'NONE';
+            const busy = busyId === p.userId;
+            return (
+              <li key={p.id} className="flex items-center gap-2.5">
+                <div aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-bold text-white">
+                  {initialsOf(p.displayName)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-semibold text-gray-800">{p.displayName}</p>
+                  <p className="truncate text-xs text-gray-600">{p.city || (p.type === 'PILGRIM' ? 'Traveler' : 'Provider')}</p>
+                </div>
+                {status === 'ACCEPTED' ? (
+                  <Button variant="quiet" busy={busy} onClick={() => message(p)} aria-label={`Message ${p.displayName}`} className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100">
+                    {!busy && <MessageSquare aria-hidden="true" className="h-3 w-3" />} Message
+                  </Button>
+                ) : status === 'PENDING' && p.connection.direction === 'INCOMING' ? (
+                  <Link href="/connections" className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100">
+                    Respond
+                  </Link>
+                ) : status === 'PENDING' ? (
+                  <span className="rounded-full border border-gray-200 bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">Requested</span>
+                ) : status === 'UNAVAILABLE' ? null : (
+                  <Button variant="quiet" busy={busy} onClick={() => connect(p)} className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100">
+                    Connect
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <Link href="/discover" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:underline">
+        <Globe aria-hidden="true" className="h-3 w-3" /> See everyone in Discover
+      </Link>
     </div>
   );
 }
