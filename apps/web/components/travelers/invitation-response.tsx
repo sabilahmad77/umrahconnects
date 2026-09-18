@@ -43,24 +43,24 @@ export function InvitationResponse() {
       return;
     }
     setPhase('checking');
-    preview.mutate(token.current, {
-      onSuccess: (data) => { setDetails(data); setPhase('ready'); },
-      onError: fail,
-    });
+    // Promise form on purpose: React StrictMode's development remount detaches the
+    // mutation observer, and per-call mutate() callbacks would then never fire.
+    preview
+      .mutateAsync(token.current)
+      .then((data) => { setDetails(data); setPhase('ready'); })
+      .catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const respond = (action: 'accept' | 'decline') =>
-    answer.mutate(
-      { action, token: token.current },
-      {
-        onSuccess: () => {
-          token.current = '';
-          setPhase(action === 'accept' ? 'accepted' : 'declined');
-        },
-        onError: fail,
-      },
-    );
+  const respond = async (action: 'accept' | 'decline') => {
+    try {
+      await answer.mutateAsync({ action, token: token.current });
+      token.current = '';
+      setPhase(action === 'accept' ? 'accepted' : 'declined');
+    } catch (error) {
+      fail(error);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 pb-10">
@@ -89,7 +89,7 @@ export function InvitationResponse() {
       )}
 
       {phase === 'ready' && details && (
-        <InvitationDetails details={details} busy={answer.isPending} onAccept={() => respond('accept')} onDecline={() => respond('decline')} />
+        <InvitationDetails details={details} busy={answer.isPending} onAccept={() => { void respond('accept'); }} onDecline={() => { void respond('decline'); }} />
       )}
 
       {phase === 'accepted' && (
