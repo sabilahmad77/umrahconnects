@@ -30,10 +30,19 @@ describe('StripeProvider.verifyWebhook (no network)', () => {
   });
 
   it('normalises failure, refund and dispute events', () => {
-    const failed = event('payment_intent.payment_failed', { id: 'pi_9', last_payment_error: { code: 'card_declined' } }, 'evt_f');
-    expect(provider().verifyWebhook(failed, header(failed))).toMatchObject({ valid: true, type: 'payment.failed', providerRef: 'pi_9', failureReason: 'card_declined' });
-    const refunded = event('charge.refunded', { id: 'ch_1', payment_intent: 'pi_9', amount_refunded: 500, currency: 'sar' }, 'evt_r');
-    expect(provider().verifyWebhook(refunded, header(refunded))).toMatchObject({ valid: true, type: 'payment.refunded', providerRef: 'pi_9', amountCents: 500n, currency: 'SAR' });
+    // A declined attempt is not terminal: the same PaymentIntent can still be paid.
+    const failed = event('payment_intent.payment_failed', { id: 'pi_9', metadata: { reference: 'ref_9' }, last_payment_error: { code: 'card_declined', decline_code: 'insufficient_funds' } }, 'evt_f');
+    expect(provider().verifyWebhook(failed, header(failed))).toMatchObject({ valid: true, type: 'payment.attempt_failed', providerRef: 'pi_9', failureReason: 'insufficient_funds', reference: 'ref_9' });
+    const canceled = event('payment_intent.canceled', { id: 'pi_9', cancellation_reason: 'abandoned' }, 'evt_c');
+    expect(provider().verifyWebhook(canceled, header(canceled))).toMatchObject({ valid: true, type: 'payment.failed', providerRef: 'pi_9', failureReason: 'abandoned' });
+    const processing = event('payment_intent.processing', { id: 'pi_9' }, 'evt_p');
+    expect(provider().verifyWebhook(processing, header(processing))).toMatchObject({ valid: true, type: 'payment.processing', providerRef: 'pi_9' });
+    const refunded = event('charge.refunded', { id: 'ch_1', payment_intent: 'pi_9', amount_refunded: 500, amount_captured: 12_345, captured: true, currency: 'sar' }, 'evt_r');
+    expect(provider().verifyWebhook(refunded, header(refunded))).toMatchObject({ valid: true, type: 'payment.refunded', providerRef: 'pi_9', amountCents: 500n, capturedCents: 12_345n, currency: 'SAR' });
+    const released = event('charge.refunded', { id: 'ch_2', payment_intent: { id: 'pi_8' }, amount_refunded: 900, captured: false, currency: 'sar' }, 'evt_r2');
+    expect(provider().verifyWebhook(released, header(released))).toMatchObject({ type: 'payment.refunded', providerRef: 'pi_8', capturedCents: undefined });
+    const closed = event('charge.dispute.closed', { id: 'dp_1', payment_intent: 'pi_9', status: 'won' }, 'evt_dc');
+    expect(provider().verifyWebhook(closed, header(closed))).toMatchObject({ valid: true, type: 'payment.dispute_closed', providerRef: 'pi_9', disputeStatus: 'won' });
     const disputed = event('charge.dispute.created', { id: 'dp_1', payment_intent: 'pi_9' }, 'evt_d');
     expect(provider().verifyWebhook(disputed, header(disputed))).toMatchObject({ valid: true, type: 'payment.disputed', providerRef: 'pi_9' });
     const other = event('customer.created', { id: 'cus_1' }, 'evt_o');
@@ -106,9 +115,12 @@ describe('StripeProvider with a mocked client (no network)', () => {
     expect(client.paymentIntents.capture).not.toHaveBeenCalled();
   });
 
-  it('confirm maps processing → PENDING and canceled → FAILED', async () => {
-    expect((await provider(mockClient('processing')).confirm('pi_mock')).status).toBe('PENDING');
-    expect((await provider(mockClient('requires_payment_method')).confirm('pi_mock')).status).toBe('PENDING');
+  it('confirm maps processing → PROCESSING, an unpaid intent → PENDING and canceled → FAILED', async () => {
+    expect((await provider(mockClient('processing')).confirm('pi_mock')).status).toBe('PROCESSING');
+    const open = await provider(mockClient('requires_payment_method')).confirm('pi_mock');
+    expect(open).toMatchObject({ status: 'PENDING', providerStatus: 'requires_payment_method', clientSecret: 'pi_mock_secret' });
+    expect(open.lastError).toBeUndefined();
+    expect(open.raw).not.toHaveProperty('client_secret');
     const canceled = await provider(mockClient('canceled', { cancellation_reason: 'abandoned' })).confirm('pi_mock');
     expect(canceled).toMatchObject({ status: 'FAILED', failureReason: 'abandoned' });
     expect(canceled.amountCents).toBeUndefined();
@@ -132,6 +144,38 @@ describe('StripeProvider with a mocked client (no network)', () => {
 
     client.refunds.create.mockResolvedValueOnce({ id: 're_2', status: 'failed', amount: 700, currency: 'sar' });
     await expect(p.refund('pi_mock', 700n)).rejects.toThrow(/failed/);
+  });
+
+  it('a declined attempt stays payable and reports its decline code', async () => {
+    const declined = await provider(
+      mockClient('requires_payment_method', { last_payment_error: { code: 'card_declined', decline_code: 'generic_decline' } }),
+    ).retrieve('pi_mock');
+    expect(declined).toMatchObject({ status: 'PENDING', lastError: 'generic_decline', clientSecret: 'pi_mock_secret' });
+    const auth = await provider(mockClient('requires_action')).retrieve('pi_mock');
+    expect(auth).toMatchObject({ status: 'PENDING', providerStatus: 'requires_action' });
+  });
+
+  it('retrieve never captures; confirm captures only a requires_capture intent', async () => {
+    const client = mockClient('requires_capture');
+    expect((await provider(client).retrieve('pi_mock')).status).toBe('PROCESSING');
+    expect(client.paymentIntents.capture).not.toHaveBeenCalled();
+  });
+
+  it('cancel reports a refusal with the current state instead of pretending', async () => {
+    const client = mockClient('succeeded');
+    client.paymentIntents.cancel.mockRejectedValueOnce(new Error('payment_intent_unexpected_state'));
+    const res = await provider(client).cancel('pi_mock');
+    expect(res.cancelled).toBe(false);
+    expect(res.state).toMatchObject({ status: 'CAPTURED', amountCents: 25_000n });
+
+    const gone = mockClient('canceled');
+    gone.paymentIntents.cancel.mockRejectedValueOnce(new Error('already canceled'));
+    expect((await provider(gone).cancel('pi_mock')).cancelled).toBe(true);
+
+    const offline = mockClient();
+    offline.paymentIntents.cancel.mockRejectedValueOnce(new Error('network down'));
+    offline.paymentIntents.retrieve.mockRejectedValueOnce(new Error('network down'));
+    await expect(provider(offline).cancel('pi_mock')).rejects.toThrow(/network down/);
   });
 
   it('status mapping helper', () => {

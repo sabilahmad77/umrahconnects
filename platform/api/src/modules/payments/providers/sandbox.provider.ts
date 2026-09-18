@@ -1,6 +1,12 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import {
-  PaymentProvider, CreateIntentInput, IntentResult, CaptureResult, RefundResult, WebhookVerification,
+  CancelResult,
+  CaptureResult,
+  CreateIntentInput,
+  IntentResult,
+  PaymentProvider,
+  RefundResult,
+  WebhookVerification,
 } from './payment-provider';
 
 /**
@@ -11,14 +17,22 @@ import {
  * path is exercisable before anyone supplies live credentials. Outcomes are
  * driven by an explicit `scenario` so failures can be tested deterministically
  * instead of hoping for one.
+ *
+ * It is never registered in production (see PaymentsService): it settles
+ * without moving money.
  */
 export class SandboxProvider implements PaymentProvider {
   readonly name = 'sandbox';
 
   constructor(private readonly webhookSecret: string) {}
 
-  isConfigured() { return true; }
-  missingConfig(): string[] { return []; }
+  isConfigured() {
+    return true;
+  }
+
+  missingConfig(): string[] {
+    return [];
+  }
 
   private ref(prefix: string) {
     return `${prefix}_${randomBytes(10).toString('hex')}`;
@@ -27,7 +41,11 @@ export class SandboxProvider implements PaymentProvider {
   async createIntent(input: CreateIntentInput): Promise<IntentResult> {
     const providerRef = this.ref('sbx_pi');
     if (input.scenario === 'decline_at_intent') {
-      return { providerRef, status: 'FAILED', raw: { scenario: input.scenario, reason: 'card_declined' } };
+      return {
+        providerRef,
+        status: 'FAILED',
+        raw: { scenario: input.scenario, reason: 'card_declined' },
+      };
     }
     return {
       providerRef,
@@ -47,11 +65,22 @@ export class SandboxProvider implements PaymentProvider {
       return {
         providerRef,
         status: 'FAILED',
+        providerStatus: 'declined',
         failureReason: 'insufficient_funds',
         raw: { scenario },
       };
     }
-    return { providerRef, status: 'CAPTURED', raw: { scenario: scenario ?? 'succeed' } };
+    return {
+      providerRef,
+      status: 'CAPTURED',
+      providerStatus: 'captured',
+      raw: { scenario: scenario ?? 'succeed' },
+    };
+  }
+
+  /** A sandbox intent holds no state outside our database, so there is nothing to refuse. */
+  async cancel(): Promise<CancelResult> {
+    return { cancelled: true };
   }
 
   async refund(providerRef: string, amountCents: bigint): Promise<RefundResult> {
@@ -69,7 +98,9 @@ export class SandboxProvider implements PaymentProvider {
 
   verifyWebhook(rawBody: string, signature: string | undefined): WebhookVerification {
     let parsed: any = {};
-    try { parsed = JSON.parse(rawBody || '{}'); } catch {
+    try {
+      parsed = JSON.parse(rawBody || '{}');
+    } catch {
       return { valid: false, reason: 'body is not valid JSON', eventId: '', type: '', raw: {} };
     }
     const base = {

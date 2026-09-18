@@ -233,16 +233,43 @@ describe('red team: payments', () => {
       expect(await ctx.prisma.payment.count({ where: { listingBookingId: booking.id, status: 'COMPLETED' } })).toBe(1);
     });
 
-    it('a new checkout supersedes an open one instead of charging twice', async () => {
+    // XT-R09 hardening: re-entering checkout (double click, second tab, reload)
+    // resumes the open attempt. A second PaymentIntent for the same outstanding
+    // balance is never created, so there is nothing that could be charged twice.
+    it('re-entering checkout resumes the open attempt instead of opening a second one', async () => {
       const b2 = await ok(w.travelerA, 'post', `/marketplace/listings/${listing.id}/bookings`, { partySize: 1 });
       const c1 = await ok(w.travelerA, 'post', '/payments/checkout', { listingBookingId: b2.id });
       const c2 = await ok(w.travelerA, 'post', '/payments/checkout', { listingBookingId: b2.id });
-      expect(c2.paymentId).not.toBe(c1.paymentId);
-      expect((await ctx.prisma.payment.findUniqueOrThrow({ where: { id: c1.paymentId } })).status).toBe('FAILED');
-      expect((await call(w.travelerA, 'post', `/payments/checkout/${c1.paymentId}/sandbox-complete`, {})).status).toBe(400);
-      await ok(w.travelerA, 'post', `/payments/checkout/${c2.paymentId}/sandbox-complete`, {});
+      expect([c1.resumed, c2.resumed]).toEqual([false, true]);
+      expect(c2.paymentId).toBe(c1.paymentId);
+      expect(c2.amountCents).toBe(17_500);
+      // Concurrent entries (double click, two tabs) are serialised the same way.
+      const burst = await Promise.all(
+        [1, 2, 3].map(() => ok(w.travelerA, 'post', '/payments/checkout', { listingBookingId: b2.id })),
+      );
+      expect(new Set(burst.map((c: any) => c.paymentId))).toEqual(new Set([c1.paymentId]));
+      expect(await ctx.prisma.payment.count({ where: { listingBookingId: b2.id } })).toBe(1);
+
+      await ok(w.travelerA, 'post', `/payments/checkout/${c1.paymentId}/sandbox-complete`, {});
+      expect((await call(w.travelerA, 'post', '/payments/checkout', { listingBookingId: b2.id })).status).toBe(400);
       const settled = await ctx.prisma.payment.findMany({ where: { listingBookingId: b2.id, status: 'COMPLETED' } });
       expect(settled.map((p) => Number(p.amountCents))).toEqual([17_500]);
+    });
+
+    it('a declined sandbox attempt fails without touching the booking; the next checkout opens a fresh attempt', async () => {
+      const b3 = await ok(w.travelerA, 'post', `/marketplace/listings/${listing.id}/bookings`, { partySize: 1 });
+      const c1 = await ok(w.travelerA, 'post', '/payments/checkout', { listingBookingId: b3.id });
+      const declined = await ok(w.travelerA, 'post', `/payments/checkout/${c1.paymentId}/sandbox-complete`, {
+        scenario: 'decline_at_capture',
+      });
+      expect([declined.status, declined.failureReason, declined.bookingPaymentStatus]).toEqual([
+        'FAILED', 'insufficient_funds', 'UNPAID',
+      ]);
+      const c2 = await ok(w.travelerA, 'post', '/payments/checkout', { listingBookingId: b3.id });
+      expect(c2.paymentId).not.toBe(c1.paymentId);
+      expect(c2.resumed).toBe(false);
+      const done = await ok(w.travelerA, 'post', `/payments/checkout/${c2.paymentId}/sandbox-complete`, {});
+      expect([done.status, done.bookingPaymentStatus, done.bookingStatus]).toEqual(['COMPLETED', 'PAID', 'CONFIRMED']);
     });
   });
 });
