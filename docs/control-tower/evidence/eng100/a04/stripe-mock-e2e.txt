@@ -1,0 +1,9 @@
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+ RUN  v2.1.9 /Users/macbook/Projects/umrah-connects-eng100/a04/platform/api
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+[Nest] 92896  - 09/18/2026, 9:14:26 PM   ERROR [PaymentsService] Payment provider call failed (create intent): Please authenticate by specifying an `Authorization` header with any valid looking testmode secret API key. For example, `Authorization: Bearer [redacted-key]`. Authorization was 'Bearer [redacted-key]'.
+ ✓ test/payments-stripe-mock.e2e-spec.ts (5 tests) 726ms
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  21:14:22
+   Duration  4.38s (transform 639ms, setup 8ms, collect 1.75s, tests 726ms, environment 0ms, prepare 39ms)

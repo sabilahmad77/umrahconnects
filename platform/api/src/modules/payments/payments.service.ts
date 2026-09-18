@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   Logger,
   NotFoundException,
@@ -85,6 +86,14 @@ function receivedWhere(where: Prisma.PaymentWhereInput): Prisma.PaymentWhereInpu
       },
     ],
   };
+}
+
+/** Provider error text can echo credentials; keep them out of the logs. */
+function redact(message: unknown): string {
+  return String(message ?? '').replace(
+    /\b(sk|rk|pk|whsec)_(test_|live_)?[A-Za-z0-9_]+/g,
+    '[redacted-key]',
+  );
 }
 
 @Injectable()
@@ -173,6 +182,24 @@ export class PaymentsService {
     if (!p.isConfigured()) {
       throw new ServiceUnavailableException(
         `Payment provider "${p.name}" is not configured. Missing: ${p.missingConfig().join(', ')}`,
+      );
+    }
+  }
+
+  /**
+   * A provider call whose failure (network, credentials, rejected request) must
+   * reach the caller as "try again later", not as an internal error.
+   */
+  private async viaProvider<T>(what: string, fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      this.logger.error(
+        `Payment provider call failed (${what}): ${redact((err as Error).message)}`,
+      );
+      throw new ServiceUnavailableException(
+        'The payment provider could not be reached. Try again.',
       );
     }
   }
@@ -373,18 +400,20 @@ export class PaymentsService {
         );
       }
 
-      const intent = await provider.createIntent({
-        amountCents: requested,
-        currency,
-        reference: idempotencyKey,
-        scenario: provider.name === 'sandbox' ? dto.scenario : undefined,
-        metadata: {
-          tenantId,
-          invoiceId: dto.invoiceId,
-          bookingId,
-          description: `Umrah Connect payment ${idempotencyKey}`,
-        },
-      });
+      const intent = await this.viaProvider('create intent', () =>
+        provider.createIntent({
+          amountCents: requested,
+          currency,
+          reference: idempotencyKey,
+          scenario: provider.name === 'sandbox' ? dto.scenario : undefined,
+          metadata: {
+            tenantId,
+            invoiceId: dto.invoiceId,
+            bookingId,
+            description: `Umrah Connect payment ${idempotencyKey}`,
+          },
+        }),
+      );
       const failed = intent.status === 'FAILED';
       const payment = await tx.payment.create({
         data: {
@@ -485,7 +514,7 @@ export class PaymentsService {
     }
     const provider = this.providerFor(payment.gateway);
     const res = await provider.cancel(payment.gatewayRef ?? '').catch((err) => {
-      this.logger.warn(`Cancel of payment ${id} failed: ${(err as Error).message}`);
+      this.logger.warn(`Cancel of payment ${id} failed: ${redact((err as Error).message)}`);
       throw new ServiceUnavailableException(
         'The payment provider could not be reached. Try again.',
       );
@@ -588,7 +617,9 @@ export class PaymentsService {
         clientSecret: fresh.status === PaymentStatus.PENDING ? state.clientSecret : undefined,
       };
     } catch (err) {
-      this.logger.warn(`Provider sync for payment ${payment.id} failed: ${(err as Error).message}`);
+      this.logger.warn(
+        `Provider sync for payment ${payment.id} failed: ${redact((err as Error).message)}`,
+      );
       if (opts.force)
         throw new ServiceUnavailableException(
           'The payment provider could not be reached. Try again.',
@@ -889,7 +920,7 @@ export class PaymentsService {
           `${payment.id}:${already}:${requested}`,
         );
       } catch (err) {
-        this.logger.error(`Refund failed for payment ${id}: ${(err as Error).message}`);
+        this.logger.error(`Refund failed for payment ${id}: ${redact((err as Error).message)}`);
         throw new ServiceUnavailableException('The payment provider could not process the refund');
       }
       const total = already + res.refundedCents;
@@ -970,7 +1001,9 @@ export class PaymentsService {
     }
     const provider = this.activeProvider();
     const stripeCustomerId =
-      provider === this.stripe ? await this.stripeCustomerFor(payer) : undefined;
+      provider === this.stripe
+        ? await this.viaProvider('ensure customer', () => this.stripeCustomerFor(payer))
+        : undefined;
 
     const outcome = await this.prisma.$transaction(async (tx) => {
       await this.lockKey(tx, `checkout:${lb.id}`);
@@ -1012,18 +1045,20 @@ export class PaymentsService {
       }
 
       const key = `checkout_${lb.id}_${randomUUID()}`;
-      const intent = await provider.createIntent({
-        amountCents: outstanding,
-        currency: lb.currency,
-        reference: key,
-        metadata: {
-          listingBookingId: lb.id,
-          providerTenantId,
-          payerUserId: payer.sub,
-          stripeCustomerId,
-          description: `${lb.listing.name} — ${lb.listing.vendor?.name ?? 'Umrah Connect'}`,
-        },
-      });
+      const intent = await this.viaProvider('create intent', () =>
+        provider.createIntent({
+          amountCents: outstanding,
+          currency: lb.currency,
+          reference: key,
+          metadata: {
+            listingBookingId: lb.id,
+            providerTenantId,
+            payerUserId: payer.sub,
+            stripeCustomerId,
+            description: `${lb.listing.name} — ${lb.listing.vendor?.name ?? 'Umrah Connect'}`,
+          },
+        }),
+      );
       const failed = intent.status === 'FAILED';
       const payment = await tx.payment.create({
         data: {
@@ -1233,7 +1268,7 @@ export class PaymentsService {
         ? await this.applyWebhook(provider.name, payment, verified)
         : 'no matching payment';
     } catch (err) {
-      this.logger.error(`Webhook ${verified.eventId} failed: ${(err as Error).message}`);
+      this.logger.error(`Webhook ${verified.eventId} failed: ${redact((err as Error).message)}`);
       if (!takenOver) {
         await this.prisma.paymentWebhookEvent
           .delete({ where: { id: event.id } })
