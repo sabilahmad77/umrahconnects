@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Principal } from '../auth/principal';
@@ -7,17 +8,40 @@ import { PUBLIC_GROUP_SELECT } from './group-public.select';
 
 /**
  * Access model
- *  - "manage": the group belongs to the caller's tenant. Required for every write
- *    to the group itself and for every sensitive read (member contact data, notes,
- *    documents, incidents, invites, related bookings).
+ *  - "manage": the group belongs to the caller's organization AND the caller holds
+ *    the CRM capability for the action (crm:pilgrim:read to read, crm:pilgrim:update
+ *    to write). Required for every write to the group itself and for every
+ *    sensitive read (member contact data, notes, documents, incidents, invites,
+ *    related bookings).
  *  - "content": the caller manages the group OR is an ACTIVE member of it. Grants
- *    reading and writing the discussion (posts, comments, polls, votes).
- *  - PUBLIC groups expose only PUBLIC_GROUP_SELECT to everyone else.
+ *    reading and writing the discussion (posts, comments) and voting in polls.
+ *    Travelers are members, never managers: they share one community organization
+ *    (D-007), so organization membership alone never grants anything here.
+ *  - Members, invitees and anyone holding the link of a PUBLIC or UNLISTED group
+ *    see only PUBLIC_GROUP_SELECT plus their own membership / invitation.
  * Foreign and unknown ids always yield the same 404.
  */
+export interface GroupAccess {
+  userId: string;
+  tenantId: string;
+  email?: string | null;
+  /** crm:pilgrim:read, which only ever applies inside the caller's organization */
+  canRead: boolean;
+  /** crm:pilgrim:update, which only ever applies inside the caller's organization */
+  canUpdate: boolean;
+}
+
+export const GROUP_VISIBILITIES = ['PRIVATE', 'UNLISTED', 'PUBLIC'] as const;
+/** Visibilities a non-member may open by link and join directly. */
+const JOINABLE = ['PUBLIC', 'UNLISTED'];
+
+const personName = (u?: { firstName: string | null; lastName: string | null } | null) =>
+  u ? `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || 'Member' : 'Member';
 
 @Injectable()
 export class GroupsService {
+  private readonly logger = new Logger(GroupsService.name);
+
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
@@ -27,9 +51,9 @@ export class GroupsService {
   async findAll(tenantId: string, query: any) {
     const { status, search, visibility, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;
-    const where: any = { tenantId };
-    if (status) where.status = status;
-    if (visibility) where.visibility = visibility;
+    const where: Prisma.TripGroupWhereInput = { tenantId };
+    if (status) where.status = String(status).toUpperCase();
+    if (visibility) where.visibility = String(visibility).toUpperCase();
     if (search) where.name = { contains: search, mode: 'insensitive' };
     const [items, total] = await Promise.all([
       this.prisma.tripGroup.findMany({
@@ -46,7 +70,6 @@ export class GroupsService {
     return { items, total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
   }
 
-  // Public/discoverable groups across tenants (PUBLIC visibility)
   /** Membership-scoped list: only safe group fields plus the caller's own membership role. */
   async findMine(userId: string) {
     const memberships = await this.prisma.groupMember.findMany({
@@ -58,10 +81,11 @@ export class GroupsService {
     return memberships.map((m) => ({ ...m.group, membership: { role: m.role, joinedAt: m.joinedAt } }));
   }
 
+  // Public/discoverable groups across tenants (PUBLIC visibility)
   async findPublic(query: any) {
     const { search, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;
-    const where: any = { visibility: 'PUBLIC' };
+    const where: Prisma.TripGroupWhereInput = { visibility: 'PUBLIC' };
     if (search) where.name = { contains: search, mode: 'insensitive' };
     const [items, total] = await Promise.all([
       this.prisma.tripGroup.findMany({
@@ -76,26 +100,62 @@ export class GroupsService {
     return { items, total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
   }
 
+  private async membershipOf(groupId: string, userId: string) {
+    if (!userId) return null;
+    const m = await this.prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+      select: { role: true, status: true, joinedAt: true },
+    });
+    return m && m.status === 'ACTIVE' ? { role: m.role, joinedAt: m.joinedAt } : null;
+  }
+
+  /** Where-clause for invitations addressed to the caller (by account, or by email for email-only invites). */
+  private addressedTo(access: Pick<GroupAccess, 'userId' | 'email'>): Prisma.GroupInviteWhereInput {
+    const email = (access.email ?? '').trim().toLowerCase();
+    return {
+      OR: [
+        { inviteeUserId: access.userId },
+        ...(email ? [{ inviteeUserId: null, inviteeEmail: { equals: email, mode: 'insensitive' as const } }] : []),
+      ],
+    };
+  }
+
   /**
-   * Detail read. The owning tenant gets the full record; anyone else gets only the
-   * public-safe projection, and only when the group is PUBLIC.
+   * Detail read. The managing organization gets the full record; members,
+   * invitees and link holders of PUBLIC/UNLISTED groups get the public-safe
+   * projection. Every answer carries `viewer` — what the caller may do here.
    */
-  async findOne(tenantId: string, id: string) {
+  async findOne(access: GroupAccess, id: string) {
     const safeId = requireId(id, 'Group');
-    const group = await this.prisma.tripGroup.findFirst({
-      where: { id: safeId, tenantId },
-      include: {
-        incidents: { orderBy: { createdAt: 'desc' }, take: 20 },
-        _count: { select: { members: true, posts: true, notes: true, polls: true, incidents: true } },
+    const membership = await this.membershipOf(safeId, access.userId);
+    if (access.canRead && access.tenantId) {
+      const group = await this.prisma.tripGroup.findFirst({
+        where: { id: safeId, tenantId: access.tenantId },
+        include: {
+          incidents: { orderBy: { createdAt: 'desc' }, take: 20 },
+          _count: { select: { members: true, posts: true, notes: true, polls: true, incidents: true } },
+        },
+      });
+      if (group) return { ...group, viewer: { canManage: access.canUpdate, canRead: true, membership, pendingInvite: null } };
+    }
+    const group = await this.prisma.tripGroup.findFirst({ where: { id: safeId }, select: PUBLIC_GROUP_SELECT });
+    if (!group) throw new NotFoundException('Group not found');
+    const invite = await this.prisma.groupInvite.findFirst({
+      where: { AND: [{ groupId: safeId, status: 'PENDING' }, this.addressedTo(access)] },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, message: true, createdAt: true },
+    });
+    if (!membership && !invite && !JOINABLE.includes(group.visibility)) throw new NotFoundException('Group not found');
+    return {
+      ...group,
+      viewer: {
+        canManage: false,
+        canRead: !!membership,
+        membership,
+        pendingInvite: invite,
+        canJoin: !membership && JOINABLE.includes(group.visibility),
       },
-    });
-    if (group) return group;
-    const pub = await this.prisma.tripGroup.findFirst({
-      where: { id: safeId, visibility: 'PUBLIC' },
-      select: PUBLIC_GROUP_SELECT,
-    });
-    if (!pub) throw new NotFoundException('Group not found');
-    return pub;
+    };
   }
 
   /** Management guard: the group must belong to the caller's tenant. */
@@ -105,30 +165,27 @@ export class GroupsService {
     );
   }
 
-  /** Content guard: caller's tenant owns the group, or the caller is an ACTIVE member. */
-  private async contentGroup(tenantId: string, userId: string, groupId: string) {
+  /**
+   * Content guard: the caller manages the group (organization + capability) or is
+   * an ACTIVE member. Anyone else gets the 404 of an unknown id.
+   */
+  private async contentGroup(access: GroupAccess, groupId: string, need: 'read' | 'write') {
     const safeId = requireId(groupId, 'Group');
-    const group = await this.prisma.tripGroup.findFirst({
-      where: {
-        id: safeId,
-        OR: [
-          ...(tenantId ? [{ tenantId }] : []),
-          ...(userId ? [{ members: { some: { userId, status: 'ACTIVE' } } }] : []),
-        ],
-      },
-      select: { id: true, tenantId: true },
-    });
+    const group = await this.prisma.tripGroup.findUnique({ where: { id: safeId }, select: { id: true, tenantId: true, name: true } });
     if (!group) throw new NotFoundException('Group not found');
-    return { ...group, managed: !!tenantId && group.tenantId === tenantId };
+    const inOrg = !!access.tenantId && group.tenantId === access.tenantId;
+    const managesRead = inOrg && access.canRead;
+    const manages = inOrg && access.canUpdate;
+    const member = !!(await this.membershipOf(group.id, access.userId));
+    if (!managesRead && !member) throw new NotFoundException('Group not found');
+    if (need === 'write' && !manages && !member) {
+      throw new ForbiddenException('Your role can read this group but not post in it');
+    }
+    return { ...group, manages, member };
   }
 
   private async callerGroupRole(groupId: string, userId: string) {
-    if (!userId) return null;
-    const m = await this.prisma.groupMember.findUnique({
-      where: { groupId_userId: { groupId, userId } },
-      select: { role: true, status: true },
-    });
-    return m && m.status === 'ACTIVE' ? m.role : null;
+    return (await this.membershipOf(groupId, userId))?.role ?? null;
   }
 
   /** A user id supplied by a client must be an active user of the caller's tenant. */
@@ -151,7 +208,7 @@ export class GroupsService {
         returnDate: dto.returnDate ? new Date(dto.returnDate) : undefined,
         capacity: dto.maxCapacity ?? dto.capacity ?? 40,
         leadGuideId: dto.leadGuideId,
-        status: dto.status ?? 'PLANNING',
+        status: (dto.status ?? 'PLANNING').toUpperCase(),
         itinerary: [],
         briefingNotes: dto.notes,
         createdBy: createdBy && createdBy.length === 36 ? createdBy : null,
@@ -173,7 +230,7 @@ export class GroupsService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.coverUrl !== undefined) data.coverUrl = dto.coverUrl;
     if (dto.visibility !== undefined) data.visibility = String(dto.visibility).toUpperCase();
-    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.status !== undefined) data.status = String(dto.status).toUpperCase();
     if (dto.tripType !== undefined) data.tripType = dto.tripType;
     if (dto.season !== undefined) data.season = dto.season;
     if (dto.capacity !== undefined || dto.maxCapacity !== undefined) data.capacity = dto.maxCapacity ?? dto.capacity;
@@ -186,17 +243,39 @@ export class GroupsService {
     return this.prisma.tripGroup.update({ where: { id }, data });
   }
 
+  /**
+   * Deletes a group and everything that exists only inside it. Incident reports,
+   * linked bookings and transport assignments are operational records kept
+   * elsewhere, so a group that has any is refused — close it (COMPLETED /
+   * CANCELLED) instead. (Deleting used to fail with a foreign-key error once an
+   * incident existed, and silently orphaned documents and linked bookings.)
+   */
   async remove(tenantId: string, id: string) {
     await this.manageGroup(tenantId, id);
-    // Cascade-delete related rows then delete the group
-    await this.prisma.groupMember.deleteMany({ where: { groupId: id } });
-    await this.prisma.groupInvite.deleteMany({ where: { groupId: id } });
-    await this.prisma.groupNote.deleteMany({ where: { groupId: id } });
-    await this.prisma.groupPostComment.deleteMany({ where: { post: { groupId: id } } });
-    await this.prisma.groupPost.deleteMany({ where: { groupId: id } });
-    await this.prisma.groupPollVote.deleteMany({ where: { poll: { groupId: id } } });
-    await this.prisma.groupPoll.deleteMany({ where: { groupId: id } });
-    return this.prisma.tripGroup.delete({ where: { id } });
+    const [incidents, bookings, transport] = await Promise.all([
+      this.prisma.incident.count({ where: { groupId: id } }),
+      this.prisma.booking.count({ where: { groupId: id } }),
+      this.prisma.transportAssignment.count({ where: { groupId: id } }),
+    ]);
+    if (incidents || bookings || transport) {
+      const kept = [
+        incidents && `${incidents} incident report${incidents === 1 ? '' : 's'}`,
+        bookings && `${bookings} linked booking${bookings === 1 ? '' : 's'}`,
+        transport && `${transport} transport assignment${transport === 1 ? '' : 's'}`,
+      ].filter(Boolean).join(', ');
+      throw new ConflictException(`This group has ${kept}. Close it (status Completed or Cancelled) instead of deleting it.`);
+    }
+    return this.prisma.$transaction(async (tx) => {
+      await tx.groupMember.deleteMany({ where: { groupId: id } });
+      await tx.groupInvite.deleteMany({ where: { groupId: id } });
+      await tx.groupNote.deleteMany({ where: { groupId: id } });
+      await tx.groupDocument.deleteMany({ where: { groupId: id } });
+      await tx.groupPostComment.deleteMany({ where: { post: { groupId: id } } });
+      await tx.groupPost.deleteMany({ where: { groupId: id } });
+      await tx.groupPollVote.deleteMany({ where: { poll: { groupId: id } } });
+      await tx.groupPoll.deleteMany({ where: { groupId: id } });
+      return tx.tripGroup.delete({ where: { id } });
+    });
   }
 
   // ─── Members ─────────────────────────────────────────────────────────
@@ -215,17 +294,10 @@ export class GroupsService {
         })
       : [];
     const byId = new Map(users.map((u) => [u.id, u]));
-    return members.map((m) => ({
-      ...m,
-      user: byId.get(m.userId)
-        ? {
-            id: byId.get(m.userId)!.id,
-            email: byId.get(m.userId)!.email,
-            firstName: byId.get(m.userId)!.firstName,
-            lastName: byId.get(m.userId)!.lastName,
-          }
-        : null,
-    }));
+    return members.map((m) => {
+      const u = byId.get(m.userId);
+      return { ...m, user: u ? { id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName } : null };
+    });
   }
 
   async addMember(tenantId: string, callerId: string, groupId: string, userId: string, role?: string) {
@@ -244,9 +316,8 @@ export class GroupsService {
         data: { status: 'ACTIVE', role: nextRole },
       });
     }
-    role = role || 'MEMBER';
     const m = await this.prisma.groupMember.create({
-      data: { groupId, userId, role, status: 'ACTIVE' },
+      data: { groupId, userId, role: role || 'MEMBER', status: 'ACTIVE' },
     });
     await this.prisma.tripGroup.update({
       where: { id: groupId },
@@ -281,21 +352,34 @@ export class GroupsService {
     return removed.count > 0;
   }
 
-  // ─── Self-service join/leave — travelers, PUBLIC groups only ─────────
+  // ─── Self-service join/leave — PUBLIC groups, or UNLISTED ones by link ──
   async selfJoin(groupId: string, userId: string) {
-    const group = await this.prisma.tripGroup.findUnique({ where: { id: groupId } });
+    const group = await this.prisma.tripGroup.findUnique({ where: { id: requireId(groupId, 'Group') } });
     if (!group) throw new NotFoundException(`Group ${groupId} not found`);
-    if ((group as any).visibility !== 'PUBLIC') {
+    const existing = await this.prisma.groupMember.findUnique({ where: { groupId_userId: { groupId, userId } } });
+    if (existing?.status === 'ACTIVE') return existing;
+    if (!JOINABLE.includes(group.visibility)) {
       throw new ForbiddenException('Only public groups can be joined directly — ask for an invite.');
     }
-    const existing = await this.prisma.groupMember.findUnique({ where: { groupId_userId: { groupId, userId } } });
-    if (existing) {
-      if (existing.status === 'ACTIVE') return existing;
-      return this.prisma.groupMember.update({ where: { groupId_userId: { groupId, userId } }, data: { status: 'ACTIVE' } });
+    if (group.capacity > 0 && group.enrolledCount >= group.capacity) {
+      throw new ConflictException('This group is full. Contact the organizer.');
     }
-    const m = await this.prisma.groupMember.create({ data: { groupId, userId, role: 'MEMBER', status: 'ACTIVE' } });
-    await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { increment: 1 } } });
-    return m;
+    if (existing) {
+      const m = await this.prisma.groupMember.update({ where: { groupId_userId: { groupId, userId } }, data: { status: 'ACTIVE' } });
+      await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { increment: 1 } } });
+      return m;
+    }
+    try {
+      const m = await this.prisma.groupMember.create({ data: { groupId, userId, role: 'MEMBER', status: 'ACTIVE' } });
+      await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { increment: 1 } } });
+      return m;
+    } catch (e) {
+      // A double click raced this request: the membership exists, which is what was asked for.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        return this.prisma.groupMember.findUniqueOrThrow({ where: { groupId_userId: { groupId, userId } } });
+      }
+      throw e;
+    }
   }
 
   async selfLeave(groupId: string, userId: string) {
@@ -313,6 +397,11 @@ export class GroupsService {
     });
   }
 
+  /**
+   * Invitations are delivered in the app: an invite by user id notifies that
+   * user; an invite by email notifies every active account with that address
+   * (and waits for anyone who signs up with it later). No email is sent.
+   */
   async createInvite(tenantId: string, groupId: string, invitedBy: string, dto: { inviteeUserId?: string; inviteeEmail?: string; message?: string }) {
     const group = await this.manageGroup(tenantId, groupId);
     if (!dto.inviteeUserId && !dto.inviteeEmail) {
@@ -321,6 +410,29 @@ export class GroupsService {
     // Users outside the caller's organization can only be invited by email.
     if (dto.inviteeUserId) await this.assertTenantUser(tenantId, dto.inviteeUserId, 'Invitee');
     const inviteeEmail = dto.inviteeEmail ? dto.inviteeEmail.trim().toLowerCase() : undefined;
+
+    const recipients = dto.inviteeUserId
+      ? [dto.inviteeUserId]
+      : (
+          await this.prisma.user.findMany({
+            where: { email: { equals: inviteeEmail, mode: 'insensitive' }, deletedAt: null, status: { notIn: ['INACTIVE', 'LOCKED'] } },
+            select: { id: true },
+          })
+        ).map((u) => u.id);
+    if (recipients.length) {
+      const alreadyMember = await this.prisma.groupMember.count({ where: { groupId, userId: { in: recipients }, status: 'ACTIVE' } });
+      if (alreadyMember) throw new ConflictException('This person is already a member of the group');
+    }
+    const pending = await this.prisma.groupInvite.findFirst({
+      where: {
+        groupId,
+        status: 'PENDING',
+        ...(dto.inviteeUserId ? { inviteeUserId: dto.inviteeUserId } : { inviteeEmail: { equals: inviteeEmail, mode: 'insensitive' } }),
+      },
+      select: { id: true },
+    });
+    if (pending) throw new ConflictException('An invitation is already pending for this person');
+
     const invite = await this.prisma.groupInvite.create({
       data: {
         groupId,
@@ -331,20 +443,45 @@ export class GroupsService {
         status: 'PENDING',
       },
     });
-    if (dto.inviteeUserId) {
-      const grp = group;
-      await this.notifications.fire({
-        recipientUserId: dto.inviteeUserId,
-        actorUserId: invitedBy,
-        tenantId,
-        type: 'GROUP_INVITE',
-        title: `Invitation to "${grp?.name ?? 'a group'}"`,
-        body: dto.message,
-        link: `/groups/${groupId}`,
-        data: { groupId, inviteId: invite.id },
-      });
+    for (const recipientUserId of recipients) {
+      try {
+        await this.notifications.fire({
+          recipientUserId,
+          actorUserId: invitedBy,
+          tenantId,
+          type: 'GROUP_INVITE',
+          title: `Invitation to join "${group.name}"`,
+          body: dto.message,
+          link: `/social/groups/${groupId}`,
+          data: { groupId, inviteId: invite.id },
+        });
+      } catch (e) {
+        this.logger.warn(`group invite notification failed: ${(e as Error).message}`);
+      }
     }
-    return invite;
+    return { ...invite, notified: recipients.length };
+  }
+
+  /** Pending invitations addressed to the caller, with the public-safe group fields. */
+  async listMyInvites(access: Pick<GroupAccess, 'userId' | 'email'>) {
+    const invites = await this.prisma.groupInvite.findMany({
+      where: { AND: [{ status: 'PENDING' }, this.addressedTo(access)] },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, message: true, createdAt: true, group: { select: PUBLIC_GROUP_SELECT } },
+    });
+    return invites;
+  }
+
+  /** The managing organization withdraws a pending invitation. */
+  async revokeInvite(tenantId: string, inviteId: string) {
+    const invite = await this.prisma.groupInvite.findFirst({
+      where: { id: requireId(inviteId, 'Invite'), group: { tenantId } },
+      select: { id: true, status: true },
+    });
+    if (!tenantId || !invite) throw new NotFoundException('Invite not found');
+    if (invite.status !== 'PENDING') throw new ConflictException(`Invite already ${invite.status.toLowerCase()}`);
+    return this.prisma.groupInvite.update({ where: { id: invite.id }, data: { status: 'REVOKED', respondedAt: new Date() } });
   }
 
   async respondInvite(caller: Pick<Principal, 'sub' | 'email'>, inviteId: string, accept: boolean) {
@@ -364,7 +501,7 @@ export class GroupsService {
       (await this.prisma.groupMember.findUnique({ where: { groupId_userId: { groupId: invite.groupId, userId } } }))
         ?.status === 'ACTIVE';
     const updated = await this.prisma.groupInvite.update({
-      where: { id: inviteId },
+      where: { id: invite.id },
       data: { status: accept ? 'ACCEPTED' : 'DECLINED', respondedAt: new Date() },
     });
     if (accept) {
@@ -381,141 +518,196 @@ export class GroupsService {
         });
       }
     }
+    // The invitation is answered, so its notification is settled too.
+    await this.prisma.notification.updateMany({
+      where: { recipientId: userId, type: 'GROUP_INVITE', readAt: null, data: { path: ['inviteId'], equals: invite.id } },
+      data: { readAt: new Date() },
+    });
     return updated;
   }
 
   // ─── Discussion (posts + comments) ───────────────────────────────────
-  async listPosts(tenantId: string, userId: string, groupId: string) {
-    await this.contentGroup(tenantId, userId, groupId);
-    const posts = await this.prisma.groupPost.findMany({
-      where: { groupId },
-      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
-      include: { _count: { select: { comments: true } } },
-    });
-    // Hydrate authors
-    const authorIds = Array.from(new Set(posts.map((p) => p.authorId)));
-    const users = authorIds.length
-      ? await this.prisma.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, firstName: true, lastName: true } })
+  private async authorsById(ids: string[]) {
+    const unique = [...new Set(ids)];
+    const users = unique.length
+      ? await this.prisma.user.findMany({ where: { id: { in: unique } }, select: { id: true, firstName: true, lastName: true } })
       : [];
-    const byId = new Map(users.map((u) => [u.id, u]));
-    return posts.map((p) => ({
-      ...p,
-      author: byId.get(p.authorId)
-        ? { id: p.authorId, firstName: byId.get(p.authorId)!.firstName, lastName: byId.get(p.authorId)!.lastName }
-        : null,
-    }));
+    return new Map(users.map((u) => [u.id, u]));
   }
 
-  async createPost(tenantId: string, groupId: string, authorId: string, dto: { body: string; mediaUrls?: string[]; isPinned?: boolean }) {
-    const group = await this.contentGroup(tenantId, authorId, groupId);
+  /** Newest first, pinned posts leading; paginated. */
+  async listPosts(access: GroupAccess, groupId: string, query: { page?: number; limit?: number } = {}) {
+    const group = await this.contentGroup(access, groupId, 'read');
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limit = Math.min(50, Math.max(1, Number(query.limit ?? 20)));
+    const [posts, total] = await Promise.all([
+      this.prisma.groupPost.findMany({
+        where: { groupId: group.id },
+        orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { _count: { select: { comments: true } } },
+      }),
+      this.prisma.groupPost.count({ where: { groupId: group.id } }),
+    ]);
+    const byId = await this.authorsById(posts.map((p) => p.authorId));
+    const items = posts.map((p) => {
+      const isMine = p.authorId === access.userId;
+      return {
+        ...p,
+        author: byId.has(p.authorId) ? { id: p.authorId, firstName: byId.get(p.authorId)!.firstName, lastName: byId.get(p.authorId)!.lastName } : null,
+        authorName: personName(byId.get(p.authorId)),
+        commentCount: p._count.comments,
+        isMine,
+        canDelete: isMine || group.manages,
+      };
+    });
+    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  async createPost(access: GroupAccess, groupId: string, dto: { body: string; mediaUrls?: string[]; isPinned?: boolean }) {
+    const group = await this.contentGroup(access, groupId, 'write');
     if (!dto.body || !dto.body.trim()) throw new BadRequestException('Post body is required');
     return this.prisma.groupPost.create({
       data: {
-        groupId,
-        authorId,
-        body: dto.body,
+        groupId: group.id,
+        authorId: access.userId,
+        body: dto.body.trim(),
         mediaUrls: dto.mediaUrls ?? [],
         // only the managing organization can pin
-        isPinned: group.managed ? dto.isPinned ?? false : false,
+        isPinned: group.manages ? dto.isPinned ?? false : false,
       },
     });
   }
 
-  /** Loads a post the caller may see (managing tenant or active member of its group). */
-  private async contentPost(tenantId: string, userId: string, postId: string) {
+  /** Loads a post the caller may see (managing organization or active member of its group). */
+  private async contentPost(access: GroupAccess, postId: string, need: 'read' | 'write') {
     const post = await this.prisma.groupPost.findUnique({
       where: { id: requireId(postId, 'Post') },
       select: { id: true, groupId: true, authorId: true },
     });
     if (!post) throw new NotFoundException('Post not found');
     try {
-      const group = await this.contentGroup(tenantId, userId, post.groupId);
+      const group = await this.contentGroup(access, post.groupId, need);
       return { post, group };
-    } catch {
+    } catch (e) {
+      if (e instanceof ForbiddenException) throw e;
       throw new NotFoundException('Post not found');
     }
   }
 
-  /** The managing organization, or the post's author (while still able to see it), may delete. */
-  async deletePost(tenantId: string, userId: string, postId: string) {
+  /** The managing organization (with crm:pilgrim:update), or the post's author, may delete. */
+  async deletePost(access: GroupAccess, postId: string) {
     const safeId = requireId(postId, 'Post');
     const post = await this.prisma.groupPost.findFirst({
       where: {
         id: safeId,
         OR: [
-          ...(tenantId ? [{ group: { tenantId } }] : []),
-          ...(userId ? [{ authorId: userId }] : []),
+          ...(access.tenantId && access.canUpdate ? [{ group: { tenantId: access.tenantId } }] : []),
+          ...(access.userId ? [{ authorId: access.userId }] : []),
         ],
       },
       select: { id: true },
     });
     if (!post) throw new NotFoundException('Post not found');
-    return this.prisma.groupPost.delete({ where: { id: post.id } });
+    await this.prisma.$transaction([
+      this.prisma.groupPostComment.deleteMany({ where: { postId: post.id } }),
+      this.prisma.groupPost.delete({ where: { id: post.id } }),
+    ]);
+    return { id: post.id, deleted: true };
   }
 
-  async listComments(tenantId: string, userId: string, postId: string) {
-    await this.contentPost(tenantId, userId, postId);
+  async listComments(access: GroupAccess, postId: string) {
+    const { post, group } = await this.contentPost(access, postId, 'read');
     const comments = await this.prisma.groupPostComment.findMany({
-      where: { postId },
+      where: { postId: post.id },
       orderBy: { createdAt: 'asc' },
+      take: 200,
     });
-    const authorIds = Array.from(new Set(comments.map((c) => c.authorId)));
-    const users = authorIds.length
-      ? await this.prisma.user.findMany({ where: { id: { in: authorIds } }, select: { id: true, firstName: true, lastName: true } })
-      : [];
-    const byId = new Map(users.map((u) => [u.id, u]));
-    return comments.map((c) => ({
-      ...c,
-      author: byId.get(c.authorId)
-        ? { id: c.authorId, firstName: byId.get(c.authorId)!.firstName, lastName: byId.get(c.authorId)!.lastName }
-        : null,
-    }));
+    const byId = await this.authorsById(comments.map((c) => c.authorId));
+    return comments.map((c) => {
+      const isMine = c.authorId === access.userId;
+      return {
+        ...c,
+        author: byId.has(c.authorId) ? { id: c.authorId, firstName: byId.get(c.authorId)!.firstName, lastName: byId.get(c.authorId)!.lastName } : null,
+        authorName: personName(byId.get(c.authorId)),
+        isMine,
+        canDelete: isMine || group.manages,
+      };
+    });
   }
 
-  async createComment(tenantId: string, postId: string, authorId: string, body: string) {
+  async createComment(access: GroupAccess, postId: string, body: string) {
     if (!body || !body.trim()) throw new BadRequestException('Comment body is required');
-    const { post } = await this.contentPost(tenantId, authorId, postId);
-    return this.prisma.groupPostComment.create({ data: { postId: post.id, authorId, body } });
+    const { post } = await this.contentPost(access, postId, 'write');
+    return this.prisma.groupPostComment.create({ data: { postId: post.id, authorId: access.userId, body: body.trim() } });
+  }
+
+  /** The comment's author, or the managing organization (with crm:pilgrim:update), may delete it. */
+  async deleteComment(access: GroupAccess, postId: string, commentId: string) {
+    const { post, group } = await this.contentPost(access, postId, 'read');
+    const comment = await this.prisma.groupPostComment.findFirst({
+      where: { id: requireId(commentId, 'Comment'), postId: post.id },
+      select: { id: true, authorId: true },
+    });
+    if (!comment || (comment.authorId !== access.userId && !group.manages)) throw new NotFoundException('Comment not found');
+    await this.prisma.groupPostComment.delete({ where: { id: comment.id } });
+    return { id: comment.id, deleted: true };
   }
 
   // ─── Polls ───────────────────────────────────────────────────────────
-  async listPolls(tenantId: string, userId: string, groupId: string) {
-    await this.contentGroup(tenantId, userId, groupId);
+  /**
+   * Polls with their tally and the caller's own choice. Individual votes (who
+   * chose what) are not exposed to other members.
+   */
+  async listPolls(access: GroupAccess, groupId: string) {
+    const group = await this.contentGroup(access, groupId, 'read');
     const polls = await this.prisma.groupPoll.findMany({
-      where: { groupId },
+      where: { groupId: group.id },
       orderBy: { createdAt: 'desc' },
-      include: { votes: true },
+      include: { votes: { select: { userId: true, optionIndex: true } } },
     });
-    return polls.map((p) => ({
+    const now = Date.now();
+    return polls.map(({ votes, ...p }) => ({
       ...p,
-      voteCount: p.votes.length,
-      breakdown: this.tallyPoll(p.votes, (p.options as any[]) ?? []),
+      voteCount: votes.length,
+      voterCount: new Set(votes.map((v) => v.userId)).size,
+      breakdown: this.tallyPoll(votes, (p.options as any[]) ?? []),
+      myVotes: votes.filter((v) => v.userId === access.userId).map((v) => v.optionIndex),
+      isClosed: p.status === 'CLOSED' || (!!p.closesAt && p.closesAt.getTime() <= now),
+      canClose: p.status !== 'CLOSED' && (group.manages || p.authorId === access.userId),
     }));
   }
 
   async createPoll(tenantId: string, groupId: string, authorId: string, dto: { question: string; options: string[]; isMultiple?: boolean; closesAt?: string }) {
-    await this.contentGroup(tenantId, authorId, groupId);
-    if (!dto.question || !dto.options || dto.options.length < 2) {
+    await this.manageGroup(tenantId, groupId);
+    const options = (dto.options ?? []).map((o) => String(o).trim()).filter(Boolean);
+    if (!dto.question?.trim() || options.length < 2) {
       throw new BadRequestException('Poll must have a question and at least 2 options');
     }
-    const optionsJson = dto.options.map((label, index) => ({ index, label }));
+    if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) {
+      throw new BadRequestException('Poll options must be different from each other');
+    }
+    if (dto.closesAt && new Date(dto.closesAt).getTime() <= Date.now()) {
+      throw new BadRequestException('The closing time must be in the future');
+    }
     return this.prisma.groupPoll.create({
       data: {
         groupId,
         authorId,
-        question: dto.question,
-        options: optionsJson,
+        question: dto.question.trim(),
+        options: options.map((label, index) => ({ index, label })),
         isMultiple: dto.isMultiple ?? false,
         closesAt: dto.closesAt ? new Date(dto.closesAt) : undefined,
       },
     });
   }
 
-  async vote(tenantId: string, pollId: string, userId: string, optionIndices: number[]) {
+  async vote(access: GroupAccess, pollId: string, optionIndices: number[]) {
     const poll = await this.prisma.groupPoll.findUnique({ where: { id: requireId(pollId, 'Poll') } });
     if (!poll) throw new NotFoundException('Poll not found');
     try {
-      await this.contentGroup(tenantId, userId, poll.groupId);
+      await this.contentGroup(access, poll.groupId, 'read');
     } catch {
       throw new NotFoundException('Poll not found');
     }
@@ -533,12 +725,12 @@ export class GroupsService {
     if (!poll.isMultiple && optionIndices.length > 1) {
       throw new BadRequestException('This poll accepts a single option');
     }
-    // Clear previous votes by this user
-    await this.prisma.groupPollVote.deleteMany({ where: { pollId, userId } });
-    await this.prisma.groupPollVote.createMany({
-      data: optionIndices.map((i) => ({ pollId, userId, optionIndex: i })),
-    });
-    return { success: true };
+    // Replace the caller's previous choice atomically.
+    await this.prisma.$transaction([
+      this.prisma.groupPollVote.deleteMany({ where: { pollId: poll.id, userId: access.userId } }),
+      this.prisma.groupPollVote.createMany({ data: optionIndices.map((i) => ({ pollId: poll.id, userId: access.userId, optionIndex: i })) }),
+    ]);
+    return { success: true, myVotes: optionIndices };
   }
 
   /** The managing organization or the poll's author may close it. */
@@ -574,11 +766,12 @@ export class GroupsService {
 
   async createNote(tenantId: string, groupId: string, authorId: string, dto: { title: string; body?: string; category?: string; pinned?: boolean }) {
     await this.manageGroup(tenantId, groupId);
+    if (!dto.title?.trim()) throw new BadRequestException('Note title is required');
     return this.prisma.groupNote.create({
       data: {
         groupId,
         authorId,
-        title: dto.title,
+        title: dto.title.trim(),
         body: dto.body,
         category: dto.category ?? 'GENERAL',
         pinned: dto.pinned ?? false,
@@ -612,7 +805,7 @@ export class GroupsService {
     return this.prisma.groupNote.delete({ where: { id: noteId } });
   }
 
-  // ─── Documents ───────────────────────────────────────────────────────
+  // ─── Documents (shared links; files are not uploaded here) ────────────
   async listDocuments(tenantId: string, groupId: string) {
     await this.manageGroup(tenantId, groupId);
     return this.prisma.groupDocument.findMany({
@@ -695,10 +888,10 @@ export class GroupsService {
     return updated;
   }
 
-  // ─── Incidents (legacy) ─────────────────────────────────────────────
+  // ─── Incidents ──────────────────────────────────────────────────────
   async getIncidents(tenantId: string, groupId: string) {
     return this.prisma.incident.findMany({
-      where: { tenantId, groupId },
+      where: { tenantId, groupId: requireId(groupId, 'Group') },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -706,6 +899,8 @@ export class GroupsService {
   async createIncident(tenantId: string, groupId: string, reportedBy: string, dto: any) {
     await this.manageGroup(tenantId, groupId);
     await assertOwnedIfPresent(this.prisma.pilgrim, dto.pilgrimId, tenantId, 'Pilgrim', { deletedAt: null });
+    const description = String(dto.description ?? dto.title ?? '').trim();
+    if (!description) throw new BadRequestException('Describe the incident');
     return this.prisma.incident.create({
       data: {
         tenantId,
@@ -713,7 +908,7 @@ export class GroupsService {
         reportedBy: reportedBy && reportedBy.length === 36 ? reportedBy : null,
         type: dto.type ?? 'OTHER',
         severity: dto.severity ?? 'MEDIUM',
-        description: dto.description ?? dto.title ?? '',
+        description,
         location: dto.location,
         pilgrimId: dto.pilgrimId,
       },
@@ -733,12 +928,13 @@ export class GroupsService {
   }
 
   async getStats(tenantId: string) {
-    const [total, active, completed, incidents] = await Promise.all([
+    const [total, active, completed, incidents, openIncidents] = await Promise.all([
       this.prisma.tripGroup.count({ where: { tenantId } }),
       this.prisma.tripGroup.count({ where: { tenantId, status: 'ACTIVE' } }),
       this.prisma.tripGroup.count({ where: { tenantId, status: 'COMPLETED' } }),
       this.prisma.incident.count({ where: { tenantId } }),
+      this.prisma.incident.count({ where: { tenantId, resolvedAt: null } }),
     ]);
-    return { total, active, completed, incidents };
+    return { total, active, completed, incidents, openIncidents };
   }
 }

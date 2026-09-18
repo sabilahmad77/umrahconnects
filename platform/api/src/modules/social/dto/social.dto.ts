@@ -21,6 +21,8 @@ export class QueryFeedDto {
   @Transform(({ obj, key }) => obj[key] === true || obj[key] === 'true' || obj[key] === '1')
   @IsBoolean()
   followingOnly?: boolean;
+  /** Only posts carrying this tag (with or without the leading #). */
+  @IsOptional() @IsString() @MaxLength(50) tag?: string;
 }
 
 // ── Posts ───────────────────────────────────────────────────────────────────
@@ -41,12 +43,32 @@ export class UpdatePostDto {
   @IsOptional() @IsString() @MaxLength(2000) body?: string;
   @IsOptional() @IsEnum(PostVisibility) visibility?: PostVisibility;
   @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) @MaxLength(50, { each: true }) tags?: string[];
+  @IsOptional() @IsArray() @ArrayMaxSize(10) @IsIn(ROLE_CODES, { each: true }) targetRoles?: string[];
 }
 
 export class CreateCommentDto {
   @IsOptional() @IsString() @MaxLength(1000) content?: string;
   @IsOptional() @IsString() @MaxLength(1000) body?: string;
+  /** Reply to this comment (a reply to a reply is attached to its top-level comment). */
   @IsOptional() @IsUUID() parentId?: string;
+}
+
+export class UpdateCommentDto {
+  @IsOptional() @IsString() @MaxLength(1000) content?: string;
+  /** Alias of `content`. */
+  @IsOptional() @IsString() @MaxLength(1000) body?: string;
+}
+
+export class QueryCommentsDto {
+  /** List the replies to this top-level comment instead of the top-level comments. */
+  @IsOptional() @IsUUID() parentId?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit?: number = 10;
+}
+
+export class QueryMessagesDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 50;
 }
 
 export class ReactDto {

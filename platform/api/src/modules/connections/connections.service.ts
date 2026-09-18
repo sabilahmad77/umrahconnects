@@ -3,12 +3,59 @@ import { requireId } from '../../common/tenant-scope';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
+/** The other party of a connection as a client may see them. */
+interface PartyProfile {
+  id: string;
+  email: string | null;
+  socialAccount: {
+    displayName: string;
+    avatarUrl: string | null;
+    bio: string | null;
+    isVerified: boolean;
+    contactVisibility: string;
+  } | null;
+}
+
+/**
+ * Connections are bidirectional and need the recipient's acceptance. Every
+ * handler is scoped to the caller (requester or recipient); other ids get the
+ * same 404 as unknown ones.
+ *
+ * A party's email is contact data: it is shown only when their contact
+ * visibility allows it (PUBLIC — always; CONNECTIONS — once connected; PRIVATE —
+ * never). Strangers sending a request do not learn each other's address.
+ */
 @Injectable()
 export class ConnectionsService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
   ) {}
+
+  private async profiles(userIds: string[]): Promise<PartyProfile[]> {
+    if (!userIds.length) return [];
+    return this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        email: true,
+        socialAccount: { select: { displayName: true, avatarUrl: true, bio: true, isVerified: true, contactVisibility: true } },
+      },
+    });
+  }
+
+  private present(profile: PartyProfile | undefined, connected: boolean) {
+    const visibility = (profile?.socialAccount?.contactVisibility ?? 'CONNECTIONS').toUpperCase();
+    const emailVisible = visibility === 'PUBLIC' || (visibility === 'CONNECTIONS' && connected);
+    const fallbackName = profile?.email ? profile.email.split('@')[0] : undefined;
+    return {
+      email: emailVisible ? profile?.email ?? undefined : undefined,
+      displayName: profile?.socialAccount?.displayName ?? fallbackName,
+      avatarUrl: profile?.socialAccount?.avatarUrl ?? undefined,
+      bio: profile?.socialAccount?.bio ?? undefined,
+      verified: profile?.socialAccount?.isVerified ?? false,
+    };
+  }
 
   /** Send a connection request from `requester` to `recipientUserId`. */
   async request(requesterUserId: string, recipientUserId: string, message?: string) {
@@ -40,7 +87,7 @@ export class ConnectionsService {
         throw new ConflictException('A connection request cannot be sent to this user');
       }
       // RE-OPEN a previously rejected one only if user re-requests
-      return this.prisma.connection.update({
+      const reopened = await this.prisma.connection.update({
         where: { id: existing.id },
         data: {
           requesterId: requesterUserId,
@@ -50,6 +97,8 @@ export class ConnectionsService {
           respondedAt: null,
         },
       });
+      await this.notifyRequest(reopened.id, requesterUserId, recipientUserId, message);
+      return reopened;
     }
 
     const conn = await this.prisma.connection.create({
@@ -60,18 +109,22 @@ export class ConnectionsService {
         message,
       },
     });
+    await this.notifyRequest(conn.id, requesterUserId, recipientUserId, message);
+    return conn;
+  }
 
-    // Notify recipient
+  private async notifyRequest(connectionId: string, requesterUserId: string, recipientUserId: string, message?: string) {
+    const [requester] = await this.profiles([requesterUserId]);
+    const name = this.present(requester, false).displayName ?? 'Someone';
     await this.notifications.fire({
       recipientUserId,
       actorUserId: requesterUserId,
       type: 'CONNECTION_REQUEST',
-      title: 'New connection request',
+      title: `${name} wants to connect`,
       body: message ?? 'You have a new connection request.',
       link: '/connections',
-      data: { connectionId: conn.id, requesterId: requesterUserId },
+      data: { connectionId, requesterId: requesterUserId },
     });
-    return conn;
   }
 
   async respond(currentUserId: string, connectionId: string, decision: 'ACCEPTED' | 'REJECTED') {
@@ -87,16 +140,18 @@ export class ConnectionsService {
       throw new BadRequestException(`Request already ${conn.status.toLowerCase()}`);
     }
     const updated = await this.prisma.connection.update({
-      where: { id: connectionId },
+      where: { id: conn.id },
       data: { status: decision, respondedAt: new Date() },
     });
     if (decision === 'ACCEPTED') {
+      const [me] = await this.profiles([currentUserId]);
+      const name = this.present(me, true).displayName ?? 'Your contact';
       await this.notifications.fire({
         recipientUserId: conn.requesterId,
         actorUserId: currentUserId,
         type: 'CONNECTION_ACCEPTED',
-        title: 'Connection accepted',
-        body: 'Your connection request was accepted.',
+        title: `${name} accepted your connection request`,
+        body: 'You are now connected.',
         link: '/connections',
         data: { connectionId: conn.id },
       });
@@ -104,6 +159,7 @@ export class ConnectionsService {
     return updated;
   }
 
+  /** Removes a connection or withdraws/dismisses a pending request, in either direction. */
   async remove(currentUserId: string, otherUserId: string) {
     const conn = await this.prisma.connection.findFirst({
       where: {
@@ -128,32 +184,12 @@ export class ConnectionsService {
       },
       orderBy: { respondedAt: 'desc' },
     });
-    const otherUserIds = rows.map((r) => (r.requesterId === userId ? r.recipientId : r.requesterId));
-    // Hydrate with user + social-account info
-    const users = otherUserIds.length
-      ? await this.prisma.user.findMany({
-          where: { id: { in: otherUserIds } },
-          select: {
-            id: true,
-            email: true,
-            socialAccount: { select: { displayName: true, avatarUrl: true, bio: true, isVerified: true } },
-          },
-        })
-      : [];
+    const otherIds = rows.map((r) => (r.requesterId === userId ? r.recipientId : r.requesterId));
+    const users = await this.profiles(otherIds);
     return {
       items: rows.map((c) => {
         const otherId = c.requesterId === userId ? c.recipientId : c.requesterId;
-        const other = users.find((u) => u.id === otherId);
-        return {
-          connectionId: c.id,
-          since: c.respondedAt,
-          otherUserId: otherId,
-          email: other?.email,
-          displayName: other?.socialAccount?.displayName,
-          avatarUrl: other?.socialAccount?.avatarUrl,
-          bio: other?.socialAccount?.bio,
-          verified: other?.socialAccount?.isVerified,
-        };
+        return { connectionId: c.id, since: c.respondedAt, otherUserId: otherId, ...this.present(users.find((u) => u.id === otherId), true) };
       }),
       total: rows.length,
     };
@@ -165,31 +201,34 @@ export class ConnectionsService {
       where: { recipientId: userId, status: 'PENDING' },
       orderBy: { createdAt: 'desc' },
     });
-    const requesterIds = rows.map((r) => r.requesterId);
-    const users = requesterIds.length
-      ? await this.prisma.user.findMany({
-          where: { id: { in: requesterIds } },
-          select: {
-            id: true,
-            email: true,
-            socialAccount: { select: { displayName: true, avatarUrl: true, bio: true } },
-          },
-        })
-      : [];
+    const users = await this.profiles(rows.map((r) => r.requesterId));
     return {
-      items: rows.map((c) => {
-        const u = users.find((x) => x.id === c.requesterId);
-        return {
-          connectionId: c.id,
-          createdAt: c.createdAt,
-          message: c.message,
-          requesterId: c.requesterId,
-          email: u?.email,
-          displayName: u?.socialAccount?.displayName,
-          avatarUrl: u?.socialAccount?.avatarUrl,
-          bio: u?.socialAccount?.bio,
-        };
-      }),
+      items: rows.map((c) => ({
+        connectionId: c.id,
+        createdAt: c.createdAt,
+        message: c.message,
+        requesterId: c.requesterId,
+        ...this.present(users.find((x) => x.id === c.requesterId), false),
+      })),
+      total: rows.length,
+    };
+  }
+
+  /** Pending requests the current user sent (so they can see and withdraw them). */
+  async listOutgoing(userId: string) {
+    const rows = await this.prisma.connection.findMany({
+      where: { requesterId: userId, status: 'PENDING' },
+      orderBy: { createdAt: 'desc' },
+    });
+    const users = await this.profiles(rows.map((r) => r.recipientId));
+    return {
+      items: rows.map((c) => ({
+        connectionId: c.id,
+        createdAt: c.createdAt,
+        message: c.message,
+        recipientId: c.recipientId,
+        ...this.present(users.find((x) => x.id === c.recipientId), false),
+      })),
       total: rows.length,
     };
   }
