@@ -5,7 +5,7 @@ import { changePasswordProblems, changePasswordServerErrors } from '../lib/passw
 
 const state = vi.hoisted(() => ({
   profile: null as any,
-  capabilities: { ready: true, can: (_c: string) => false, isPlatform: false },
+  capabilities: { ready: true, can: (_c: string): boolean => false, isPlatform: false },
   user: null as any,
   google: { enabled: true, mode: 'google' } as { enabled: boolean; mode: 'google' | 'local-stub' },
 }));
