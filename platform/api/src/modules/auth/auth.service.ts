@@ -4,12 +4,14 @@ import {
   ConflictException,
   BadRequestException,
   ServiceUnavailableException,
+  HttpException,
+  HttpStatus,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
+import { OtpCode, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash, randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -21,6 +23,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { OtpLoginDto } from './dto/otp-login.dto';
 import { ACCESS_TOKEN_TYPE } from './strategies/jwt.strategy';
+import { passwordResetEmail, verificationEmail } from './auth-emails';
 import type { Principal } from './principal';
 
 export interface JwtPayload {
@@ -61,6 +64,18 @@ export const PURPOSE = {
   OAUTH_LINK: 'oauth_link_intent',
   OTP_LOGIN: 'login',
 } as const;
+
+/** A new verification email can be requested this long after the previous one. */
+export const VERIFICATION_RESEND_COOLDOWN_SECONDS = 60;
+
+/**
+ * Stable `error.code` values for one-time links, so the web can tell a person
+ * what actually happened instead of one generic "invalid or expired". The
+ * tokens are 256-bit random values, so saying "already used" or "expired"
+ * reveals nothing to anyone who does not already hold the link.
+ */
+type LinkKind = 'VERIFICATION' | 'RESET';
+type LinkState = 'valid' | 'used' | 'expired' | 'invalid';
 
 @Injectable()
 export class AuthService {
@@ -202,7 +217,10 @@ export class AuthService {
     }
 
     if (matched.length === 0) {
-      await this.recordFailedLogin(candidates.map((c) => c.id));
+      // Only accounts that have a password can have it guessed. Counting
+      // failures against a Google-only account let anyone lock its owner out
+      // of Google Sign-In by typing wrong passwords for their email.
+      await this.recordFailedLogin(candidates.filter((c) => c.passwordHash).map((c) => c.id));
       throw new UnauthorizedException('Invalid credentials');
     }
     if (matched.length > 1) {
@@ -366,10 +384,24 @@ export class AuthService {
     };
   }
 
+  /**
+   * Wrong input is a 400 with a stable code, not a 401: the session itself is
+   * fine, and a 401 here made the web client treat a typo as an expired session.
+   */
   async changePassword(principal: Principal, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUnique({ where: { id: principal.sub } });
-    if (!user?.passwordHash || !(await bcrypt.compare(currentPassword, user.passwordHash))) {
-      throw new UnauthorizedException('Current password is incorrect');
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.passwordHash) {
+      throw new BadRequestException({
+        code: 'PASSWORD_NOT_SET',
+        message: 'This account signs in with Google and has no password yet. Use "Set a password" to receive a link by email.',
+      });
+    }
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw new BadRequestException({ code: 'CURRENT_PASSWORD_INCORRECT', message: 'Current password is incorrect.' });
+    }
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      throw new BadRequestException({ code: 'PASSWORD_UNCHANGED', message: 'Choose a new password that is different from your current one.' });
     }
     await this.prisma.user.update({
       where: { id: user.id },
@@ -380,7 +412,8 @@ export class AuthService {
       tenantId: user.tenantId, actorId: user.id, actorEmail: user.email ?? undefined, action: 'UPDATE',
       namespace: 'core', resource: 'user_password', resourceId: user.id,
     });
-    return { message: 'Password changed. Please sign in again on your other devices.' };
+    // Every session is revoked, this one included, so the web must sign in again.
+    return { message: 'Password changed. Sign in again with your new password.', sessionsRevoked: true };
   }
 
   // ── One-time tokens (reset, verification, OAuth tickets) ───────────────
@@ -416,6 +449,47 @@ export class AuthService {
     return claimed.count === 1 ? row.userId : null;
   }
 
+  /**
+   * Consumes an emailed link (verification or reset) and says precisely why it
+   * cannot be used. "Used" also covers a link replaced by a newer one, because
+   * issuing a link retires the earlier ones.
+   */
+  private async redeemLink(kind: LinkKind, purpose: string, token: string): Promise<OtpCode & { userId: string }> {
+    const row = await this.prisma.otpCode.findFirst({ where: { codeHash: sha256(token), purpose } });
+    let state: LinkState = 'valid';
+    if (!row?.userId) state = 'invalid';
+    else if (row.usedAt) state = 'used';
+    else if (row.expiresAt <= new Date()) state = 'expired';
+    else {
+      const claimed = await this.prisma.otpCode.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
+      if (claimed.count !== 1) state = 'used';
+    }
+    if (state === 'valid') return row as OtpCode & { userId: string };
+
+    const verified = state === 'used' && kind === 'VERIFICATION'
+      ? !!(await this.prisma.user.findUnique({ where: { id: row!.userId! }, select: { emailVerifiedAt: true } }))?.emailVerifiedAt
+      : undefined;
+    const messages: Record<LinkKind, Record<Exclude<LinkState, 'valid'>, string>> = {
+      VERIFICATION: {
+        invalid: 'This verification link is not valid. Open the most recent link from your email, or request a new one.',
+        used: verified
+          ? 'This verification link has already been used. Your email address is confirmed.'
+          : 'This verification link has already been used or was replaced by a newer one. Request a new link.',
+        expired: 'This verification link has expired. Request a new one.',
+      },
+      RESET: {
+        invalid: 'This password reset link is not valid. Request a new one from the sign-in page.',
+        used: 'This password reset link has already been used or was replaced by a newer one. Request a new link if you still need it.',
+        expired: 'This password reset link has expired. Request a new one from the sign-in page.',
+      },
+    };
+    throw new UnauthorizedException({
+      code: `${kind}_LINK_${state.toUpperCase()}`,
+      message: messages[kind][state],
+      ...(verified === undefined ? {} : { details: { emailVerified: verified } }),
+    });
+  }
+
   async issueOAuthTicket(userId: string) {
     return this.issueOneTimeToken(PURPOSE.OAUTH_TICKET, userId, null, 2);
   }
@@ -425,10 +499,15 @@ export class AuthService {
   }
 
   async exchangeOAuthTicket(ticket: string, ctx: SessionContext = {}): Promise<AuthTokens> {
+    const invalid = () =>
+      new UnauthorizedException({
+        code: 'OAUTH_TICKET_INVALID',
+        message: 'This Google sign-in has expired or was already completed. Start Google sign-in again.',
+      });
     const userId = await this.consumeOneTimeToken(PURPOSE.OAUTH_TICKET, ticket);
-    if (!userId) throw new UnauthorizedException('Sign-in link is invalid or has expired');
+    if (!userId) throw invalid();
     const user = await this.loadUser({ id: userId });
-    if (!user || user.deletedAt) throw new UnauthorizedException('Sign-in link is invalid or has expired');
+    if (!user || user.deletedAt) throw invalid();
     this.assertCanSignIn(user);
     await this.prisma.user.update({
       where: { id: user.id },
@@ -453,21 +532,15 @@ export class AuthService {
     for (const user of users) {
       const token = await this.issueOneTimeToken(PURPOSE.RESET, user.id, user.email, 30);
       const link = `${this.webUrl}/reset-password?token=${encodeURIComponent(token)}`;
-      await this.mail.send({
-        to: user.email!,
-        subject: 'Reset your Umrah Connect password',
-        text:
-          `A password reset was requested for your ${user.tenant?.name ?? 'Umrah Connect'} account.\n\n` +
-          `Open this link within 30 minutes to choose a new password:\n${link}\n\n` +
-          `If you did not request this, you can ignore this email.`,
-      });
+      const expiresAt = new Date(Date.now() + 30 * 60_000);
+      const mail = passwordResetEmail({ ...user, hasPassword: !!user.passwordHash }, user.tenant?.name ?? 'Umrah Connect', link, expiresAt);
+      await this.mail.send({ to: user.email!, ...mail });
     }
     return { message: generic, delivery: 'email' };
   }
 
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
-    const userId = await this.consumeOneTimeToken(PURPOSE.RESET, token);
-    if (!userId) throw new UnauthorizedException('Reset link is invalid or has expired.');
+    const { userId } = await this.redeemLink('RESET', PURPOSE.RESET, token);
     const user = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -493,19 +566,34 @@ export class AuthService {
     if (!this.mail.canDeliver) {
       throw new ServiceUnavailableException('Verification email is temporarily unavailable.');
     }
+    // Per-account cooldown: the route throttle is per IP, which does not stop
+    // one signed-in account from flooding its own inbox from several networks.
+    const previous = await this.prisma.otpCode.findFirst({
+      where: { userId: user.id, purpose: PURPOSE.VERIFY_EMAIL },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    const wait = previous
+      ? Math.ceil((previous.createdAt.getTime() + VERIFICATION_RESEND_COOLDOWN_SECONDS * 1000 - Date.now()) / 1000)
+      : 0;
+    if (wait > 0) {
+      throw new HttpException(
+        {
+          code: 'VERIFICATION_COOLDOWN',
+          message: `A verification email was sent recently. You can request another in ${wait} seconds.`,
+          details: { retryAfterSeconds: wait },
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
     const token = await this.issueOneTimeToken(PURPOSE.VERIFY_EMAIL, user.id, user.email, 24 * 60);
     const link = `${this.webUrl}/verify-email?token=${encodeURIComponent(token)}`;
-    const result = await this.mail.send({
-      to: user.email,
-      subject: 'Confirm your Umrah Connect email',
-      text: `Welcome to Umrah Connect.\n\nConfirm your email address within 24 hours:\n${link}\n`,
-    });
+    const result = await this.mail.send({ to: user.email, ...verificationEmail(user, link, new Date(Date.now() + 24 * 3600_000)) });
     return { delivered: result.delivered };
   }
 
   async confirmEmail(token: string) {
-    const userId = await this.consumeOneTimeToken(PURPOSE.VERIFY_EMAIL, token);
-    if (!userId) throw new UnauthorizedException('Verification link is invalid or has expired.');
+    const { userId } = await this.redeemLink('VERIFICATION', PURPOSE.VERIFY_EMAIL, token);
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     await this.prisma.user.update({
       where: { id: userId },

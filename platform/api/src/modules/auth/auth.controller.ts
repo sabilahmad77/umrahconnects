@@ -8,8 +8,8 @@ import {
   Req,
   Res,
   Query,
-  Logger,
   UnauthorizedException,
+  ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -17,7 +17,7 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { AuthService, AuthTokens, SessionContext } from './auth.service';
-import { GoogleAuthService, GoogleSignInError, GOOGLE_STATE_COOKIE } from './google.service';
+import { GoogleAuthService, GOOGLE_STATE_COOKIE } from './google.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { OtpLoginDto } from './dto/otp-login.dto';
@@ -35,8 +35,6 @@ const MIN = 60_000;
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
-  private readonly logger = new Logger(AuthController.name);
-
   constructor(
     private readonly authService: AuthService,
     private readonly google: GoogleAuthService,
@@ -187,7 +185,9 @@ export class AuthController {
   @Get('google/status')
   @ApiOperation({ summary: 'Whether Google Sign-In is configured on this deployment' })
   googleStatus() {
-    return { success: true, data: { enabled: this.google.configured } };
+    // `mode` is 'local-stub' only in development/test with the loopback stub provider,
+    // so the sign-in page can say plainly that it is not a real Google login.
+    return { success: true, data: { enabled: this.google.configured, mode: this.google.mode } };
   }
 
   @Public()
@@ -204,7 +204,7 @@ export class AuthController {
       setCookie(res, GOOGLE_STATE_COOKIE, stateCookie, { maxAgeMs: 10 * MIN, secure: this.google.secureCookies });
       return res.redirect(302, url);
     } catch (err) {
-      return res.redirect(302, this.google.loginErrorUrl(this.googleErrorCode(err)));
+      return res.redirect(302, this.google.errorUrl(err));
     }
   }
 
@@ -222,7 +222,7 @@ export class AuthController {
     try {
       return res.redirect(302, await this.google.callback(query, stateCookie));
     } catch (err) {
-      return res.redirect(302, this.google.loginErrorUrl(this.googleErrorCode(err)));
+      return res.redirect(302, this.google.errorUrl(err));
     }
   }
 
@@ -238,22 +238,19 @@ export class AuthController {
   @Post('google/link-intent')
   @HttpCode(HttpStatus.OK)
   @AnyAuthenticated()
+  @AllowPendingTenant()
   @Throttle({ default: { limit: 10, ttl: 5 * MIN } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'One-time intent to link Google to the signed-in account; then open google/start?intent=' })
   async googleLinkIntent(@CurrentUser() user: Principal) {
     if (!this.google.configured) throw new ServiceUnavailableException('Google Sign-In is not configured');
     if (user.tenantType === 'PLATFORM') {
-      throw new UnauthorizedException('Platform accounts cannot use Google Sign-In');
+      // 403, not 401: the session is valid, the account type is simply not allowed.
+      throw new ForbiddenException({ code: 'GOOGLE_NOT_ALLOWED', message: 'Platform accounts cannot use Google Sign-In' });
     }
     return { success: true, data: { intent: await this.authService.issueLinkIntent(user.sub) } };
   }
 
-  private googleErrorCode(err: unknown) {
-    if (err instanceof GoogleSignInError) return err.code;
-    this.logger.error(`Google sign-in failed: ${(err as Error)?.message}`);
-    return 'google_failed' as const;
-  }
 
   // ── Phone OTP (disabled until an SMS provider is integrated) ───────────
 
