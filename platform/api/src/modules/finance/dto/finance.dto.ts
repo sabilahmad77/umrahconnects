@@ -58,7 +58,7 @@ export class CreateInvoiceDto {
   @IsOptional() @IsString() @MaxLength(200) counterpartyName?: string;
   /** Alias sent by API scripts. */
   @IsOptional() @IsString() @MaxLength(200) clientName?: string;
-  /** Accepted for client compatibility; not persisted. */
+  /** The customer's email, kept with the billing address (issuedToAddress.email). */
   @IsOptional() @IsEmail() @MaxLength(255) counterpartyEmail?: string;
   @IsOptional() @IsObject() @RawJson() issuedToAddress?: Record<string, unknown>;
 
@@ -175,4 +175,26 @@ export class QueryFinanceDto {
   @IsOptional() @IsDateString() dateTo?: string;
   @IsOptional() @Type(() => Number) @IsNumber() page?: number = 1;
   @IsOptional() @Type(() => Number) @IsNumber() limit?: number = 20;
+}
+
+/** GET /finance/invoices — an unknown status is a 400, not a database error. */
+export class QueryInvoicesDto {
+  @IsOptional() @Transform(upper) @IsEnum(InvoiceStatus) status?: InvoiceStatus;
+  @IsOptional() @Transform(upper) @IsIn(INVOICE_TYPES as unknown as string[]) type?: string;
+  @IsOptional() @IsString() @MaxLength(120) search?: string;
+  @IsOptional() @IsUUID() bookingId?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 20;
+}
+
+export class QueryPaymentsDto {
+  @IsOptional() @Transform(upper) @IsEnum(PaymentStatus) status?: PaymentStatus;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 20;
+}
+
+export class QueryBudgetPlansDto {
+  @IsOptional() @Transform(upper) @IsIn(BUDGET_PLAN_STATUSES as unknown as string[]) status?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 50;
 }

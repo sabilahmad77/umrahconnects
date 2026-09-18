@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { BOOKING_STATUS_TRANSITIONS, DERIVED_BOOKING_STATUSES, derivedBookingStatus } from './booking-money';
 import { NotificationsService } from '../notifications/notifications.service';
 import { assertAllOwned, findOwned, requireId } from '../../common/tenant-scope';
 
@@ -19,6 +21,13 @@ function normalizeBookingStatus(raw?: string): string {
   if ((BOOKING_STATUSES as readonly string[]).includes(up)) return up;
   if (BOOKING_STATUS_ALIASES[up]) return BOOKING_STATUS_ALIASES[up];
   throw new BadRequestException(`Invalid booking status "${raw}". Allowed: ${BOOKING_STATUSES.join(', ')}`);
+}
+
+/** A return date before the departure date is refused (400) instead of stored. */
+function assertDateOrder(departure?: string | Date | null, ret?: string | Date | null) {
+  if (departure && ret && new Date(ret).getTime() < new Date(departure).getTime()) {
+    throw new BadRequestException('The return date cannot be before the departure date');
+  }
 }
 
 @Injectable()
@@ -44,7 +53,8 @@ export class BookingsService {
     const { status, packageId, search, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;
     const where: any = { tenantId };
-    if (status) where.status = status;
+    // Aliases (ENQUIRY, PENDING…) resolve to the stored enum instead of failing in the database.
+    if (status) where.status = normalizeBookingStatus(status);
     if (packageId) where.packageId = packageId;
     if (search) {
       where.OR = [
@@ -120,11 +130,15 @@ export class BookingsService {
     if (paidAmountCents > totalAmountCents) {
       throw new BadRequestException('depositAmount must not exceed the booking total');
     }
+    assertDateOrder(dto.departureDate, dto.returnDate);
 
     // Empty-string createdBy was the cause of "INTERNAL_ERROR" (invalid UUID)
     const safeCreatedBy = createdBy && createdBy.length === 36 ? createdBy : null;
 
-    const status = normalizeBookingStatus(dto.status);
+    // A deposit taken at creation moves the booking into its payment phase; the
+    // paid statuses themselves are never chosen by the caller.
+    const requested = normalizeBookingStatus(dto.status);
+    const status = derivedBookingStatus(requested, paidAmountCents, totalAmountCents, paidAmountCents);
 
     const booking = await this.prisma.booking.create({
       data: {
@@ -168,17 +182,35 @@ export class BookingsService {
   }
 
   async updateBooking(tenantId: string, id: string, dto: any) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
     const data: any = {};
     if (dto.notes !== undefined) data.notes = dto.notes;
     if (dto.departureDate) data.departureDate = new Date(dto.departureDate);
     if (dto.returnDate) data.returnDate = new Date(dto.returnDate);
+    assertDateOrder(data.departureDate ?? current.departureDate, data.returnDate ?? current.returnDate);
     const booking = await this.prisma.booking.update({ where: { id }, data });
     return this.normalizeBigInt(booking);
   }
 
+  /**
+   * Manual lifecycle move. Payment statuses are derived from money events and
+   * cancellation has its own endpoint (and capability), so neither is accepted here.
+   */
   async updateStatus(tenantId: string, id: string, status: string) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    if (status === current.status) return current;
+    if ((DERIVED_BOOKING_STATUSES as readonly string[]).includes(status)) {
+      throw new BadRequestException(
+        `${status} is derived from recorded payments — record the payment on the booking's invoice instead`,
+      );
+    }
+    if (status === 'CANCELLED') {
+      throw new BadRequestException('Cancel a booking with POST /bookings/:id/cancel');
+    }
+    const allowed = BOOKING_STATUS_TRANSITIONS[String(current.status)] ?? [];
+    if (!allowed.includes(status)) {
+      throw new BadRequestException(`A ${current.status} booking cannot move to ${status}`);
+    }
     const booking = await this.prisma.booking.update({
       where: { id },
       data: { status: status as any, cancelledAt: status === 'CANCELLED' ? new Date() : undefined },
@@ -213,33 +245,33 @@ export class BookingsService {
 
   async assignPackage(tenantId: string, id: string, packageId: string) {
     await this.findOne(tenantId, id);
-    const pkg = await this.prisma.package.findFirst({ where: { id: packageId, tenantId } });
+    const pkg = await this.prisma.package.findFirst({ where: { id: packageId, tenantId, deletedAt: null } });
     if (!pkg) throw new NotFoundException('Package not found');
     return this.normalizeBigInt(await this.prisma.booking.update({ where: { id }, data: { packageId } }));
   }
 
+  /**
+   * Kept for older clients. The paid amount is server-owned: it moves only with
+   * payments recorded on the booking's invoice (finance:payment:process), never
+   * by typing a number here. A status in the body follows the lifecycle rules.
+   */
   async setPayment(tenantId: string, id: string, dto: { paidAmount?: number; paidAmountCents?: number; status?: string }) {
     const booking = await this.findOne(tenantId, id);
-    const data: any = {};
-    let paid: bigint | undefined;
-    if (dto.paidAmount != null) paid = BigInt(Math.round(Number(dto.paidAmount) * 100));
-    if (dto.paidAmountCents != null) paid = BigInt(Math.round(Number(dto.paidAmountCents)));
-    if (paid !== undefined) {
-      const total = BigInt(booking.totalAmountCents ?? 0);
-      if (paid < BigInt(0)) throw new BadRequestException('Paid amount must not be negative');
-      if (paid > total) throw new BadRequestException('Paid amount must not exceed the booking total');
-      data.paidAmountCents = paid;
+    if (dto.paidAmount != null || dto.paidAmountCents != null) {
+      throw new BadRequestException(
+        "The paid amount is derived from recorded payments. Record the payment on the booking's invoice.",
+      );
     }
-    if (dto.status !== undefined && dto.status !== null) {
-      const status = normalizeBookingStatus(dto.status);
-      data.status = status as any;
-      if (status === 'CANCELLED' && booking.status !== 'CANCELLED') data.cancelledAt = new Date();
-    }
-    return this.normalizeBigInt(await this.prisma.booking.update({ where: { id }, data }));
+    if (dto.status === undefined || dto.status === null) return booking;
+    return this.updateStatus(tenantId, id, normalizeBookingStatus(dto.status));
   }
 
   async cancel(tenantId: string, id: string, reason?: string) {
-    await this.findOne(tenantId, id);
+    const current = await this.findOne(tenantId, id);
+    if (current.status === 'CANCELLED') return current;
+    if (['COMPLETED', 'REFUNDED'].includes(String(current.status))) {
+      throw new BadRequestException(`A ${current.status} booking cannot be cancelled`);
+    }
     return this.normalizeBigInt(await this.prisma.booking.update({
       where: { id },
       data: { status: 'CANCELLED' as any, cancelledAt: new Date(), cancellationReason: reason },
@@ -253,8 +285,14 @@ export class BookingsService {
    */
   async generateInvoice(tenantId: string, bookingId: string) {
     const booking = await this.findOne(tenantId, bookingId);
-    // Reuse existing invoice if one was already generated
-    const existing = await this.prisma.invoice.findFirst({ where: { tenantId, bookingId } });
+    if (['CANCELLED', 'REFUNDED'].includes(String(booking.status))) {
+      throw new BadRequestException(`A ${booking.status} booking cannot be invoiced`);
+    }
+    // Reuse the booking's live invoice; a voided or cancelled one is replaced.
+    const existing = await this.prisma.invoice.findFirst({
+      where: { tenantId, bookingId, status: { notIn: ['VOID', 'CANCELLED'] as any } },
+      orderBy: { createdAt: 'desc' },
+    });
     if (existing) {
       return {
         ...existing,
@@ -282,34 +320,71 @@ export class BookingsService {
     const dueAt = new Date();
     dueAt.setDate(dueAt.getDate() + 14);
     const totalCents = Number(booking.totalAmountCents ?? 0);
-    const paidCents = Number(booking.paidAmountCents ?? 0);
     const pilgrimCount = (booking as any).pilgrims?.length ?? 1;
-    const invoice = await this.prisma.invoice.create({
-      data: {
-        tenantId,
-        invoiceRef,
-        bookingId,
-        type: 'CUSTOMER',
-        issuedToName,
-        issuedAt,
-        dueAt,
-        currency: booking.currency,
-        subtotalCents: BigInt(totalCents),
-        taxCents: BigInt(0),
-        discountCents: BigInt(0),
-        totalCents: BigInt(totalCents),
-        paidCents: BigInt(paidCents),
-        lineItems: [
-          {
-            description: (booking as any).package?.name ?? 'Package',
-            qty: pilgrimCount,
-            unitPriceCents: pilgrimCount > 0 ? Math.round(totalCents / pilgrimCount) : totalCents,
-            totalCents,
+    const invoice = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.invoice.create({
+        data: {
+          tenantId,
+          invoiceRef,
+          bookingId,
+          type: 'CUSTOMER',
+          issuedToName,
+          issuedAt,
+          dueAt,
+          currency: booking.currency,
+          subtotalCents: BigInt(totalCents),
+          taxCents: BigInt(0),
+          discountCents: BigInt(0),
+          totalCents: BigInt(totalCents),
+          paidCents: BigInt(0),
+          lineItems: [
+            {
+              description: (booking as any).package?.name ?? 'Package',
+              qty: pilgrimCount,
+              unitPriceCents: pilgrimCount > 0 ? Math.round(totalCents / pilgrimCount) : totalCents,
+              totalCents,
+            },
+          ],
+          status: 'DRAFT',
+          notes: booking.notes,
+        },
+      });
+      // Money already received for the booking moves onto the invoice as
+      // payments, so the invoice's paid total is backed by payment records
+      // (and a card payment can never collect it a second time).
+      const settled = { in: ['COMPLETED', 'PARTIALLY_REFUNDED'] as any };
+      await tx.payment.updateMany({
+        where: { tenantId, bookingId, invoiceId: null, status: settled },
+        data: { invoiceId: created.id },
+      });
+      const backed = await tx.payment.aggregate({
+        where: { tenantId, bookingId, status: settled },
+        _sum: { amountCents: true, refundedCents: true },
+      });
+      const backedCents = BigInt(backed._sum.amountCents ?? 0) - BigInt(backed._sum.refundedCents ?? 0);
+      const carried = BigInt(booking.paidAmountCents ?? 0) - backedCents;
+      if (carried > BigInt(0)) {
+        await tx.payment.create({
+          data: {
+            tenantId,
+            invoiceId: created.id,
+            bookingId,
+            amountCents: carried,
+            currency: booking.currency,
+            gateway: 'booking_deposit',
+            gatewayRef: booking.bookingRef,
+            status: 'COMPLETED',
+            paidAt: new Date(),
+            idempotencyKey: `deposit-${bookingId}-${randomUUID()}`,
           },
-        ],
-        status: 'DRAFT',
-        notes: booking.notes,
-      },
+        });
+      }
+      const onInvoice = await tx.payment.aggregate({
+        where: { invoiceId: created.id, status: settled },
+        _sum: { amountCents: true, refundedCents: true },
+      });
+      const paid = BigInt(onInvoice._sum.amountCents ?? 0) - BigInt(onInvoice._sum.refundedCents ?? 0);
+      return tx.invoice.update({ where: { id: created.id }, data: { paidCents: paid < BigInt(0) ? BigInt(0) : paid } });
     });
     return {
       ...invoice,
@@ -344,7 +419,7 @@ export class BookingsService {
   async findPackages(tenantId: string, query: any = {}) {
     const { type, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;
-    const where: any = { tenantId };
+    const where: any = { tenantId, deletedAt: null };
     if (type) where.tripType = type;
     const [items, total] = await Promise.all([
       this.prisma.package.findMany({ where, skip, take: +limit, orderBy: { createdAt: 'desc' }, include: { _count: { select: { bookings: true } } } }),
@@ -358,7 +433,7 @@ export class BookingsService {
   }
 
   async findPackage(tenantId: string, id: string) {
-    const pkg = await this.prisma.package.findFirst({ where: { id, tenantId } });
+    const pkg = await this.prisma.package.findFirst({ where: { id, tenantId, deletedAt: null } });
     if (!pkg) throw new NotFoundException('Package not found');
     return this.normalizeBigInt(pkg);
   }

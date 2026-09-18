@@ -31,10 +31,11 @@ export enum BookingStatus {
   COMPLETED = 'COMPLETED',
 }
 
-/** Statuses a booking may be created in (matches the web "New booking" form). */
-export const INITIAL_BOOKING_STATUSES = [
-  'DRAFT', 'ENQUIRY', 'INQUIRY', 'CONFIRMED', 'PARTIALLY_PAID', 'FULLY_PAID', 'VISA_PROCESSING',
-] as const;
+/**
+ * Statuses a booking may be created in (matches the web "New booking" form).
+ * PARTIALLY_PAID / FULLY_PAID are derived from the deposit, never chosen.
+ */
+export const INITIAL_BOOKING_STATUSES = ['DRAFT', 'ENQUIRY', 'INQUIRY', 'CONFIRMED', 'VISA_PROCESSING'] as const;
 
 export class BookingPilgrimAssignmentDto {
   @ApiProperty()

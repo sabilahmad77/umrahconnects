@@ -8,6 +8,9 @@ import {
   IsDateString,
   IsInt,
   Min,
+  Max,
+  MinLength,
+  MaxLength,
 } from 'class-validator';
 
 export enum PackageType {
@@ -27,6 +30,8 @@ export enum PackageStatus {
 export class CreatePackageDto {
   @ApiProperty()
   @IsString()
+  @MinLength(2)
+  @MaxLength(255)
   name: string;
 
   @ApiPropertyOptional()
@@ -59,9 +64,10 @@ export class CreatePackageDto {
   @IsDateString()
   departureDateTo?: string;
 
-  @ApiProperty()
-  @IsNumber()
+  @ApiProperty({ description: 'Price per adult in major units (SAR)' })
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
+  @Max(10_000_000)
   priceAdult: number;
 
   @ApiPropertyOptional()

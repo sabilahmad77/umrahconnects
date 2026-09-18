@@ -7,6 +7,9 @@ import type { Principal } from '../auth/principal';
 import {
   CreateBudgetPlanDto,
   CreateInvoiceDto,
+  QueryBudgetPlansDto,
+  QueryInvoicesDto,
+  QueryPaymentsDto,
   RecordPaymentDto,
   RefundPaymentDto,
   SetInvoiceStatusDto,
@@ -24,7 +27,7 @@ export class FinanceController {
   // ── Invoices ───────────────────────────────────────────────────────────
   @Get('invoices')
   @RequirePermissions('finance:invoice:read')
-  async findInvoices(@TenantId() tenantId: string, @Query() query: any) {
+  async findInvoices(@TenantId() tenantId: string, @Query() query: QueryInvoicesDto) {
     return { success: true, data: await this.service.findInvoices(tenantId, query) };
   }
 
@@ -79,7 +82,7 @@ export class FinanceController {
   // ── Payments ───────────────────────────────────────────────────────────
   @Get('payments')
   @RequirePermissions('finance:invoice:read')
-  async findPayments(@TenantId() tenantId: string, @Query() query: any) {
+  async findPayments(@TenantId() tenantId: string, @Query() query: QueryPaymentsDto) {
     return { success: true, data: await this.service.findPayments(tenantId, query) };
   }
 
@@ -123,7 +126,7 @@ export class FinanceController {
   // ── Budget plans ───────────────────────────────────────────────────────
   @Get('budget-plans')
   @RequirePermissions('finance:report:read')
-  async findBudgetPlans(@TenantId() tenantId: string, @Query() query: any) {
+  async findBudgetPlans(@TenantId() tenantId: string, @Query() query: QueryBudgetPlansDto) {
     return { success: true, data: await this.service.findBudgetPlans(tenantId, query) };
   }
 
