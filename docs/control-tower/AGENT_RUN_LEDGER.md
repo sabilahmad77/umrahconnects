@@ -22,7 +22,7 @@ No real messaging channel to Codex exists, so none was claimed.
 | Worker | Responsibility | Agent id | Launched (+0500) | Worktree / branch | Status | Reviewed commits | Outcome |
 |---|---|---|---|---|---|---|---|
 | A01 | Coordinator, integration, register, scoring | main session | 16:45 | `umrah-connects-integration` / `engineering/100-loop` | running | 48693e5, 9a4da31 | provenance, Codex port, capability helper, register |
-| A02 | Auth, Google, verification, settings, preferences (W13 W14 W20 P07) | a1437ff4025a2e857 | 17:14 | `…/eng100/a02` / `eng100/a02` | running | — | — |
+| A02 | Auth, Google, verification, settings, preferences (W13 W14 W20 P07) | a1437ff4025a2e857 | 17:14 (429-interrupted), resumed 20:52 | `…/eng100/a02` / `eng100/a02` | **completed 21:38** (186 tool uses, 561k tokens) | 54a07c3 f369c69 bd118cb 55ee3b4 c559ad2 a5bbfc7 d4d4956 → merged `9fd41a1` | W13/W14/W20 done (real Google A11, SMTP A13 unverified); P07 partial pending XW-1 in notifications.service (A05/A01); API e2e 174/174, web 103/103, browser 29/29; migration `20260918120000_user_preferences` |
 | A03 | Capability UI, onboarding + KYC, Super Admin (W09 W15) | a7c7cfa2e2d42e975 | 17:14 | `…/eng100/a03` / `eng100/a03` | running | — | — |
 | A03b | Role workflows: operator, hotel, transport, visa | a9d2ba181767ae884 | 17:14 | `…/eng100/a03b` / `eng100/a03b` | running | — | — |
 | A04 | Booking, Stripe checkout, finance (W16) | ad331e5a81107a4aa | 17:14 | `…/eng100/a04` / `eng100/a04` | running | — | — |
