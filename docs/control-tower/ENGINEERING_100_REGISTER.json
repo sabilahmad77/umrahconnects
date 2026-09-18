@@ -1,0 +1,3311 @@
+{
+ "schema": "umrah-connect/engineering-100-register/v1",
+ "createdAt": "2026-09-18T12:23:52+00:00",
+ "updatedAt": "2026-09-18T12:23:52+00:00",
+ "writer": "A01 coordinator",
+ "candidate": {
+  "branch": "engineering/100-loop",
+  "revision": null,
+  "fingerprint": null
+ },
+ "statusValues": [
+  "PASS",
+  "FAIL",
+  "BLOCKED",
+  "PARTIAL",
+  "NOT DONE",
+  "OPEN"
+ ],
+ "gates": {
+  "G1 no unresolved P0 exposure": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G2 no unresolved P0/P1 security or critical functional defect": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G3 authentication and authorization accepted": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G4 tenant and Super Admin isolation accepted": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G5 data and money integrity accepted": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G6 critical browser journeys accepted": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G7 builds and cold boot accepted": {
+   "status": "OPEN",
+   "evidence": ""
+  },
+  "G8 provider and operational verification complete for launch": {
+   "status": "OPEN",
+   "evidence": ""
+  }
+ },
+ "requirements": [
+  {
+   "id": "S01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Super Admin separated from Operator; /admin platform-only",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac; R; B"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Role grants cannot escalate or cross organizations",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Custom roles cannot exceed the creator or carry platform capabilities",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Signup cannot join a chosen organization",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Phone OTP cannot create accounts; disabled without SMS",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S06",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Deny-by-default route policies enforced at request time and boot",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E access-policy; C (boot log)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S07",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Hotels/rooms/allotments tenant-isolated",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E isolation; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S08",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Transport tenant-isolated incl. seat counters",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E isolation"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S09",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Bookings/pilgrims/finance foreign-id linking blocked",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E isolation"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S10",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Compliance/visa isolation incl. passport data",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E isolation"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S11",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Groups/social/connections ownership & visibility",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E isolation"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S12",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Marketplace listings/bookings/quotes ownership",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E marketplace"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S13",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Marketplace requests discovery & access rules",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E marketplace"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S14",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Sensitive documents private (signed, audited access)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac; R; I (S3 presign)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S15",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Upload content validation and size limits",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "U file-sniff; E; I"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S16",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Brute-force / abuse throttling",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rate-limit; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S17",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Unauthenticated organization creation closed",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S18",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Immediate session revocation (lock, suspend, logout-all, password change)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; E rbac"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S19",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Mass assignment blocked by typed DTOs",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E isolation"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S20",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "CORS allow-list; no wildcard in production",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S21",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Error hygiene: no stack traces, request ids, stable codes",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S22",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Security headers (HSTS in prod, CSP, nosniff, frame-deny)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S23",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "S23.E"
+   ],
+   "cross_refs": [
+    "W40.L"
+   ],
+   "area": "Security",
+   "requirement": "No secrets in repository or image",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C (image scan); git ls-files check"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S23.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "S23",
+   "area": "Security",
+   "requirement": "Current tree, build output and container image contain no secrets (scan)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C (image scan); git ls-files check"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S24",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Unsafe production configuration refused at start",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S25",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Red-team findings RT-001..RT-010 fixed",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E (7 red-team files)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S26",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Payment amount tampering impossible",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E payments; E follow-ups; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "S27",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Client IP trust behind the web proxy",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "U client-ip (web header pending XT-R05)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Registration (Traveler, verification mail)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Login with lockout and generic errors",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Password hashing (bcrypt cost 12) and policy",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "code; E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Refresh rotation with reuse detection; httpOnly cookie",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Logout and logout-all",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A06",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Password reset single-use; no token leakage",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A07",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Email verification",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A08",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Account/organization status enforcement",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth; E rbac"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A09",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Provider onboarding with KYC and platform approval",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A10",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "Google Sign-In (PKCE, state, nonce, linking, ticket exchange)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E google (token endpoint stubbed)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A11",
+   "scope": "launch",
+   "kind": "original",
+   "needs": "Real Google OAuth client (GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI) and a sign-in with a real Google account",
+   "area": "Auth",
+   "requirement": "Google Sign-In against real Google credentials",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs GOOGLE_CLIENT_ID/SECRET"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A12",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "SMTP delivery code path",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "I Mailpit"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "A13",
+   "scope": "launch",
+   "kind": "original",
+   "needs": "SMTP mailbox + SPF/DKIM/DMARC; a real inbox receives reset and verification mail",
+   "area": "Auth",
+   "requirement": "Production email delivery",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs SMTP credentials"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "R01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "Capability catalogue synced; unknown capabilities fail build/boot",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "tsc; C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "R02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "Eight system roles with capability matrix",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac matrix; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "R03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "Finance as scoped capabilities (D-004)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E follow-ups; R"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "R04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "Real accounts for every role (development)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "R (9 logins)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "R05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "Database-level RLS defence in depth",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "D-009, ADR-001 amendment"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Route inventory with policy per route (325 routes)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "evidence/api-route-policies.json"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Prisma errors mapped to 4xx; custom error codes preserved",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Dead/misleading code removed (tenant middleware, local strategy, RLS helpers)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "git history"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Codex backend dependencies XT-001/004/006/007/008/009",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "CROSS_TRACK_REQUESTS"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Traveler group memberships (XT-002)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E follow-ups"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P06",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Traveler visa status (XT-003)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "product decision: pilgrim↔user link"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P07",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Persisted user preferences (XT-005)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "no model; not launch-critical"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "P08",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "API",
+   "requirement": "Consistent response envelope for legacy controllers",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "LOOPS_BACKLOG"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Baseline migration proven identical to live schema",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "migrate diff exit 0"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Incremental migrations apply on dev, test and empty production DB",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C; E global setup"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "No schema changes on application start",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "RBAC data migration (legacy admins, roleless travelers)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "sync-rbac run on core DB"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Backups with integrity check and restore drill",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C rehearsal"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D06",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "D06.E",
+    "D06.L"
+   ],
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Off-site backup target",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs R2/rclone credentials"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D06.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "D06",
+   "area": "Database",
+   "requirement": "OFFSITE_REMOTE contract, validation and a rehearsed copy to a local rclone remote",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs R2/rclone credentials"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D06.L",
+   "scope": "launch",
+   "kind": "split",
+   "parent": "D06",
+   "area": "Database",
+   "requirement": "Off-site R2 bucket + rclone remote configured on the production host; nightly copy observed",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs R2/rclone credentials"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D07",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Transactional settlement and counter integrity",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E payments; E isolation"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "D08",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Seed data realism (AUD-028)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "development data only"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "F01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake behaviour",
+   "requirement": "OTP fake success removed",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "F02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake behaviour",
+   "requirement": "Admin settings no longer fake toggles",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "code"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "F03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake behaviour",
+   "requirement": "Sandbox gateway impossible in production",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "F04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake behaviour",
+   "requirement": "Reset links no longer leaked/logged",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E auth"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "T01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Stripe",
+   "requirement": "Provider on official SDK (intents, capture, refunds, customers, cancel)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "I stripe-mock"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "T02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Stripe",
+   "requirement": "Webhook signature, idempotency, amount/currency and mode checks",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "U stripe.provider; E follow-ups"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "T03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Stripe",
+   "requirement": "Server-determined amounts; traveler checkout",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E payments"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "T04",
+   "scope": "launch",
+   "kind": "original",
+   "needs": "Stripe account test keys; test-mode payment with Stripe test cards and webhook delivery",
+   "area": "Stripe",
+   "requirement": "Verification in Stripe test mode with real keys",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs STRIPE_* test keys"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "O01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Storage",
+   "requirement": "Private documents with signed URLs (local driver)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "E rbac"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "O02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Storage",
+   "requirement": "S3-compatible driver (R2 code path)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "I MinIO"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "O03",
+   "scope": "launch",
+   "kind": "original",
+   "needs": "Cloudflare R2 buckets + scoped token; upload and signed download against real R2",
+   "area": "Storage",
+   "requirement": "Verification against a real Cloudflare R2 bucket",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs R2 credentials"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "O04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Storage",
+   "requirement": "Orphaned object cleanup job",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "no job runner (AUD-038)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Infrastructure",
+   "requirement": "Production image (non-root, read-only, no env files)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "C"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Infrastructure",
+   "requirement": "Compose + Caddy configuration validated",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "docker compose config; caddy validate"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Infrastructure",
+   "requirement": "KVM runbook (prep, deploy, data move, rollback)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "infrastructure/kvm/README.md"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Infrastructure",
+   "requirement": "Hosting inventory and Render deprecation",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "INFRASTRUCTURE.md"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Infrastructure",
+   "requirement": "CI quality gate defined",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "api-ci.yml (not yet executed on GitHub)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I06",
+   "scope": "launch",
+   "kind": "original",
+   "needs": "Umrah KVM 8 target + SSH access, api.umrahconnect.io DNS, authorized deployment",
+   "area": "Infrastructure",
+   "requirement": "Production API reachable (AUD-001)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "needs KVM server + DNS; deployment not authorized"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I07",
+   "scope": "launch",
+   "kind": "original",
+   "needs": "www.umrahconnect.io added in Vercel domains with a valid certificate",
+   "area": "Infrastructure",
+   "requirement": "www certificate (AUD-020)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "Vercel domain setting"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I08",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "I08.E",
+    "I08.L"
+   ],
+   "cross_refs": [],
+   "area": "Infrastructure",
+   "requirement": "External uptime monitoring",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "configure at cutover"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I08.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "I08",
+   "area": "Infrastructure",
+   "requirement": "Uptime monitoring implemented (scheduled external check + host-side health alert), locally verified",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "configure at cutover"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "I08.L",
+   "scope": "launch",
+   "kind": "split",
+   "parent": "I08",
+   "area": "Infrastructure",
+   "requirement": "Monitoring activated against the production endpoints after cutover",
+   "origin": "core-90",
+   "baseline": {
+    "status": "DEFERRED",
+    "evidence": "configure at cutover"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Typecheck (API)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "tsc exit 0"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Lint (API)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "eslint 0 problems"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Unit tests",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "19/19"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "E2E security suites",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "144/144, stable over 3 runs"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Provider integration suites",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "11/11"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q06",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Production build (API) and container build",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "nest build; docker build"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q07",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Runtime QA through the web proxy",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "65/65"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "Q08",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tests",
+   "requirement": "Browser verification of hardened backend",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "operator dashboard 200s; /admin 403"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "X01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Cross-track",
+   "requirement": "Frontend requests delivered with contracts",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "CROSS_TRACK_REQUESTS.md"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W01",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Integration",
+   "requirement": "Both tracks merged with no lost work and no unresolved conflict",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "merge `001553a`; file sets disjoint except `pnpm-lock.yaml`"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W02",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Build",
+   "requirement": "Web typecheck",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`tsc --noEmit` exit 0"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W03",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Build",
+   "requirement": "Web lint",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`eslint app components hooks lib middleware.ts` exit 0"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W04",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Build",
+   "requirement": "Web tests",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "58/58 (39 inherited + 19 new contract guards)"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W05",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Build",
+   "requirement": "Web production build",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`next build` exit 0, 76 static pages, middleware 26.4 kB"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W06",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Build",
+   "requirement": "Production build refuses to start without `API_PROXY_ORIGIN`",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "build without it exits 1 with the named error"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W07",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "XT-R01 refresh token is never held by page scripts",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "login body has no `refreshToken`; cookie httpOnly; empty-body refresh + logout verified over HTTP and in the browser"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W08",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "XT-R02 post-login routing from real server roles",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "browser, all seven: PILGRIM→/travel-plan, OPERATOR_ADMIN→/dashboard, HOTEL_MANAGER→/hotel-dashboard, TRANSPORT_MANAGER→/transport-dashboard, VISA_OFFICER→/visa-dashboard, FINANCE_MANAGER→/finance-dashboard, SUPER_ADMIN→/admin-dashboard"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W09",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "RBAC",
+   "requirement": "XT-R02 UI guards driven by server capabilities rather than role names",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "`lib/workspace-access.ts` still matches role names; `/auth/me` permissions unused"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W10",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "XT-R03 private documents opened through short-lived signed URLs",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "visa + KYC wired to `/documents/*/url`; acceptance: upload → `private:` reference → signed fetch 200 → tampered signature 401"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W11",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake data",
+   "requirement": "XT-R04 client-side demo personas gone",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "login page is email+password only"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W12",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "XT-R05 proxy secret and trustworthy client IP",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`apps/web/middleware.ts`; two clients get independent rate-limit buckets (429 at 31), a forged header is discarded"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W13",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "W13.E"
+   ],
+   "cross_refs": [
+    "A11"
+   ],
+   "area": "Auth",
+   "requirement": "XT-R06 Google Sign-In UI",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no `/auth/callback` page; backend flow complete and tested"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W13.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "W13",
+   "area": "Auth",
+   "requirement": "Google Sign-In UI, callback, errors, linking — verified against a stub OIDC provider",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no `/auth/callback` page; backend flow complete and tested"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W14",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "W14.E"
+   ],
+   "cross_refs": [
+    "A13"
+   ],
+   "area": "Auth",
+   "requirement": "XT-R07 email verification UI",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no `/verify-email` page or unverified banner; backend complete"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W14.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "W14",
+   "area": "Auth",
+   "requirement": "Verification page, banner, resend, expiry/replay — verified with local mail capture",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no `/verify-email` page or unverified banner; backend complete"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W15",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Onboarding",
+   "requirement": "XT-R08 provider onboarding + KYC submission UI",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no caller for `/onboarding/organization` or `/tenants/me/kyc`"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W16",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "W16.E"
+   ],
+   "cross_refs": [
+    "T04",
+    "N-PRV-1"
+   ],
+   "area": "Payments",
+   "requirement": "XT-R09 Stripe Elements checkout UI",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no `@stripe/*` dependency; sandbox intent/confirm path works"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W16.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "W16",
+   "area": "Payments",
+   "requirement": "Stripe Payment Element checkout for travelers and staff — verified with the sandbox path and stripe-mock",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "no `@stripe/*` dependency; sandbox intent/confirm path works"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W17",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Contracts",
+   "requirement": "XT-R10 request contracts aligned across every module",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "booking/invoice transitions, refund routing, visa decisions, enums — all covered by `tests/server-contracts.test.ts`"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W18",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Media",
+   "requirement": "XT-R11 image hosts corrected and R2 media host admitted",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`next.config.mjs` remote patterns; `umrahconnect.io` spelling fixed"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W19",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Admin",
+   "requirement": "XT-R12 PLATFORM organization type displays correctly",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "browser: platform organization listed and labelled in `/admin-tenants`"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W20",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Settings",
+   "requirement": "XT-R13 change-password and sign-out-everywhere in settings",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "settings page remains read-only"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W21",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "XT-R14 password hints match the server rule",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "shared `lib/password-policy.ts`, asserted against the register DTO"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W22",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Money",
+   "requirement": "Listing creation prices at face value, not 100×",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`marketplace-view.tsx` sends major units; server converts once"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W23",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Auth",
+   "requirement": "An account in more than one workspace can sign in",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "workspace list read from `error.details.tenants`; reproduced with a real two-workspace account"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W24",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake data",
+   "requirement": "Listings show their own media and their real seller",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "stock photography removed; `imageUrls` / `vendor.name`; confirmed in the browser"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W25",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake data",
+   "requirement": "Notification bell reflects real notifications",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "envelope unwrapped in `use-platform.ts`"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W26",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake data",
+   "requirement": "Social bookmark reflects server state",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "feed returns the viewer's own save; client seeds from it"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W27",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Fake data",
+   "requirement": "Admin tiles are platform-wide, not page-scoped",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`/admin/stats` returns `tenants.byStatus` and `usersByStatus`; browser shows 11/11 consistent"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W28",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "UX",
+   "requirement": "Validation failures render as a sentence, not raw JSON",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "`lib/api-error.ts` across 49 call sites; unit-tested"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W29",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Honesty",
+   "requirement": "Fields the server ignores are not offered as inputs",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "hotel room count and booked seats removed from edit forms"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W30",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Responsive",
+   "requirement": "No horizontal page scroll at 1440/1280/1024/768/390/360",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "measured `scrollWidth` vs `clientWidth` across operator, provider and platform routes"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W31",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Accessibility",
+   "requirement": "Full WCAG certification",
+   "origin": "web-41",
+   "baseline": {
+    "status": "NOT DONE",
+    "evidence": "swept routes have zero unnamed controls, but no automated audit or screen-reader session"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W32",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Browser QA",
+   "requirement": "Console and network clean on the integrated app",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "zero console errors; all `/proxy-api` calls 200; no request loops"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W33",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Tenant isolation",
+   "requirement": "Cross-tenant read/write/delete refused for every role pair",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "acceptance harness, A/B organizations for hotel, transport, visa, operator, traveler"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W34",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Super Admin",
+   "requirement": "Platform routes refused to every non-platform identity",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "63 direct API probes + anonymous; browser boundary page"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W35",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Database",
+   "requirement": "Writes persist across session and process boundaries",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "create → read → fresh login → list → soft delete → status confirmed"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W36",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Money",
+   "requirement": "Booking totals are server-authoritative",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "tampered total 400; server figure matches; checkout charges the server total"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W37",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Storage",
+   "requirement": "Document authorization holds end to end",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "signed URL serves, tampered signature refused, cross-tenant and traveler refused"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W38",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Security",
+   "requirement": "Sign-out-everywhere revokes same-second tokens",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "defect found, fixed, regression test with no sleeps"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W39",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "Reproducibility",
+   "requirement": "Cold boot from the canonical worktree passes the full smoke",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "fresh PIDs in the integration worktree; 65/65 + 210/210"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W40",
+   "scope": "parent",
+   "kind": "original",
+   "children": [
+    "W40.E",
+    "W40.L"
+   ],
+   "cross_refs": [],
+   "area": "Secrets",
+   "requirement": "Credentials removed from version control",
+   "origin": "web-41",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "file untracked and ignored locally, but the tokens are in pushed history — only revocation at the provider closes this"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W40.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "W40",
+   "area": "Secrets",
+   "requirement": "Credentials removed from tracked files and ignored going forward",
+   "origin": "web-41",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "file untracked and ignored locally, but the tokens are in pushed history — only revocation at the provider closes this"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W40.L",
+   "scope": "launch",
+   "kind": "split",
+   "parent": "W40",
+   "area": "Secrets",
+   "requirement": "Every exposed credential revoked at its provider and confirmed invalid",
+   "origin": "web-41",
+   "baseline": {
+    "status": "BLOCKED",
+    "evidence": "file untracked and ignored locally, but the tokens are in pushed history — only revocation at the provider closes this"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "W41",
+   "scope": "engineering",
+   "kind": "original",
+   "cross_refs": [],
+   "area": "E2E",
+   "requirement": "Every role's core journey walked in a browser",
+   "origin": "web-41",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "all seven roles signed in through the real form; landing page and scoped data confirmed for traveler, operator, hotel, transport, visa, finance and Super Admin"
+   },
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N01",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Integration",
+   "requirement": "Codex's post-merge uncommitted web work integrated without loss; Codex worktree untouched",
+   "owner": "A01",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LINK-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Traveler linkage",
+   "requirement": "Traveler↔pilgrim link only through an operator invitation accepted by the verified invited account; revocation, audit, cross-tenant claim prevention",
+   "owner": "A07",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Posts: create, edit and delete own posts; others refused (UI + API)",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-2",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Comments: list with pagination, add, reply, edit and delete with correct counts and ownership",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-3",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Reactions and bookmarks toggle and persist per viewer",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-4",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Groups and membership: traveler groups, join/leave/invites; operator group management actions",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-5",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Connections and direct messages work end to end",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-6",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Notifications: list, mark read, mark all read; persisted",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-SOC-7",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Social",
+   "requirement": "Pagination / load more on feeds and lists",
+   "owner": "A05",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LST-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Listings",
+   "requirement": "Listing create, edit, publish/unpublish and archive with required fields and categories",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LST-2",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Listings",
+   "requirement": "Real seller identity and real uploaded media on listings",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LST-3",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Listings",
+   "requirement": "Marketplace search, filters and pagination",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LST-4",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Listings",
+   "requirement": "Price units and currency correct from form to wire to display to checkout",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LST-5",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Listings",
+   "requirement": "Listing ownership: another provider cannot edit, unpublish or delete",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-LST-6",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Listings",
+   "requirement": "Marketplace requests → offers → accept → booking",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-UPL-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Uploads",
+   "requirement": "Upload UX: picker, validation, progress, failure recovery",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-UPL-2",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Uploads",
+   "requirement": "Persisted object reference; preview or authorized download (new tab, signed URL re-minted)",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-UPL-3",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Uploads",
+   "requirement": "Replacement and deletion where supported",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-UPL-4",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Uploads",
+   "requirement": "Size/type rejection, permission denial, expired or tampered signed URL refused",
+   "owner": "A06",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Operator workflows beyond the landing page (pilgrims, bookings, packages, groups, reports)",
+   "owner": "A03b/A04/A07",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-2",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Hotel workflows (properties, room types, rooms, allotments, bookings, assignments)",
+   "owner": "A03b",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-3",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Transport workflows (vehicles, drivers, routes, assignments, bookings)",
+   "owner": "A03b",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-4",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Visa agency workflows (cases, documents, decisions, service requests)",
+   "owner": "A03b",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-5",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Finance workflows (invoices, recorded payments, refunds, reporting) inside one organization",
+   "owner": "A04",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-6",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Super Admin workflows (users, organizations, KYC, moderation, platform controls)",
+   "owner": "A03",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-ROLE-7",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Role workflows",
+   "requirement": "Traveler workflows (requests, bookings, checkout, tracking, community)",
+   "owner": "A04/A05/A07",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-FORM-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Forms",
+   "requirement": "Required fields present; client/server validation aligned; useful errors; duplicate-submit protection; persisted defaults",
+   "owner": "all",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-QA-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Browser QA",
+   "requirement": "Functional browser matrix: every route × permitted role — positive, invalid, denied, empty/error, persistence — on the candidate in Chrome",
+   "owner": "A10",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-OPS-1",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Operations",
+   "requirement": "Backup directory created and owned by the deploy user (idempotent)",
+   "owner": "A09",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-OPS-4",
+   "scope": "engineering",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Operations",
+   "requirement": "Render runtime dependency removed from the target; stack builds and runs with no Render endpoint or credential",
+   "owner": "A09",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-OPS-5",
+   "scope": "launch",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Operations",
+   "requirement": "Legacy Render service decommissioned after an authorized KVM cutover (backup first)",
+   "owner": "Owner",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-BRD-1",
+   "scope": "launch",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Brand",
+   "requirement": "Approved standalone Makkah/Kaaba hero asset supplied at apps/web/public/images/hero/makkah-approved.webp",
+   "owner": "Owner",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-PRV-1",
+   "scope": "launch",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Payments",
+   "requirement": "Stripe live activation: live keys, production webhook endpoint, account activation",
+   "owner": "Owner",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  },
+  {
+   "id": "N-DEP-1",
+   "scope": "launch",
+   "kind": "new",
+   "origin": "engineering-100",
+   "area": "Deployment",
+   "requirement": "Production deployment of the reviewed candidate: Vercel env (API_PROXY_ORIGIN, PROXY_SHARED_SECRET) and KVM API",
+   "owner": "Owner",
+   "baseline": null,
+   "status": "OPEN",
+   "evidence": [],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": ""
+  }
+ ]
+}

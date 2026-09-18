@@ -1,0 +1,923 @@
+{
+ "core": [
+  {
+   "id": "S01",
+   "area": "Security",
+   "requirement": "Super Admin separated from Operator; /admin platform-only",
+   "status": "PASS",
+   "evidence": "E rbac; R; B"
+  },
+  {
+   "id": "S02",
+   "area": "Security",
+   "requirement": "Role grants cannot escalate or cross organizations",
+   "status": "PASS",
+   "evidence": "E rbac"
+  },
+  {
+   "id": "S03",
+   "area": "Security",
+   "requirement": "Custom roles cannot exceed the creator or carry platform capabilities",
+   "status": "PASS",
+   "evidence": "E rbac; R"
+  },
+  {
+   "id": "S04",
+   "area": "Security",
+   "requirement": "Signup cannot join a chosen organization",
+   "status": "PASS",
+   "evidence": "E auth; R"
+  },
+  {
+   "id": "S05",
+   "area": "Security",
+   "requirement": "Phone OTP cannot create accounts; disabled without SMS",
+   "status": "PASS",
+   "evidence": "E auth"
+  },
+  {
+   "id": "S06",
+   "area": "Security",
+   "requirement": "Deny-by-default route policies enforced at request time and boot",
+   "status": "PASS",
+   "evidence": "E access-policy; C (boot log)"
+  },
+  {
+   "id": "S07",
+   "area": "Security",
+   "requirement": "Hotels/rooms/allotments tenant-isolated",
+   "status": "PASS",
+   "evidence": "E isolation; R"
+  },
+  {
+   "id": "S08",
+   "area": "Security",
+   "requirement": "Transport tenant-isolated incl. seat counters",
+   "status": "PASS",
+   "evidence": "E isolation"
+  },
+  {
+   "id": "S09",
+   "area": "Security",
+   "requirement": "Bookings/pilgrims/finance foreign-id linking blocked",
+   "status": "PASS",
+   "evidence": "E isolation"
+  },
+  {
+   "id": "S10",
+   "area": "Security",
+   "requirement": "Compliance/visa isolation incl. passport data",
+   "status": "PASS",
+   "evidence": "E isolation"
+  },
+  {
+   "id": "S11",
+   "area": "Security",
+   "requirement": "Groups/social/connections ownership & visibility",
+   "status": "PASS",
+   "evidence": "E isolation"
+  },
+  {
+   "id": "S12",
+   "area": "Security",
+   "requirement": "Marketplace listings/bookings/quotes ownership",
+   "status": "PASS",
+   "evidence": "E marketplace"
+  },
+  {
+   "id": "S13",
+   "area": "Security",
+   "requirement": "Marketplace requests discovery & access rules",
+   "status": "PASS",
+   "evidence": "E marketplace"
+  },
+  {
+   "id": "S14",
+   "area": "Security",
+   "requirement": "Sensitive documents private (signed, audited access)",
+   "status": "PASS",
+   "evidence": "E rbac; R; I (S3 presign)"
+  },
+  {
+   "id": "S15",
+   "area": "Security",
+   "requirement": "Upload content validation and size limits",
+   "status": "PASS",
+   "evidence": "U file-sniff; E; I"
+  },
+  {
+   "id": "S16",
+   "area": "Security",
+   "requirement": "Brute-force / abuse throttling",
+   "status": "PASS",
+   "evidence": "E rate-limit; R"
+  },
+  {
+   "id": "S17",
+   "area": "Security",
+   "requirement": "Unauthenticated organization creation closed",
+   "status": "PASS",
+   "evidence": "E rbac; R"
+  },
+  {
+   "id": "S18",
+   "area": "Security",
+   "requirement": "Immediate session revocation (lock, suspend, logout-all, password change)",
+   "status": "PASS",
+   "evidence": "E auth; E rbac"
+  },
+  {
+   "id": "S19",
+   "area": "Security",
+   "requirement": "Mass assignment blocked by typed DTOs",
+   "status": "PASS",
+   "evidence": "E isolation"
+  },
+  {
+   "id": "S20",
+   "area": "Security",
+   "requirement": "CORS allow-list; no wildcard in production",
+   "status": "PASS",
+   "evidence": "E auth; C"
+  },
+  {
+   "id": "S21",
+   "area": "Security",
+   "requirement": "Error hygiene: no stack traces, request ids, stable codes",
+   "status": "PASS",
+   "evidence": "E auth; C"
+  },
+  {
+   "id": "S22",
+   "area": "Security",
+   "requirement": "Security headers (HSTS in prod, CSP, nosniff, frame-deny)",
+   "status": "PASS",
+   "evidence": "E auth; C"
+  },
+  {
+   "id": "S23",
+   "area": "Security",
+   "requirement": "No secrets in repository or image",
+   "status": "PASS",
+   "evidence": "C (image scan); git ls-files check"
+  },
+  {
+   "id": "S24",
+   "area": "Security",
+   "requirement": "Unsafe production configuration refused at start",
+   "status": "PASS",
+   "evidence": "C"
+  },
+  {
+   "id": "S25",
+   "area": "Security",
+   "requirement": "Red-team findings RT-001..RT-010 fixed",
+   "status": "PASS",
+   "evidence": "E (7 red-team files)"
+  },
+  {
+   "id": "S26",
+   "area": "Security",
+   "requirement": "Payment amount tampering impossible",
+   "status": "PASS",
+   "evidence": "E payments; E follow-ups; R"
+  },
+  {
+   "id": "S27",
+   "area": "Security",
+   "requirement": "Client IP trust behind the web proxy",
+   "status": "PASS",
+   "evidence": "U client-ip (web header pending XT-R05)"
+  },
+  {
+   "id": "A01",
+   "area": "Auth",
+   "requirement": "Registration (Traveler, verification mail)",
+   "status": "PASS",
+   "evidence": "E auth; R"
+  },
+  {
+   "id": "A02",
+   "area": "Auth",
+   "requirement": "Login with lockout and generic errors",
+   "status": "PASS",
+   "evidence": "E auth; R"
+  },
+  {
+   "id": "A03",
+   "area": "Auth",
+   "requirement": "Password hashing (bcrypt cost 12) and policy",
+   "status": "PASS",
+   "evidence": "code; E auth"
+  },
+  {
+   "id": "A04",
+   "area": "Auth",
+   "requirement": "Refresh rotation with reuse detection; httpOnly cookie",
+   "status": "PASS",
+   "evidence": "E auth; R"
+  },
+  {
+   "id": "A05",
+   "area": "Auth",
+   "requirement": "Logout and logout-all",
+   "status": "PASS",
+   "evidence": "E auth"
+  },
+  {
+   "id": "A06",
+   "area": "Auth",
+   "requirement": "Password reset single-use; no token leakage",
+   "status": "PASS",
+   "evidence": "E auth; R"
+  },
+  {
+   "id": "A07",
+   "area": "Auth",
+   "requirement": "Email verification",
+   "status": "PASS",
+   "evidence": "E auth"
+  },
+  {
+   "id": "A08",
+   "area": "Auth",
+   "requirement": "Account/organization status enforcement",
+   "status": "PASS",
+   "evidence": "E auth; E rbac"
+  },
+  {
+   "id": "A09",
+   "area": "Auth",
+   "requirement": "Provider onboarding with KYC and platform approval",
+   "status": "PASS",
+   "evidence": "E rbac"
+  },
+  {
+   "id": "A10",
+   "area": "Auth",
+   "requirement": "Google Sign-In (PKCE, state, nonce, linking, ticket exchange)",
+   "status": "PASS",
+   "evidence": "E google (token endpoint stubbed)"
+  },
+  {
+   "id": "A11",
+   "area": "Auth",
+   "requirement": "Google Sign-In against real Google credentials",
+   "status": "BLOCKED",
+   "evidence": "needs GOOGLE_CLIENT_ID/SECRET"
+  },
+  {
+   "id": "A12",
+   "area": "Auth",
+   "requirement": "SMTP delivery code path",
+   "status": "PASS",
+   "evidence": "I Mailpit"
+  },
+  {
+   "id": "A13",
+   "area": "Auth",
+   "requirement": "Production email delivery",
+   "status": "BLOCKED",
+   "evidence": "needs SMTP credentials"
+  },
+  {
+   "id": "R01",
+   "area": "RBAC",
+   "requirement": "Capability catalogue synced; unknown capabilities fail build/boot",
+   "status": "PASS",
+   "evidence": "tsc; C"
+  },
+  {
+   "id": "R02",
+   "area": "RBAC",
+   "requirement": "Eight system roles with capability matrix",
+   "status": "PASS",
+   "evidence": "E rbac matrix; R"
+  },
+  {
+   "id": "R03",
+   "area": "RBAC",
+   "requirement": "Finance as scoped capabilities (D-004)",
+   "status": "PASS",
+   "evidence": "E follow-ups; R"
+  },
+  {
+   "id": "R04",
+   "area": "RBAC",
+   "requirement": "Real accounts for every role (development)",
+   "status": "PASS",
+   "evidence": "R (9 logins)"
+  },
+  {
+   "id": "R05",
+   "area": "RBAC",
+   "requirement": "Database-level RLS defence in depth",
+   "status": "DEFERRED",
+   "evidence": "D-009, ADR-001 amendment"
+  },
+  {
+   "id": "P01",
+   "area": "API",
+   "requirement": "Route inventory with policy per route (325 routes)",
+   "status": "PASS",
+   "evidence": "evidence/api-route-policies.json"
+  },
+  {
+   "id": "P02",
+   "area": "API",
+   "requirement": "Prisma errors mapped to 4xx; custom error codes preserved",
+   "status": "PASS",
+   "evidence": "E auth"
+  },
+  {
+   "id": "P03",
+   "area": "API",
+   "requirement": "Dead/misleading code removed (tenant middleware, local strategy, RLS helpers)",
+   "status": "PASS",
+   "evidence": "git history"
+  },
+  {
+   "id": "P04",
+   "area": "API",
+   "requirement": "Codex backend dependencies XT-001/004/006/007/008/009",
+   "status": "PASS",
+   "evidence": "CROSS_TRACK_REQUESTS"
+  },
+  {
+   "id": "P05",
+   "area": "API",
+   "requirement": "Traveler group memberships (XT-002)",
+   "status": "PASS",
+   "evidence": "E follow-ups"
+  },
+  {
+   "id": "P06",
+   "area": "API",
+   "requirement": "Traveler visa status (XT-003)",
+   "status": "BLOCKED",
+   "evidence": "product decision: pilgrim\u2194user link"
+  },
+  {
+   "id": "P07",
+   "area": "API",
+   "requirement": "Persisted user preferences (XT-005)",
+   "status": "DEFERRED",
+   "evidence": "no model; not launch-critical"
+  },
+  {
+   "id": "P08",
+   "area": "API",
+   "requirement": "Consistent response envelope for legacy controllers",
+   "status": "DEFERRED",
+   "evidence": "LOOPS_BACKLOG"
+  },
+  {
+   "id": "D01",
+   "area": "Database",
+   "requirement": "Baseline migration proven identical to live schema",
+   "status": "PASS",
+   "evidence": "migrate diff exit 0"
+  },
+  {
+   "id": "D02",
+   "area": "Database",
+   "requirement": "Incremental migrations apply on dev, test and empty production DB",
+   "status": "PASS",
+   "evidence": "C; E global setup"
+  },
+  {
+   "id": "D03",
+   "area": "Database",
+   "requirement": "No schema changes on application start",
+   "status": "PASS",
+   "evidence": "C"
+  },
+  {
+   "id": "D04",
+   "area": "Database",
+   "requirement": "RBAC data migration (legacy admins, roleless travelers)",
+   "status": "PASS",
+   "evidence": "sync-rbac run on core DB"
+  },
+  {
+   "id": "D05",
+   "area": "Database",
+   "requirement": "Backups with integrity check and restore drill",
+   "status": "PASS",
+   "evidence": "C rehearsal"
+  },
+  {
+   "id": "D06",
+   "area": "Database",
+   "requirement": "Off-site backup target",
+   "status": "BLOCKED",
+   "evidence": "needs R2/rclone credentials"
+  },
+  {
+   "id": "D07",
+   "area": "Database",
+   "requirement": "Transactional settlement and counter integrity",
+   "status": "PASS",
+   "evidence": "E payments; E isolation"
+  },
+  {
+   "id": "D08",
+   "area": "Database",
+   "requirement": "Seed data realism (AUD-028)",
+   "status": "DEFERRED",
+   "evidence": "development data only"
+  },
+  {
+   "id": "F01",
+   "area": "Fake behaviour",
+   "requirement": "OTP fake success removed",
+   "status": "PASS",
+   "evidence": "E auth"
+  },
+  {
+   "id": "F02",
+   "area": "Fake behaviour",
+   "requirement": "Admin settings no longer fake toggles",
+   "status": "PASS",
+   "evidence": "code"
+  },
+  {
+   "id": "F03",
+   "area": "Fake behaviour",
+   "requirement": "Sandbox gateway impossible in production",
+   "status": "PASS",
+   "evidence": "C"
+  },
+  {
+   "id": "F04",
+   "area": "Fake behaviour",
+   "requirement": "Reset links no longer leaked/logged",
+   "status": "PASS",
+   "evidence": "E auth"
+  },
+  {
+   "id": "T01",
+   "area": "Stripe",
+   "requirement": "Provider on official SDK (intents, capture, refunds, customers, cancel)",
+   "status": "PASS",
+   "evidence": "I stripe-mock"
+  },
+  {
+   "id": "T02",
+   "area": "Stripe",
+   "requirement": "Webhook signature, idempotency, amount/currency and mode checks",
+   "status": "PASS",
+   "evidence": "U stripe.provider; E follow-ups"
+  },
+  {
+   "id": "T03",
+   "area": "Stripe",
+   "requirement": "Server-determined amounts; traveler checkout",
+   "status": "PASS",
+   "evidence": "E payments"
+  },
+  {
+   "id": "T04",
+   "area": "Stripe",
+   "requirement": "Verification in Stripe test mode with real keys",
+   "status": "BLOCKED",
+   "evidence": "needs STRIPE_* test keys"
+  },
+  {
+   "id": "O01",
+   "area": "Storage",
+   "requirement": "Private documents with signed URLs (local driver)",
+   "status": "PASS",
+   "evidence": "E rbac"
+  },
+  {
+   "id": "O02",
+   "area": "Storage",
+   "requirement": "S3-compatible driver (R2 code path)",
+   "status": "PASS",
+   "evidence": "I MinIO"
+  },
+  {
+   "id": "O03",
+   "area": "Storage",
+   "requirement": "Verification against a real Cloudflare R2 bucket",
+   "status": "BLOCKED",
+   "evidence": "needs R2 credentials"
+  },
+  {
+   "id": "O04",
+   "area": "Storage",
+   "requirement": "Orphaned object cleanup job",
+   "status": "DEFERRED",
+   "evidence": "no job runner (AUD-038)"
+  },
+  {
+   "id": "I01",
+   "area": "Infrastructure",
+   "requirement": "Production image (non-root, read-only, no env files)",
+   "status": "PASS",
+   "evidence": "C"
+  },
+  {
+   "id": "I02",
+   "area": "Infrastructure",
+   "requirement": "Compose + Caddy configuration validated",
+   "status": "PASS",
+   "evidence": "docker compose config; caddy validate"
+  },
+  {
+   "id": "I03",
+   "area": "Infrastructure",
+   "requirement": "KVM runbook (prep, deploy, data move, rollback)",
+   "status": "PASS",
+   "evidence": "infrastructure/kvm/README.md"
+  },
+  {
+   "id": "I04",
+   "area": "Infrastructure",
+   "requirement": "Hosting inventory and Render deprecation",
+   "status": "PASS",
+   "evidence": "INFRASTRUCTURE.md"
+  },
+  {
+   "id": "I05",
+   "area": "Infrastructure",
+   "requirement": "CI quality gate defined",
+   "status": "PASS",
+   "evidence": "api-ci.yml (not yet executed on GitHub)"
+  },
+  {
+   "id": "I06",
+   "area": "Infrastructure",
+   "requirement": "Production API reachable (AUD-001)",
+   "status": "BLOCKED",
+   "evidence": "needs KVM server + DNS; deployment not authorized"
+  },
+  {
+   "id": "I07",
+   "area": "Infrastructure",
+   "requirement": "www certificate (AUD-020)",
+   "status": "BLOCKED",
+   "evidence": "Vercel domain setting"
+  },
+  {
+   "id": "I08",
+   "area": "Infrastructure",
+   "requirement": "External uptime monitoring",
+   "status": "DEFERRED",
+   "evidence": "configure at cutover"
+  },
+  {
+   "id": "Q01",
+   "area": "Tests",
+   "requirement": "Typecheck (API)",
+   "status": "PASS",
+   "evidence": "tsc exit 0"
+  },
+  {
+   "id": "Q02",
+   "area": "Tests",
+   "requirement": "Lint (API)",
+   "status": "PASS",
+   "evidence": "eslint 0 problems"
+  },
+  {
+   "id": "Q03",
+   "area": "Tests",
+   "requirement": "Unit tests",
+   "status": "PASS",
+   "evidence": "19/19"
+  },
+  {
+   "id": "Q04",
+   "area": "Tests",
+   "requirement": "E2E security suites",
+   "status": "PASS",
+   "evidence": "144/144, stable over 3 runs"
+  },
+  {
+   "id": "Q05",
+   "area": "Tests",
+   "requirement": "Provider integration suites",
+   "status": "PASS",
+   "evidence": "11/11"
+  },
+  {
+   "id": "Q06",
+   "area": "Tests",
+   "requirement": "Production build (API) and container build",
+   "status": "PASS",
+   "evidence": "nest build; docker build"
+  },
+  {
+   "id": "Q07",
+   "area": "Tests",
+   "requirement": "Runtime QA through the web proxy",
+   "status": "PASS",
+   "evidence": "65/65"
+  },
+  {
+   "id": "Q08",
+   "area": "Tests",
+   "requirement": "Browser verification of hardened backend",
+   "status": "PASS",
+   "evidence": "operator dashboard 200s; /admin 403"
+  },
+  {
+   "id": "X01",
+   "area": "Cross-track",
+   "requirement": "Frontend requests delivered with contracts",
+   "status": "PASS",
+   "evidence": "CROSS_TRACK_REQUESTS.md"
+  }
+ ],
+ "web": [
+  {
+   "id": "W01",
+   "area": "Integration",
+   "requirement": "Both tracks merged with no lost work and no unresolved conflict",
+   "status": "PASS",
+   "evidence": "merge `001553a`; file sets disjoint except `pnpm-lock.yaml`"
+  },
+  {
+   "id": "W02",
+   "area": "Build",
+   "requirement": "Web typecheck",
+   "status": "PASS",
+   "evidence": "`tsc --noEmit` exit 0"
+  },
+  {
+   "id": "W03",
+   "area": "Build",
+   "requirement": "Web lint",
+   "status": "PASS",
+   "evidence": "`eslint app components hooks lib middleware.ts` exit 0"
+  },
+  {
+   "id": "W04",
+   "area": "Build",
+   "requirement": "Web tests",
+   "status": "PASS",
+   "evidence": "58/58 (39 inherited + 19 new contract guards)"
+  },
+  {
+   "id": "W05",
+   "area": "Build",
+   "requirement": "Web production build",
+   "status": "PASS",
+   "evidence": "`next build` exit 0, 76 static pages, middleware 26.4 kB"
+  },
+  {
+   "id": "W06",
+   "area": "Build",
+   "requirement": "Production build refuses to start without `API_PROXY_ORIGIN`",
+   "status": "PASS",
+   "evidence": "build without it exits 1 with the named error"
+  },
+  {
+   "id": "W07",
+   "area": "Security",
+   "requirement": "XT-R01 refresh token is never held by page scripts",
+   "status": "PASS",
+   "evidence": "login body has no `refreshToken`; cookie httpOnly; empty-body refresh + logout verified over HTTP and in the browser"
+  },
+  {
+   "id": "W08",
+   "area": "RBAC",
+   "requirement": "XT-R02 post-login routing from real server roles",
+   "status": "PASS",
+   "evidence": "browser, all seven: PILGRIM\u2192/travel-plan, OPERATOR_ADMIN\u2192/dashboard, HOTEL_MANAGER\u2192/hotel-dashboard, TRANSPORT_MANAGER\u2192/transport-dashboard, VISA_OFFICER\u2192/visa-dashboard, FINANCE_MANAGER\u2192/finance-dashboard, SUPER_ADMIN\u2192/admin-dashboard"
+  },
+  {
+   "id": "W09",
+   "area": "RBAC",
+   "requirement": "XT-R02 UI guards driven by server capabilities rather than role names",
+   "status": "NOT DONE",
+   "evidence": "`lib/workspace-access.ts` still matches role names; `/auth/me` permissions unused"
+  },
+  {
+   "id": "W10",
+   "area": "Security",
+   "requirement": "XT-R03 private documents opened through short-lived signed URLs",
+   "status": "PASS",
+   "evidence": "visa + KYC wired to `/documents/*/url`; acceptance: upload \u2192 `private:` reference \u2192 signed fetch 200 \u2192 tampered signature 401"
+  },
+  {
+   "id": "W11",
+   "area": "Fake data",
+   "requirement": "XT-R04 client-side demo personas gone",
+   "status": "PASS",
+   "evidence": "login page is email+password only"
+  },
+  {
+   "id": "W12",
+   "area": "Security",
+   "requirement": "XT-R05 proxy secret and trustworthy client IP",
+   "status": "PASS",
+   "evidence": "`apps/web/middleware.ts`; two clients get independent rate-limit buckets (429 at 31), a forged header is discarded"
+  },
+  {
+   "id": "W13",
+   "area": "Auth",
+   "requirement": "XT-R06 Google Sign-In UI",
+   "status": "NOT DONE",
+   "evidence": "no `/auth/callback` page; backend flow complete and tested"
+  },
+  {
+   "id": "W14",
+   "area": "Auth",
+   "requirement": "XT-R07 email verification UI",
+   "status": "NOT DONE",
+   "evidence": "no `/verify-email` page or unverified banner; backend complete"
+  },
+  {
+   "id": "W15",
+   "area": "Onboarding",
+   "requirement": "XT-R08 provider onboarding + KYC submission UI",
+   "status": "NOT DONE",
+   "evidence": "no caller for `/onboarding/organization` or `/tenants/me/kyc`"
+  },
+  {
+   "id": "W16",
+   "area": "Payments",
+   "requirement": "XT-R09 Stripe Elements checkout UI",
+   "status": "NOT DONE",
+   "evidence": "no `@stripe/*` dependency; sandbox intent/confirm path works"
+  },
+  {
+   "id": "W17",
+   "area": "Contracts",
+   "requirement": "XT-R10 request contracts aligned across every module",
+   "status": "PASS",
+   "evidence": "booking/invoice transitions, refund routing, visa decisions, enums \u2014 all covered by `tests/server-contracts.test.ts`"
+  },
+  {
+   "id": "W18",
+   "area": "Media",
+   "requirement": "XT-R11 image hosts corrected and R2 media host admitted",
+   "status": "PASS",
+   "evidence": "`next.config.mjs` remote patterns; `umrahconnect.io` spelling fixed"
+  },
+  {
+   "id": "W19",
+   "area": "Admin",
+   "requirement": "XT-R12 PLATFORM organization type displays correctly",
+   "status": "PASS",
+   "evidence": "browser: platform organization listed and labelled in `/admin-tenants`"
+  },
+  {
+   "id": "W20",
+   "area": "Settings",
+   "requirement": "XT-R13 change-password and sign-out-everywhere in settings",
+   "status": "NOT DONE",
+   "evidence": "settings page remains read-only"
+  },
+  {
+   "id": "W21",
+   "area": "Auth",
+   "requirement": "XT-R14 password hints match the server rule",
+   "status": "PASS",
+   "evidence": "shared `lib/password-policy.ts`, asserted against the register DTO"
+  },
+  {
+   "id": "W22",
+   "area": "Money",
+   "requirement": "Listing creation prices at face value, not 100\u00d7",
+   "status": "PASS",
+   "evidence": "`marketplace-view.tsx` sends major units; server converts once"
+  },
+  {
+   "id": "W23",
+   "area": "Auth",
+   "requirement": "An account in more than one workspace can sign in",
+   "status": "PASS",
+   "evidence": "workspace list read from `error.details.tenants`; reproduced with a real two-workspace account"
+  },
+  {
+   "id": "W24",
+   "area": "Fake data",
+   "requirement": "Listings show their own media and their real seller",
+   "status": "PASS",
+   "evidence": "stock photography removed; `imageUrls` / `vendor.name`; confirmed in the browser"
+  },
+  {
+   "id": "W25",
+   "area": "Fake data",
+   "requirement": "Notification bell reflects real notifications",
+   "status": "PASS",
+   "evidence": "envelope unwrapped in `use-platform.ts`"
+  },
+  {
+   "id": "W26",
+   "area": "Fake data",
+   "requirement": "Social bookmark reflects server state",
+   "status": "PASS",
+   "evidence": "feed returns the viewer's own save; client seeds from it"
+  },
+  {
+   "id": "W27",
+   "area": "Fake data",
+   "requirement": "Admin tiles are platform-wide, not page-scoped",
+   "status": "PASS",
+   "evidence": "`/admin/stats` returns `tenants.byStatus` and `usersByStatus`; browser shows 11/11 consistent"
+  },
+  {
+   "id": "W28",
+   "area": "UX",
+   "requirement": "Validation failures render as a sentence, not raw JSON",
+   "status": "PASS",
+   "evidence": "`lib/api-error.ts` across 49 call sites; unit-tested"
+  },
+  {
+   "id": "W29",
+   "area": "Honesty",
+   "requirement": "Fields the server ignores are not offered as inputs",
+   "status": "PASS",
+   "evidence": "hotel room count and booked seats removed from edit forms"
+  },
+  {
+   "id": "W30",
+   "area": "Responsive",
+   "requirement": "No horizontal page scroll at 1440/1280/1024/768/390/360",
+   "status": "PASS",
+   "evidence": "measured `scrollWidth` vs `clientWidth` across operator, provider and platform routes"
+  },
+  {
+   "id": "W31",
+   "area": "Accessibility",
+   "requirement": "Full WCAG certification",
+   "status": "NOT DONE",
+   "evidence": "swept routes have zero unnamed controls, but no automated audit or screen-reader session"
+  },
+  {
+   "id": "W32",
+   "area": "Browser QA",
+   "requirement": "Console and network clean on the integrated app",
+   "status": "PASS",
+   "evidence": "zero console errors; all `/proxy-api` calls 200; no request loops"
+  },
+  {
+   "id": "W33",
+   "area": "Tenant isolation",
+   "requirement": "Cross-tenant read/write/delete refused for every role pair",
+   "status": "PASS",
+   "evidence": "acceptance harness, A/B organizations for hotel, transport, visa, operator, traveler"
+  },
+  {
+   "id": "W34",
+   "area": "Super Admin",
+   "requirement": "Platform routes refused to every non-platform identity",
+   "status": "PASS",
+   "evidence": "63 direct API probes + anonymous; browser boundary page"
+  },
+  {
+   "id": "W35",
+   "area": "Database",
+   "requirement": "Writes persist across session and process boundaries",
+   "status": "PASS",
+   "evidence": "create \u2192 read \u2192 fresh login \u2192 list \u2192 soft delete \u2192 status confirmed"
+  },
+  {
+   "id": "W36",
+   "area": "Money",
+   "requirement": "Booking totals are server-authoritative",
+   "status": "PASS",
+   "evidence": "tampered total 400; server figure matches; checkout charges the server total"
+  },
+  {
+   "id": "W37",
+   "area": "Storage",
+   "requirement": "Document authorization holds end to end",
+   "status": "PASS",
+   "evidence": "signed URL serves, tampered signature refused, cross-tenant and traveler refused"
+  },
+  {
+   "id": "W38",
+   "area": "Security",
+   "requirement": "Sign-out-everywhere revokes same-second tokens",
+   "status": "PASS",
+   "evidence": "defect found, fixed, regression test with no sleeps"
+  },
+  {
+   "id": "W39",
+   "area": "Reproducibility",
+   "requirement": "Cold boot from the canonical worktree passes the full smoke",
+   "status": "PASS",
+   "evidence": "fresh PIDs in the integration worktree; 65/65 + 210/210"
+  },
+  {
+   "id": "W40",
+   "area": "Secrets",
+   "requirement": "Credentials removed from version control",
+   "status": "BLOCKED",
+   "evidence": "file untracked and ignored locally, but the tokens are in pushed history \u2014 only revocation at the provider closes this"
+  },
+  {
+   "id": "W41",
+   "area": "E2E",
+   "requirement": "Every role's core journey walked in a browser",
+   "status": "PASS",
+   "evidence": "all seven roles signed in through the real form; landing page and scoped data confirmed for traveler, operator, hotel, transport, visa, finance and Super Admin"
+  }
+ ]
+}
