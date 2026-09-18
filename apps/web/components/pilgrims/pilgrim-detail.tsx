@@ -19,8 +19,10 @@ import {
   usePilgrim, useAddPilgrimDocument, useAssignPilgrimToBooking,
 } from '@/hooks/use-pilgrims';
 import { PILGRIM_STATUSES } from '@/lib/statuses';
+import { PilgrimAccountAccess } from './pilgrim-account-access';
 
-type TabKey = 'overview' | 'documents' | 'bookings' | 'edit';
+type TabKey = 'overview' | 'documents' | 'bookings' | 'access' | 'edit';
+const TAB_LABELS: Record<TabKey, string> = { overview: 'Overview', documents: 'Documents', bookings: 'Bookings', access: 'Traveler access', edit: 'Edit' };
 
 // Mirrors DocumentType in platform/api/src/modules/pilgrims/dto/add-document.dto.ts.
 // ID_CARD and YELLOW_FEVER are not members and were rejected on submit.
@@ -90,16 +92,16 @@ export function PilgrimDetail({ id }: { id: string }) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
-        {(['overview', 'documents', 'bookings', 'edit'] as TabKey[]).map((t) => (
+        {(['overview', 'documents', 'bookings', 'access', 'edit'] as TabKey[]).map((t) => (
           <Button variant="quiet" type="button"
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              'capitalize px-3 py-2 rounded-xl text-sm font-medium transition-colors',
+              'px-3 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap',
               tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50',
             )}
           >
-            {t}
+            {TAB_LABELS[t]}
           </Button>
         ))}
       </div>
@@ -107,6 +109,7 @@ export function PilgrimDetail({ id }: { id: string }) {
       {tab === 'overview' && <Overview p={p} fullName={fullName} />}
       {tab === 'documents' && <DocumentsTab p={p} refetch={refetch} />}
       {tab === 'bookings' && <BookingsTab p={p} refetch={refetch} />}
+      {tab === 'access' && <PilgrimAccountAccess pilgrim={p} />}
       {tab === 'edit' && <EditTab p={p} refetch={refetch} />}
     </div>
   );
@@ -260,7 +263,8 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
   const { data: bookingsData , error: bookingsError, refetch: retryBookings} = useBookings({ limit: 50 });
   const assign = useAssignPilgrimToBooking();
   const bookings = bookingsData?.items ?? [];
-  const inBookings = new Set((p.bookings ?? []).map((bp: any) => bp.bookingId));
+  // GET /pilgrims/:id returns the linked Booking rows themselves (id, bookingRef, status, package).
+  const inBookings = new Set((p.bookings ?? []).map((b: any) => b.id));
   const available = bookings.filter((b: any) => !inBookings.has(b.id));
   const [selected, setSelected] = useState('');
 
@@ -304,17 +308,17 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
           <div className="py-10 text-center text-sm text-gray-600">Not attached to any booking yet</div>
         ) : (
           <ul className="divide-y divide-gray-50">
-            {p.bookings.map((bp: any) => {
-              const booking = bookings.find((b: any) => b.id === bp.bookingId);
+            {p.bookings.map((linked: any) => {
+              const booking = bookings.find((b: any) => b.id === linked.id) ?? linked;
               return (
-                <li key={bp.id} className="p-4">
-                  <Link href={`/bookings/${bp.bookingId}`} className="flex items-center justify-between hover:text-brand-600">
+                <li key={linked.id} className="p-4">
+                  <Link href={`/bookings/${linked.id}`} className="flex items-center justify-between hover:text-brand-600">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{booking?.bookingRef ?? bp.bookingId.slice(0, 8)}</p>
-                      <p className="text-xs text-gray-600">{booking?.package?.name ?? '—'} · {booking?.status ?? ''}</p>
+                      <p className="text-sm font-medium text-gray-900">{booking.bookingRef ?? linked.id.slice(0, 8)}</p>
+                      <p className="text-xs text-gray-600">{booking.package?.name ?? '—'} · {booking.status ?? ''}</p>
                     </div>
-                    {booking?.totalAmountCents != null && (
-                      <p className="text-sm font-bold text-gray-900">{booking.currency} {(booking.totalAmountCents / 100).toLocaleString()}</p>
+                    {booking.totalAmountCents != null && (
+                      <p className="text-sm font-bold text-gray-900">{booking.currency} {(Number(booking.totalAmountCents) / 100).toLocaleString()}</p>
                     )}
                   </Link>
                 </li>
