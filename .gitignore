@@ -100,3 +100,7 @@ infrastructure/kvm/backups/
 # Claude Code local settings — machine-specific, and has historically captured
 # approved shell commands verbatim (including their credentials). Never tracked.
 .claude/settings.local.json
+
+# Engineering 100 loop — private local QA material: generated demo credentials,
+# browser storage state and any trace that could carry a token. Never tracked.
+.project/local/
