@@ -60,7 +60,6 @@ interface Page {
 
 const normalizeTag = (tag: string) => tag.trim().replace(/^#+/, '').toLowerCase();
 const normalizeTags = (tags?: string[]) => [...new Set((tags ?? []).map(normalizeTag).filter(Boolean))].slice(0, 20);
-const isUniqueViolation = (e: unknown) => e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
 
 @Injectable()
 export class SocialService {
@@ -96,13 +95,9 @@ export class SocialService {
       if (!displayName) return existing;
       return this.prisma.socialAccount.update({ where: { id: existing.id }, data: { displayName, type } });
     }
-    try {
-      return await this.prisma.socialAccount.create({ data: { userId, type, displayName: displayName || 'Member' } });
-    } catch (e) {
-      // Two first requests raced: the other one created it.
-      if (isUniqueViolation(e)) return this.prisma.socialAccount.findFirstOrThrow({ where: { userId } });
-      throw e;
-    }
+    // skipDuplicates: when two first requests race, the loser simply reads the winner's row.
+    await this.prisma.socialAccount.createMany({ data: [{ userId, type, displayName: displayName || 'Member' }], skipDuplicates: true });
+    return this.prisma.socialAccount.findFirstOrThrow({ where: { userId } });
   }
 
   // ── Visibility ──────────────────────────────────────────────────────────────
@@ -569,22 +564,23 @@ export class SocialService {
     const reactionType: string = (typeof dto === 'string' ? dto : (dto?.type ?? dto?.reaction)) ?? 'LIKE';
     const counter = reactionType === 'LIKE' ? 'likeCount' : reactionType === 'SHARE' ? 'shareCount' : null;
     const existing = await this.prisma.reaction.findFirst({ where: { postId: post.id, accountId: account.id, type: reactionType } });
+    const desired: boolean = typeof dto?.active === 'boolean' ? dto.active : !existing;
 
     let toggled: boolean;
-    if (existing) {
-      const removed = await this.prisma.reaction.deleteMany({ where: { id: existing.id } });
+    if (!desired) {
+      const removed = await this.prisma.reaction.deleteMany({ where: { postId: post.id, accountId: account.id, type: reactionType } });
       if (removed.count && counter) {
         await this.prisma.post.updateMany({ where: { id: post.id, [counter]: { gt: 0 } }, data: { [counter]: { decrement: 1 } } });
       }
       toggled = false;
     } else {
-      try {
-        await this.prisma.reaction.create({ data: { postId: post.id, accountId: account.id, type: reactionType } });
-        if (counter) await this.prisma.post.update({ where: { id: post.id }, data: { [counter]: { increment: 1 } } });
-      } catch (e) {
-        // A double click raced this request: the reaction exists, which is the requested state.
-        if (!isUniqueViolation(e)) throw e;
-      }
+      // A double click may race this request; skipDuplicates leaves the reaction in place,
+      // which is the requested state, and only the insert that happened moves the counter.
+      const created = await this.prisma.reaction.createMany({
+        data: [{ postId: post.id, accountId: account.id, type: reactionType }],
+        skipDuplicates: true,
+      });
+      if (created.count && counter) await this.prisma.post.update({ where: { id: post.id }, data: { [counter]: { increment: 1 } } });
       toggled = true;
 
       if (reactionType === 'LIKE' || reactionType === 'SHARE') {
@@ -623,7 +619,7 @@ export class SocialService {
 
   // ── Follow ────────────────────────────────────────────────────────────────────
 
-  async toggleFollow(tenantId: string, userId: string, targetAccountId: string) {
+  async toggleFollow(tenantId: string, userId: string, targetAccountId: string, desiredState?: boolean) {
     const followerAccount = await this.getOrCreateSocialAccount(userId, tenantId);
     const targetId = requireId(targetAccountId, 'Account');
     if (followerAccount.id === targetId) throw new BadRequestException('Cannot follow yourself');
@@ -633,8 +629,9 @@ export class SocialService {
     const existing = await this.prisma.follow.findUnique({
       where: { followerId_followedId: { followerId: followerAccount.id, followedId: target.id } },
     });
+    const desired = typeof desiredState === 'boolean' ? desiredState : !existing;
     let following: boolean;
-    if (existing) {
+    if (!desired) {
       const removed = await this.prisma.follow.deleteMany({ where: { followerId: followerAccount.id, followedId: target.id } });
       if (removed.count) {
         await this.prisma.socialAccount.updateMany({ where: { id: followerAccount.id, followingCount: { gt: 0 } }, data: { followingCount: { decrement: 1 } } });
@@ -642,16 +639,17 @@ export class SocialService {
       }
       following = false;
     } else {
-      try {
-        await this.prisma.follow.create({ data: { followerId: followerAccount.id, followedId: target.id } });
+      const created = await this.prisma.follow.createMany({
+        data: [{ followerId: followerAccount.id, followedId: target.id }],
+        skipDuplicates: true,
+      });
+      if (created.count) {
         await this.prisma.socialAccount.update({ where: { id: followerAccount.id }, data: { followingCount: { increment: 1 } } });
         await this.prisma.socialAccount.update({ where: { id: target.id }, data: { followerCount: { increment: 1 } } });
         await this.notify({
           tenantId, recipientUserId: target.userId, actorUserId: userId, type: 'FOLLOW',
           title: `${followerAccount.displayName} started following you`, link: '/social', data: { followerAccountId: followerAccount.id },
         });
-      } catch (e) {
-        if (!isUniqueViolation(e)) throw e;
       }
       following = true;
     }
@@ -708,14 +706,15 @@ export class SocialService {
   updateAccount = this.updateMyAccount.bind(this);
 
   // ── Saved posts (bookmarks) ─────────────────────────────────────────
-  async toggleSavePost(tenantId: string, userId: string, postId: string, roles: string[] = []) {
+  async toggleSavePost(tenantId: string, userId: string, postId: string, roles: string[] = [], desiredState?: boolean) {
     postId = requireId(postId, 'Post');
     const account = await this.getOrCreateSocialAccount(userId, tenantId);
     const existing = await this.prisma.savedPost.findUnique({ where: { accountId_postId: { accountId: account.id, postId } } });
+    const desired = typeof desiredState === 'boolean' ? desiredState : !existing;
     let saved: boolean;
-    if (existing) {
+    if (!desired) {
       // Un-saving is always allowed, even for a post that has since become invisible.
-      const removed = await this.prisma.savedPost.deleteMany({ where: { id: existing.id } });
+      const removed = await this.prisma.savedPost.deleteMany({ where: { accountId: account.id, postId } });
       if (removed.count) {
         await this.prisma.post.updateMany({ where: { id: postId, saveCount: { gt: 0 } }, data: { saveCount: { decrement: 1 } } });
       }
@@ -723,12 +722,8 @@ export class SocialService {
     } else {
       // Saving requires the post to exist and be visible.
       await this.findVisiblePost({ userId, accountId: account.id, isVerified: account.isVerified, roles }, postId);
-      try {
-        await this.prisma.savedPost.create({ data: { accountId: account.id, postId } });
-        await this.prisma.post.update({ where: { id: postId }, data: { saveCount: { increment: 1 } } });
-      } catch (e) {
-        if (!isUniqueViolation(e)) throw e;
-      }
+      const created = await this.prisma.savedPost.createMany({ data: [{ accountId: account.id, postId }], skipDuplicates: true });
+      if (created.count) await this.prisma.post.update({ where: { id: postId }, data: { saveCount: { increment: 1 } } });
       saved = true;
     }
     return { saved, saveCount: await this.prisma.savedPost.count({ where: { postId } }) };

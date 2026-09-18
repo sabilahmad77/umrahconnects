@@ -369,17 +369,13 @@ export class GroupsService {
       await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { increment: 1 } } });
       return m;
     }
-    try {
-      const m = await this.prisma.groupMember.create({ data: { groupId, userId, role: 'MEMBER', status: 'ACTIVE' } });
-      await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { increment: 1 } } });
-      return m;
-    } catch (e) {
-      // A double click raced this request: the membership exists, which is what was asked for.
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        return this.prisma.groupMember.findUniqueOrThrow({ where: { groupId_userId: { groupId, userId } } });
-      }
-      throw e;
-    }
+    // A double click may race this request: only the insert that happened moves the counter.
+    const created = await this.prisma.groupMember.createMany({
+      data: [{ groupId, userId, role: 'MEMBER', status: 'ACTIVE' }],
+      skipDuplicates: true,
+    });
+    if (created.count) await this.prisma.tripGroup.update({ where: { id: groupId }, data: { enrolledCount: { increment: 1 } } });
+    return this.prisma.groupMember.findUniqueOrThrow({ where: { groupId_userId: { groupId, userId } } });
   }
 
   async selfLeave(groupId: string, userId: string) {

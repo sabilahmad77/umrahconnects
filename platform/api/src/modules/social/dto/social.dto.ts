@@ -75,6 +75,21 @@ export class ReactDto {
   @IsOptional() @IsIn(REACTION_TYPES) type?: string;
   /** Alias of `type`. */
   @IsOptional() @IsIn(REACTION_TYPES) reaction?: string;
+  /**
+   * The state the client wants (true = reacted). Repeating the same request is
+   * then harmless (a double click cannot undo itself). Omitted = toggle.
+   */
+  @IsOptional() @IsBoolean() active?: boolean;
+}
+
+export class SavePostDto {
+  /** Desired state; omitted = toggle. */
+  @IsOptional() @IsBoolean() saved?: boolean;
+}
+
+export class FollowDto {
+  /** Desired state; omitted = toggle. */
+  @IsOptional() @IsBoolean() following?: boolean;
 }
 
 // ── Account ─────────────────────────────────────────────────────────────────

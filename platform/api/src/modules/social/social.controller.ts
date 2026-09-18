@@ -14,6 +14,8 @@ import {
   QueryCommentsDto,
   QueryMessagesDto,
   ReactDto,
+  SavePostDto,
+  FollowDto,
   UpdateSocialAccountDto,
   OpenConversationDto,
   SendMessageDto,
@@ -122,8 +124,13 @@ export class SocialController {
 
   @Post('posts/:id/save')
   @RequirePermissions('social:post:read')
-  async toggleSavePost(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.toggleSavePost(tenantId, user.sub, id, user.roles) };
+  async toggleSavePost(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SavePostDto,
+  ) {
+    return { success: true, data: await this.service.toggleSavePost(tenantId, user.sub, id, user.roles, dto?.saved) };
   }
 
   @Get('saved-posts')
@@ -147,8 +154,8 @@ export class SocialController {
 
   @Post('accounts/:id/follow')
   @RequirePermissions('social:post:create')
-  async toggleFollow(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.toggleFollow(tenantId, user.sub, id) };
+  async toggleFollow(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string, @Body() dto: FollowDto) {
+    return { success: true, data: await this.service.toggleFollow(tenantId, user.sub, id, dto?.following) };
   }
 
   // ─── Messaging (participants only; enforced by the service) ────────────
