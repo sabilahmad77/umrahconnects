@@ -1,297 +1,138 @@
 'use client';
-import { Button } from '@/components/ui/system';
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import {
+  LayoutDashboard, Users, BookOpen, Hotel, FileCheck2, Bus, DollarSign, Users2, Store, Rss, BarChart3,
+  Settings, ChevronLeft, ChevronRight, Globe, LogOut, Map, Shield, ClipboardList, FolderOpen, Inbox,
+  Building2, Zap, User, Package, BadgeCheck, MessageSquare, Clock, type LucideIcon,
+} from 'lucide-react';
+import { Button } from '@/components/ui/system';
 import { cn } from '@/lib/utils';
 import { useAuthContext } from '@/components/providers/auth-provider';
-import {
-  LayoutDashboard, Users, BookOpen, Hotel, FileCheck2, Bus,
-  DollarSign, Users2, Store, Rss, BarChart3, Settings,
-  ChevronLeft, ChevronRight, Globe, LogOut, Map, Shield, BedDouble, ClipboardList,
-  FolderOpen, Inbox, Building2, Zap, User, Package,
-} from 'lucide-react';
-import { canOpenWorkspaceRoute } from '@/lib/workspace-access';
 import type { DashboardType } from '@/lib/auth';
+import {
+  isPendingOrganization,
+  layoutFor,
+  navigationFor,
+  normalizePath,
+  workspaceKind,
+  type NavKey,
+} from '@/lib/workspace-access';
 
-// ─── Navigation configs per role ─────────────────────────────────────────────
-
-// Shared platform-wide sections every role gets at the bottom
-const SHARED_PLATFORM = [
-  {
-    section: 'Shared platform',
-    items: [
-      { label: 'Marketplace',  href: '/marketplace', icon: Store },
-      { label: 'Social Hub',   href: '/social',      icon: Rss },
-      { label: 'Connections',  href: '/connections', icon: Users },
-      { label: 'Groups',       href: '/groups',      icon: Users2 },
-      { label: 'Requests',     href: '/requests',    icon: BookOpen },
-    ],
-  },
-];
-
-const NAV: Record<DashboardType, { section: string; items: { label: string; href: string; icon: any; badge?: string }[] }[]> = {
-  operator: [
-    {
-      section: 'My CRM',
-      items: [
-        { label: 'Dashboard',         href: '/dashboard',  icon: LayoutDashboard },
-        { label: 'Pilgrims & CRM',    href: '/pilgrims',   icon: Users },
-        { label: 'Bookings',          href: '/bookings',   icon: BookOpen },
-        { label: 'Packages',          href: '/packages',   icon: Package },
-        { label: 'Groups',            href: '/groups',     icon: Users2 },
-      ],
-    },
-    {
-      section: 'My Inventory',
-      items: [
-        { label: 'Hotels',            href: '/hotels',     icon: Hotel },
-        { label: 'Transport',         href: '/transport',  icon: Bus },
-        { label: 'Visa & Compliance', href: '/compliance', icon: FileCheck2 },
-      ],
-    },
-    {
-      section: 'My Finance',
-      items: [
-        { label: 'Finance',           href: '/finance',    icon: DollarSign },
-        { label: 'Reports',           href: '/reports',    icon: BarChart3 },
-      ],
-    },
-    ...SHARED_PLATFORM,
-  ],
-
-  admin: [
-    {
-      section: 'Platform control',
-      items: [
-        { label: 'Overview',                href: '/admin-dashboard', icon: LayoutDashboard },
-        { label: 'All Tenants',             href: '/admin-tenants',   icon: Globe },
-        { label: 'All Users',               href: '/admin-users',     icon: Users },
-        { label: 'All Pilgrims',            href: '/pilgrims',        icon: Users },
-        { label: 'All Bookings',            href: '/bookings',        icon: BookOpen },
-        { label: 'All Groups',              href: '/groups',          icon: Users2 },
-        { label: 'Marketplace Listings',    href: '/admin-listings',  icon: Store },
-      ],
-    },
-    {
-      section: 'Governance',
-      items: [
-        { label: 'KYC Verification',        href: '/admin-kyc',       icon: Shield },
-        { label: 'Website Inquiries',       href: '/admin-inquiries', icon: Inbox },
-        { label: 'Roles & Permissions',     href: '/admin-roles',     icon: ClipboardList },
-        { label: 'System Logs',             href: '/admin-logs',      icon: BarChart3 },
-        { label: 'Support / Issues',        href: '/admin-support',   icon: FileCheck2 },
-      ],
-    },
-    {
-      section: 'Intelligence',
-      items: [
-        { label: 'Reports & Analytics',     href: '/reports',         icon: BarChart3 },
-        { label: 'Finance',                 href: '/finance',         icon: DollarSign },
-      ],
-    },
-    ...SHARED_PLATFORM,
-    {
-      section: 'Config',
-      items: [{ label: 'Platform Settings', href: '/admin-settings',  icon: Shield }],
-    },
-  ],
-
-  hotel: [
-    {
-      section: 'My Hotel CRM',
-      items: [
-        { label: 'Dashboard',         href: '/hotel-dashboard', icon: LayoutDashboard },
-        { label: 'My Hotels',         href: '/hotels',          icon: Hotel },
-        { label: 'Rooms & Inventory', href: '/hotels',          icon: BedDouble },
-        { label: 'Bookings',          href: '/hotel-bookings',  icon: BookOpen },
-        { label: 'Finance',           href: '/finance',         icon: DollarSign },
-      ],
-    },
-    ...SHARED_PLATFORM,
-  ],
-
-  transport: [
-    {
-      section: 'My Fleet CRM',
-      items: [
-        { label: 'Dashboard',         href: '/transport-dashboard',   icon: LayoutDashboard },
-        { label: 'Vehicles & Fleet',  href: '/transport/vehicles',    icon: Bus },
-        { label: 'Drivers',           href: '/transport/drivers',     icon: Users },
-        { label: 'Routes',            href: '/transport/routes',      icon: Map },
-        { label: 'Assignments',       href: '/transport/assignments', icon: ClipboardList },
-        { label: 'Bookings',          href: '/transport/bookings',    icon: BookOpen },
-        { label: 'Finance',           href: '/finance',               icon: DollarSign },
-      ],
-    },
-    ...SHARED_PLATFORM,
-  ],
-
-  compliance: [
-    {
-      section: 'My Visa CRM',
-      items: [
-        { label: 'Dashboard',          href: '/visa-dashboard',  icon: LayoutDashboard },
-        { label: 'Visa Applications',  href: '/compliance',      icon: FileCheck2 },
-        { label: 'Pilgrims / Applicants', href: '/pilgrims',     icon: Users },
-        { label: 'Document Management', href: '/visa-documents', icon: FolderOpen },
-        { label: 'Service Requests',   href: '/visa-requests',   icon: Inbox },
-        { label: 'Finance',            href: '/finance',         icon: DollarSign },
-        { label: 'Reports',            href: '/reports',         icon: BarChart3 },
-      ],
-    },
-    ...SHARED_PLATFORM,
-  ],
-
-  finance: [
-    {
-      section: 'My Finance CRM',
-      items: [
-        { label: 'Dashboard',     href: '/finance-dashboard', icon: LayoutDashboard },
-        { label: 'Invoices',      href: '/finance',           icon: DollarSign },
-        { label: 'Payments',      href: '/finance-payments',  icon: ClipboardList },
-        { label: 'Bookings',      href: '/bookings',          icon: BookOpen },
-        { label: 'Budget Plans',  href: '/budget-plans',      icon: BarChart3 },
-        { label: 'Reports',       href: '/reports',           icon: BarChart3 },
-      ],
-    },
-    ...SHARED_PLATFORM,
-  ],
-
-  pilgrim: [
-    {
-      section: 'Community',
-      items: [
-        { label: 'Social Hub',        href: '/social',       icon: Rss },
-        { label: 'Discover',          href: '/discover',     icon: Globe },
-        { label: 'Connections',       href: '/connections',  icon: Users },
-        { label: 'Messages',          href: '/messages',     icon: BookOpen },
-        { label: 'My Groups',         href: '/travel-plan#my-groups',       icon: Users2 },
-      ],
-    },
-    {
-      section: 'My Travel',
-      items: [
-        { label: 'Marketplace',       href: '/marketplace',  icon: Store },
-        { label: 'My Requests',       href: '/requests',     icon: FileCheck2 },
-        { label: 'My Offers',         href: '/my-offers',    icon: DollarSign },
-        { label: 'My Bookings',       href: '/my-bookings',  icon: BookOpen },
-        { label: 'My Travel Plan',    href: '/travel-plan',  icon: Map },
-      ],
-    },
-    {
-      section: 'Account',
-      items: [
-        { label: 'Profile',           href: '/profile',      icon: Shield },
-      ],
-    },
-  ],
+/** Icon of each menu entry. Which entries appear is decided in lib/workspace-access.ts. */
+const ICONS: Record<NavKey, LucideIcon> = {
+  overview: LayoutDashboard, tenants: Globe, users: Users, listings: Store, kyc: Shield, inquiries: Inbox,
+  roles: ClipboardList, logs: BarChart3, support: FileCheck2, platformSettings: Shield,
+  dashboard: LayoutDashboard, pilgrims: Users, bookings: BookOpen, packages: Package, groups: Users2,
+  hotels: Hotel, transport: Bus, visa: FileCheck2, finance: DollarSign, reports: BarChart3,
+  hotelDashboard: LayoutDashboard, hotelBookings: BookOpen,
+  transportDashboard: LayoutDashboard, vehicles: Bus, drivers: Users, routes: Map, assignments: ClipboardList,
+  transportBookings: BookOpen,
+  visaDashboard: LayoutDashboard, visaApplications: FileCheck2, applicants: Users, visaDocuments: FolderOpen,
+  serviceRequests: Inbox,
+  financeDashboard: LayoutDashboard, invoices: DollarSign, payments: ClipboardList, budgetPlans: BarChart3,
+  marketplace: Store, social: Rss, connections: Users, requests: BookOpen, discover: Globe,
+  messages: MessageSquare, myGroups: Users2, myRequests: FileCheck2, myOffers: DollarSign, myBookings: BookOpen,
+  travelPlan: Map, profile: Shield, registerOrganization: Building2, verification: BadgeCheck,
 };
 
-// Routes that should also be in the operator/admin sidebar so they can act as providers
-const PROVIDER_NAV_EXTRAS = [
-  { label: 'My Connections', href: '/connections', icon: Users },
-];
-
-// Single deep-green sidebar across all roles (matches design references); role is shown via a gold-accented badge.
-const ROLE_CONFIG: Record<DashboardType, { label: string; Icon: any; gradient: string; badge: string }> = {
-  operator:   { label: 'Umrah Operator / Agency', Icon: Building2,  gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
-  admin:      { label: 'Super Admin',         Icon: Zap,        gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
-  hotel:      { label: 'Hotel Owner',         Icon: Hotel,      gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
-  transport:  { label: 'Transport Company',   Icon: Bus,        gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
-  compliance: { label: 'Visa Agency',         Icon: FileCheck2, gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
-  finance:    { label: 'Finance Manager',     Icon: DollarSign, gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
-  pilgrim:    { label: 'Traveler / Pilgrim',  Icon: User,       gradient: 'from-brand-500 to-brand-600', badge: 'bg-white/10 text-gold-300' },
+// Single deep-green sidebar across all roles (matches design references); the
+// workspace is shown by a gold-accented badge. Platform accounts get the
+// midnight variant so the console is never mistaken for an organization.
+const WORKSPACE_BADGE: Record<DashboardType, { label: string; Icon: LucideIcon }> = {
+  operator: { label: 'Umrah Operator / Agency', Icon: Building2 },
+  admin: { label: 'Super Admin', Icon: Zap },
+  hotel: { label: 'Hotel Owner', Icon: Hotel },
+  transport: { label: 'Transport Company', Icon: Bus },
+  compliance: { label: 'Visa Agency', Icon: FileCheck2 },
+  finance: { label: 'Finance Manager', Icon: DollarSign },
+  pilgrim: { label: 'Traveler / Pilgrim', Icon: User },
 };
-
-// ─── Sidebar Component ────────────────────────────────────────────────────────
 
 export function Sidebar({ mobile = false }: { mobile?: boolean }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '/';
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthContext();
 
-  const dashboardType = user?.dashboardType ?? 'operator';
-  const seen = new Set<string>();
-  const navSections = (NAV[dashboardType] ?? NAV.operator).map(section => ({ ...section, items: section.items.filter(item => { if (!canOpenWorkspaceRoute(item.href, user?.roles ?? [], user?.permissions)) return false; if (seen.has(item.href)) return false; seen.add(item.href); return true; }) }));
-  const roleCfg = ROLE_CONFIG[dashboardType] ?? ROLE_CONFIG.operator;
-  const initials = (user?.displayName ?? 'UC').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const sections = navigationFor(user);
+  const platform = !!user && workspaceKind(user) === 'platform';
+  const pending = isPendingOrganization(user);
+  const badge = pending
+    ? { label: 'Verification pending', Icon: Clock }
+    : WORKSPACE_BADGE[user ? layoutFor(user) : 'operator'];
+  const initials = (user?.displayName ?? 'UC')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  const current = normalizePath(pathname);
 
   return (
     <aside
       className={cn(
-        'relative flex h-full flex-col text-white transition-[width] duration-150 shrink-0', dashboardType === 'admin' ? 'bg-midnight' : 'bg-brand-600',
-        mobile ? 'w-full min-h-[75dvh]' : collapsed ? 'w-[68px]' : 'w-[240px]',
+        'relative flex h-full shrink-0 flex-col text-white transition-[width] duration-150',
+        platform ? 'bg-midnight' : 'bg-brand-600',
+        mobile ? 'min-h-[75dvh] w-full' : collapsed ? 'w-[68px]' : 'w-[240px]',
       )}
     >
       {/* ── Logo ── */}
-      <div className={cn(
-        'flex items-center gap-3 px-4 py-4 border-b border-white/10',
-        collapsed && 'justify-center px-3',
-      )}>
-        <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+      <div className={cn('flex items-center gap-3 border-b border-white/10 px-4 py-4', collapsed && 'justify-center px-3')}>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark-light.png" alt="Umrah Connect" className="w-6 h-6 object-contain" />
+          <img src="/logo-mark-light.png" alt="Umrah Connect" className="h-6 w-6 object-contain" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="text-sm font-heading font-bold leading-none text-white truncate">Umrah Connect</p>
-            <p className="text-xs tracking-[0.18em] text-gold-400 mt-1 truncate">CONNECTED JOURNEYS</p>
+            <p className="truncate font-heading text-sm font-bold leading-none text-white">Umrah Connect</p>
+            <p className="mt-1 truncate text-xs tracking-[0.18em] text-gold-400">CONNECTED JOURNEYS</p>
           </div>
         )}
       </div>
 
-      {/* ── Role badge (expanded only) ── */}
+      {/* ── Workspace badge (expanded only) ── */}
       {!collapsed && (
-        <div className="px-3 py-2.5 border-b border-white/10">
-          <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full', roleCfg.badge)}>
-            <roleCfg.Icon className="h-3 w-3" />
-            {roleCfg.label}
+        <div className="border-b border-white/10 px-3 py-2.5">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold text-gold-300">
+            <badge.Icon className="h-3 w-3" />
+            {badge.label}
           </span>
         </div>
       )}
 
       {/* ── Navigation ── */}
-      <nav className="flex-1 overflow-y-auto py-3 scrollbar-hide">
-        {navSections.map((section) => (
+      <nav aria-label="Workspace" className="scrollbar-hide flex-1 overflow-y-auto py-3">
+        {sections.map((section) => (
           <div key={section.section} className="mb-2">
             {!collapsed && (
-              <p className="px-4 py-1 text-xs font-bold text-white/70 uppercase tracking-widest">
-                {section.section}
-              </p>
+              <p className="px-4 py-1 text-xs font-bold uppercase tracking-widest text-white/70">{section.section}</p>
             )}
-            {section.items.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== '/' && pathname?.startsWith(item.href + '/'));
+            {section.items.map((entry) => {
+              const target = normalizePath(entry.href);
+              const anchored = entry.href.includes('#');
+              const active = !anchored && (current === target || (target !== '/' && current.startsWith(`${target}/`)));
+              const Icon = ICONS[entry.key];
               return (
                 <Link
-                  key={item.href + item.label}
-                  href={item.href}
-                  aria-label={item.label}
-                  aria-current={active ? "page" : undefined}
-                  title={collapsed ? item.label : undefined}
+                  key={entry.href}
+                  href={entry.href}
+                  aria-label={entry.label}
+                  aria-current={active ? 'page' : undefined}
+                  title={collapsed ? entry.label : undefined}
+                  data-nav-href={target}
                   className={cn(
-                    'relative flex items-center gap-3 mx-2 px-2.5 py-3 rounded-lg text-sm transition-all duration-150',
+                    'relative mx-2 flex items-center gap-3 rounded-lg px-2.5 py-3 text-sm transition-all duration-150',
                     collapsed && 'justify-center',
-                    active
-                      ? 'bg-white/12 text-white font-semibold'
-                      : 'text-white/80 hover:bg-white/5 hover:text-white',
+                    active ? 'bg-white/12 font-semibold text-white' : 'text-white/80 hover:bg-white/5 hover:text-white',
                   )}
                 >
                   {active && !collapsed && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 rounded-r bg-gold-400" />
+                    <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r bg-gold-400" />
                   )}
-                  <item.icon
-                    className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-gold-300' : 'text-white/75')}
-                  />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                  {!collapsed && item.badge && (
-                    <span className="ml-auto text-xs font-bold bg-gold-500 text-brand-900 px-1.5 py-0.5 rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
+                  <Icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-gold-300' : 'text-white/75')} />
+                  {!collapsed && <span className="truncate">{entry.label}</span>}
                 </Link>
               );
             })}
@@ -300,36 +141,39 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       </nav>
 
       {/* ── User + bottom actions ── */}
-      <div className="border-t border-white/10 p-2 space-y-0.5">
+      <div className="space-y-0.5 border-t border-white/10 p-2">
         {!collapsed && user && (
-          <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl mb-1 bg-white/5">
-            <div className="w-8 h-8 rounded-full bg-gold-500 flex items-center justify-center text-brand-900 text-xs font-bold shrink-0">
+          <div className="mb-1 flex items-center gap-2.5 rounded-xl bg-white/5 px-2.5 py-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold-500 text-xs font-bold text-brand-900">
               {initials}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-white truncate">{user.displayName}</p>
-              {/* The account's own identity, or nothing. "Demo mode" was a leftover
-                  placeholder that any account without an email on its token saw. */}
-              {user.email && <p className="text-xs text-white/70 truncate">{user.email}</p>}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-white">{user.displayName}</p>
+              {/* The account's own identity, or nothing. */}
+              {user.email && <p className="truncate text-xs text-white/70">{user.email}</p>}
             </div>
           </div>
         )}
         <Link
           href="/settings"
-          aria-label="Settings" title={collapsed ? 'Settings' : undefined}
+          aria-label="Settings"
+          title={collapsed ? 'Settings' : undefined}
           className={cn(
-            'flex items-center gap-3 px-2.5 py-3 rounded-lg text-sm text-white/80 hover:bg-white/5 hover:text-white transition-colors',
+            'flex items-center gap-3 rounded-lg px-2.5 py-3 text-sm text-white/80 transition-colors hover:bg-white/5 hover:text-white',
             collapsed && 'justify-center',
           )}
         >
           <Settings className="h-[18px] w-[18px] shrink-0" />
           {!collapsed && 'Settings'}
         </Link>
-        <Button variant="quiet" type="button"
+        <Button
+          variant="quiet"
+          type="button"
           onClick={logout}
-          aria-label="Sign out" title={collapsed ? 'Sign out' : undefined}
+          aria-label="Sign out"
+          title={collapsed ? 'Sign out' : undefined}
           className={cn(
-            'flex items-center gap-3 px-2.5 py-2 w-full rounded-xl text-[13px] text-white/80 hover:bg-white/10 hover:text-white transition-colors',
+            'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-[13px] text-white/80 transition-colors hover:bg-white/10 hover:text-white',
             collapsed && 'justify-center',
           )}
         >
@@ -339,16 +183,16 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       </div>
 
       {/* ── Collapse toggle ── */}
-      <Button variant="quiet" type="button"
+      <Button
+        variant="quiet"
+        type="button"
         hidden={mobile}
-        aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+        aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
         aria-expanded={!collapsed}
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-5 top-[72px] w-11 h-11 p-0 rounded-full border border-sandstone bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors z-20"
+        className="absolute -right-5 top-[72px] z-20 flex h-11 w-11 items-center justify-center rounded-full border border-sandstone bg-white p-0 shadow-sm transition-colors hover:bg-gray-50"
       >
-        {collapsed
-          ? <ChevronRight className="h-3 w-3 text-brand-500" />
-          : <ChevronLeft className="h-3 w-3 text-brand-500" />}
+        {collapsed ? <ChevronRight className="h-3 w-3 text-brand-500" /> : <ChevronLeft className="h-3 w-3 text-brand-500" />}
       </Button>
     </aside>
   );
