@@ -2034,6 +2034,7 @@ model Post {
   reactions Reaction[]
   reports   PostReport[]
   savedBy   SavedPost[]
+  editedAt  DateTime?    @map("edited_at") @db.Timestamptz // eng100-a05: set when the author edits the content
 
   @@index([authorId])
   @@index([type, moderationStatus])
@@ -2056,9 +2057,11 @@ model Comment {
   deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
 
   reactions Reaction[]
+  editedAt  DateTime?  @map("edited_at") @db.Timestamptz // eng100-a05: set when the author edits the comment
 
   @@index([postId])
   @@index([authorId])
+  @@index([postId, parentId, createdAt]) // eng100-a05: paginated top-level comments and reply threads
   @@map("comments")
   @@schema("social")
 }
