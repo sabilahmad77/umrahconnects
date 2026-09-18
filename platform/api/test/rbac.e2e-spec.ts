@@ -254,4 +254,133 @@ describe('role architecture, platform separation and privilege escalation', () =
       expect((await ctx.http().get('/uploads/..%2f.env')).status).toBe(404);
     });
   });
+
+  describe('capability changes take effect on the next request (W09 server half)', () => {
+    const roleId = async (name: string) => (await ctx.prisma.role.findFirstOrThrow({ where: { tenantId: null, name } })).id;
+
+    it('a role the organization admin revokes is refused with the same access token and leaves /auth/me', async () => {
+      // A fresh finance account, so no other test's grants blur the result.
+      const bcrypt = await import('bcryptjs');
+      const email = `revocable.${uniq()}@op-a.test`;
+      const account = await ctx.prisma.user.create({
+        data: {
+          tenantId: w.tenants.opA, email, passwordHash: await bcrypt.hash('Revocable-2026', 4),
+          firstName: 'Revocable', lastName: 'Finance', status: 'ACTIVE', emailVerifiedAt: new Date(),
+        },
+      });
+      const rbac = ctx.app.get((await import('../src/modules/rbac/rbac.service')).RbacService);
+      await rbac.grantSystemRole(account.id, 'FINANCE_MANAGER');
+      const login = await ctx.http().post(api('/auth/login')).send({ email, password: 'Revocable-2026' });
+      const finance = { Authorization: `Bearer ${login.body.data.accessToken}` };
+      const as = (path: string) => ctx.http().get(api(path)).set(finance);
+      expect((await as('/pilgrims')).status).toBe(403);
+
+      const staff = await roleId('OPERATOR_STAFF');
+      const granted = await ctx.http().post(api('/rbac/assign')).set(bearer(w.opA)).send({ userId: account.id, roleId: staff });
+      expect(granted.status).toBe(201);
+      expect((await as('/pilgrims')).status).toBe(200);
+      expect((await as('/auth/me')).body.data.permissions).toContain('crm:pilgrim:read');
+
+      const revoked = await ctx.http().delete(api(`/rbac/assign/${account.id}/${staff}`)).set(bearer(w.opA));
+      expect(revoked.status).toBe(200);
+      // Same token as before: authorization is resolved from the database on every request.
+      expect((await as('/pilgrims')).status).toBe(403);
+      const me = (await as('/auth/me')).body.data;
+      expect(me.permissions).not.toContain('crm:pilgrim:read');
+      expect(me.roles).toEqual(['FINANCE_MANAGER']);
+    });
+  });
+
+  describe('the platform console never returns credentials', () => {
+    // Column names (camelCase and database spelling) and relations that hold secrets.
+    const SECRET_KEYS = new Set([
+      'passwordHash', 'password_hash', 'password', 'mfaSecret', 'mfa_secret',
+      'tokenHash', 'token_hash', 'codeHash', 'code_hash', 'refreshTokens', 'otpCodes',
+    ]);
+    const BCRYPT = /\$2[aby]?\$\d{2}\$[./A-Za-z0-9]{20,}/;
+    const MFA_SECRET = 'JBSWY3DPEHPK3PXPLEAKCHECK';
+
+    /** Every path in a JSON body that names a secret column or carries a secret value. */
+    function leaks(value: unknown, path = '$'): string[] {
+      if (Array.isArray(value)) return value.flatMap((v, i) => leaks(v, `${path}[${i}]`));
+      if (value && typeof value === 'object') {
+        return Object.entries(value).flatMap(([k, v]) => [
+          ...(SECRET_KEYS.has(k) ? [`${path}.${k}`] : []),
+          ...leaks(v, `${path}.${k}`),
+        ]);
+      }
+      if (typeof value === 'string' && (BCRYPT.test(value) || value.includes(MFA_SECRET))) return [`${path} (secret value)`];
+      return [];
+    }
+
+    it('no /admin, /tenants or /rbac payload about users carries a password hash, MFA secret or token hash', async () => {
+      const bcrypt = await import('bcryptjs');
+      const email = `leak-probe.${uniq()}@op-a.test`;
+      const probe = await ctx.prisma.user.create({
+        data: {
+          tenantId: w.tenants.opA, email, passwordHash: await bcrypt.hash('Leak-Probe-2026', 4),
+          mfaSecret: MFA_SECRET, mfaEnabled: true, firstName: 'Leak', lastName: 'Probe', status: 'ACTIVE',
+        },
+      });
+      // Give it a live refresh token and a one-time code so those relations exist too.
+      const login = await ctx.http().post(api('/auth/login')).send({ email, password: 'Leak-Probe-2026' });
+      expect([200, 401, 403]).toContain(login.status);
+      const staffRole = (await ctx.prisma.role.findFirstOrThrow({ where: { tenantId: null, name: 'OPERATOR_STAFF' } })).id;
+
+      const admin = (method: 'get' | 'put' | 'post' | 'delete', path: string, body?: object) => {
+        const req = ctx.http()[method](api(path)).set(bearer(w.superAdmin));
+        return body ? req.send(body) : req;
+      };
+      const responses: [string, Awaited<ReturnType<typeof admin>>][] = [
+        ['GET /admin/users', await admin('get', '/admin/users')],
+        ['GET /admin/users?search', await admin('get', `/admin/users?search=${encodeURIComponent('leak-probe')}`)],
+        ['GET /admin/users?tenantId', await admin('get', `/admin/users?tenantId=${w.tenants.opA}`)],
+        ['GET /admin/tenants', await admin('get', '/admin/tenants')],
+        ['GET /admin/tenants/:id', await admin('get', `/admin/tenants/${w.tenants.opA}`)],
+        ['GET /admin/roles', await admin('get', '/admin/roles')],
+        ['GET /admin/roles/:id', await admin('get', `/admin/roles/${staffRole}`)],
+        ['GET /admin/kyc', await admin('get', '/admin/kyc')],
+        ['GET /admin/stats', await admin('get', '/admin/stats')],
+        ['GET /admin/audit-logs', await admin('get', '/admin/audit-logs?limit=200')],
+        ['PUT /admin/users/:id/status', await admin('put', `/admin/users/${probe.id}/status`, { status: 'LOCKED', reason: 'leak probe' })],
+        ['PUT /admin/users/:id/status (unlock)', await admin('put', `/admin/users/${probe.id}/status`, { status: 'ACTIVE' })],
+        ['POST /admin/users/:id/roles', await admin('post', `/admin/users/${probe.id}/roles`, { roleId: staffRole })],
+        ['DELETE /admin/users/:id/roles/:roleId', await admin('delete', `/admin/users/${probe.id}/roles/${staffRole}`)],
+        ['POST /admin/users/:id/force-logout', await admin('post', `/admin/users/${probe.id}/force-logout`)],
+        ['GET /tenants/:id', await admin('get', `/tenants/${w.tenants.opA}`)],
+        ['GET /tenants/me (org admin)', await get(w.opA, '/tenants/me')],
+        ['GET /rbac/roles (org admin)', await get(w.opA, '/rbac/roles')],
+        ['GET /rbac/my-permissions', await get(w.opA, '/rbac/my-permissions')],
+      ];
+      for (const [label, res] of responses) {
+        expect(res.status, label).toBeLessThan(400);
+        expect(leaks(res.body), label).toEqual([]);
+      }
+
+      const listed = responses[1][1].body.data.items.find((u: any) => u.id === probe.id);
+      expect(listed, 'probe user is listed').toBeTruthy();
+      expect(Object.keys(listed)).not.toContain('passwordHash');
+
+      // The CSV export is a text body, so it is checked as text.
+      const csv = await admin('get', '/admin/users/export');
+      expect(csv.status).toBe(200);
+      expect(csv.text).not.toMatch(BCRYPT);
+      expect(csv.text).not.toContain(MFA_SECRET);
+    });
+
+    it('offers only the roles the server would grant', async () => {
+      const users = (await ctx.http().get(api('/admin/users?limit=200')).set(bearer(w.superAdmin))).body.data.items as any[];
+      const names = (id: string) => (users.find((u) => u.id === id)?.assignableRoles ?? []).map((r: any) => r.name);
+      expect(names(w.opA.id)).not.toContain('SUPER_ADMIN');
+      expect(names(w.hotelA.id)).not.toContain('OPERATOR_ADMIN');
+      expect(names(w.hotelA.id)).toContain('FINANCE_MANAGER');
+      expect(names(w.superAdmin.id)).toEqual([]);
+      // Every offer is accepted by the grant endpoint.
+      const offer = users.find((u) => u.id === w.transportA.id).assignableRoles.find((r: any) => r.name === 'FINANCE_MANAGER');
+      const grant = await ctx.http().post(api(`/admin/users/${w.transportA.id}/roles`)).set(bearer(w.superAdmin)).send({ roleId: offer.id });
+      expect(grant.status).toBe(201);
+      const undo = await ctx.http().delete(api(`/admin/users/${w.transportA.id}/roles/${offer.id}`)).set(bearer(w.superAdmin));
+      expect(undo.status).toBe(200);
+    });
+  });
 });

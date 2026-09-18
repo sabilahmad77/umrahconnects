@@ -1,15 +1,67 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { TenantStatus, UserStatus } from '@prisma/client';
-import { ASSIGNABLE_ROLES_BY_TENANT_TYPE } from '../rbac/catalog';
+import { ASSIGNABLE_ROLES_BY_TENANT_TYPE, COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
 import { REGISTRY_SOURCES } from './dto/admin.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { DocumentAccessService } from '../storage/document-access.service';
 
 /** Who performed a privileged action — threaded into every audit row. */
 export interface AdminActor {
   sub?: string;
   email?: string;
   tenantId?: string;
+}
+
+/**
+ * States of an organization that is still being verified. They belong to the
+ * KYC workflow: an organization enters ACTIVE from one of them only through an
+ * approved KYC submission, never through a direct status change.
+ */
+const VERIFICATION_STATUSES: TenantStatus[] = [
+  TenantStatus.PENDING_KYC,
+  TenantStatus.KYC_SUBMITTED,
+  TenantStatus.KYC_APPROVED,
+  TenantStatus.KYC_REJECTED,
+];
+
+/** What the platform remembers about a suspension, kept in `tenant.metadata.suspension`. */
+interface SuspensionRecord {
+  previousStatus: TenantStatus;
+  at: string;
+  by?: string;
+  reason?: string;
+}
+
+type RoleRef = { id: string; name: string; tenantId: string | null };
+
+/**
+ * Why `role` may not be granted to an account of an organization of `tenantType`
+ * (or null when it may):
+ *  - SUPER_ADMIN only to accounts of the PLATFORM organization;
+ *  - global organization roles only where that organization type allows them;
+ *  - organization custom roles only inside their own organization;
+ *  - platform accounts never receive organization roles.
+ */
+function grantRefusal(
+  tenantType: string,
+  userTenantId: string,
+  role: { name: string; tenantId: string | null },
+): { status: 400 | 403; message: string } | null {
+  if (role.tenantId) {
+    return role.tenantId === userTenantId ? null : { status: 400, message: 'Role belongs to a different tenant' };
+  }
+  if (role.name === 'SUPER_ADMIN') {
+    return tenantType === 'PLATFORM'
+      ? null
+      : { status: 403, message: 'Super Admin can only be granted to platform accounts' };
+  }
+  const allowed = (ASSIGNABLE_ROLES_BY_TENANT_TYPE[tenantType] ?? []) as string[];
+  const communityRole = role.name === 'PILGRIM';
+  if (!allowed.includes(role.name) && !(communityRole && tenantType !== 'PLATFORM')) {
+    return { status: 403, message: `Role ${role.name} cannot be granted to a ${tenantType} organization` };
+  }
+  return null;
 }
 
 @Injectable()
@@ -106,6 +158,11 @@ export class AdminService {
   }
 
   // ── Tenants ──────────────────────────────────────────────────────────
+  /**
+   * Each row also says what an administrator can do with it: `verified` (an
+   * approved KYC submission exists, so the organization may be ACTIVE) and
+   * `restoreStatus` (the status a suspension or archive would return it to).
+   */
   async listTenants(query: any = {}) {
     const { status, type, search, page = 1, limit = 50 } = query;
     const where: any = {};
@@ -113,13 +170,22 @@ export class AdminService {
     if (type) where.type = type;
     if (search) where.name = { contains: search, mode: 'insensitive' };
     const skip = (+page - 1) * +limit;
-    const [items, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.tenant.findMany({
         where, skip, take: +limit, orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { users: true } } },
+        include: {
+          _count: { select: { users: true, kycRecords: { where: { verifiedAt: { not: null } } } } },
+        },
       }),
       this.prisma.tenant.count({ where }),
     ]);
+    const items = await Promise.all(
+      rows.map(async (t) => ({
+        ...t,
+        verified: t.type === 'PLATFORM' || t._count.kycRecords > 0,
+        restoreStatus: await this.restoreStatusOf(t),
+      })),
+    );
     return { items, total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
   }
 
@@ -128,18 +194,71 @@ export class AdminService {
       where: { id },
       include: {
         users: { select: { id: true, email: true, firstName: true, lastName: true, status: true } },
-        kycRecords: true,
+        kycRecords: { orderBy: { createdAt: 'desc' } },
         _count: { select: { users: true, roles: true } },
       },
     });
     if (!tenant) throw new NotFoundException('Tenant not found');
-    return tenant;
+    return {
+      ...tenant,
+      verified: tenant.type === 'PLATFORM' || tenant.kycRecords.some((k) => !!k.verifiedAt),
+      restoreStatus: await this.restoreStatusOf(tenant),
+    };
   }
 
+  private static metadataOf(tenant: { metadata?: unknown }): Record<string, any> {
+    const m = tenant.metadata;
+    return m && typeof m === 'object' && !Array.isArray(m) ? { ...(m as Record<string, any>) } : {};
+  }
+
+  /**
+   * The status a suspended or archived organization returns to when that is
+   * lifted. It is recorded on the organization when the suspension or archive
+   * happens; for ones made before that, the audit trail row of the change has it.
+   */
+  private async restoreStatusOf(tenant: {
+    id: string;
+    status: TenantStatus;
+    metadata?: unknown;
+  }): Promise<TenantStatus | null> {
+    if (tenant.status !== TenantStatus.SUSPENDED && tenant.status !== TenantStatus.CHURNED) return null;
+    const meta = AdminService.metadataOf(tenant);
+    const recorded: SuspensionRecord | undefined =
+      tenant.status === TenantStatus.SUSPENDED ? meta.suspension : meta.archive;
+    if (recorded?.previousStatus) return recorded.previousStatus;
+    const row = await this.prisma.auditLog.findFirst({
+      where: {
+        tenantId: tenant.id,
+        resource: 'tenant',
+        resourceId: tenant.id,
+        action: { in: ['TENANT_CONFIG_CHANGE', 'SOFT_DELETE'] as any },
+      },
+      orderBy: { occurredAt: 'desc' },
+      select: { beforeState: true, afterState: true },
+    });
+    const after = (row?.afterState as any)?.status;
+    const previous = (row?.beforeState as any)?.status;
+    return after === tenant.status && previous ? (previous as TenantStatus) : null;
+  }
+
+  /**
+   * Change an organization's status from the platform console.
+   *
+   * What this can do: suspend an organization, lift a suspension (the
+   * organization returns to the status it had), restore an archived
+   * organization, and reactivate an organization that has passed verification.
+   * What it cannot do: activate an organization that has not been verified, or
+   * move one between verification states. Those decisions belong to KYC review
+   * (approve / reject), so there is exactly one path to ACTIVE for a new
+   * organization and it leaves a review record behind.
+   */
   async updateTenantStatus(id: string, status: TenantStatus, actor?: AdminActor, reason?: string) {
     const before = await this.findTenant(id);
     if (before.status === status) {
       throw new BadRequestException(`Tenant is already ${status}`);
+    }
+    if (status === TenantStatus.CHURNED) {
+      throw new BadRequestException('Use Archive to retire an organization');
     }
     // A non-ACTIVE tenant is rejected at the auth guard, so downgrading your
     // own tenant would immediately lock you out of the admin surface.
@@ -148,20 +267,55 @@ export class AdminService {
         'You cannot suspend the tenant you are signed in to — it would lock you out',
       );
     }
+    if (status !== TenantStatus.ACTIVE && before.slug === COMMUNITY_TENANT_SLUG) {
+      throw new BadRequestException(
+        'The traveler community cannot be suspended — it would sign out every traveler. Lock individual accounts instead.',
+      );
+    }
+
+    const lifting = before.restoreStatus === status;
+    if (!lifting) {
+      if (VERIFICATION_STATUSES.includes(status)) {
+        throw new BadRequestException('Verification states change only through KYC review');
+      }
+      if (status === TenantStatus.ACTIVE && !before.verified) {
+        throw new BadRequestException(
+          'This organization has not been verified. Approve its KYC submission to activate it.',
+        );
+      }
+      if (status === TenantStatus.SUSPENDED && before.deletedAt) {
+        throw new BadRequestException('Restore the archived organization before suspending it');
+      }
+    }
+
+    const metadata = AdminService.metadataOf(before);
+    if (status === TenantStatus.SUSPENDED) {
+      metadata.suspension = {
+        previousStatus: before.status,
+        at: new Date().toISOString(),
+        by: actor?.email ?? actor?.sub,
+        reason,
+      } satisfies SuspensionRecord;
+    } else if (before.status === TenantStatus.SUSPENDED) {
+      delete metadata.suspension;
+    }
+    if (before.status === TenantStatus.CHURNED) delete metadata.archive;
+
     const tenant = await this.prisma.tenant.update({
       where: { id },
       data: {
         status,
-        // Reactivating un-archives: otherwise a tenant reads as ACTIVE while
-        // still carrying deletedAt, i.e. active and archived at the same time.
-        ...(status === TenantStatus.ACTIVE ? { deletedAt: null } : {}),
+        metadata,
+        // Leaving the archive clears deletedAt: otherwise a tenant reads as
+        // ACTIVE while still carrying deletedAt, i.e. active and archived at once.
+        ...(before.deletedAt ? { deletedAt: null } : {}),
       },
     });
     await this.trail(
       actor, 'TENANT_CONFIG_CHANGE', 'tenant', id,
       { status: before.status, deletedAt: before.deletedAt },
       { status: tenant.status, deletedAt: tenant.deletedAt },
-      { tenantName: tenant.name, reason }, id,
+      { tenantName: tenant.name, reason, lifted: lifting || undefined }, id,
     );
     return tenant;
   }
@@ -179,9 +333,18 @@ export class AdminService {
         'You cannot archive the tenant you are signed in to — it would lock you out',
       );
     }
+    if (before.slug === COMMUNITY_TENANT_SLUG) {
+      throw new BadRequestException('The traveler community cannot be archived');
+    }
+    const metadata = AdminService.metadataOf(before);
+    metadata.archive = {
+      previousStatus: before.status,
+      at: new Date().toISOString(),
+      by: actor?.email ?? actor?.sub,
+    } satisfies SuspensionRecord;
     const tenant = await this.prisma.tenant.update({
       where: { id },
-      data: { status: TenantStatus.CHURNED, deletedAt: new Date() },
+      data: { status: TenantStatus.CHURNED, deletedAt: new Date(), metadata },
     });
     await this.trail(
       actor, 'SOFT_DELETE', 'tenant', id,
@@ -204,6 +367,12 @@ export class AdminService {
   }
 
   // ── Users ────────────────────────────────────────────────────────────
+  /**
+   * Users across organizations. Fields are listed explicitly: spreading the
+   * whole row used to send every password hash and MFA secret to the browser.
+   * `assignableRoles` is what the server would accept for that account, so the
+   * console offers only grants that can succeed.
+   */
   async listUsers(query: any = {}) {
     const { status, tenantId, search, page = 1, limit = 50 } = query;
     const where: any = {};
@@ -215,24 +384,39 @@ export class AdminService {
       { lastName: { contains: search, mode: 'insensitive' } },
     ];
     const skip = (+page - 1) * +limit;
-    const [items, total] = await Promise.all([
+    const [items, total, roles] = await Promise.all([
       this.prisma.user.findMany({
         where, skip, take: +limit, orderBy: { createdAt: 'desc' },
-        include: {
-          tenant: { select: { id: true, name: true, type: true } },
-          userRoles: { include: { role: { select: { id: true, name: true } } } },
+        select: {
+          ...AdminService.USER_FIELDS,
+          tenant: { select: { id: true, name: true, type: true, status: true } },
+          userRoles: { select: { role: { select: { id: true, name: true } } } },
         },
       }),
       this.prisma.user.count({ where }),
+      this.prisma.role.findMany({ select: { id: true, name: true, tenantId: true }, orderBy: { name: 'asc' } }),
     ]);
     return {
-      items: items.map((u: any) => ({
-        ...u,
-        roles: u.userRoles?.map((ur: any) => ({ id: ur.role.id, name: ur.role.name })) ?? [],
-      })),
+      items: items.map(({ userRoles, ...u }) => {
+        const held = new Set(userRoles.map((ur) => ur.role.id));
+        return {
+          ...u,
+          roles: userRoles.map((ur) => ({ id: ur.role.id, name: ur.role.name })),
+          assignableRoles: roles
+            .filter((r: RoleRef) => !held.has(r.id) && !grantRefusal(u.tenant?.type ?? '', u.tenantId, r))
+            .map((r) => ({ id: r.id, name: r.name, tenantId: r.tenantId })),
+        };
+      }),
       total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit),
     };
   }
+
+  /** The user fields the platform console may see. Never credentials or MFA material. */
+  private static readonly USER_FIELDS = {
+    id: true, tenantId: true, email: true, phone: true, status: true,
+    firstName: true, lastName: true, avatarUrl: true, emailVerifiedAt: true,
+    lastLoginAt: true, lockedUntil: true, createdAt: true, updatedAt: true,
+  } as const;
 
   private async mustFindUser(id: string) {
     if (!id) throw new BadRequestException('User id is required');
@@ -258,6 +442,7 @@ export class AdminService {
         ...(revoke ? { sessionsRevokedAt: AdminService.revocationInstant() } : {}),
         ...(status === UserStatus.ACTIVE ? { failedLoginCount: 0, lockedUntil: null } : {}),
       },
+      select: AdminService.USER_FIELDS,
     });
     if (revoke) {
       await this.prisma.refreshToken.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
@@ -305,29 +490,12 @@ export class AdminService {
     return created;
   }
 
-  /**
-   * Which role may be granted to which account:
-   *  - SUPER_ADMIN only to accounts of the PLATFORM organization;
-   *  - global organization roles only where that organization type allows them;
-   *  - organization custom roles only inside their own organization;
-   *  - platform accounts never receive organization roles.
-   */
+  /** Refuses a grant `grantRefusal` would refuse (see the rules there). */
   private async assertGrantable(userTenantId: string, role: { name: string; tenantId: string | null }) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: userTenantId }, select: { type: true } });
-    const type = tenant?.type ?? '';
-    if (role.tenantId) {
-      if (role.tenantId !== userTenantId) throw new BadRequestException('Role belongs to a different tenant');
-      return;
-    }
-    if (role.name === 'SUPER_ADMIN') {
-      if (type !== 'PLATFORM') throw new ForbiddenException('Super Admin can only be granted to platform accounts');
-      return;
-    }
-    const allowed = ASSIGNABLE_ROLES_BY_TENANT_TYPE[type] ?? [];
-    const communityRole = role.name === 'PILGRIM';
-    if (!(allowed as string[]).includes(role.name) && !(communityRole && type !== 'PLATFORM')) {
-      throw new ForbiddenException(`Role ${role.name} cannot be granted to a ${type} organization`);
-    }
+    const refusal = grantRefusal(tenant?.type ?? '', userTenantId, role);
+    if (!refusal) return;
+    throw refusal.status === 400 ? new BadRequestException(refusal.message) : new ForbiddenException(refusal.message);
   }
 
   /** Revocation timestamps are truncated to whole seconds to match JWT `iat`. */
@@ -373,8 +541,13 @@ export class AdminService {
   }
 
   // ── KYC verification ────────────────────────────────────────────────
+  /**
+   * Submissions for review, newest first. Each carries its decision history
+   * from the audit trail (who approved or rejected it, when, and the note or
+   * reason they gave), because the KYC row itself only records the outcome.
+   */
   async listKyc(query: any = {}) {
-    const { status } = query;
+    const { status, tenantId } = query;
     const where: any = {};
     if (status === 'PENDING') {
       where.verifiedAt = null;
@@ -384,11 +557,38 @@ export class AdminService {
     } else if (status === 'REJECTED') {
       where.rejectionReason = { not: null };
     }
-    return this.prisma.tenantKyc.findMany({
+    if (tenantId) where.tenantId = tenantId;
+    const records = await this.prisma.tenantKyc.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { tenant: { select: { id: true, name: true, type: true, email: true, country: true } } },
+      include: {
+        tenant: {
+          select: {
+            id: true, name: true, slug: true, type: true, status: true, email: true, phone: true,
+            country: true, licenseNumber: true, website: true, deletedAt: true,
+          },
+        },
+      },
     });
+    const decisions = records.length
+      ? await this.prisma.auditLog.findMany({
+          where: { resource: 'tenant_kyc', resourceId: { in: records.map((r) => r.id) } },
+          orderBy: { occurredAt: 'asc' },
+          select: { resourceId: true, actorEmail: true, occurredAt: true, metadata: true },
+        })
+      : [];
+    return records.map((record) => ({
+      ...record,
+      decisions: decisions
+        .filter((d) => d.resourceId === record.id && (d.metadata as any)?.decision)
+        .map((d) => ({
+          decision: (d.metadata as any).decision as string,
+          by: d.actorEmail,
+          at: d.occurredAt,
+          reason: (d.metadata as any).reason as string | undefined,
+          notes: (d.metadata as any).notes as string | undefined,
+        })),
+    }));
   }
 
   async findKyc(id: string) {
@@ -400,43 +600,93 @@ export class AdminService {
     return kyc;
   }
 
-  async approveKyc(id: string, actor?: AdminActor, notes?: string) {
-    const kyc = await this.findKyc(id);
-    if (kyc.verifiedAt) throw new BadRequestException('KYC record is already approved');
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.tenantKyc.update({
-        where: { id },
-        data: { verifiedAt: new Date(), verifiedBy: actor?.sub, rejectionReason: null },
-      });
-      if (!kyc.tenant.deletedAt && kyc.tenant.status !== TenantStatus.SUSPENDED) {
-        await tx.tenant.update({ where: { id: kyc.tenantId }, data: { status: TenantStatus.ACTIVE } });
-      }
-      return row;
-    });
-    await this.trail(actor, 'TENANT_CONFIG_CHANGE', 'tenant_kyc', id, { status: kyc.tenant.status }, { status: 'ACTIVE' }, { decision: 'APPROVED', notes }, kyc.tenantId);
-    return updated;
+  /**
+   * A submission is decided exactly once. Revisiting an approval is done by
+   * suspending the organization; a rejected submission is answered by the
+   * organization submitting corrected documents, which creates a new record.
+   */
+  private static assertUndecided(kyc: { verifiedAt: Date | null; rejectionReason: string | null }) {
+    if (kyc.verifiedAt) throw new BadRequestException('This submission has already been approved');
+    if (kyc.rejectionReason) {
+      throw new BadRequestException(
+        'This submission has already been rejected. The organization can submit corrected documents.',
+      );
+    }
   }
 
-  async rejectKyc(id: string, reason: string, actor?: AdminActor) {
-    if (!reason?.trim()) throw new BadRequestException('A rejection reason is required');
+  /** Whether a KYC decision moves the organization: only while it is being verified. */
+  private static inVerification(tenant: { status: TenantStatus; deletedAt: Date | null }) {
+    return !tenant.deletedAt && VERIFICATION_STATUSES.includes(tenant.status);
+  }
+
+  /**
+   * Approve a submission. This is the only way an organization that is being
+   * verified becomes ACTIVE. A suspended or archived organization keeps its
+   * status; the approval is recorded and counts when the suspension is lifted.
+   */
+  async approveKyc(id: string, actor?: AdminActor, notes?: string) {
     const kyc = await this.findKyc(id);
+    AdminService.assertUndecided(kyc);
+    const activates = AdminService.inVerification(kyc.tenant);
     const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.tenantKyc.update({
-        where: { id },
-        data: { rejectionReason: reason.trim(), verifiedAt: null, verifiedBy: null },
+      // Guarded write: two reviewers deciding the same submission at once
+      // cannot both succeed, and the loser is told rather than overwriting.
+      const decided = await tx.tenantKyc.updateMany({
+        where: { id, verifiedAt: null, rejectionReason: null },
+        data: { verifiedAt: new Date(), verifiedBy: actor?.sub ?? null },
       });
-      if (kyc.tenant.status !== TenantStatus.ACTIVE && kyc.tenant.status !== TenantStatus.SUSPENDED) {
+      if (!decided.count) throw new ConflictException('This submission was decided by someone else just now');
+      if (activates) {
+        await tx.tenant.update({ where: { id: kyc.tenantId }, data: { status: TenantStatus.ACTIVE } });
+      }
+      return tx.tenantKyc.findUniqueOrThrow({ where: { id } });
+    });
+    const tenantStatus = activates ? TenantStatus.ACTIVE : kyc.tenant.status;
+    await this.trail(
+      actor, 'TENANT_CONFIG_CHANGE', 'tenant_kyc', id,
+      { status: kyc.tenant.status }, { status: tenantStatus },
+      { decision: 'APPROVED', notes: notes?.trim() || undefined, tenantName: kyc.tenant.name }, kyc.tenantId,
+    );
+    return { ...updated, tenantStatus };
+  }
+
+  /**
+   * Send a submission back with a reason the organization will see. The
+   * organization stays unverified (KYC_REJECTED) and can resubmit.
+   */
+  async rejectKyc(id: string, reason: string, actor?: AdminActor) {
+    const text = reason?.trim() ?? '';
+    if (text.length < 3) {
+      throw new BadRequestException('Give the organization a reason of at least 3 characters');
+    }
+    const kyc = await this.findKyc(id);
+    AdminService.assertUndecided(kyc);
+    const flags = AdminService.inVerification(kyc.tenant);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const decided = await tx.tenantKyc.updateMany({
+        where: { id, verifiedAt: null, rejectionReason: null },
+        data: { rejectionReason: text },
+      });
+      if (!decided.count) throw new ConflictException('This submission was decided by someone else just now');
+      if (flags) {
         await tx.tenant.update({ where: { id: kyc.tenantId }, data: { status: TenantStatus.KYC_REJECTED } });
       }
-      return row;
+      return tx.tenantKyc.findUniqueOrThrow({ where: { id } });
     });
-    await this.trail(actor, 'TENANT_CONFIG_CHANGE', 'tenant_kyc', id, undefined, undefined, { decision: 'REJECTED', reason }, kyc.tenantId);
-    return updated;
+    const tenantStatus = flags ? TenantStatus.KYC_REJECTED : kyc.tenant.status;
+    await this.trail(
+      actor, 'TENANT_CONFIG_CHANGE', 'tenant_kyc', id,
+      { status: kyc.tenant.status }, { status: tenantStatus },
+      { decision: 'REJECTED', reason: text, tenantName: kyc.tenant.name }, kyc.tenantId,
+    );
+    return { ...updated, tenantStatus };
   }
 
   async createKyc(tenantId: string, dto: { registrySource?: string; documents?: any[]; registryData?: any }, actor?: AdminActor) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
     if (!tenant) throw new NotFoundException('Tenant not found');
+    // Reviewers can only open files stored under the organization's own KYC folder.
+    DocumentAccessService.assertKycDocuments(tenantId, dto.documents);
     const raw = String(dto.registrySource ?? 'MANUAL').toUpperCase().replace(/[\s-]+/g, '_');
     if (!(REGISTRY_SOURCES as readonly string[]).includes(raw)) {
       throw new BadRequestException(`Invalid registrySource "${dto.registrySource}". Allowed: ${REGISTRY_SOURCES.join(', ')}`);

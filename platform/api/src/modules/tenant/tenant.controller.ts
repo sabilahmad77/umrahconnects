@@ -37,7 +37,7 @@ export class TenantController {
   @AllowPendingTenant()
   @ApiOperation({ summary: 'Current organization' })
   async getMyTenant(@TenantId() tenantId: string) {
-    return { success: true, data: await this.tenantService.findById(tenantId) };
+    return { success: true, data: TenantService.ownView(await this.tenantService.findById(tenantId)) };
   }
 
   @Put('me')
@@ -45,7 +45,7 @@ export class TenantController {
   @AllowPendingTenant()
   @ApiOperation({ summary: 'Update the current organization profile' })
   async updateMyTenant(@TenantId() tenantId: string, @Body() dto: UpdateTenantDto) {
-    return { success: true, data: await this.tenantService.update(tenantId, dto) };
+    return { success: true, data: TenantService.ownView(await this.tenantService.update(tenantId, dto)) };
   }
 
   @Post('me/kyc')

@@ -49,31 +49,42 @@ export class OnboardingService {
       if (dto.slug) throw new ConflictException(`Organization slug '${slug}' is already taken`);
       slug = `${slug}-${Math.random().toString(36).slice(2, 8)}`;
     }
+    const adminRoleId = await this.rbac.systemRoleId(adminRole);
 
-    const tenant = await this.prisma.$transaction(async (tx) => {
-      const org = await tx.tenant.create({
-        data: {
-          slug,
-          name: dto.name,
-          nameAr: dto.nameAr,
-          type: dto.type,
-          status: 'PENDING_KYC',
-          email: dto.email ?? user.email!,
-          phone: dto.phone,
-          country: dto.country,
-          licenseNumber: dto.licenseNumber,
-          website: dto.website,
-          settings: {},
-        },
+    // One transaction for the whole move: the organization, the founder's new
+    // home and the founder's new role either all exist or none do. Granting the
+    // role afterwards used to leave a founder with no role at all if that
+    // second write failed.
+    const tenant = await this.prisma
+      .$transaction(async (tx) => {
+        const org = await tx.tenant.create({
+          data: {
+            slug,
+            name: dto.name.trim(),
+            nameAr: dto.nameAr?.trim() || undefined,
+            type: dto.type,
+            status: 'PENDING_KYC',
+            email: dto.email ?? user.email!,
+            phone: dto.phone,
+            country: dto.country.toUpperCase(),
+            licenseNumber: dto.licenseNumber?.trim() || undefined,
+            website: dto.website,
+            settings: {},
+          },
+        });
+        // The founder moves into the new organization. Traveler-only grants are dropped.
+        await tx.user.update({ where: { id: user.id }, data: { tenantId: org.id, status: 'ACTIVE' } });
+        await tx.userRole.deleteMany({
+          where: { userId: user.id, role: { OR: [{ tenantId: { not: null } }, { name: { in: ROLE_CODES } }] } },
+        });
+        await tx.userRole.create({ data: { userId: user.id, roleId: adminRoleId, grantedBy: user.id } });
+        return org;
+      })
+      .catch((error: { code?: string }) => {
+        // Two founders racing for the same generated slug: the unique index decides.
+        if (error?.code === 'P2002') throw new ConflictException('That organization address was just taken. Try again.');
+        throw error;
       });
-      // The founder moves into the new organization. Traveler-only grants are dropped.
-      await tx.user.update({ where: { id: user.id }, data: { tenantId: org.id, status: 'ACTIVE' } });
-      await tx.userRole.deleteMany({
-        where: { userId: user.id, role: { OR: [{ tenantId: { not: null } }, { name: { in: ROLE_CODES } }] } },
-      });
-      return org;
-    });
-    await this.rbac.grantSystemRole(user.id, adminRole, user.id);
     await this.auth.revokeAllSessions(user.id);
     await this.audit.log({
       tenantId: tenant.id, actorId: user.id, actorEmail: user.email ?? undefined, action: 'CREATE',
