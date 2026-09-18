@@ -14,12 +14,49 @@
  *   - 1 booking
  */
 
-import { PrismaClient, TenantType, TenantStatus, TenantTier, UserStatus, Gender, PilgrimStatus, BookingStatus } from '@prisma/client';
+import { Prisma, PrismaClient, TenantType, TenantStatus, TenantTier, UserStatus, Gender, PilgrimStatus, BookingStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 const ADMIN_PASSWORD = 'Admin@1234';
 const BCRYPT_ROUNDS = 10;
+
+// ── Idempotency helpers (AUD-028 / D08) ──────────────────────────────────────
+// The seed can run again on an existing database: records are found by their
+// natural keys (tenant + phone, tenant + package name, booking ref) and every
+// booking is linked to the travelers it was priced for, so a booking never
+// shows "0 pilgrims" and a BOOKED traveler always has a booking.
+
+async function ensurePilgrim(data: Prisma.PilgrimUncheckedCreateInput) {
+  const existing = await prisma.pilgrim.findFirst({ where: { tenantId: data.tenantId, phone: data.phone ?? undefined, deletedAt: null } });
+  // Every seeded traveler is in a booking: a LEAD/PROSPECT status contradicts that and is corrected.
+  // Later statuses (visa progress set by seed-modules or by real workflows) are left alone.
+  if (existing) {
+    if (existing.status === 'LEAD' || existing.status === 'PROSPECT') {
+      return prisma.pilgrim.update({ where: { id: existing.id }, data: { status: data.status } });
+    }
+    return existing;
+  }
+  return prisma.pilgrim.create({ data });
+}
+
+async function ensurePackage(data: Prisma.PackageUncheckedCreateInput) {
+  const existing = await prisma.package.findFirst({ where: { tenantId: data.tenantId, name: data.name } });
+  return existing ?? prisma.package.create({ data });
+}
+
+/** The booking plus exactly one BookingPilgrim row per traveler, each at the package price. */
+async function ensureBooking(data: Prisma.BookingUncheckedCreateInput, pilgrimIds: string[], priceCents: bigint) {
+  const booking = await prisma.booking.upsert({ where: { bookingRef: data.bookingRef }, create: data, update: {} });
+  for (const pilgrimId of pilgrimIds) {
+    await prisma.bookingPilgrim.upsert({
+      where: { bookingId_pilgrimId: { bookingId: booking.id, pilgrimId } },
+      create: { tenantId: booking.tenantId, bookingId: booking.id, pilgrimId, priceCents, currency: booking.currency },
+      update: {},
+    });
+  }
+  return booking;
+}
 
 async function main() {
   console.log('🌱 Seeding Umrah Connects database...\n');
@@ -163,21 +200,20 @@ async function main() {
     { firstNameEn: 'Abubakar', lastNameEn: 'Suleiman', nationality: 'NG', country: 'NG', gender: Gender.MALE, phone: '+2348012345678', priorUmrahCount: 0 },
   ];
 
+  const ksaPilgrimsIds: string[] = [];
   for (const pilgrimData of ksaPilgrims) {
-    await prisma.pilgrim.create({
-      data: {
+    const pilgrim = await ensurePilgrim({
         tenantId: ksaTenant.id,
         status: PilgrimStatus.BOOKED,
         dateOfBirth: new Date('1985-03-15'),
         preferredLanguage: pilgrimData.nationality === 'SA' ? 'ar' : pilgrimData.nationality === 'ID' ? 'id' : 'en',
         ...pilgrimData,
-      },
     });
+    ksaPilgrimsIds.push(pilgrim.id);
   }
 
   // KSA Package
-  const ksaPackage = await prisma.package.create({
-    data: {
+  const ksaPackage = await ensurePackage({
       tenantId: ksaTenant.id,
       name: 'Ramadan VIP Umrah Package 2026',
       nameAr: 'باقة عمرة رمضان VIP 2026',
@@ -193,12 +229,10 @@ async function main() {
       includes: { visa: true, flight: false, hotel_makkah: true, hotel_madinah: true, transport: true, meals: true, guide: true },
       isPublished: true,
       createdBy: ksaAdmin.id,
-    },
   });
 
   // KSA Booking
-  await prisma.booking.create({
-    data: {
+  await ensureBooking({
       tenantId: ksaTenant.id,
       bookingRef: 'UC-2026-00001',
       packageId: ksaPackage.id,
@@ -209,8 +243,7 @@ async function main() {
       departureDate: new Date('2026-03-01'),
       returnDate: new Date('2026-03-15'),
       createdBy: ksaAdmin.id,
-    },
-  });
+  }, ksaPilgrimsIds, ksaPackage.basePriceCents);
 
   console.log(`   ✓ Tenant: ${ksaTenant.slug} | Admin: admin@alharamain.sa | Password: Admin@1234\n`);
 
@@ -291,9 +324,9 @@ async function main() {
     { firstNameEn: 'Agus', lastNameEn: 'Setiawan', gender: Gender.MALE, phone: '+6281355555555', priorUmrahCount: 0 },
   ];
 
+  const idPilgrimsIds: string[] = [];
   for (const pilgrimData of idPilgrims) {
-    await prisma.pilgrim.create({
-      data: {
+    const pilgrim = await ensurePilgrim({
         tenantId: idTenant.id,
         status: PilgrimStatus.VISA_PENDING,
         nationality: 'ID',
@@ -301,13 +334,12 @@ async function main() {
         dateOfBirth: new Date('1988-07-20'),
         preferredLanguage: 'id',
         ...pilgrimData,
-      },
     });
+    idPilgrimsIds.push(pilgrim.id);
   }
 
   // Indonesian Package
-  const idPackage = await prisma.package.create({
-    data: {
+  const idPackage = await ensurePackage({
       tenantId: idTenant.id,
       name: 'Paket Umrah Ekonomi Ramadhan 1447H',
       tier: 'ECONOMY',
@@ -322,11 +354,9 @@ async function main() {
       includes: { visa: true, flight: true, hotel_makkah: true, hotel_madinah: true, transport: true, meals: false, guide: true },
       isPublished: true,
       createdBy: idAdmin.id,
-    },
   });
 
-  await prisma.booking.create({
-    data: {
+  await ensureBooking({
       tenantId: idTenant.id,
       bookingRef: 'UC-2026-00002',
       packageId: idPackage.id,
@@ -337,8 +367,7 @@ async function main() {
       departureDate: new Date('2026-03-05'),
       returnDate: new Date('2026-03-17'),
       createdBy: idAdmin.id,
-    },
-  });
+  }, idPilgrimsIds, idPackage.basePriceCents);
 
   console.log(`   ✓ Tenant: ${idTenant.slug} | Admin: admin@baitussalam.co.id | Password: Admin@1234\n`);
 
@@ -419,23 +448,23 @@ async function main() {
     { firstNameEn: 'Hassan', lastNameEn: 'Raza', gender: Gender.MALE, phone: '+923255555555', priorUmrahCount: 2 },
   ];
 
+  const pkPilgrimsIds: string[] = [];
   for (const pilgrimData of pkPilgrims) {
-    await prisma.pilgrim.create({
-      data: {
+    const pilgrim = await ensurePilgrim({
         tenantId: pkTenant.id,
-        status: PilgrimStatus.PROSPECT,
+        // In the partially paid booking below, so BOOKED (PROSPECT contradicted the booking — AUD-028).
+        status: PilgrimStatus.BOOKED,
         nationality: 'PK',
         country: 'PK',
         dateOfBirth: new Date('1990-11-05'),
         preferredLanguage: 'ur',
         ...pilgrimData,
-      },
     });
+    pkPilgrimsIds.push(pilgrim.id);
   }
 
   // Pakistani Package
-  const pkPackage = await prisma.package.create({
-    data: {
+  const pkPackage = await ensurePackage({
       tenantId: pkTenant.id,
       name: 'Standard Umrah Package 2026',
       tier: 'STANDARD',
@@ -450,11 +479,9 @@ async function main() {
       includes: { visa: true, flight: true, hotel_makkah: true, hotel_madinah: false, transport: true, meals: false, guide: false },
       isPublished: true,
       createdBy: pkAdmin.id,
-    },
   });
 
-  await prisma.booking.create({
-    data: {
+  await ensureBooking({
       tenantId: pkTenant.id,
       bookingRef: 'UC-2026-00003',
       packageId: pkPackage.id,
@@ -465,8 +492,7 @@ async function main() {
       departureDate: new Date('2026-04-01'),
       returnDate: new Date('2026-04-11'),
       createdBy: pkAdmin.id,
-    },
-  });
+  }, pkPilgrimsIds, pkPackage.basePriceCents);
 
   console.log(`   ✓ Tenant: ${pkTenant.slug} | Admin: admin@kaabatravel.pk | Password: Admin@1234\n`);
 
@@ -515,8 +541,8 @@ async function main() {
   });
 
   // Seed posts
-  await prisma.post.createMany({
-    data: [
+  // Posts have no natural unique key, so each is created only if the same author has not posted it yet.
+  const seedPosts: Prisma.PostUncheckedCreateInput[] = [
       {
         authorId: ksaSocialAccount.id,
         type: 'OFFER' as any,
@@ -594,9 +620,11 @@ async function main() {
         commentCount: 67,
         shareCount: 45,
       },
-    ],
-    skipDuplicates: true,
-  });
+  ];
+  for (const post of seedPosts) {
+    const exists = await prisma.post.findFirst({ where: { authorId: post.authorId, body: post.body } });
+    if (!exists) await prisma.post.create({ data: post });
+  }
 
   console.log('   ✓ Social feed posts seeded\n');
 

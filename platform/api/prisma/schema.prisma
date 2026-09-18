@@ -379,6 +379,7 @@ model User {
   otpCodes      OtpCode[]
   identities    UserIdentity[]
   socialAccount SocialAccount?
+  pilgrimLinks  PilgrimAccountLink[] // eng100-a07
 
   @@unique([tenantId, email])
   @@unique([tenantId, phone])
@@ -584,6 +585,7 @@ model Pilgrim {
   rowVersion Int       @default(1) @map("row_version")
 
   documents PilgrimDocument[]
+  accountLinks PilgrimAccountLink[] // eng100-a07
 
   @@index([tenantId])
   @@index([tenantId, status])
@@ -631,6 +633,73 @@ model PilgrimDocument {
 
   @@index([tenantId, pilgrimId])
   @@map("pilgrim_documents")
+  @@schema("plugin_crm")
+}
+
+// eng100-a07 — traveler ↔ pilgrim linkage (P06 / XT-003, DECISIONS.md D-022)
+enum PilgrimLinkStatus {
+  INVITED // invitation emailed, waiting for the traveler
+  ACTIVE // accepted by the verified traveler account the invitation was sent to
+  DECLINED // the traveler declined the invitation
+  REVOKED // the organization withdrew the invitation or ended the link
+  UNLINKED // the traveler ended an active link
+  EXPIRED // the invitation passed its expiry unused
+
+  @@schema("plugin_crm")
+}
+
+/// An organization-initiated, traveler-accepted relationship between ONE traveler
+/// account and ONE pilgrim record of ONE organization. It is the only way a
+/// traveler account can see organization data about a pilgrim record, and it
+/// only ever exposes that record's trip status — never organization-wide reads.
+/// Nothing is linked because an email, name or phone happens to match.
+///
+/// Integrity rules that Prisma 5 cannot express live in the migration
+/// 20260918170000_pilgrim_account_links (Prisma's diff ignores them, so they do
+/// not show up as drift):
+///   - partial unique index: at most one ACTIVE link per pilgrim record (which
+///     also means an account can never hold two ACTIVE links to one record);
+///   - partial unique index: at most one outstanding INVITED invitation per record;
+///   - CHECK: an ACTIVE link has an account and an acceptance time;
+///   - CHECK: an INVITED link has a token hash.
+model PilgrimAccountLink {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// The organization that holds the pilgrim record (and invited the traveler).
+  tenantId  String            @map("tenant_id") @db.Uuid
+  pilgrimId String            @map("pilgrim_id") @db.Uuid
+  pilgrim   Pilgrim           @relation(fields: [pilgrimId], references: [id], onDelete: Cascade)
+  /// The traveler account — set only when the invitation is accepted.
+  userId    String?           @map("user_id") @db.Uuid
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    PilgrimLinkStatus @default(INVITED)
+
+  /// Lower-cased address the invitation was sent to. Acceptance requires the
+  /// accepting account's verified email to be exactly this address.
+  invitedEmail String  @map("invited_email") @db.VarChar(255)
+  /// RECORD = the pilgrim's email on file; ENTERED = typed by the inviting staff member.
+  emailSource  String  @default("RECORD") @map("email_source") @db.VarChar(20)
+  /// SHA-256 (hex) of the single-use invitation token. The raw token exists only
+  /// in the emailed link; the hash is cleared as soon as the invitation is answered.
+  tokenHash    String? @unique @map("token_hash") @db.VarChar(64)
+
+  invitedBy     String    @map("invited_by") @db.Uuid
+  invitedAt     DateTime  @default(now()) @map("invited_at") @db.Timestamptz
+  expiresAt     DateTime  @map("expires_at") @db.Timestamptz
+  lastSentAt    DateTime  @default(now()) @map("last_sent_at") @db.Timestamptz
+  sendCount     Int       @default(1) @map("send_count")
+  acceptedAt    DateTime? @map("accepted_at") @db.Timestamptz
+  declinedAt    DateTime? @map("declined_at") @db.Timestamptz
+  unlinkedAt    DateTime? @map("unlinked_at") @db.Timestamptz
+  revokedAt     DateTime? @map("revoked_at") @db.Timestamptz
+  revokedBy     String?   @map("revoked_by") @db.Uuid
+  revokedReason String?   @map("revoked_reason") @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, pilgrimId])
+  @@index([userId, status])
+  @@map("pilgrim_account_links")
   @@schema("plugin_crm")
 }
 

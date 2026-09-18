@@ -1,0 +1,104 @@
+{
+  "check": "P06 traveler↔pilgrim link — browser",
+  "at": "2026-09-18T16:19:02.979Z",
+  "web": "http://localhost:3407",
+  "identities": [
+    {
+      "key": "operatorAdminA",
+      "email": "operator.admin.a@qa.umrahconnect.test",
+      "role": "OPERATOR_ADMIN"
+    },
+    {
+      "key": "travelerA",
+      "email": "traveler.a@qa.umrahconnect.test",
+      "role": "PILGRIM"
+    },
+    {
+      "key": "travelerB",
+      "email": "traveler.b@qa.umrahconnect.test",
+      "role": "PILGRIM"
+    },
+    {
+      "key": "operatorAdminB",
+      "email": "operator.admin.b@qa.umrahconnect.test",
+      "role": "OPERATOR_ADMIN"
+    }
+  ],
+  "steps": [
+    {
+      "step": "operator A: invite dialog prefilled with the email on record",
+      "ok": true,
+      "detail": "traveler.a@qa.umrahconnect.test"
+    },
+    {
+      "step": "operator A: invitation sent, status \"Invitation waiting for the traveler\"",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "invitation link found in the API dev mail log (MAIL_DRIVER=log)",
+      "ok": true,
+      "detail": "link captured (token not recorded)"
+    },
+    {
+      "step": "traveler B: invitation for another address is refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "token stripped from the address bar after load",
+      "ok": true,
+      "detail": "/travel-plan/link"
+    },
+    {
+      "step": "traveler A: preview names the organization and the record",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "traveler A: accepted",
+      "ok": true,
+      "detail": "POST /travelers/me/links/preview 200 | POST /travelers/me/links/accept 200"
+    },
+    {
+      "step": "traveler A: travel plan shows booking, group and visa status",
+      "ok": true,
+      "detail": "Amina Rahman · QA-2026-A0001 · Partially Paid · Autumn Umrah group — October 2026 · Submitted · Umrah visa"
+    },
+    {
+      "step": "traveler A: no passport number or passport field shown",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "traveler B: sees no trips and nothing of A",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "operator B: operator A's record is unavailable (404)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "operator B: GET /pilgrims/:A/account-links → 404",
+      "ok": true,
+      "detail": "404"
+    },
+    {
+      "step": "operator A: revoked with a reason, history shows it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "traveler A: trip gone after refresh",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "traveler A: replaying the used link is refused",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
