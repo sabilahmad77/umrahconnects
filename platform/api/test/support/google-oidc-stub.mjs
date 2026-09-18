@@ -123,7 +123,7 @@ export async function startGoogleOidcStub(options = {}) {
 <label for="given_name">First name</label><input id="given_name" name="given_name" type="text" value="Stub">
 <label for="family_name">Last name</label><input id="family_name" name="family_name" type="text" value="Traveler">
 <label style="display:flex;gap:8px;align-items:center"><input id="email_verified" name="email_verified" type="checkbox" value="true" checked> The provider reports this email as verified</label>
-<div class="row"><button class="deny" type="submit" name="decision" value="deny">Cancel</button><button class="allow" type="submit" name="decision" value="allow">Continue</button></div>
+<div class="row"><button class="deny" type="submit" name="decision" value="deny" formnovalidate>Cancel</button><button class="allow" type="submit" name="decision" value="allow">Continue</button></div>
 </form>`,
     );
   };
