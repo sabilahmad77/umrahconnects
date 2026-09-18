@@ -1,9 +1,64 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
 import { acceptSession } from '@/lib/session';
 import { clearAuth, getStoredUser, type StoredUser, type DashboardType } from '@/lib/auth';
+import type { PreferencesUpdate, UserPreferences } from '@/lib/preferences';
+
+/** `GET /auth/google/status`. A failed check is treated as "not offered", never as enabled. */
+export function useGoogleSignInStatus() {
+  return useQuery({
+    queryKey: ['auth', 'google-status'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/auth/google/status');
+      return { enabled: data?.data?.enabled === true, mode: data?.data?.mode === 'local-stub' ? 'local-stub' : 'google' } as const;
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+export interface AccountProfile {
+  id: string;
+  email: string | null;
+  firstName: string;
+  lastName: string;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  createdAt: string;
+  locale: string;
+  timezone: string;
+  tenant: { id: string; name: string; slug: string; type: string; status: string } | null;
+  identities: { provider: string; email: string | null; createdAt: string }[];
+}
+
+/** The signed-in account as the server sees it now (`GET /auth/me`): identities, password presence, verification. */
+export function useAccountProfile() {
+  return useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => (await apiClient.get('/auth/me')).data.data as AccountProfile,
+  });
+}
+
+export function usePreferences() {
+  return useQuery({
+    queryKey: ['auth', 'preferences'],
+    queryFn: async () => (await apiClient.get('/users/me/preferences')).data.data as UserPreferences,
+  });
+}
+
+/** Saves a partial update; the response is the saved state, so the cache is replaced with the server's readback. */
+export function useUpdatePreferences() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (update: PreferencesUpdate) => (await apiClient.put('/users/me/preferences', update)).data.data as UserPreferences,
+    onSuccess: (saved) => {
+      qc.setQueryData(['auth', 'preferences'], saved);
+      void qc.invalidateQueries({ queryKey: ['auth', 'me'] });
+    },
+  });
+}
 
 export function useAuth() {
   const [isLoading, setIsLoading] = useState(false);
