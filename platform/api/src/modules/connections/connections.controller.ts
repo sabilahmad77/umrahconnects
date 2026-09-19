@@ -6,6 +6,10 @@ import { Principal } from '../auth/principal';
 import { ConnectionsService } from './connections.service';
 import { RequestConnectionDto } from './dto/connection.dto';
 
+/**
+ * Responses use the standard `{ success, data }` envelope like every other
+ * module (they used to return bare objects).
+ */
 @ApiTags('connections')
 @ApiBearerAuth()
 @Controller('connections')
@@ -15,40 +19,45 @@ export class ConnectionsController {
   constructor(private svc: ConnectionsService) {}
 
   @Post('request')
-  async request(
-    @CurrentUser() user: Principal,
-    @Body() body: RequestConnectionDto,
-  ) {
-    return this.svc.request(user.sub, (body.recipientId ?? body.targetUserId) as string, body.message);
+  async request(@CurrentUser() user: Principal, @Body() body: RequestConnectionDto) {
+    return { success: true, data: await this.svc.request(user.sub, (body.recipientId ?? body.targetUserId) as string, body.message) };
   }
 
   @Post(':id/accept')
   async accept(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.respond(user.sub, id, 'ACCEPTED');
+    return { success: true, data: await this.svc.respond(user.sub, id, 'ACCEPTED') };
   }
 
   @Post(':id/reject')
   async reject(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
-    return this.svc.respond(user.sub, id, 'REJECTED');
+    return { success: true, data: await this.svc.respond(user.sub, id, 'REJECTED') };
   }
 
+  /** Removes a connection, or withdraws / dismisses a pending request, with that user. */
   @Delete('with/:userId')
   async remove(@CurrentUser() user: Principal, @Param('userId', ParseUUIDPipe) userId: string) {
-    return this.svc.remove(user.sub, userId);
+    return { success: true, data: await this.svc.remove(user.sub, userId) };
   }
 
   @Get()
   async list(@CurrentUser() user: Principal) {
-    return this.svc.listAccepted(user.sub);
+    return { success: true, data: await this.svc.listAccepted(user.sub) };
   }
 
+  /** Incoming requests awaiting the caller's answer. */
   @Get('pending')
   async pending(@CurrentUser() user: Principal) {
-    return this.svc.listPending(user.sub);
+    return { success: true, data: await this.svc.listPending(user.sub) };
+  }
+
+  /** Requests the caller sent that are still awaiting an answer. */
+  @Get('outgoing')
+  async outgoing(@CurrentUser() user: Principal) {
+    return { success: true, data: await this.svc.listOutgoing(user.sub) };
   }
 
   @Get('status/:userId')
   async status(@CurrentUser() user: Principal, @Param('userId', ParseUUIDPipe) userId: string) {
-    return this.svc.status(user.sub, userId);
+    return { success: true, data: await this.svc.status(user.sub, userId) };
   }
 }

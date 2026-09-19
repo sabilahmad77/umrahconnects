@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Prisma, SocialAccountType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { requireId } from '../../common/tenant-scope';
 import { PUBLIC_GROUP_SELECT } from '../groups/group-public.select';
+import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
 
 /** Public profile projection — never phone, nationality, travel dates or moderation flags. */
 export const PUBLIC_AUTHOR_SELECT = { id: true, displayName: true, avatarUrl: true, isVerified: true } as const;
@@ -12,12 +14,31 @@ export const PUBLIC_AUTHOR_SELECT = { id: true, displayName: true, avatarUrl: tr
 const HIDDEN_MODERATION = ['REJECTED', 'SHADOW_BANNED', 'HELD_FOR_REVIEW'] as const;
 const HIDDEN_COMMENT_MODERATION = ['REJECTED', 'SHADOW_BANNED'] as const;
 
+/** Accounts auto-created before names were derived from the user profile carry this placeholder. */
+const LEGACY_PLACEHOLDER_NAME = 'User';
+
+const ACCOUNT_TYPE_BY_TENANT_TYPE: Record<string, SocialAccountType> = {
+  OPERATOR: 'OPERATOR',
+  MU_ASSASA: 'OPERATOR',
+  SUB_AGENT: 'SUB_AGENT',
+  VENDOR_HOTEL: 'VENDOR_HOTEL',
+  VENDOR_TRANSPORT: 'VENDOR_TRANSPORT',
+  VENDOR_CATERING: 'VENDOR_CATERING',
+  VENDOR_GUIDE: 'MUTAWIF',
+  VENDOR_VISA: 'VISA_PROCESSOR',
+};
+
 /** Who is looking: resolved once per request. */
 interface Viewer {
   userId: string;
   accountId: string | null;
   isVerified: boolean;
   roles: string[];
+}
+
+interface Page {
+  page?: number;
+  limit?: number;
 }
 
 /*
@@ -29,23 +50,54 @@ interface Viewer {
  *   CUSTOM_SET    author only (no audience list is modelled)
  * The author always sees their own posts. Soft-deleted posts are never shown, and
  * REJECTED / SHADOW_BANNED / HELD_FOR_REVIEW posts are shown only to the author.
+ *
+ * Comments: one reply level. A reply to a reply is attached to the top-level
+ * comment it belongs to. Only a comment's author may edit or delete it; deleting a
+ * top-level comment removes its replies too. Counts returned to clients are
+ * computed from live rows, never from the denormalised counters (which seeded or
+ * legacy data may have inflated); the counters are still maintained for sorting.
  */
+
+const normalizeTag = (tag: string) => tag.trim().replace(/^#+/, '').toLowerCase();
+const normalizeTags = (tags?: string[]) => [...new Set((tags ?? []).map(normalizeTag).filter(Boolean))].slice(0, 20);
 
 @Injectable()
 export class SocialService {
+  private readonly logger = new Logger(SocialService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly config: ConfigService,
   ) {}
 
-  private async getOrCreateSocialAccount(userId: string, _tenantId: string) {
-    let account = await this.prisma.socialAccount.findFirst({ where: { userId } });
-    if (!account) {
-      account = await this.prisma.socialAccount.create({
-        data: { userId, type: 'OPERATOR' as any, displayName: 'User' },
-      });
+  // ── Accounts ──────────────────────────────────────────────────────────────────
+
+  /** The user's social account, created on first use with a name taken from their user profile. */
+  private async getOrCreateSocialAccount(userId: string, _tenantId?: string) {
+    const existing = await this.prisma.socialAccount.findFirst({ where: { userId } });
+    if (existing && existing.displayName !== LEGACY_PLACEHOLDER_NAME) return existing;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { firstName: true, lastName: true, email: true, tenant: { select: { type: true, slug: true } } },
+    });
+    const fullName = [user?.firstName, user?.lastName].map((p) => (p ?? '').trim()).filter(Boolean).join(' ');
+    const displayName = (fullName || user?.email?.split('@')[0] || '').slice(0, 100);
+    const type: SocialAccountType =
+      user?.tenant?.slug === COMMUNITY_TENANT_SLUG
+        ? 'PILGRIM'
+        : ACCOUNT_TYPE_BY_TENANT_TYPE[user?.tenant?.type ?? ''] ?? 'OPERATOR';
+
+    if (existing) {
+      // One-off repair of accounts auto-created with the placeholder name (and the
+      // wrong type): posts by every traveler used to show "User".
+      if (!displayName) return existing;
+      return this.prisma.socialAccount.update({ where: { id: existing.id }, data: { displayName, type } });
     }
-    return account;
+    // skipDuplicates: when two first requests race, the loser simply reads the winner's row.
+    await this.prisma.socialAccount.createMany({ data: [{ userId, type, displayName: displayName || 'Member' }], skipDuplicates: true });
+    return this.prisma.socialAccount.findFirstOrThrow({ where: { userId } });
   }
 
   // ── Visibility ──────────────────────────────────────────────────────────────
@@ -102,241 +154,461 @@ export class SocialService {
     return post;
   }
 
+  /** A comment on `postId` that `viewer` may see; otherwise 404. */
+  private async findVisibleComment(viewer: Viewer, postId: string, commentId: string) {
+    const id = requireId(commentId, 'Comment');
+    const comment = await this.prisma.comment.findFirst({
+      where: { AND: [{ id, postId }, this.visibleCommentsWhere(viewer)] },
+      select: { id: true, parentId: true, authorId: true },
+    });
+    if (!comment) throw new NotFoundException('Comment not found');
+    return comment;
+  }
+
+  // ── Presentation ────────────────────────────────────────────────────────────
+
+  /** What a post read includes: the author, live comment/save counts and the viewer's own state. */
+  private postInclude(viewer: Viewer) {
+    return {
+      author: { select: PUBLIC_AUTHOR_SELECT },
+      _count: { select: { comments: { where: this.visibleCommentsWhere(viewer) }, savedBy: true } },
+      ...(viewer.accountId
+        ? {
+            reactions: { where: { accountId: viewer.accountId }, select: { type: true } },
+            savedBy: { where: { accountId: viewer.accountId }, select: { id: true } },
+          }
+        : {}),
+    } satisfies Prisma.PostInclude;
+  }
+
+  /**
+   * Shapes posts for clients. Like/share counts come from one grouped query over
+   * the page; moderation internals are never exposed, and the author alone sees
+   * the moderation status and role audience of their own post.
+   */
+  private async presentPosts(posts: any[], viewer: Viewer) {
+    if (!posts.length) return [];
+    const grouped = await this.prisma.reaction.groupBy({
+      by: ['postId', 'type'],
+      where: { postId: { in: posts.map((p) => p.id) }, type: { in: ['LIKE', 'SHARE'] } },
+      _count: { _all: true },
+    });
+    const reactionCount = (postId: string, type: string) =>
+      grouped.find((g) => g.postId === postId && g.type === type)?._count._all ?? 0;
+
+    return posts.map((p) => {
+      const isMine = !!viewer.accountId && p.authorId === viewer.accountId;
+      const own: { type: string }[] = p.reactions ?? [];
+      return {
+        id: p.id,
+        authorId: p.authorId,
+        author: p.author,
+        type: p.type,
+        visibility: p.visibility,
+        body: p.body,
+        structuredData: p.structuredData,
+        mediaUrls: p.mediaUrls ?? [],
+        attachmentUrl: p.attachmentUrl,
+        tags: p.tags ?? [],
+        language: p.language,
+        expiresAt: p.expiresAt,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        editedAt: p.editedAt ?? null,
+        likeCount: reactionCount(p.id, 'LIKE'),
+        shareCount: reactionCount(p.id, 'SHARE'),
+        commentCount: p._count?.comments ?? 0,
+        saveCount: p._count?.savedBy ?? 0,
+        likedByMe: own.some((r) => r.type === 'LIKE'),
+        savedByMe: (p.savedBy?.length ?? 0) > 0,
+        isMine,
+        ...(isMine ? { moderationStatus: p.moderationStatus, targetRoles: p.targetRoles ?? [] } : {}),
+        // Viewer-only arrays kept for existing clients (mobile) that read them.
+        reactions: own,
+        savedBy: p.savedBy ?? [],
+      };
+    });
+  }
+
+  private async presentPost(postId: string, viewer: Viewer) {
+    const post = await this.prisma.post.findFirst({ where: { id: postId }, include: this.postInclude(viewer) });
+    if (!post) throw new NotFoundException(`Post ${postId} not found`);
+    return (await this.presentPosts([post], viewer))[0];
+  }
+
+  private presentComment(c: any, viewer: Viewer, replyCount?: number) {
+    const isMine = !!viewer.accountId && c.authorId === viewer.accountId;
+    return {
+      id: c.id,
+      postId: c.postId,
+      parentId: c.parentId ?? null,
+      body: c.body,
+      author: c.author,
+      createdAt: c.createdAt,
+      editedAt: c.editedAt ?? null,
+      isMine,
+      // The server's rule, surfaced so clients never offer what would be refused.
+      canEdit: isMine,
+      canDelete: isMine,
+      ...(replyCount !== undefined ? { replyCount } : {}),
+      ...(isMine ? { moderationStatus: c.moderationStatus } : {}),
+    };
+  }
+
+  // ── Media ─────────────────────────────────────────────────────────────────────
+
+  /**
+   * Post images must be public media this platform stored (POST /uploads):
+   * `/uploads/<file>` locally or `<S3_PUBLIC_BASE_URL>/media/<file>` on R2.
+   * Arbitrary URLs would turn posts into tracking pixels or hot-links.
+   */
+  private ownMedia(urls: string[] | undefined): string[] {
+    if (!urls?.length) return [];
+    const base = this.config.get<string>('S3_PUBLIC_BASE_URL')?.replace(/\/+$/, '');
+    const fileName = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+    const isOwn = (u: string) =>
+      (u.startsWith('/uploads/') && fileName.test(u.slice('/uploads/'.length))) ||
+      (!!base && u.startsWith(`${base}/media/`) && fileName.test(u.slice(`${base}/media/`.length)));
+    for (const u of urls) {
+      if (typeof u !== 'string' || !isOwn(u)) throw new BadRequestException('Post images must be uploaded through Umrah Connect');
+    }
+    return [...new Set(urls)];
+  }
+
+  // ── Notifications (best-effort: a failed notification never fails the action) ─
+
+  private async notify(input: Parameters<NotificationsService['fire']>[0]) {
+    try {
+      await this.notifications.fire(input);
+    } catch (e) {
+      this.logger.warn(`notification ${input.type} failed: ${(e as Error).message}`);
+    }
+  }
+
+  private async accountUserId(accountId: string) {
+    return (await this.prisma.socialAccount.findUnique({ where: { id: accountId }, select: { userId: true } }))?.userId;
+  }
+
   // ── Feed ────────────────────────────────────────────────────────────────────
 
   async getFeed(tenantId: string, userId: string, query: any, roles: string[] = []) {
     const page = Math.max(1, Number(query?.page ?? 1));
     const limit = Math.min(100, Math.max(1, Number(query?.limit ?? 20)));
     const { type, followingOnly } = query ?? {};
-    const skip = (page - 1) * limit;
+    const tag = typeof query?.tag === 'string' ? normalizeTag(query.tag) : '';
 
     const viewer = await this.getViewer(userId, roles);
-    const account = viewer.accountId ? { id: viewer.accountId } : null;
+    const followed = await this.followedAuthorIds(viewer);
 
-    const and: Prisma.PostWhereInput[] = [];
+    // Every post the viewer may see: public posts, their own, followers-only posts of
+    // accounts they follow, verified-only and role-targeted posts they qualify for.
+    const and: Prisma.PostWhereInput[] = [this.visiblePostsWhere(viewer, followed)];
     if (type) and.push({ type });
-
-    if (followingOnly) {
-      // Posts from followed accounts, still subject to every visibility rule.
-      const followed = await this.followedAuthorIds(viewer);
-      and.push({ authorId: { in: followed } });
-      and.push(this.visiblePostsWhere(viewer, followed));
-    } else {
-      and.push(this.visiblePostsWhere(viewer, [], { publicOnly: true }));
-    }
+    if (tag) and.push({ tags: { has: tag } });
+    if (followingOnly) and.push({ authorId: { in: followed } });
     const where: Prisma.PostWhereInput = { AND: and };
 
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
         where,
-        skip,
-        take: +limit,
-        orderBy: [{ createdAt: 'desc' }],
-        include: {
-          author: { select: PUBLIC_AUTHOR_SELECT },
-          comments: {
-            where: { AND: [this.visibleCommentsWhere(viewer), { parentId: null }] },
-            take: 2,
-            orderBy: { createdAt: 'asc' },
-            include: { author: { select: { id: true, displayName: true, avatarUrl: true } } },
-          },
-          // viewer's own reactions so the client can restore liked state after reload
-          ...(account ? { reactions: { where: { accountId: account.id }, select: { type: true } } } : {}),
-          // ...and their own save, for the same reason: without it the bookmark
-          // always rendered empty and the first click un-saved the post.
-          ...(account ? { savedBy: { where: { accountId: account.id }, select: { id: true } } } : {}),
-        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        include: this.postInclude(viewer),
       }),
       this.prisma.post.count({ where }),
     ]);
 
-    return { items: posts, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return { items: await this.presentPosts(posts, viewer), total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   // ── Posts ───────────────────────────────────────────────────────────────────
 
-  async createPost(tenantId: string, userId: string, dto: any) {
-    const text = String(dto.content ?? dto.body ?? '');
-    if (!text.trim() && !(dto.mediaUrls?.length)) throw new BadRequestException('Post content is required');
-    if (dto.visibility === 'ROLE_SET' && !(dto.targetRoles?.length)) {
+  async createPost(tenantId: string, userId: string, dto: any, roles: string[] = []) {
+    const text = String(dto.content ?? dto.body ?? '').trim();
+    const mediaUrls = this.ownMedia(dto.mediaUrls);
+    if (!text && !mediaUrls.length) throw new BadRequestException('Post content is required');
+    if (dto.visibility === 'ROLE_SET' && !dto.targetRoles?.length) {
       throw new BadRequestException('targetRoles is required for ROLE_SET visibility');
     }
     const account = await this.getOrCreateSocialAccount(userId, tenantId);
 
-    return this.prisma.post.create({
+    const post = await this.prisma.post.create({
       data: {
         authorId: account.id,
         type: dto.type ?? 'UPDATE',
         body: text,
         visibility: dto.visibility ?? 'PUBLIC',
-        mediaUrls: dto.mediaUrls ?? [],
-        tags: dto.tags ?? [],
+        mediaUrls,
+        tags: normalizeTags(dto.tags),
         language: dto.language ?? 'ar',
-        targetRoles: dto.targetRoles ?? [],
+        targetRoles: dto.visibility === 'ROLE_SET' ? dto.targetRoles : [],
       },
-      include: { author: { select: { id: true, displayName: true, avatarUrl: true, isVerified: true } } },
     });
+    await this.prisma.socialAccount.update({ where: { id: account.id }, data: { postCount: { increment: 1 } } });
+    const viewer: Viewer = { userId, accountId: account.id, isVerified: account.isVerified, roles };
+    return this.presentPost(post.id, viewer);
   }
 
+  /** Single post with its visible comments inline (flat, oldest first — the mobile client reads them). */
   async findOnePost(userId: string, id: string, roles: string[] = []) {
     const viewer = await this.getViewer(userId, roles);
     const visible = await this.findVisiblePost(viewer, id);
-    const post = await this.prisma.post.findFirst({
-      where: { id: visible.id, deletedAt: null },
-      include: {
-        author: { select: PUBLIC_AUTHOR_SELECT },
-        comments: {
-          where: this.visibleCommentsWhere(viewer),
-          orderBy: { createdAt: 'asc' },
-          include: { author: { select: { id: true, displayName: true, avatarUrl: true } } },
-        },
-      },
-    });
-    if (!post) throw new NotFoundException(`Post ${id} not found`);
-    return post;
+    const [post, comments] = await Promise.all([
+      this.presentPost(visible.id, viewer),
+      this.prisma.comment.findMany({
+        where: { AND: [{ postId: visible.id }, this.visibleCommentsWhere(viewer)] },
+        orderBy: { createdAt: 'asc' },
+        take: 200,
+        include: { author: { select: PUBLIC_AUTHOR_SELECT } },
+      }),
+    ]);
+    return { ...post, comments: comments.map((c) => this.presentComment(c, viewer)) };
   }
 
   // Alias for controller
   getPost = this.findOnePost.bind(this);
 
-  async updatePost(tenantId: string, userId: string, id: string, dto: any) {
+  /** The author's own, live post; anything else is the same 404 as an unknown id. */
+  private async ownPost(userId: string, id: string) {
+    const postId = requireId(id, 'Post');
     const account = await this.prisma.socialAccount.findFirst({ where: { userId } });
-    if (!account) throw new NotFoundException('Social account not found');
+    const post = account
+      ? await this.prisma.post.findFirst({ where: { id: postId, authorId: account.id, deletedAt: null } })
+      : null;
+    if (!account || !post) throw new NotFoundException(`Post ${postId} not found`);
+    return { account, post };
+  }
 
-    const post = await this.prisma.post.findFirst({ where: { id, authorId: account.id, deletedAt: null } });
-    if (!post) throw new NotFoundException(`Post ${id} not found`);
+  async updatePost(tenantId: string, userId: string, id: string, dto: any, roles: string[] = []) {
+    const { account, post } = await this.ownPost(userId, id);
 
-    const data: any = { updatedAt: new Date() };
-    if (dto.body !== undefined || dto.content !== undefined) data.body = dto.body ?? dto.content;
+    const data: Prisma.PostUpdateInput = {};
+    if (dto.body !== undefined || dto.content !== undefined) {
+      const text = String(dto.content ?? dto.body ?? '').trim();
+      if (!text && !post.mediaUrls.length) throw new BadRequestException('Post content is required');
+      if (text !== (post.body ?? '')) {
+        data.body = text;
+        data.editedAt = new Date();
+      }
+    }
+    if (dto.tags !== undefined) data.tags = normalizeTags(dto.tags);
     if (dto.visibility !== undefined) data.visibility = dto.visibility;
-    if (dto.tags !== undefined) data.tags = dto.tags;
+    const visibility = dto.visibility ?? post.visibility;
+    if (visibility === 'ROLE_SET') {
+      const targetRoles = dto.targetRoles ?? post.targetRoles;
+      if (!targetRoles?.length) throw new BadRequestException('targetRoles is required for ROLE_SET visibility');
+      data.targetRoles = targetRoles;
+    } else if (dto.visibility !== undefined) {
+      data.targetRoles = [];
+    }
 
-    return this.prisma.post.update({ where: { id }, data });
+    if (Object.keys(data).length) await this.prisma.post.update({ where: { id: post.id }, data });
+    const viewer: Viewer = { userId, accountId: account.id, isVerified: account.isVerified, roles };
+    return this.presentPost(post.id, viewer);
   }
 
   async deletePost(tenantId: string, userId: string, id: string) {
-    const account = await this.prisma.socialAccount.findFirst({ where: { userId } });
-    if (!account) throw new NotFoundException('Social account not found');
-
-    const post = await this.prisma.post.findFirst({ where: { id, authorId: account.id, deletedAt: null } });
-    if (!post) throw new NotFoundException(`Post ${id} not found`);
-
-    return this.prisma.post.update({ where: { id }, data: { deletedAt: new Date() } });
+    const { account, post } = await this.ownPost(userId, id);
+    await this.prisma.post.update({ where: { id: post.id }, data: { deletedAt: new Date() } });
+    await this.prisma.socialAccount.updateMany({
+      where: { id: account.id, postCount: { gt: 0 } },
+      data: { postCount: { decrement: 1 } },
+    });
+    return { id: post.id, deleted: true };
   }
 
   // ── Comments ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Top-level comments (newest first) or, with `parentId`, the replies to one
+   * comment (oldest first, reading as a conversation). Both are paginated.
+   */
+  async listComments(userId: string, postId: string, query: { parentId?: string } & Page, roles: string[] = []) {
+    const viewer = await this.getViewer(userId, roles);
+    const post = await this.findVisiblePost(viewer, postId);
+    const page = Math.max(1, Number(query.page ?? 1));
+    const limit = Math.min(50, Math.max(1, Number(query.limit ?? 10)));
+    const parent = query.parentId ? await this.findVisibleComment(viewer, post.id, query.parentId) : null;
+
+    const where: Prisma.CommentWhereInput = {
+      AND: [{ postId: post.id, parentId: parent?.id ?? null }, this.visibleCommentsWhere(viewer)],
+    };
+    const [rows, total] = await Promise.all([
+      this.prisma.comment.findMany({
+        where,
+        orderBy: parent ? [{ createdAt: 'asc' }, { id: 'asc' }] : [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { author: { select: PUBLIC_AUTHOR_SELECT } },
+      }),
+      this.prisma.comment.count({ where }),
+    ]);
+
+    let replyCounts = new Map<string, number>();
+    if (!parent && rows.length) {
+      const grouped = await this.prisma.comment.groupBy({
+        by: ['parentId'],
+        where: { AND: [{ postId: post.id, parentId: { in: rows.map((r) => r.id) } }, this.visibleCommentsWhere(viewer)] },
+        _count: { _all: true },
+      });
+      replyCounts = new Map(grouped.map((g) => [g.parentId as string, g._count._all]));
+    }
+
+    return {
+      items: rows.map((c) => this.presentComment(c, viewer, parent ? undefined : replyCounts.get(c.id) ?? 0)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
 
   async addComment(tenantId: string, userId: string, postId: string, dto: any, roles: string[] = []) {
     const text = String(dto.content ?? dto.body ?? '').trim();
     if (!text) throw new BadRequestException('Comment content is required');
     const account = await this.getOrCreateSocialAccount(userId, tenantId);
+    const viewer: Viewer = { userId, accountId: account.id, isVerified: account.isVerified, roles };
+    const post = await this.findVisiblePost(viewer, postId);
 
-    const post = await this.findVisiblePost(await this.getViewer(userId, roles), postId);
-
+    // One reply level: replying to a reply attaches to that reply's top-level comment.
+    let parent: { id: string; parentId: string | null; authorId: string } | null = null;
     if (dto.parentId) {
-      const parent = await this.prisma.comment.findFirst({
-        where: { id: requireId(dto.parentId, 'Comment'), postId: post.id, deletedAt: null },
-        select: { id: true },
-      });
-      if (!parent) throw new NotFoundException('Parent comment not found');
+      const target = await this.findVisibleComment(viewer, post.id, dto.parentId);
+      parent = target.parentId ? await this.findVisibleComment(viewer, post.id, target.parentId) : target;
     }
 
     const comment = await this.prisma.comment.create({
-      data: {
-        postId: post.id,
-        authorId: account.id,
-        body: text,
-        parentId: dto.parentId ?? null,
-      },
-      include: { author: { select: { id: true, displayName: true, avatarUrl: true } } },
+      data: { postId: post.id, authorId: account.id, body: text, parentId: parent?.id ?? null },
+      include: { author: { select: PUBLIC_AUTHOR_SELECT } },
     });
+    await this.prisma.post.update({ where: { id: post.id }, data: { commentCount: { increment: 1 } } });
 
-    await this.prisma.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
+    const excerpt = text.slice(0, 140);
+    const link = `/social?post=${post.id}`;
+    const data = { postId: post.id, commentId: comment.id, ...(parent ? { parentId: parent.id } : {}) };
+    const postAuthorUserId = await this.accountUserId(post.authorId);
+    const parentAuthorUserId = parent ? await this.accountUserId(parent.authorId) : undefined;
+    if (parentAuthorUserId) {
+      await this.notify({
+        tenantId, recipientUserId: parentAuthorUserId, actorUserId: userId, type: 'COMMENT_REPLY',
+        title: `${account.displayName} replied to your comment`, body: excerpt, link, data,
+      });
+    }
+    if (postAuthorUserId && postAuthorUserId !== parentAuthorUserId) {
+      await this.notify({
+        tenantId, recipientUserId: postAuthorUserId, actorUserId: userId, type: 'POST_COMMENT',
+        title: `${account.displayName} commented on your post`, body: excerpt, link, data,
+      });
+    }
 
-    // Notify the post author (or comment parent author for replies)
-    try {
-      const postAuthor = await this.prisma.socialAccount.findUnique({ where: { id: post.authorId } });
-      if (postAuthor && postAuthor.userId !== userId) {
-        await this.notifications.fire({
-          tenantId,
-          recipientUserId: postAuthor.userId,
-          actorUserId: userId,
-          type: dto.parentId ? 'COMMENT_REPLY' : 'POST_COMMENT',
-          title: dto.parentId ? 'New reply on your comment' : 'New comment on your post',
-          body: (comment.body ?? '').slice(0, 140),
-          link: `/social?post=${postId}`,
-          data: { postId, commentId: comment.id },
-        });
+    return this.presentComment(comment, viewer, parent ? undefined : 0);
+  }
+
+  /** Only the author edits a comment; everyone else gets the 404 of an unknown id. */
+  async updateComment(tenantId: string, userId: string, postId: string, commentId: string, dto: any, roles: string[] = []) {
+    const text = String(dto?.content ?? dto?.body ?? '').trim();
+    if (!text) throw new BadRequestException('Comment content is required');
+    const viewer = await this.getViewer(userId, roles);
+    const post = await this.findVisiblePost(viewer, postId);
+    const comment = viewer.accountId
+      ? await this.prisma.comment.findFirst({
+          where: { id: requireId(commentId, 'Comment'), postId: post.id, authorId: viewer.accountId, deletedAt: null },
+        })
+      : null;
+    if (!comment) throw new NotFoundException(`Comment ${commentId} not found`);
+
+    const updated = await this.prisma.comment.update({
+      where: { id: comment.id },
+      data: text === comment.body ? {} : { body: text, editedAt: new Date() },
+      include: { author: { select: PUBLIC_AUTHOR_SELECT } },
+    });
+    return this.presentComment(updated, viewer);
+  }
+
+  /** Only the author deletes a comment; a top-level comment takes its replies with it. */
+  async deleteComment(tenantId: string, userId: string, postId: string, commentId: string, roles: string[] = []) {
+    const viewer = await this.getViewer(userId, roles);
+    const post = await this.findVisiblePost(viewer, postId);
+    const comment = viewer.accountId
+      ? await this.prisma.comment.findFirst({
+          where: { id: requireId(commentId, 'Comment'), postId: post.id, authorId: viewer.accountId, deletedAt: null },
+          select: { id: true, parentId: true },
+        })
+      : null;
+    if (!comment) throw new NotFoundException(`Comment ${commentId} not found`);
+
+    const now = new Date();
+    const removed = await this.prisma.$transaction(async (tx) => {
+      const self = await tx.comment.updateMany({ where: { id: comment.id, deletedAt: null }, data: { deletedAt: now } });
+      const replies = comment.parentId
+        ? { count: 0 }
+        : await tx.comment.updateMany({ where: { parentId: comment.id, deletedAt: null }, data: { deletedAt: now } });
+      const count = self.count + replies.count;
+      if (count) {
+        await tx.post.updateMany({ where: { id: post.id, commentCount: { gte: count } }, data: { commentCount: { decrement: count } } });
       }
-    } catch { /* notifications are best-effort */ }
-
-    return comment;
-  }
-
-  async updateComment(tenantId: string, userId: string, postId: string, commentId: string, body: string) {
-    const account = await this.prisma.socialAccount.findFirst({ where: { userId } });
-    if (!account) throw new NotFoundException('Social account not found');
-
-    const comment = await this.prisma.comment.findFirst({ where: { id: commentId, postId, authorId: account.id, deletedAt: null } });
-    if (!comment) throw new NotFoundException(`Comment ${commentId} not found`);
-
-    return this.prisma.comment.update({ where: { id: commentId }, data: { body } });
-  }
-
-  async deleteComment(tenantId: string, userId: string, postId: string, commentId: string) {
-    const account = await this.prisma.socialAccount.findFirst({ where: { userId } });
-    if (!account) throw new NotFoundException('Social account not found');
-
-    const comment = await this.prisma.comment.findFirst({ where: { id: commentId, postId, authorId: account.id, deletedAt: null } });
-    if (!comment) throw new NotFoundException(`Comment ${commentId} not found`);
-
-    await this.prisma.comment.update({ where: { id: commentId }, data: { deletedAt: new Date() } });
-    await this.prisma.post.update({ where: { id: postId }, data: { commentCount: { decrement: 1 } } });
-    return { deleted: true };
+      return count;
+    });
+    return { id: comment.id, deleted: true, removed };
   }
 
   // ── Reactions ─────────────────────────────────────────────────────────────────
 
   async toggleReaction(tenantId: string, userId: string, postId: string, dto: any, roles: string[] = []) {
     const account = await this.getOrCreateSocialAccount(userId, tenantId);
-
-    const post = await this.findVisiblePost(await this.getViewer(userId, roles), postId);
+    const viewer: Viewer = { userId, accountId: account.id, isVerified: account.isVerified, roles };
+    const post = await this.findVisiblePost(viewer, postId);
 
     // Accept dto as object, string, or undefined; also accept `reaction` alias for `type`
-    const reactionType =
-      (typeof dto === 'string' ? dto : (dto?.type ?? dto?.reaction)) ?? 'LIKE';
-    const existing = await this.prisma.reaction.findFirst({ where: { postId, accountId: account.id, type: reactionType } });
+    const reactionType: string = (typeof dto === 'string' ? dto : (dto?.type ?? dto?.reaction)) ?? 'LIKE';
+    const counter = reactionType === 'LIKE' ? 'likeCount' : reactionType === 'SHARE' ? 'shareCount' : null;
+    const existing = await this.prisma.reaction.findFirst({ where: { postId: post.id, accountId: account.id, type: reactionType } });
+    const desired: boolean = typeof dto?.active === 'boolean' ? dto.active : !existing;
 
-    if (existing) {
-      await this.prisma.reaction.delete({ where: { id: existing.id } });
-      if (reactionType === 'LIKE') await this.prisma.post.update({ where: { id: postId }, data: { likeCount: { decrement: 1 } } });
-      if (reactionType === 'SHARE') await this.prisma.post.update({ where: { id: postId }, data: { shareCount: { decrement: 1 } } });
-      return { toggled: false, type: reactionType };
+    let toggled: boolean;
+    if (!desired) {
+      const removed = await this.prisma.reaction.deleteMany({ where: { postId: post.id, accountId: account.id, type: reactionType } });
+      if (removed.count && counter) {
+        await this.prisma.post.updateMany({ where: { id: post.id, [counter]: { gt: 0 } }, data: { [counter]: { decrement: 1 } } });
+      }
+      toggled = false;
     } else {
-      await this.prisma.reaction.create({ data: { postId, accountId: account.id, type: reactionType } });
-      if (reactionType === 'LIKE') await this.prisma.post.update({ where: { id: postId }, data: { likeCount: { increment: 1 } } });
-      if (reactionType === 'SHARE') await this.prisma.post.update({ where: { id: postId }, data: { shareCount: { increment: 1 } } });
+      // A double click may race this request; skipDuplicates leaves the reaction in place,
+      // which is the requested state, and only the insert that happened moves the counter.
+      const created = await this.prisma.reaction.createMany({
+        data: [{ postId: post.id, accountId: account.id, type: reactionType }],
+        skipDuplicates: true,
+      });
+      if (created.count && counter) await this.prisma.post.update({ where: { id: post.id }, data: { [counter]: { increment: 1 } } });
+      toggled = true;
 
-      // Notify post author for LIKE/SHARE
-      try {
-        if (['LIKE', 'SHARE'].includes(reactionType)) {
-          const postAuthor = await this.prisma.socialAccount.findUnique({ where: { id: post.authorId } });
-          if (postAuthor && postAuthor.userId !== userId) {
-            await this.notifications.fire({
-              tenantId,
-              recipientUserId: postAuthor.userId,
-              actorUserId: userId,
-              type: 'POST_REACTION',
-              title: reactionType === 'LIKE' ? 'Someone liked your post' : 'Someone shared your post',
-              link: `/social?post=${postId}`,
-              data: { postId, type: reactionType },
-            });
-          }
+      if (reactionType === 'LIKE' || reactionType === 'SHARE') {
+        const recipientUserId = await this.accountUserId(post.authorId);
+        // Like/unlike/like must not stack notifications: one unread one per actor and post.
+        const pending = recipientUserId
+          ? await this.prisma.notification.findFirst({
+              where: { recipientId: recipientUserId, actorId: userId, type: 'POST_REACTION', readAt: null, data: { path: ['postId'], equals: post.id } },
+              select: { id: true },
+            })
+          : null;
+        if (recipientUserId && !pending) {
+          await this.notify({
+            tenantId, recipientUserId, actorUserId: userId, type: 'POST_REACTION',
+            title: reactionType === 'LIKE' ? `${account.displayName} liked your post` : `${account.displayName} shared your post`,
+            link: `/social?post=${post.id}`,
+            data: { postId: post.id, type: reactionType },
+          });
         }
-      } catch { /* best-effort */ }
-
-      return { toggled: true, type: reactionType };
+      }
     }
+
+    const likeCount = await this.prisma.reaction.count({ where: { postId: post.id, type: 'LIKE' } });
+    const likedByMe =
+      reactionType === 'LIKE'
+        ? toggled
+        : !!(await this.prisma.reaction.findFirst({ where: { postId: post.id, accountId: account.id, type: 'LIKE' }, select: { id: true } }));
+    return { toggled, type: reactionType, likeCount, likedByMe };
   }
 
   async getReactions(tenantId: string, postId: string) {
@@ -347,26 +619,42 @@ export class SocialService {
 
   // ── Follow ────────────────────────────────────────────────────────────────────
 
-  async toggleFollow(tenantId: string, userId: string, targetAccountId: string) {
+  async toggleFollow(tenantId: string, userId: string, targetAccountId: string, desiredState?: boolean) {
     const followerAccount = await this.getOrCreateSocialAccount(userId, tenantId);
+    const targetId = requireId(targetAccountId, 'Account');
+    if (followerAccount.id === targetId) throw new BadRequestException('Cannot follow yourself');
+    const target = await this.prisma.socialAccount.findFirst({ where: { id: targetId, isSuspended: false } });
+    if (!target) throw new NotFoundException(`Account ${targetId} not found`);
 
-    const targetAccount = await this.prisma.socialAccount.findFirst({ where: { id: targetAccountId } });
-    if (!targetAccount) throw new NotFoundException(`Account ${targetAccountId} not found`);
-    if (followerAccount.id === targetAccountId) throw new BadRequestException('Cannot follow yourself');
-
-    const existing = await this.prisma.follow.findFirst({ where: { followerId: followerAccount.id, followedId: targetAccountId } });
-
-    if (existing) {
-      await this.prisma.follow.delete({ where: { followerId_followedId: { followerId: followerAccount.id, followedId: targetAccountId } } });
-      await this.prisma.socialAccount.update({ where: { id: followerAccount.id }, data: { followingCount: { decrement: 1 } } });
-      await this.prisma.socialAccount.update({ where: { id: targetAccountId }, data: { followerCount: { decrement: 1 } } });
-      return { following: false };
+    const existing = await this.prisma.follow.findUnique({
+      where: { followerId_followedId: { followerId: followerAccount.id, followedId: target.id } },
+    });
+    const desired = typeof desiredState === 'boolean' ? desiredState : !existing;
+    let following: boolean;
+    if (!desired) {
+      const removed = await this.prisma.follow.deleteMany({ where: { followerId: followerAccount.id, followedId: target.id } });
+      if (removed.count) {
+        await this.prisma.socialAccount.updateMany({ where: { id: followerAccount.id, followingCount: { gt: 0 } }, data: { followingCount: { decrement: 1 } } });
+        await this.prisma.socialAccount.updateMany({ where: { id: target.id, followerCount: { gt: 0 } }, data: { followerCount: { decrement: 1 } } });
+      }
+      following = false;
     } else {
-      await this.prisma.follow.create({ data: { followerId: followerAccount.id, followedId: targetAccountId } });
-      await this.prisma.socialAccount.update({ where: { id: followerAccount.id }, data: { followingCount: { increment: 1 } } });
-      await this.prisma.socialAccount.update({ where: { id: targetAccountId }, data: { followerCount: { increment: 1 } } });
-      return { following: true };
+      const created = await this.prisma.follow.createMany({
+        data: [{ followerId: followerAccount.id, followedId: target.id }],
+        skipDuplicates: true,
+      });
+      if (created.count) {
+        await this.prisma.socialAccount.update({ where: { id: followerAccount.id }, data: { followingCount: { increment: 1 } } });
+        await this.prisma.socialAccount.update({ where: { id: target.id }, data: { followerCount: { increment: 1 } } });
+        await this.notify({
+          tenantId, recipientUserId: target.userId, actorUserId: userId, type: 'FOLLOW',
+          title: `${followerAccount.displayName} started following you`, link: '/social', data: { followerAccountId: followerAccount.id },
+        });
+      }
+      following = true;
     }
+    const followerCount = await this.prisma.follow.count({ where: { followedId: target.id } });
+    return { following, followerCount };
   }
 
   // ── Accounts ──────────────────────────────────────────────────────────────────
@@ -378,21 +666,15 @@ export class SocialService {
   }
 
   async getMyAccount(tenantId: string, userId: string) {
-    const withCounts = { _count: { select: { posts: true, followerList: true, followingList: true } } };
-    let account = await this.prisma.socialAccount.findFirst({ where: { userId }, include: withCounts });
-    if (!account) {
-      await this.getOrCreateSocialAccount(userId, tenantId);
-      account = await this.prisma.socialAccount.findFirst({ where: { userId }, include: withCounts });
-    }
+    await this.getOrCreateSocialAccount(userId, tenantId);
+    const account = await this.prisma.socialAccount.findFirst({
+      where: { userId },
+      include: { _count: { select: { posts: { where: { deletedAt: null } }, followerList: true, followingList: true } } },
+    });
     if (!account) return null;
-    // FIX-07: expose LIVE counts (not the stale denormalized columns) under the
-    // names the UI reads (_count.posts / followers / following), so profile
-    // counters update immediately after posting / following.
-    const { _count, ...rest } = account as any;
-    return {
-      ...rest,
-      _count: { posts: _count.posts, followers: _count.followerList, following: _count.followingList },
-    };
+    // Live counts (never the denormalised columns) under the names the UI reads.
+    const { _count, ...rest } = account;
+    return { ...rest, _count: { posts: _count.posts, followers: _count.followerList, following: _count.followingList } };
   }
 
   // Alias for controller
@@ -420,21 +702,31 @@ export class SocialService {
     return this.prisma.socialAccount.update({ where: { id: account.id }, data });
   }
 
+  // Alias for controller
+  updateAccount = this.updateMyAccount.bind(this);
+
   // ── Saved posts (bookmarks) ─────────────────────────────────────────
-  async toggleSavePost(tenantId: string, userId: string, postId: string, roles: string[] = []) {
+  async toggleSavePost(tenantId: string, userId: string, postId: string, roles: string[] = [], desiredState?: boolean) {
     postId = requireId(postId, 'Post');
     const account = await this.getOrCreateSocialAccount(userId, tenantId);
     const existing = await this.prisma.savedPost.findUnique({ where: { accountId_postId: { accountId: account.id, postId } } });
-    if (existing) {
-      await this.prisma.savedPost.delete({ where: { id: existing.id } });
-      await this.prisma.post.update({ where: { id: postId }, data: { saveCount: { decrement: 1 } } }).catch(() => undefined);
-      return { saved: false };
+    const desired = typeof desiredState === 'boolean' ? desiredState : !existing;
+    let saved: boolean;
+    if (!desired) {
+      // Un-saving is always allowed, even for a post that has since become invisible.
+      const removed = await this.prisma.savedPost.deleteMany({ where: { accountId: account.id, postId } });
+      if (removed.count) {
+        await this.prisma.post.updateMany({ where: { id: postId, saveCount: { gt: 0 } }, data: { saveCount: { decrement: 1 } } });
+      }
+      saved = false;
+    } else {
+      // Saving requires the post to exist and be visible.
+      await this.findVisiblePost({ userId, accountId: account.id, isVerified: account.isVerified, roles }, postId);
+      const created = await this.prisma.savedPost.createMany({ data: [{ accountId: account.id, postId }], skipDuplicates: true });
+      if (created.count) await this.prisma.post.update({ where: { id: postId }, data: { saveCount: { increment: 1 } } });
+      saved = true;
     }
-    // Un-saving is always allowed; saving requires the post to exist and be visible.
-    await this.findVisiblePost(await this.getViewer(userId, roles), postId);
-    await this.prisma.savedPost.create({ data: { accountId: account.id, postId } });
-    await this.prisma.post.update({ where: { id: postId }, data: { saveCount: { increment: 1 } } }).catch(() => undefined);
-    return { saved: true };
+    return { saved, saveCount: await this.prisma.savedPost.count({ where: { postId } }) };
   }
 
   async listSavedPosts(tenantId: string, userId: string, roles: string[] = []) {
@@ -445,16 +737,18 @@ export class SocialService {
       // hide saved posts that were since deleted, moderated away or restricted
       where: { accountId: account.id, post: this.visiblePostsWhere(viewer, followed) },
       orderBy: { savedAt: 'desc' },
-      include: { post: { include: { author: { select: PUBLIC_AUTHOR_SELECT } } } },
+      take: 200,
+      include: { post: { include: this.postInclude(viewer) } },
     });
-    return items.map((s) => ({ ...s.post, savedAt: s.savedAt }));
+    const posts = await this.presentPosts(items.map((s) => s.post), viewer);
+    return posts.map((p, i) => ({ ...p, savedAt: items[i].savedAt }));
   }
 
   // ── Discover ─────────────────────────────────────────────────────────
   async discoverPeople(tenantId: string, userId: string, params: { limit?: number; search?: string } = {}) {
     const limit = Math.min(50, Math.max(1, Number(params.limit ?? 12)));
     const me = await this.getOrCreateSocialAccount(userId, tenantId);
-    const where: any = {
+    const where: Prisma.SocialAccountWhereInput = {
       id: { not: me.id },
       isSuspended: false,
       profileVisibility: { in: ['PUBLIC', 'CONNECTIONS'] },
@@ -468,24 +762,49 @@ export class SocialService {
     const people = await this.prisma.socialAccount.findMany({
       where,
       take: limit,
-      orderBy: { followerCount: 'desc' },
+      orderBy: [{ followerCount: 'desc' }, { createdAt: 'asc' }],
       select: {
         id: true, userId: true, type: true, displayName: true, bio: true, avatarUrl: true,
         city: true, nationality: true, travelInterests: true, isVerified: true,
         followerCount: true, postCount: true,
       },
     });
-    const follows = await this.prisma.follow.findMany({
-      where: { followerId: me.id, followedId: { in: people.map((p) => p.id) } },
-      select: { followedId: true },
-    });
+    const ids = people.map((p) => p.id);
+    const userIds = people.map((p) => p.userId);
+    const [follows, followerCounts, connections] = await Promise.all([
+      this.prisma.follow.findMany({ where: { followerId: me.id, followedId: { in: ids } }, select: { followedId: true } }),
+      this.prisma.follow.groupBy({ by: ['followedId'], where: { followedId: { in: ids } }, _count: { _all: true } }),
+      this.prisma.connection.findMany({
+        where: {
+          OR: [
+            { requesterId: userId, recipientId: { in: userIds } },
+            { recipientId: userId, requesterId: { in: userIds } },
+          ],
+        },
+        select: { id: true, requesterId: true, recipientId: true, status: true },
+      }),
+    ]);
     const followedIds = new Set(follows.map((f) => f.followedId));
-    return people.map((p) => ({ ...p, isFollowing: followedIds.has(p.id) }));
+    return people.map((p) => {
+      const c = connections.find((x) => x.requesterId === p.userId || x.recipientId === p.userId);
+      return {
+        ...p,
+        // live follower count (the column may be stale)
+        followerCount: followerCounts.find((g) => g.followedId === p.id)?._count._all ?? 0,
+        isFollowing: followedIds.has(p.id),
+        // A block is reported as "no connection possible" without saying who blocked whom.
+        connection: c
+          ? c.status === 'BLOCKED'
+            ? { status: 'UNAVAILABLE' }
+            : { status: c.status, direction: c.requesterId === userId ? 'OUTGOING' : 'INCOMING', connectionId: c.id }
+          : { status: 'NONE' },
+      };
+    });
   }
 
   async discoverGroups(params: { limit?: number; search?: string } = {}) {
     const limit = Math.min(50, Math.max(1, Number(params.limit ?? 12)));
-    const where: any = { visibility: 'PUBLIC' };
+    const where: Prisma.TripGroupWhereInput = { visibility: 'PUBLIC' };
     if (params.search) where.name = { contains: params.search, mode: 'insensitive' };
     return this.prisma.tripGroup.findMany({
       where,
@@ -495,149 +814,168 @@ export class SocialService {
     });
   }
 
-  async trendingPosts(limit = 10) {
+  /** Public posts with the most live engagement (reactions, then comments). */
+  async trendingPosts(limit = 10, userId?: string, roles: string[] = []) {
     const take = Math.min(50, Math.max(1, Number(limit) || 10));
-    return this.prisma.post.findMany({
-      where: { moderationStatus: 'APPROVED', deletedAt: null, visibility: 'PUBLIC' },
-      orderBy: [{ likeCount: 'desc' }, { commentCount: 'desc' }, { createdAt: 'desc' }],
+    const viewer = await this.getViewer(userId ?? '', roles);
+    const posts = await this.prisma.post.findMany({
+      where: this.visiblePostsWhere(viewer, [], { publicOnly: true }),
+      orderBy: [{ reactions: { _count: 'desc' } }, { comments: { _count: 'desc' } }, { createdAt: 'desc' }],
       take,
-      include: { author: { select: PUBLIC_AUTHOR_SELECT } },
+      include: this.postInclude(viewer),
     });
+    return this.presentPosts(posts, viewer);
   }
 
-  // Alias for controller
-  updateAccount = this.updateMyAccount.bind(this);
-
   // ── Messaging ───────────────────────────────────────────────────────────
-  /** List all conversations the current user participates in. */
+
+  /** True when either user has blocked the other (a BLOCKED connection in either direction). */
+  private async blockedBetween(userId: string, otherUserIds: string[]) {
+    if (!otherUserIds.length) return false;
+    const block = await this.prisma.connection.findFirst({
+      where: {
+        status: 'BLOCKED',
+        OR: [
+          { requesterId: userId, recipientId: { in: otherUserIds } },
+          { recipientId: userId, requesterId: { in: otherUserIds } },
+        ],
+      },
+      select: { id: true },
+    });
+    return !!block;
+  }
+
+  /** Conversations the current user participates in, most recent activity first. */
   async listConversations(tenantId: string, userId: string) {
     const account = await this.getOrCreateSocialAccount(userId, tenantId);
-    // participants JSON contains social-account ids
-    const all = await this.prisma.conversation.findMany({
-      orderBy: { lastMessageAt: 'desc' },
-      take: 200,
+    // participants is a JSON array of social-account ids; containment is evaluated in
+    // the database, so no conversation is missed however many others exist.
+    const mine = await this.prisma.conversation.findMany({
+      where: { participants: { array_contains: [account.id] } },
+      orderBy: [{ lastMessageAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
+      take: 100,
     });
-    const mine = all.filter((c) => {
-      const ps = Array.isArray(c.participants) ? (c.participants as string[]) : [];
-      return ps.includes(account.id);
-    });
-    // Hydrate with the other participant's profile + latest message
-    const result = await Promise.all(
+    const otherIds = [...new Set(mine.flatMap((c) => (c.participants as string[]).filter((id) => id !== account.id)))];
+    const others = otherIds.length
+      ? await this.prisma.socialAccount.findMany({
+          where: { id: { in: otherIds } },
+          select: { id: true, displayName: true, avatarUrl: true, userId: true },
+        })
+      : [];
+    const items = await Promise.all(
       mine.map(async (c) => {
         const ps = (c.participants as string[]).filter((id) => id !== account.id);
-        const others = ps.length
-          ? await this.prisma.socialAccount.findMany({
-              where: { id: { in: ps } },
-              select: { id: true, displayName: true, avatarUrl: true, userId: true },
-            })
-          : [];
         const latest = await this.prisma.message.findFirst({
           where: { conversationId: c.id, deletedAt: null },
           orderBy: { createdAt: 'desc' },
+          select: { id: true, body: true, createdAt: true, senderId: true },
         });
+        const members = others.filter((o) => ps.includes(o.id));
         return {
           id: c.id,
           type: c.type,
           name: c.name,
           lastMessageAt: c.lastMessageAt,
-          other: others[0] ?? null,
-          others,
-          latest,
+          createdAt: c.createdAt,
+          other: members[0] ?? null,
+          others: members,
+          latest: latest ? { ...latest, isMine: latest.senderId === account.id } : null,
         };
       }),
     );
-    return { items: result, total: result.length };
+    return { items, total: items.length };
   }
 
   /** Start (or reuse) a DM thread between current user and recipient (by user id). */
   async openConversation(tenantId: string, userId: string, recipientUserId: string) {
     recipientUserId = requireId(recipientUserId, 'Recipient');
     if (userId === recipientUserId) throw new BadRequestException('Cannot DM yourself');
-    // The recipient must be an existing, usable account.
+    // The recipient must be an existing, usable account with no block between the two users.
     const recipient = await this.prisma.user.findFirst({
       where: { id: recipientUserId, deletedAt: null, status: { notIn: ['INACTIVE', 'LOCKED'] } },
       select: { id: true },
     });
-    if (!recipient) throw new NotFoundException('Recipient not found');
+    if (!recipient || (await this.blockedBetween(userId, [recipient.id]))) throw new NotFoundException('Recipient not found');
     const me = await this.getOrCreateSocialAccount(userId, tenantId);
-    let other = await this.prisma.socialAccount.findFirst({ where: { userId: recipient.id } });
-    if (other?.isSuspended) throw new NotFoundException('Recipient not found');
-    if (!other) {
-      other = await this.prisma.socialAccount.create({
-        data: { userId: recipient.id, type: 'OPERATOR' as any, displayName: 'User' },
-      });
-    }
+    const other = await this.getOrCreateSocialAccount(recipient.id);
+    if (other.isSuspended) throw new NotFoundException('Recipient not found');
+
     const pair = [me.id, other.id].sort();
-    // Reuse if a DM with same pair exists
-    const existing = await this.prisma.conversation.findMany({ where: { type: 'DM' }, take: 200 });
-    const found = existing.find((c) => {
-      const ps = Array.isArray(c.participants) ? (c.participants as string[]).slice().sort() : [];
-      return ps.length === 2 && ps[0] === pair[0] && ps[1] === pair[1];
+    const candidates = await this.prisma.conversation.findMany({
+      where: { type: 'DM', participants: { array_contains: pair } },
+      orderBy: { createdAt: 'asc' },
     });
-    if (found) return found;
-    return this.prisma.conversation.create({
-      data: { type: 'DM', participants: pair as any },
-    });
+    const found = candidates.find((c) => Array.isArray(c.participants) && (c.participants as string[]).length === 2);
+    const conversation = found ?? (await this.prisma.conversation.create({ data: { type: 'DM', participants: pair } }));
+    return {
+      ...conversation,
+      other: { id: other.id, displayName: other.displayName, avatarUrl: other.avatarUrl, userId: other.userId },
+    };
   }
 
-  async listMessages(tenantId: string, userId: string, conversationId: string, params: { page?: number; limit?: number }) {
-    const account = await this.getOrCreateSocialAccount(userId, tenantId);
-    const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
-    if (!conv) throw new NotFoundException('Conversation not found');
-    const ps = Array.isArray(conv.participants) ? (conv.participants as string[]) : [];
-    // Same answer as an unknown id: non-participants learn nothing about the conversation.
-    if (!ps.includes(account.id)) throw new NotFoundException('Conversation not found');
+  /** A conversation the caller takes part in; non-participants get the 404 of an unknown id. */
+  private async participantConversation(userId: string, conversationId: string) {
+    const account = await this.getOrCreateSocialAccount(userId);
+    const conv = await this.prisma.conversation.findUnique({ where: { id: requireId(conversationId, 'Conversation') } });
+    const ps = conv && Array.isArray(conv.participants) ? (conv.participants as string[]) : [];
+    if (!conv || !ps.includes(account.id)) throw new NotFoundException('Conversation not found');
+    return { account, conv, participants: ps };
+  }
 
+  async listMessages(tenantId: string, userId: string, conversationId: string, params: Page) {
+    const { account, conv } = await this.participantConversation(userId, conversationId);
     const page = Math.max(1, Number(params.page ?? 1));
     const limit = Math.min(100, Math.max(1, Number(params.limit ?? 50)));
     const [items, total] = await Promise.all([
       this.prisma.message.findMany({
-        where: { conversationId, deletedAt: null },
-        orderBy: { createdAt: 'desc' },
+        where: { conversationId: conv.id, deletedAt: null },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * limit,
         take: limit,
         include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } },
       }),
-      this.prisma.message.count({ where: { conversationId, deletedAt: null } }),
+      this.prisma.message.count({ where: { conversationId: conv.id, deletedAt: null } }),
     ]);
-    return { items: items.reverse(), total, page, limit };
+    // Reading the conversation settles its message notifications.
+    await this.prisma.notification.updateMany({
+      where: { recipientId: userId, type: 'MESSAGE', readAt: null, data: { path: ['conversationId'], equals: conv.id } },
+      data: { readAt: new Date() },
+    });
+    return {
+      items: items.reverse().map((m) => ({ ...m, isMine: m.senderId === account.id })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async sendMessage(tenantId: string, userId: string, conversationId: string, body: string) {
-    if (!body?.trim()) throw new BadRequestException('Message body is required');
-    const account = await this.getOrCreateSocialAccount(userId, tenantId);
-    const conv = await this.prisma.conversation.findUnique({ where: { id: conversationId } });
-    if (!conv) throw new NotFoundException('Conversation not found');
-    const ps = Array.isArray(conv.participants) ? (conv.participants as string[]) : [];
-    // Same answer as an unknown id: non-participants learn nothing about the conversation.
-    if (!ps.includes(account.id)) throw new NotFoundException('Conversation not found');
+    const text = String(body ?? '').trim();
+    if (!text) throw new BadRequestException('Message body is required');
+    const { account, conv, participants } = await this.participantConversation(userId, conversationId);
+
+    const otherAccountIds = participants.filter((id) => id !== account.id);
+    const others = otherAccountIds.length
+      ? await this.prisma.socialAccount.findMany({ where: { id: { in: otherAccountIds } }, select: { userId: true } })
+      : [];
+    if (await this.blockedBetween(userId, others.map((o) => o.userId))) {
+      throw new ForbiddenException('Messages to this person are not available');
+    }
 
     const msg = await this.prisma.message.create({
-      data: { conversationId, senderId: account.id, body: body.trim() },
+      data: { conversationId: conv.id, senderId: account.id, body: text },
       include: { sender: { select: { id: true, displayName: true, avatarUrl: true } } },
     });
-    await this.prisma.conversation.update({ where: { id: conversationId }, data: { lastMessageAt: new Date() } });
+    await this.prisma.conversation.update({ where: { id: conv.id }, data: { lastMessageAt: msg.createdAt } });
 
-    // Notify the other participant(s)
-    const otherAccountIds = ps.filter((id) => id !== account.id);
-    if (otherAccountIds.length) {
-      const others = await this.prisma.socialAccount.findMany({
-        where: { id: { in: otherAccountIds } },
-        select: { userId: true },
+    for (const o of others) {
+      await this.notify({
+        tenantId, recipientUserId: o.userId, actorUserId: userId, type: 'MESSAGE',
+        title: `New message from ${account.displayName}`, body: text.slice(0, 140),
+        link: `/messages?c=${conv.id}`, data: { conversationId: conv.id, messageId: msg.id },
       });
-      for (const o of others) {
-        await this.notifications.fire({
-          tenantId,
-          recipientUserId: o.userId,
-          actorUserId: userId,
-          type: 'MESSAGE',
-          title: 'New message',
-          body: body.slice(0, 140),
-          link: `/messages?c=${conversationId}`,
-          data: { conversationId, messageId: msg.id },
-        });
-      }
     }
-    return msg;
+    return { ...msg, isMine: true };
   }
 }

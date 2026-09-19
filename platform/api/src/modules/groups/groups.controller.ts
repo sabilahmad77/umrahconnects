@@ -1,23 +1,46 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-import { GroupsService } from './groups.service';
+import { GroupAccess, GroupsService } from './groups.service';
 import {
   CreateGroupDto, UpdateGroupDto, QueryGroupDto, CreateIncidentDto, UpdateIncidentDto,
   QueryPublicGroupDto, AddGroupMemberDto, CreateGroupInviteDto, RespondGroupInviteDto,
   CreateGroupPostDto, CreateGroupCommentDto, CreateGroupPollDto, VoteGroupPollDto,
-  CreateGroupNoteDto, UpdateGroupNoteDto, AddGroupDocumentDto, AddGroupPilgrimDto,
+  CreateGroupNoteDto, UpdateGroupNoteDto, AddGroupDocumentDto, AddGroupPilgrimDto, QueryGroupPostsDto,
 } from './dto/group.dto';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { AnyAuthenticated } from '../../common/decorators/access.decorator';
+import { RbacService } from '../rbac/rbac.service';
 import { Principal } from '../auth/principal';
 
+/**
+ * Trip groups. Management routes require a CRM capability and act inside the
+ * caller's organization. Member-facing routes (@AnyAuthenticated) serve both the
+ * managing organization and the group's members — travelers included — and the
+ * service decides per group: organization + capability, or active membership.
+ */
 @ApiTags('groups')
 @Controller({ path: 'groups', version: '1' })
 @ApiBearerAuth()
 export class GroupsController {
-  constructor(private readonly service: GroupsService) {}
+  constructor(
+    private readonly service: GroupsService,
+    private readonly rbac: RbacService,
+  ) {}
+
+  /** The caller as the groups service sees them: identity plus their CRM capabilities (from the database). */
+  private async access(req: any): Promise<GroupAccess> {
+    const granted = await this.rbac.permissionsFor(req);
+    const user: Principal = req.user;
+    return {
+      userId: user.sub,
+      tenantId: user.tenantId,
+      email: user.email,
+      canRead: granted.has('crm:pilgrim:read'),
+      canUpdate: granted.has('crm:pilgrim:update'),
+    };
+  }
 
   // ── Listing & basic CRUD ────────────────────────────────────────────
   @Get()
@@ -29,7 +52,7 @@ export class GroupsController {
   /** Groups the signed-in user is an active member of (travelers included). */
   @Get('mine')
   @AnyAuthenticated()
-  async findMine(@CurrentUser() user: any) {
+  async findMine(@CurrentUser() user: Principal) {
     return { success: true, data: await this.service.findMine(user.sub) };
   }
 
@@ -37,6 +60,13 @@ export class GroupsController {
   @Public()
   async findPublic(@Query() query: QueryPublicGroupDto) {
     return { success: true, data: await this.service.findPublic(query) };
+  }
+
+  /** Pending invitations addressed to the signed-in user. */
+  @Get('invites/mine')
+  @AnyAuthenticated()
+  async myInvites(@CurrentUser() user: Principal) {
+    return { success: true, data: await this.service.listMyInvites({ userId: user.sub, email: user.email }) };
   }
 
   @Post()
@@ -51,10 +81,11 @@ export class GroupsController {
     return { success: true, data: await this.service.getStats(tenantId) };
   }
 
+  /** Full record for the managing organization; the public-safe view for members, invitees and link holders. */
   @Get(':id')
-  @RequirePermissions('crm:pilgrim:read')
-  async findOne(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.findOne(tenantId, id) };
+  @AnyAuthenticated()
+  async findOne(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.findOne(await this.access(req), id) };
   }
 
   @Put(':id')
@@ -88,7 +119,7 @@ export class GroupsController {
     return { success: true, data: await this.service.removeMember(tenantId, id, userId) };
   }
 
-  // ── Self-service join/leave (travelers — PUBLIC groups only) ───────
+  // ── Self-service join/leave (PUBLIC groups, or UNLISTED ones by link) ─
   @Post(':id/join')
   @AnyAuthenticated()
   async joinGroup(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
@@ -120,42 +151,58 @@ export class GroupsController {
     return { success: true, data: await this.service.respondInvite(user, inviteId, body.accept) };
   }
 
-  // ── Discussion ─────────────────────────────────────────────────────
+  @Post('invites/:inviteId/revoke')
+  @RequirePermissions('crm:pilgrim:update')
+  async revokeInvite(@TenantId() tenantId: string, @Param('inviteId', ParseUUIDPipe) inviteId: string) {
+    return { success: true, data: await this.service.revokeInvite(tenantId, inviteId) };
+  }
+
+  // ── Discussion (managing organization or active members) ────────────
   @Get(':id/posts')
-  @RequirePermissions('crm:pilgrim:read')
-  async listPosts(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.listPosts(tenantId, user.sub, id) };
+  @AnyAuthenticated()
+  async listPosts(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Query() query: QueryGroupPostsDto) {
+    return { success: true, data: await this.service.listPosts(await this.access(req), id, query) };
   }
 
   @Post(':id/posts')
-  @RequirePermissions('crm:pilgrim:update')
-  async createPost(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string, @Body() body: CreateGroupPostDto) {
-    return { success: true, data: await this.service.createPost(tenantId, id, user.sub, body) };
+  @AnyAuthenticated()
+  async createPost(@Req() req: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: CreateGroupPostDto) {
+    return { success: true, data: await this.service.createPost(await this.access(req), id, body) };
   }
 
   @Delete('posts/:postId')
-  @RequirePermissions('crm:pilgrim:update')
-  async deletePost(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('postId', ParseUUIDPipe) postId: string) {
-    return { success: true, data: await this.service.deletePost(tenantId, user.sub, postId) };
+  @AnyAuthenticated()
+  async deletePost(@Req() req: any, @Param('postId', ParseUUIDPipe) postId: string) {
+    return { success: true, data: await this.service.deletePost(await this.access(req), postId) };
   }
 
   @Get('posts/:postId/comments')
-  @RequirePermissions('crm:pilgrim:read')
-  async listComments(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('postId', ParseUUIDPipe) postId: string) {
-    return { success: true, data: await this.service.listComments(tenantId, user.sub, postId) };
+  @AnyAuthenticated()
+  async listComments(@Req() req: any, @Param('postId', ParseUUIDPipe) postId: string) {
+    return { success: true, data: await this.service.listComments(await this.access(req), postId) };
   }
 
   @Post('posts/:postId/comments')
-  @RequirePermissions('crm:pilgrim:update')
-  async createComment(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('postId', ParseUUIDPipe) postId: string, @Body() body: CreateGroupCommentDto) {
-    return { success: true, data: await this.service.createComment(tenantId, postId, user.sub, body.body) };
+  @AnyAuthenticated()
+  async createComment(@Req() req: any, @Param('postId', ParseUUIDPipe) postId: string, @Body() body: CreateGroupCommentDto) {
+    return { success: true, data: await this.service.createComment(await this.access(req), postId, body.body) };
+  }
+
+  @Delete('posts/:postId/comments/:commentId')
+  @AnyAuthenticated()
+  async deleteComment(
+    @Req() req: any,
+    @Param('postId', ParseUUIDPipe) postId: string,
+    @Param('commentId', ParseUUIDPipe) commentId: string,
+  ) {
+    return { success: true, data: await this.service.deleteComment(await this.access(req), postId, commentId) };
   }
 
   // ── Polls ──────────────────────────────────────────────────────────
   @Get(':id/polls')
-  @RequirePermissions('crm:pilgrim:read')
-  async listPolls(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.listPolls(tenantId, user.sub, id) };
+  @AnyAuthenticated()
+  async listPolls(@Req() req: any, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.listPolls(await this.access(req), id) };
   }
 
   @Post(':id/polls')
@@ -165,9 +212,9 @@ export class GroupsController {
   }
 
   @Post('polls/:pollId/vote')
-  @RequirePermissions('crm:pilgrim:read')
-  async vote(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('pollId', ParseUUIDPipe) pollId: string, @Body() body: VoteGroupPollDto) {
-    return { success: true, data: await this.service.vote(tenantId, pollId, user.sub, body.optionIndices) };
+  @AnyAuthenticated()
+  async vote(@Req() req: any, @Param('pollId', ParseUUIDPipe) pollId: string, @Body() body: VoteGroupPollDto) {
+    return { success: true, data: await this.service.vote(await this.access(req), pollId, body.optionIndices) };
   }
 
   @Post('polls/:pollId/close')
@@ -227,7 +274,7 @@ export class GroupsController {
     return { success: true, data: await this.service.getRelated(tenantId, id) };
   }
 
-  // ── Pilgrim/Incidents (legacy) ─────────────────────────────────────
+  // ── Pilgrims / incidents ───────────────────────────────────────────
   @Post(':id/pilgrims')
   @RequirePermissions('crm:pilgrim:update')
   async addPilgrim(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: AddGroupPilgrimDto) {

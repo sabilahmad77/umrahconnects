@@ -1,39 +1,43 @@
 import {
-  IsString, IsOptional, IsNumber, IsDateString, IsUUID, IsArray, IsBoolean, IsIn, IsInt, IsEmail,
+  IsString, IsOptional, IsNumber, IsDateString, IsUUID, IsArray, IsBoolean, IsIn, IsInt, IsEmail, IsUrl,
   MaxLength, Min, Max, ArrayMinSize, ArrayMaxSize,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
+export const GROUP_VISIBILITY_VALUES = ['PRIVATE', 'UNLISTED', 'PUBLIC'];
+export const GROUP_STATUS_VALUES = ['PLANNING', 'CONFIRMED', 'ACTIVE', 'IN_KSA', 'RETURNING', 'COMPLETED', 'CANCELLED'];
+const upper = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toUpperCase() : value);
 
 export class CreateGroupDto {
-  @IsString() name: string;
+  @IsString() @MaxLength(200) name: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() coverUrl?: string;
   @IsOptional() @IsString() tripType?: string;
   @IsOptional() @IsString() season?: string;
-  @IsOptional() @IsString() visibility?: string;
+  @IsOptional() @Transform(upper) @IsIn(GROUP_VISIBILITY_VALUES) visibility?: string;
   @IsOptional() @IsUUID() packageId?: string;
   @IsOptional() @IsUUID() leadGuideId?: string;
   @IsOptional() @IsDateString() departureDate?: string;
   @IsOptional() @IsDateString() returnDate?: string;
-  @IsOptional() @IsNumber() maxCapacity?: number;
-  @IsOptional() @IsNumber() capacity?: number;
-  @IsOptional() @IsString() status?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(10000) maxCapacity?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(10000) capacity?: number;
+  @IsOptional() @Transform(upper) @IsIn(GROUP_STATUS_VALUES) status?: string;
   @IsOptional() notes?: string;
 }
 
 export class UpdateGroupDto {
-  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() @MaxLength(200) name?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() coverUrl?: string;
   @IsOptional() @IsString() tripType?: string;
   @IsOptional() @IsString() season?: string;
-  @IsOptional() @IsString() visibility?: string;
+  @IsOptional() @Transform(upper) @IsIn(GROUP_VISIBILITY_VALUES) visibility?: string;
   @IsOptional() @IsUUID() leadGuideId?: string;
   @IsOptional() @IsDateString() departureDate?: string;
   @IsOptional() @IsDateString() returnDate?: string;
-  @IsOptional() @IsNumber() maxCapacity?: number;
-  @IsOptional() @IsNumber() capacity?: number;
-  @IsOptional() @IsString() status?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(10000) maxCapacity?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(10000) capacity?: number;
+  @IsOptional() @Transform(upper) @IsIn(GROUP_STATUS_VALUES) status?: string;
   @IsOptional() notes?: string;
   @IsOptional() briefingNotes?: string;
   @IsOptional() itinerary?: any;
@@ -131,7 +135,10 @@ export class UpdateGroupNoteDto {
 
 export class AddGroupDocumentDto {
   @IsString() @MaxLength(255) name: string;
-  @IsString() @MaxLength(2048) url: string;
+  /** A shared link. Only http(s) — a javascript: or data: URL would run in the reader's session. */
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { message: 'url must be an http(s) link' })
+  @MaxLength(2048)
+  url: string;
   @IsOptional() @IsString() @MaxLength(120) mimeType?: string;
   @IsOptional() @IsInt() @Min(0) sizeBytes?: number;
   @IsOptional() @IsString() @MaxLength(2000) description?: string;
@@ -139,4 +146,9 @@ export class AddGroupDocumentDto {
 
 export class AddGroupPilgrimDto {
   @IsUUID() bookingId: string;
+}
+
+export class QueryGroupPostsDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit?: number = 20;
 }
