@@ -30,10 +30,11 @@ No real messaging channel to Codex exists, so none was claimed.
 | A06 | Listings, media, uploads, storage, O04 | a61186878f8268378 | 17:14 | `…/eng100/a06` / `eng100/a06` | running | — | — |
 | A07 | Traveler linkage (P06), seeds (D08), QA identities | a753066d747b73adb | 17:14 (interrupted by the account usage limit), resumed 20:52 | `…/eng100/a07` / `eng100/a07` | **completed 21:22** (82 tool uses, 567k tokens) | 09207dd 170d8fb 319c06f 72a6c1c 20d3458 9fed6fc 4393138 → merged `ce5e142` | P06 + D08 done; e2e 164/164 in its worktree; browser 15/15 steps; migration `20260918170000_pilgrim_account_links` |
 | A09 | Render retirement, KVM, backups, monitoring (I08) | ab88b88c8089253bb | 17:14 (429 early); restarted ~17:25 (19 Sep) | `…/eng100/a09` / `eng100/a09` | running | — | — |
+| A08 | Security: database RLS (R05), authorization regression | a71062c2a098505ac | 17:45 (19 Sep) | `…/eng100/a08` / `eng100/a08` (from candidate 7ca4d4d) | running | — | — |
 
-Not yet launched (wave 2, after wave 1 integrates): A08 security + RLS (R05) +
-envelope (P08), A10 browser QA, A11 accessibility + responsive, A12 independent
-acceptance reviewer.
+Not yet launched: A10 browser QA, A11 accessibility + responsive, A12 independent
+acceptance reviewer (they run against the integrated candidate once A03b, A06 and A09 merge).
+P08 envelope: connections done by A05; marketplace-requests assigned to A06.
 
 ## Interruptions
 
