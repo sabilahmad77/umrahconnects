@@ -463,6 +463,19 @@ describe('R05: database-level Row-Level Security', () => {
         expect(await ctx.appPrisma.pilgrim.count()).toBe(own);
       });
     });
+    it('a transaction keeps the scope it started with: system scope never widens an open tenant transaction', async () => {
+      const own = await ownerCount(`plugin_crm.pilgrims WHERE tenant_id = '${w.tenants.opA}'`);
+      const total = await ownerCount('plugin_crm.pilgrims');
+      await asActor(w.opA, false, () =>
+        ctx.appPrisma.$transaction(async (tx) => {
+          // The tx handle stays tenant-scoped even inside system scope …
+          expect(await withSystemScope('test.fixture', () => tx.pilgrim.count())).toBe(own);
+          // … while new operations on the service run system-scoped in their own transaction.
+          expect(await withSystemScope('test.fixture', () => ctx.appPrisma.pilgrim.count())).toBe(total);
+          expect(await tx.pilgrim.count()).toBe(own);
+        }),
+      );
+    });
   });
 
   // ── per-user and shared rows ─────────────────────────────────────────────

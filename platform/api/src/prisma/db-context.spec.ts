@@ -69,16 +69,16 @@ describe('database scope context (R05)', () => {
     await expect(withSystemScope('anything' as never, async () => 1)).rejects.toThrow(/Unknown system scope reason/);
   });
 
-  it('refuses to switch scope inside an open transaction (its scope is fixed at BEGIN)', async () => {
+  it('inside an open transaction, system scope applies to NEW operations only (the tx scope is fixed at BEGIN)', async () => {
     await runWithDbContext({}, async () => {
       bindPrincipalToDbContext({ sub: USER, tenantId: TENANT, tenantType: 'OPERATOR' }, null);
       await runInTransactionContext(async () => {
-        await expect(withSystemScope('payments.webhook', async () => 1)).rejects.toThrow(/before the transaction/);
+        expect(currentDbContext()).toMatchObject({ scope: 'tenant', inTransaction: true });
+        // New operations started inside run system-scoped, outside the open transaction.
+        const inner = await withSystemScope('payments.webhook', async () => currentDbContext());
+        expect(inner).toMatchObject({ scope: 'system', inTransaction: false });
+        expect(currentDbContext()).toMatchObject({ scope: 'tenant', inTransaction: true });
       });
-      // Already system when the transaction opened: nesting is fine.
-      await withSystemScope('payments.webhook', () =>
-        runInTransactionContext(() => withSystemScope('payments.webhook', async () => currentDbContext()?.scope)),
-      ).then((scope) => expect(scope).toBe('system'));
     });
   });
 

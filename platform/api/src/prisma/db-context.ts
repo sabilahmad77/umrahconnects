@@ -114,20 +114,20 @@ export function bindPrincipalToDbContext(principal: ScopedPrincipal, sharedTenan
  * that must cross organizations, and keep the explicit service-layer checks
  * (ownership, signatures, tokens) inside it — RLS no longer backs them up there.
  *
- * Must be entered BEFORE opening a transaction: the scope of a transaction is
- * fixed when it starts.
+ * A transaction's scope is fixed when it starts: enter system scope BEFORE
+ * `$transaction(...)`. Inside an already open transaction, the `tx` handle keeps
+ * its original (narrower) scope — it is never widened — while new operations on
+ * PrismaService itself run system-scoped in their own transaction.
  */
 export async function withSystemScope<T>(reason: SystemScopeReason, fn: () => Promise<T> | T): Promise<T> {
   if (!(SYSTEM_SCOPE_REASONS as readonly string[]).includes(reason)) {
     throw new Error(`Unknown system scope reason "${reason}"`);
   }
   const parent = storage.getStore();
-  if (parent?.inTransaction && parent.scope !== 'system') {
-    throw new Error('withSystemScope must be entered before the transaction is opened, not inside it');
-  }
   usage.set(reason, (usage.get(reason) ?? 0) + 1);
   logger.debug(
-    `system scope: ${reason} (user=${parent?.userId ?? '-'} tenant=${parent?.tenantId ?? '-'} request=${parent?.requestId ?? '-'})`,
+    `system scope: ${reason} (user=${parent?.userId ?? '-'} tenant=${parent?.tenantId ?? '-'} request=${parent?.requestId ?? '-'}` +
+      `${parent?.inTransaction && parent.scope !== 'system' ? ', inside a narrower transaction: its tx handle keeps its scope' : ''})`,
   );
   const child: DbContext = { ...parent, scope: 'system', reason, inTransaction: false };
   // `await` inside the scope: Prisma queries are lazy and must start while the scope is active.
