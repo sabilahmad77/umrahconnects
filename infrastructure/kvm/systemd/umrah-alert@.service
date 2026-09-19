@@ -1,0 +1,10 @@
+[Unit]
+Description=Umrah Connect alert for failed unit %i
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/opt/umrah-connect/infrastructure/kvm
+ExecStart=/opt/umrah-connect/infrastructure/kvm/scripts/alert.sh "%i failed" "Details: journalctl -u %i -n 50"
+TimeoutStartSec=1min
+NoNewPrivileges=yes

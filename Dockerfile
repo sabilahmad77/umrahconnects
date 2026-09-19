@@ -37,14 +37,26 @@ RUN apt-get update \
 ENV NODE_ENV=production \
     PORT=4000 \
     HOST=0.0.0.0 \
-    NODE_OPTIONS=--enable-source-maps
+    NODE_OPTIONS=--enable-source-maps \
+    CHECKPOINT_DISABLE=1 \
+    PRISMA_HIDE_UPDATE_MESSAGE=1
 
 WORKDIR /app
-COPY --from=build --chown=app:app /app /app
-COPY --chown=app:app infrastructure/kvm/api-entrypoint.sh /usr/local/bin/api-entrypoint
+# Application code stays owned by root and read-only for the runtime user: even without the
+# read-only root filesystem of the compose stack, a compromised process cannot rewrite its own
+# code or dependencies. Only the uploads directory (local storage driver) is writable.
+COPY --from=build /app /app
+COPY infrastructure/kvm/api-entrypoint.sh /usr/local/bin/api-entrypoint
 RUN chmod 0755 /usr/local/bin/api-entrypoint \
   && mkdir -p /app/platform/api/uploads/private \
   && chown -R app:app /app/platform/api/uploads
+
+# Commit the image was built from (scripts/deploy.sh passes it); reported by GET /api/v1/health.
+# Declared last so a new release only rebuilds this metadata layer.
+ARG UC_RELEASE=unknown
+ENV UC_RELEASE=${UC_RELEASE}
+LABEL org.opencontainers.image.title="umrah-connect-api" \
+      org.opencontainers.image.revision="${UC_RELEASE}"
 
 USER app
 WORKDIR /app/platform/api

@@ -1,0 +1,38 @@
+# Infrastructure gate: the KVM blueprint (compose in both proxy modes, Caddyfile, published-port policy,
+# shell scripts, systemd units) and the workflow files themselves. Runs only when those files change.
+name: infra-ci
+
+on:
+  pull_request:
+    paths:
+      - "infrastructure/**"
+      - "scripts/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/**"
+      - "scripts/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  blueprint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: KVM blueprint (compose, Caddyfile, ports, shell, systemd)
+        run: infrastructure/kvm/scripts/validate-blueprint.sh
+      - name: Workflow files (actionlint)
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color

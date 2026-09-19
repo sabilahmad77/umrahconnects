@@ -1,0 +1,15 @@
+[Unit]
+Description=Umrah Connect host health check (containers, API, HTTPS edge, disk, backup age)
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/opt/umrah-connect/infrastructure/kvm
+# The script raises and clears alerts itself (scripts/alert.sh); no OnFailure= here, or every failed
+# minute would alert twice.
+ExecStart=/opt/umrah-connect/infrastructure/kvm/scripts/healthcheck.sh
+TimeoutStartSec=2min
+NoNewPrivileges=yes
+PrivateTmp=yes

@@ -1,0 +1,72 @@
+# External uptime monitor (I08) that needs no extra account: every 5 minutes a GitHub-hosted runner runs
+# scripts/uptime-check.sh against production (API readiness and liveness, the web origin, the web → API
+# proxy path, certificate lifetimes). A failure fails the run (GitHub e-mails the workflow's owner) and
+# opens — or comments on — one "uptime-incident" issue; the first passing run closes it.
+#
+# Inert until the owner turns it on after the KVM cutover (docs/control-tower/RENDER_RETIREMENT.md):
+#   Settings → Secrets and variables → Actions → Variables: UPTIME_MONITOR=on
+#   optional: UPTIME_API_URL, UPTIME_WEB_URL (defaults below)
+# A manual run (Actions → uptime → Run workflow) always probes, enabled or not.
+# GitHub may delay scheduled runs and pauses schedules in repositories without activity for 60 days,
+# so this complements the provider monitor described in infrastructure/kvm/README.md; it does not replace it.
+name: uptime
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    if: github.event_name == 'workflow_dispatch' || vars.UPTIME_MONITOR == 'on'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      UPTIME_API_URL: ${{ vars.UPTIME_API_URL || 'https://api.umrahconnect.io' }}
+      UPTIME_WEB_URL: ${{ vars.UPTIME_WEB_URL || 'https://umrahconnect.io' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts
+      - name: Probe production
+        run: |
+          set -o pipefail
+          bash scripts/uptime-check.sh | tee uptime-report.txt
+
+      - name: Open or update the incident issue
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh label create uptime-incident --color B60205 --description "Production uptime check failing" --force
+          {
+            echo "Uptime check failed at $(date -u +%Y-%m-%dT%H:%M:%SZ) — run: $RUN_URL"
+            echo
+            echo '```'
+            cat uptime-report.txt 2>/dev/null || echo "(no report)"
+            echo '```'
+          } > body.md
+          open="$(gh issue list --label uptime-incident --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --body-file body.md
+          else
+            gh issue create --title "Production uptime check failing" --label uptime-incident --body-file body.md
+          fi
+
+      - name: Close the incident issue after recovery
+        if: success() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --label uptime-incident --state open --json number --jq '.[].number'); do
+            gh issue close "$n" --comment "Recovered: every uptime check passed at $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+          done

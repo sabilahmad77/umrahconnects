@@ -1,0 +1,64 @@
+# Proxy mode "bundled" (default): this stack's own Caddy terminates TLS and owns the host's :80/:443.
+# Use it only when no other web server on the host needs those ports; otherwise use
+# docker-compose.shared-proxy.yml. Selected in .env.production:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.bundled-proxy.yml
+services:
+  # Named volumes start out root-owned; this one-shot step hands them to the non-root Caddy user
+  # (idempotent, runs on every `up`, then exits).
+  uc-caddy-init:
+    image: caddy:2.8
+    user: "0:0"
+    command: ["sh", "-c", "chown -R 10002:10002 /data /config && chmod 0700 /data /config"]
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    network_mode: none
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  uc-caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    # Non-root. Docker lets unprivileged processes bind ports below 1024 inside a container
+    # (net.ipv4.ip_unprivileged_port_start=0), so no capability is needed.
+    user: "10002:10002"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required (Let's Encrypt account e-mail)}
+    ports:
+      # [ip:]port specs; production publishes 80 and 443 on all interfaces (ACME needs them public).
+      - "${CADDY_HTTP_PUBLISH:-80}:80"
+      - "${CADDY_HTTPS_PUBLISH:-443}:443"
+      - "${CADDY_HTTPS_PUBLISH:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      uc-caddy-init:
+        condition: service_completed_successfully
+      uc-api:
+        condition: service_healthy
+    healthcheck:
+      # The admin endpoint listens on localhost inside the container only.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [uc-edge]
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+volumes:
+  caddy_data:
+  caddy_config:

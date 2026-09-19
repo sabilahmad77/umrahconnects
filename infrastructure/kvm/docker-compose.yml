@@ -1,16 +1,27 @@
-# Umrah Connect — Hostinger KVM 8 production stack (API + PostgreSQL + HTTPS proxy)
-#
-#   cp .env.production.example .env.production   # fill in values on the server only
-#   docker compose --env-file .env.production pull | build
-#   docker compose --env-file .env.production run --rm api migrate
+# Umrah Connect — Hostinger KVM 8 production stack: PostgreSQL 16 + API.
+# The HTTPS entry point is added by exactly one proxy-mode file, selected with COMPOSE_FILE in .env.production:
+#   docker-compose.bundled-proxy.yml  this stack's own Caddy owns the host's :80/:443 (dedicated host)
+#   docker-compose.shared-proxy.yml   an existing reverse proxy on the host serves several projects
+# Run every command from this directory:
+#   docker compose --env-file .env.production config -q        # validate
+#   docker compose --env-file .env.production run --rm uc-api migrate
 #   docker compose --env-file .env.production up -d
 #
-# Only Caddy publishes ports (80/443). PostgreSQL and the API are reachable
-# only on the internal network (and PostgreSQL on 127.0.0.1 for backups/admin).
+# Coexistence with other projects on the same host:
+#   - Everything is namespaced by the project name below: containers umrah-connect-uc-<service>-1,
+#     volumes umrah-connect_<volume>, networks umrah-connect_<network>.
+#   - Service names carry the uc- prefix because a service name is also a DNS name on every network the
+#     service joins; a shared proxy network must never see two projects' "api" or "postgres".
+#   - This file publishes no host port at all. PostgreSQL is reachable only from uc-api on an internal
+#     network without internet access; operators use `docker compose exec uc-postgres …`.
 name: umrah-connect
 
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "20m", max-file: "5" }
+
 services:
-  postgres:
+  uc-postgres:
     image: postgres:16-bookworm
     restart: unless-stopped
     environment:
@@ -18,34 +29,38 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-umrah}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_INITDB_ARGS: --data-checksums
+    # Sized for this project's share of the host (defaults assume the 32 GB KVM 8); lower them when other
+    # projects on the same host need the memory.
     command:
       - postgres
       - -c
-      - shared_buffers=4GB
+      - shared_buffers=${PG_SHARED_BUFFERS:-4GB}
       - -c
-      - effective_cache_size=16GB
+      - effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-16GB}
       - -c
-      - max_connections=100
+      - max_connections=${PG_MAX_CONNECTIONS:-100}
       - -c
       - log_min_duration_statement=500
       - -c
       - password_encryption=scram-sha-256
+    # Parallel queries use POSIX shared memory; Docker's 64 MB default is too small for them.
+    shm_size: ${PG_SHM_SIZE:-1g}
+    # Room for a clean shutdown (checkpoint) instead of a SIGKILL after 10 s and crash recovery on start.
+    stop_grace_period: 1m
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
-    networks: [internal]
-    logging: &logging
-      driver: json-file
-      options: { max-size: "20m", max-file: "5" }
+    networks: [uc-backend]
+    logging: *logging
 
-  api:
-    image: ${API_IMAGE:-umrah-connect-api:latest}
+  uc-api:
+    # scripts/deploy.sh builds umrah-connect-api:<sha>, runs it via API_IMAGE, and tags it :current once healthy.
+    # Every other command (restore, bootstrap-admin, cleanup) therefore runs the deployed release.
+    image: ${API_IMAGE:-umrah-connect-api:current}
     build:
       context: ../..
       dockerfile: Dockerfile
@@ -55,16 +70,21 @@ services:
       NODE_ENV: production
       PORT: 4000
       TRUST_PROXY: "1"
-      DATABASE_URL: postgresql://${POSTGRES_USER:-umrah}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-umrah_connects}?schema=public&connection_limit=20
+      DATABASE_URL: postgresql://${POSTGRES_USER:-umrah}:${POSTGRES_PASSWORD}@uc-postgres:5432/${POSTGRES_DB:-umrah_connects}?schema=public&connection_limit=${API_DB_CONNECTION_LIMIT:-20}
     depends_on:
-      postgres:
+      uc-postgres:
         condition: service_healthy
     volumes:
       # Only used when STORAGE_DRIVER=local (with STORAGE_LOCAL_PERSISTENT=true).
       - uploads:/app/platform/api/uploads
     expose:
       - "4000"
-    networks: [internal]
+    networks:
+      uc-backend: {}
+      # uc-edge gives the API its outbound access (Stripe, R2, SMTP, Google) and is where the bundled
+      # proxy reaches it. The alias is the one upstream name every proxy mode uses.
+      uc-edge:
+        aliases: [umrah-connect-api]
     read_only: true
     tmpfs:
       - /tmp
@@ -73,31 +93,11 @@ services:
     cap_drop: [ALL]
     logging: *logging
 
-  caddy:
-    image: caddy:2.8
-    restart: unless-stopped
-    environment:
-      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
-      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - api
-    networks: [internal]
-    logging: *logging
-
 volumes:
   pgdata:
   uploads:
-  caddy_data:
-  caddy_config:
 
 networks:
-  internal:
-    driver: bridge
+  uc-backend:
+    internal: true
+  uc-edge: {}

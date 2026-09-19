@@ -1,4 +1,6 @@
-# Automatic HTTPS (Let's Encrypt) for the API host, e.g. api.umrahconnect.io.
+# Bundled proxy (docker-compose.bundled-proxy.yml): automatic HTTPS (Let's Encrypt) for the API host,
+# e.g. api.umrahconnect.io. In shared-proxy mode, copy the site block below into the shared proxy's
+# configuration unchanged — the upstream alias umrah-connect-api exists on both networks.
 {
 	email {$ACME_EMAIL}
 	servers {
@@ -26,7 +28,7 @@
 	@docs path /api/docs*
 	respond @docs 404
 
-	reverse_proxy api:4000 {
+	reverse_proxy umrah-connect-api:4000 {
 		header_up X-Request-Id {http.request.uuid}
 		health_uri /api/v1/health/ready
 		health_interval 15s
