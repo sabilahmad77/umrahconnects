@@ -1,4 +1,5 @@
 // Loaded before every e2e file, before the app module is imported.
+import { inject } from 'vitest';
 import { resolveAppDatabaseUrl, resolveTestDatabaseUrl } from './db-url';
 
 process.env.NODE_ENV = 'test';
@@ -13,6 +14,8 @@ process.env.MAIL_DRIVER = 'log';
 process.env.PAYMENT_PROVIDER = 'sandbox';
 process.env.SANDBOX_WEBHOOK_SECRET = 'test-sandbox-webhook-secret';
 process.env.STORAGE_DRIVER = 'local';
+// This run's own directory (test/global-setup.ts, removed after the run) — never the worktree's uploads/.
+process.env.STORAGE_LOCAL_DIR = inject('e2eStorageDir');
 process.env.KAFKA_ENABLED = 'false';
 process.env.THROTTLE_DISABLED = process.env.THROTTLE_DISABLED ?? 'true';
 // Pinned so the suite does not inherit a developer's .env. The API supports both
