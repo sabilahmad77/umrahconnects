@@ -1,10 +1,23 @@
-import { Injectable, Logger, BadRequestException, ServiceUnavailableException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  ServiceUnavailableException,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createHash, randomBytes } from 'crypto';
 import { createReadStream, existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
-import { join, normalize, sep } from 'path';
+import { readdir, stat } from 'fs/promises';
+import { isAbsolute, join, normalize, resolve, sep } from 'path';
 import type { Readable } from 'stream';
 import { sniffFile, SniffedType } from './file-sniff';
 
@@ -22,6 +35,18 @@ export interface StoredObject {
   checksum: string;
 }
 
+/** One stored object as the driver reports it (used by the orphan cleanup job). */
+export interface StoredObjectInfo {
+  visibility: Visibility;
+  /** Public media: `media/<name>`. Private documents: `<prefix>/<name>`. */
+  storageKey: string;
+  /** The object's file name — globally unique for everything this service wrote. */
+  name: string;
+  sizeBytes: number;
+  lastModified: Date;
+  driver: StorageDriver;
+}
+
 export interface PutFileInput {
   buffer: Buffer;
   originalName: string;
@@ -31,18 +56,39 @@ export interface PutFileInput {
   prefix: string;
 }
 
-const DOCUMENT_TYPES: SniffedType[] = ['pdf', 'jpeg', 'png', 'webp', 'heic', 'tiff'];
-const IMAGE_TYPES: SniffedType[] = ['jpeg', 'png', 'webp', 'gif'];
-const DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
-const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const DOCUMENT_TYPES: SniffedType[] = ['pdf', 'jpeg', 'png', 'webp', 'heic', 'tiff'];
+export const IMAGE_TYPES: SniffedType[] = ['jpeg', 'png', 'webp', 'gif'];
+export const DOCUMENT_MAX_BYTES = 15 * 1024 * 1024;
+export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Every object this service writes is named `<epoch ms>-<24 hex chars>.<ext>`.
+ * The name is unique across drivers and prefixes, which is what lets the orphan
+ * cleanup job decide "is this object referenced anywhere?" by name alone — and
+ * it never considers a file whose name does not have this shape.
+ */
+export const STORED_NAME_PATTERN = /^\d{13}-[0-9a-f]{24}\.[a-z0-9]{2,5}$/;
+const PUBLIC_MEDIA_KEY = /^media\/(\d{13}-[0-9a-f]{24}\.[a-z0-9]{2,5})$/;
+
+/**
+ * Root directory of the `local` driver. `STORAGE_LOCAL_DIR` (absolute, or
+ * relative to the working directory) overrides the default `./uploads`; the
+ * static `/uploads` route and the cleanup job use the same resolution.
+ */
+export function resolveLocalStorageRoot(configured?: string | null): string {
+  const raw = configured?.trim();
+  if (!raw) return join(process.cwd(), 'uploads');
+  return isAbsolute(raw) ? normalize(raw) : resolve(process.cwd(), raw);
+}
 
 /**
  * One seam for every binary the platform stores.
  *
  * Drivers:
- *  - `local`: disk under ./uploads. Public media are flat files served at
- *    /uploads/<file>; private documents live under ./uploads/private and are
- *    never served statically. Production use requires a persistent volume.
+ *  - `local`: disk under ./uploads (or STORAGE_LOCAL_DIR). Public media are flat
+ *    files served at /uploads/<file>; private documents live under
+ *    <root>/private and are never served statically. Production use requires a
+ *    persistent volume.
  *  - `r2` / `s3`: S3-compatible object storage (Cloudflare R2 via S3_ENDPOINT).
  *    Private documents go to S3_BUCKET (must not be public) and are read through
  *    short-lived presigned URLs; public media go to S3_PUBLIC_BUCKET and are
@@ -54,14 +100,18 @@ const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly localDir = join(process.cwd(), 'uploads');
   private s3?: S3Client;
 
   constructor(private config: ConfigService) {
     if (this.driver === 'local') {
-      mkdirSync(join(this.localDir, 'private'), { recursive: true });
-      if (this.config.get('NODE_ENV') === 'production' && this.config.get('STORAGE_LOCAL_PERSISTENT') !== 'true') {
-        this.logger.warn('STORAGE_DRIVER=local in production without a persistent volume — uploads will be lost on redeploy.');
+      mkdirSync(join(this.localRoot, 'private'), { recursive: true });
+      if (
+        this.config.get('NODE_ENV') === 'production' &&
+        this.config.get('STORAGE_LOCAL_PERSISTENT') !== 'true'
+      ) {
+        this.logger.warn(
+          'STORAGE_DRIVER=local in production without a persistent volume — uploads will be lost on redeploy.',
+        );
       }
     }
   }
@@ -69,6 +119,11 @@ export class StorageService {
   get driver(): StorageDriver {
     const d = (this.config.get<string>('STORAGE_DRIVER') ?? 'local').toLowerCase();
     return (d === 'r2' || d === 's3' ? d : 'local') as StorageDriver;
+  }
+
+  /** Root directory of the local driver (public media at the top level, documents under private/). */
+  get localRoot(): string {
+    return resolveLocalStorageRoot(this.config.get<string>('STORAGE_LOCAL_DIR'));
   }
 
   /** Whether the configured driver has everything it needs to run. */
@@ -112,14 +167,14 @@ export class StorageService {
     return this.s3;
   }
 
-  private validate(input: PutFileInput, allowed: SniffedType[], maxBytes: number) {
+  private validate(input: PutFileInput, allowed: SniffedType[], maxBytes: number, label: string) {
     if (!input.buffer?.length) throw new BadRequestException('Uploaded file is empty');
-    if (input.buffer.length > maxBytes) throw new BadRequestException(`File is larger than ${maxBytes / 1024 / 1024} MB`);
+    if (input.buffer.length > maxBytes) {
+      throw new BadRequestException(`${label} must be ${maxBytes / 1024 / 1024} MB or smaller`);
+    }
     const sniffed = sniffFile(input.buffer);
     if (!sniffed || !allowed.includes(sniffed.type)) {
-      throw new BadRequestException(
-        `File content is not an accepted type. Allowed: ${allowed.join(', ')}`,
-      );
+      throw new BadRequestException(`File content is not an accepted type. Allowed: ${allowed.join(', ')}`);
     }
     return sniffed;
   }
@@ -135,12 +190,16 @@ export class StorageService {
     return clean;
   }
 
+  private static newName(ext: string) {
+    return `${Date.now()}-${randomBytes(12).toString('hex')}.${ext}`;
+  }
+
   /** Private document (visa, KYC, traveler documents). Never publicly addressable. */
   async put(input: PutFileInput): Promise<StoredObject> {
     this.requireReady();
-    const sniffed = this.validate(input, DOCUMENT_TYPES, DOCUMENT_MAX_BYTES);
+    const sniffed = this.validate(input, DOCUMENT_TYPES, DOCUMENT_MAX_BYTES, 'Documents');
     const checksum = createHash('sha256').update(input.buffer).digest('hex');
-    const key = `${StorageService.safePrefix(input.prefix)}/${Date.now()}-${randomBytes(12).toString('hex')}.${sniffed.ext}`;
+    const key = `${StorageService.safePrefix(input.prefix)}/${StorageService.newName(sniffed.ext)}`;
 
     if (this.driver === 'local') {
       const full = this.localPath(key);
@@ -173,20 +232,17 @@ export class StorageService {
   /** Public media (avatars, post and listing images). */
   async putPublicImage(input: Omit<PutFileInput, 'prefix'>): Promise<StoredObject> {
     this.requireReady();
-    const sniffed = this.validate({ ...input, prefix: 'media' }, IMAGE_TYPES, IMAGE_MAX_BYTES);
+    const sniffed = this.validate({ ...input, prefix: 'media' }, IMAGE_TYPES, IMAGE_MAX_BYTES, 'Images');
     const checksum = createHash('sha256').update(input.buffer).digest('hex');
-    const name = `${Date.now()}-${randomBytes(12).toString('hex')}.${sniffed.ext}`;
+    const name = StorageService.newName(sniffed.ext);
 
     let url: string;
     if (this.driver === 'local') {
-      writeFileSync(join(this.localDir, name), input.buffer, { mode: 0o644 });
+      mkdirSync(this.localRoot, { recursive: true });
+      writeFileSync(join(this.localRoot, name), input.buffer, { mode: 0o644 });
       url = `/uploads/${name}`;
     } else {
-      const bucket = this.config.get<string>('S3_PUBLIC_BUCKET');
-      const base = this.config.get<string>('S3_PUBLIC_BASE_URL')?.replace(/\/+$/, '');
-      if (!bucket || !base) {
-        throw new ServiceUnavailableException('Public media storage is not configured. Missing: S3_PUBLIC_BUCKET, S3_PUBLIC_BASE_URL');
-      }
+      const { bucket, base } = this.publicBucket();
       await this.client().send(
         new PutObjectCommand({
           Bucket: bucket,
@@ -198,18 +254,40 @@ export class StorageService {
       );
       url = `${base}/media/${name}`;
     }
-    return { url, storageKey: `media/${name}`, driver: this.driver, visibility: 'public', mimeType: sniffed.mime, sizeBytes: input.buffer.length, checksum };
+    return {
+      url,
+      storageKey: `media/${name}`,
+      driver: this.driver,
+      visibility: 'public',
+      mimeType: sniffed.mime,
+      sizeBytes: input.buffer.length,
+      checksum,
+    };
+  }
+
+  private publicBucket() {
+    const bucket = this.config.get<string>('S3_PUBLIC_BUCKET');
+    const base = this.config.get<string>('S3_PUBLIC_BASE_URL')?.replace(/\/+$/, '');
+    if (!bucket || !base) {
+      throw new ServiceUnavailableException(
+        'Public media storage is not configured. Missing: S3_PUBLIC_BUCKET, S3_PUBLIC_BASE_URL',
+      );
+    }
+    return { bucket, base };
   }
 
   private localPath(key: string) {
-    const root = join(this.localDir, 'private');
+    const root = join(this.localRoot, 'private');
     const full = normalize(join(root, key));
     if (!full.startsWith(root + sep)) throw new BadRequestException('Invalid storage key');
     return full;
   }
 
   /** Short-lived URL for a private object (R2/S3). Local objects use the API's signed route instead. */
-  async presignedUrl(storageKey: string, opts: { filename?: string; expiresInSeconds?: number } = {}): Promise<string> {
+  async presignedUrl(
+    storageKey: string,
+    opts: { filename?: string; expiresInSeconds?: number } = {},
+  ): Promise<string> {
     const disposition = `attachment; filename="${(opts.filename ?? 'document').replace(/[^\w.\- ]/g, '_')}"`;
     return getSignedUrl(
       this.client(),
@@ -237,10 +315,124 @@ export class StorageService {
         const full = this.localPath(storageKey);
         if (existsSync(full)) unlinkSync(full);
       } else if (driver === this.driver) {
-        await this.client().send(new DeleteObjectCommand({ Bucket: this.config.get<string>('S3_BUCKET'), Key: storageKey }));
+        await this.client().send(
+          new DeleteObjectCommand({ Bucket: this.config.get<string>('S3_BUCKET'), Key: storageKey }),
+        );
       }
     } catch (err) {
       this.logger.warn(`Could not remove ${storageKey}: ${(err as Error).message}`);
     }
+  }
+
+  /**
+   * Deletes one public media object (`media/<name>`) written by putPublicImage.
+   * Throws when the key is not a media key or the driver fails, so callers can
+   * report the failure instead of claiming the file is gone.
+   */
+  async removePublicMedia(storageKey: string): Promise<void> {
+    const m = PUBLIC_MEDIA_KEY.exec(storageKey ?? '');
+    if (!m) throw new BadRequestException('Invalid media key');
+    if (this.driver === 'local') {
+      const full = join(this.localRoot, m[1]);
+      if (existsSync(full)) unlinkSync(full);
+      return;
+    }
+    const { bucket } = this.publicBucket();
+    await this.client().send(new DeleteObjectCommand({ Bucket: bucket, Key: storageKey }));
+  }
+
+  /** Deletes an object reported by listObjects(); throws on failure. */
+  async deleteObject(obj: Pick<StoredObjectInfo, 'visibility' | 'storageKey'>): Promise<void> {
+    if (obj.visibility === 'public') return this.removePublicMedia(obj.storageKey);
+    if (this.driver === 'local') {
+      const full = this.localPath(obj.storageKey);
+      if (existsSync(full)) unlinkSync(full);
+      return;
+    }
+    await this.client().send(
+      new DeleteObjectCommand({ Bucket: this.config.get<string>('S3_BUCKET'), Key: obj.storageKey }),
+    );
+  }
+
+  /**
+   * Every object the configured driver holds: public media first, then private
+   * documents. Local: top-level files of the root are public media, files under
+   * private/ are documents. S3/R2: the public bucket's `media/` prefix and the
+   * whole private bucket.
+   */
+  async *listObjects(): AsyncGenerator<StoredObjectInfo> {
+    if (this.driver === 'local') {
+      yield* this.listLocal();
+      return;
+    }
+    this.requireReady();
+    const publicBucket = this.config.get<string>('S3_PUBLIC_BUCKET');
+    if (publicBucket) yield* this.listBucket(publicBucket, 'media/', 'public');
+    yield* this.listBucket(this.config.get<string>('S3_BUCKET')!, undefined, 'private');
+  }
+
+  private async *listLocal(): AsyncGenerator<StoredObjectInfo> {
+    const root = this.localRoot;
+    if (!existsSync(root)) return;
+    for (const entry of await readdir(root, { withFileTypes: true })) {
+      if (!entry.isFile() || entry.name.startsWith('.')) continue;
+      const s = await stat(join(root, entry.name));
+      yield {
+        visibility: 'public',
+        storageKey: `media/${entry.name}`,
+        name: entry.name,
+        sizeBytes: s.size,
+        lastModified: s.mtime,
+        driver: 'local',
+      };
+    }
+    const privateRoot = join(root, 'private');
+    if (!existsSync(privateRoot)) return;
+    const walk = async function* (dir: string, rel: string): AsyncGenerator<StoredObjectInfo> {
+      for (const entry of await readdir(dir, { withFileTypes: true })) {
+        if (entry.name.startsWith('.')) continue;
+        const full = join(dir, entry.name);
+        const key = rel ? `${rel}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          yield* walk(full, key);
+        } else if (entry.isFile()) {
+          const s = await stat(full);
+          yield {
+            visibility: 'private',
+            storageKey: key,
+            name: entry.name,
+            sizeBytes: s.size,
+            lastModified: s.mtime,
+            driver: 'local',
+          };
+        }
+      }
+    };
+    yield* walk(privateRoot, '');
+  }
+
+  private async *listBucket(
+    bucket: string,
+    prefix: string | undefined,
+    visibility: Visibility,
+  ): AsyncGenerator<StoredObjectInfo> {
+    let token: string | undefined;
+    do {
+      const page = await this.client().send(
+        new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, ContinuationToken: token }),
+      );
+      for (const o of page.Contents ?? []) {
+        if (!o.Key || o.Key.endsWith('/')) continue;
+        yield {
+          visibility,
+          storageKey: o.Key,
+          name: o.Key.slice(o.Key.lastIndexOf('/') + 1),
+          sizeBytes: Number(o.Size ?? 0),
+          lastModified: o.LastModified ?? new Date(0),
+          driver: this.driver,
+        };
+      }
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token);
   }
 }

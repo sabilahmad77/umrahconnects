@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { UploadsController } from './uploads.controller';
-import { AuditModule } from '../audit/audit.module';
+import { ImageUploadInterceptor } from './image-upload.interceptor';
 
+// MediaRegistryService (storage, registry, audit) comes from the global StorageModule.
 @Module({
-  imports: [AuditModule],
   controllers: [UploadsController],
+  providers: [ImageUploadInterceptor],
 })
 export class UploadsModule {}
