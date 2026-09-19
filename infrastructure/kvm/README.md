@@ -134,10 +134,13 @@ The legacy database was created with `prisma db push` and has no migration histo
 cd /opt/umrah-connect/infrastructure/kvm && ./scripts/deploy.sh <reviewed-commit-sha>
 ```
 
-Refuses commits that are not on `origin/main` and checkouts with local edits. Runs `preflight.sh`, builds
-`umrah-connect-api:<sha12>` with `UC_RELEASE=<sha>`, runs `check-config` in the new image, takes a backup, migrates
-(`prisma migrate deploy`), starts the stack with `--wait`, checks readiness, then tags the image `:current` (the old
-one becomes `:previous`; five release images are kept). On a failed health check it puts `:previous` back.
+Refuses commits that are not on `origin/main` and checkouts with local edits, then continues with the deployed
+commit's own copy of the script. Runs `preflight.sh`, builds `umrah-connect-api:<sha12>` with `UC_RELEASE=<sha>`, runs
+`check-config` in the new image, starts the database and backs it up (an empty first database needs no backup; a
+failed off-site copy is a warning, a failed local backup stops the deploy), migrates (`prisma migrate deploy`),
+starts the stack with `--wait`, checks readiness, then tags the image `:current` (the old one becomes `:previous`;
+five release images are kept). On a failed health check it starts `:previous` again, waits until it is healthy,
+and returns the checkout to that release's commit. Rehearsed end to end: `docs/control-tower/evidence/eng100/a09/deploy-rehearsal.md`.
 
 ## 5. Backups and restore
 
