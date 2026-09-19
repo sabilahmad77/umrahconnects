@@ -56,3 +56,19 @@ session resumes from here — nothing below is inferred.
   from the candidate; (2) merge A03b, A09, A08 as they finish; (3) seed QA identities on the candidate
   (`seed-qa-identities.ts`), build + start the candidate stack, launch A10 browser QA and A11
   accessibility/responsive; (4) A12 independent review; (5) full regression + register + final report.
+
+## Checkpoint 4 — 2026-09-19 18:40 +0500
+
+- Candidate `engineering/100-loop` @ `7c4780d`: every wave-1 branch and A08 merged (A02 A03 A03b A04 A05
+  A06 A07 A08 A09) plus coordinator fixes (`88ab60f`, `41fbacb`, `f5203e7`, `3ae74bb`, `ea83d44`).
+- Full gate on the candidate: API tsc/lint clean, unit 186/186; web tsc/eslint clean, vitest 223/223;
+  **API e2e as the non-superuser runtime role (RLS enforced): 444 passed, 5 skipped (stripe-mock), 0 failed.**
+- Candidate DB `umrah_connects_integration`: all migrations applied. `.env` now splits DATABASE_URL
+  (runtime login `uc_int_app`, member of `uc_app_runtime`) and MIGRATE_DATABASE_URL (owner). Run
+  migrations/seeds with `DATABASE_URL="$MIGRATE_DATABASE_URL"`.
+- Production builds started in the background (logs in the session scratchpad a01/api-build.txt, web-build.txt).
+- Usage: 5-hour window 94 % at 18:33 (resets 21:50); weekly 36 %.
+- Next after the reset: (1) seed QA identities on the candidate (owner URL) and start API :4300 +
+  `next start -p 3300`; (2) launch the fixer (F1–F11 + F13 hotel/trip/visa payment status honesty,
+  F14 offer-conversion checks, ConfirmDialog error surfacing, A08→KVM runtime-role compose/env,
+  README/record one-liners) and A10 browser QA + A11 accessibility/responsive in parallel; (3) A12 review.
