@@ -10,9 +10,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHotelOwnerStats } from '@/hooks/use-hotels';
+import { useCapabilities } from '@/hooks/use-capabilities';
 
 export function HotelDashboard() {
   const { data: stats, isLoading, error, refetch } = useHotelOwnerStats();
+  const { can } = useCapabilities();
+  const canManage = can('hotel:allotment:manage');
+  const canFinance = can('finance:invoice:read');
+  const canMarketplace = can('marketplace:listing:read');
 
   if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
@@ -20,15 +25,17 @@ export function HotelDashboard() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Hotel operations</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Current records for of your hotels, rooms, occupancy, bookings and revenue</p>
+          <p className="text-sm text-gray-600 mt-0.5">Your hotels, rooms, occupancy, bookings and payments — from the records themselves</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="quiet" type="button" aria-label="Refresh dashboard" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
-          <Link href="/hotels" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
-            <Plus className="h-4 w-4" /> Add hotel
-          </Link>
+          {canManage && (
+            <Link href="/hotels" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
+              <Plus className="h-4 w-4" /> Add hotel
+            </Link>
+          )}
         </div>
       </div>
 
@@ -41,16 +48,16 @@ export function HotelDashboard() {
           <section className="border-l-4 border-brand-500 bg-white p-5"><h2 className="text-base font-semibold text-gray-900">Arrivals and reservation requests</h2><p className="mt-2 text-sm text-gray-600">Review pending reservations and coordinate upcoming check-ins before updating inventory.</p><Link href="/hotel-bookings" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-700">Open work queue</Link></section>
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KPI label="Hotels" value={stats.hotels.total} sub={`${stats.hotels.active} active`} icon={Hotel} color="bg-yellow-50 text-yellow-700" href="/hotels" />
-            <KPI label="Rooms" value={stats.rooms.total} sub={`${stats.rooms.roomTypes} room types`} icon={BedDouble} color="bg-brand-50 text-brand-700" href="/hotels" />
-            <KPI label="Occupancy" value={`${stats.occupancyRate}%`} sub={`${stats.rooms.booked} booked`} icon={Percent} color="bg-purple-50 text-purple-700" href="/hotels" />
+            <KPI label="Own hotels" value={stats.hotels.total} sub={`${stats.hotels.active} active`} icon={Hotel} color="bg-yellow-50 text-yellow-700" href="/hotels" />
+            <KPI label="Rooms in service" value={stats.rooms.total} sub={`${stats.rooms.roomTypes} room types`} icon={BedDouble} color="bg-brand-50 text-brand-700" href="/hotels" />
+            <KPI label="Occupied now" value={`${stats.occupancyRate}%`} sub={`${stats.rooms.booked} guests checked in`} icon={Percent} color="bg-purple-50 text-purple-700" href="/hotel-bookings" />
             <KPI label="Bookings" value={stats.bookings.total} sub={`${stats.bookings.pending} pending`} icon={CalendarCheck2} color="bg-blue-50 text-blue-700" href="/hotel-bookings" />
           </div>
 
           {/* Room status tiles */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Tile label="Available rooms" value={stats.rooms.available} dot="bg-green-500" />
-            <Tile label="Booked rooms" value={stats.rooms.booked} dot="bg-blue-500" />
+            <Tile label="Occupied rooms" value={stats.rooms.booked} dot="bg-blue-500" />
             <Tile label="Maintenance" value={stats.rooms.maintenance} dot="bg-yellow-500" />
             <Tile label="Pending requests" value={stats.bookings.pending} dot="bg-orange-500" />
             <Tile label="Checked-in" value={stats.bookings.checkedIn} dot="bg-purple-500" />
@@ -60,19 +67,22 @@ export function HotelDashboard() {
             {/* Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-brand-600" /> Revenue
+                <Wallet className="h-4 w-4 text-brand-600" /> Booking payments
               </h3>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.revenue.currency} {(stats.revenue.collectedCents / 100).toLocaleString()}</p>
-                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><CheckCircle2 className="h-3 w-3" /> Collected</p>
+                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><CheckCircle2 className="h-3 w-3" /> Bookings recorded as paid</p>
               </div>
               <div className="pt-2 border-t border-gray-50">
                 <p className="text-lg font-semibold text-gray-700">{stats.revenue.currency} {(stats.revenue.outstandingCents / 100).toLocaleString()}</p>
-                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1"><PauseCircle className="h-3 w-3" /> Outstanding payments</p>
+                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1"><PauseCircle className="h-3 w-3" /> Not yet paid (open bookings)</p>
               </div>
-              <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
-                Go to finance <ArrowRight className="h-3 w-3" />
-              </Link>
+              <p className="text-xs text-gray-600">Payment status comes from payments recorded in Finance; it is not edited on bookings.</p>
+              {canFinance && (
+                <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
+                  Go to finance <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
 
             {/* Upcoming check-ins */}
@@ -128,9 +138,11 @@ export function HotelDashboard() {
               </h3>
               <p className="text-2xl font-bold text-gray-900">{stats.marketplace.activeListings}</p>
               <p className="text-xs text-gray-600">Active listings</p>
-              <Link href="/marketplace" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1 mt-3">
-                Manage listings <ArrowRight className="h-3 w-3" />
-              </Link>
+              {canMarketplace && (
+                <Link href="/marketplace" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1 mt-3">
+                  Manage listings <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2">
@@ -162,15 +174,13 @@ export function HotelDashboard() {
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <QuickAction href="/hotels" label="My Hotels" icon={Hotel} bg="bg-yellow-50 text-yellow-800" />
-              <QuickAction href="/hotels" label="Rooms" icon={BedDouble} bg="bg-brand-50 text-brand-600" />
+              <QuickAction href="/hotels" label="Hotels & rooms" icon={Hotel} bg="bg-yellow-50 text-yellow-800" />
               <QuickAction href="/hotel-bookings" label="Bookings" icon={CalendarCheck2} bg="bg-blue-50 text-blue-600" />
-              <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-purple-50 text-purple-600" />
-              <QuickAction href="/finance" label="Finance" icon={Wallet} bg="bg-green-50 text-green-800" />
+              {canMarketplace && <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-purple-50 text-purple-600" />}
+              {canFinance && <QuickAction href="/finance" label="Finance" icon={Wallet} bg="bg-green-50 text-green-800" />}
               <QuickAction href="/social" label="Social Hub" icon={MessageSquare} bg="bg-pink-50 text-pink-600" />
               <QuickAction href="/connections" label="Connections" icon={DoorOpen} bg="bg-blue-50 text-blue-700" />
-              <QuickAction href="/hotels?status=MAINTENANCE" label="Maintenance" icon={Wrench} bg="bg-yellow-50 text-yellow-700" />
-              <QuickAction href="/settings" label="Settings" icon={DoorOpen} bg="bg-gray-50 text-gray-700" />
+              <QuickAction href="/settings" label="Settings" icon={Wrench} bg="bg-gray-50 text-gray-700" />
             </div>
           </div>
         </>
