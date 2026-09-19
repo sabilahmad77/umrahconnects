@@ -7,10 +7,17 @@ import { Button, Dialog } from '@/components/ui/system';
 import { BookingCheckout } from './booking-checkout';
 import { Loader2, AlertCircle, CalendarCheck2, Wallet, Hotel, Bus, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMyMarketplaceBookings } from '@/hooks/use-marketplace';
+import { toast } from 'sonner';
+import { apiErrorMessage } from '@/lib/api-error';
+import { useCancelMarketplaceBooking, useMyMarketplaceBookings } from '@/hooks/use-marketplace';
+
+/** The server lets a customer cancel only a pending booking with no payment recorded or in progress. */
+const customerMayCancel = (b: any) => b.status === 'PENDING' && b.paymentStatus === 'UNPAID';
 
 export function MyBookingsView() {
   const [selectedBooking,setSelectedBooking]=useState<string>();
+  const [cancelling, setCancelling] = useState<any>();
+  const cancel = useCancelMarketplaceBooking();
   const [returnCheckout]=useState(()=> typeof window!=='undefined' && new URLSearchParams(window.location.search).has('checkout'));
   const { data: bookings = [], isLoading, error , refetch: retryMyMarketplaceBookings} = useMyMarketplaceBookings();
 
@@ -19,6 +26,24 @@ export function MyBookingsView() {
     <div className="space-y-5 pb-6">
       {returnCheckout && <BookingCheckout onChanged={()=>{void retryMyMarketplaceBookings();}} />}
       <Dialog open={!!selectedBooking} onOpenChange={open=>{if(!open)setSelectedBooking(undefined);}} title="Booking payment"><BookingCheckout bookingId={selectedBooking} onChanged={()=>{void retryMyMarketplaceBookings();}} /></Dialog>
+      <Dialog open={!!cancelling} onOpenChange={open=>{if(!open && !cancel.isPending)setCancelling(undefined);}} title="Cancel this booking?" description={cancelling ? `${cancelling.listing?.name ?? 'Listing'} · ${cancelling.partySize} pax` : undefined}>
+        <p className="text-sm text-gray-600">The provider is told that you cancelled. Nothing has been paid, so there is nothing to refund.</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" disabled={cancel.isPending} onClick={()=>setCancelling(undefined)}>Keep booking</Button>
+          <Button variant="danger" busy={cancel.isPending} onClick={async()=>{
+            try {
+              await cancel.mutateAsync(cancelling.id);
+              toast.success('Booking cancelled');
+              setCancelling(undefined);
+            } catch (e) {
+              // e.g. a payment was started meanwhile, or the provider already confirmed.
+              toast.error(apiErrorMessage(e, 'The booking could not be cancelled.'));
+              setCancelling(undefined);
+              void retryMyMarketplaceBookings();
+            }
+          }}>Cancel booking</Button>
+        </div>
+      </Dialog>
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My bookings</h1>
         <p className="text-sm text-gray-600 mt-0.5">Bookings you’ve placed on marketplace listings.</p>
@@ -74,7 +99,10 @@ export function MyBookingsView() {
                     </div>
                   </div>
                 </div>
-                {b.paymentStatus!=='PAID' && !['CANCELLED','REFUNDED','COMPLETED'].includes(b.status) && <Button className="mt-3" variant="secondary" onClick={()=>setSelectedBooking(b.id)}>Pay booking</Button>}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {b.paymentStatus!=='PAID' && !['CANCELLED','REFUNDED','COMPLETED'].includes(b.status) && <Button variant="secondary" onClick={()=>setSelectedBooking(b.id)}>Pay booking</Button>}
+                  {customerMayCancel(b) && <Button variant="quiet" className="text-red-700" onClick={()=>setCancelling(b)}>Cancel booking</Button>}
+                </div>
                 {b.notes && <p className="text-xs text-gray-600 mt-2 pt-2 border-t border-gray-50">{b.notes}</p>}
               </li>
             );
