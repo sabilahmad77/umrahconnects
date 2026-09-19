@@ -1,15 +1,36 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma, TenantType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MediaRegistryService } from '../storage/media-registry.service';
 import { requireId } from '../../common/tenant-scope';
 import {
   CreateListingBookingDto,
   CreateListingInquiryDto,
-  LISTING_STATUSES,
   MAX_PARTY_SIZE,
   PRICING_MODELS,
   UpdateListingBookingDto,
 } from './dto/marketplace.dto';
+import { CreateListingDto } from './dto/create-listing.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
+import { MyListingsQueryDto, QueryListingDto } from './dto/query-listing.dto';
+import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
+import { CreateQuoteDto, RespondQuoteDto } from './dto/create-quote.dto';
+import {
+  assertListingTransition,
+  CATEGORY_TYPES,
+  listingOrderBy,
+  normalizeAttributes,
+  normalizePricingModel,
+  pageWindow,
+  priceCentsFrom,
+} from './listing-rules';
 
 /** Vendor fields that are safe to expose on public routes (never KYC documents or contact details). */
 const PUBLIC_VENDOR_SELECT = {
@@ -29,6 +50,22 @@ const PUBLIC_VENDOR_SELECT = {
   createdAt: true,
 } as const;
 
+/** A seller's own view of its profile: contact details included, KYC material never. */
+const OWN_VENDOR_SELECT = {
+  ...PUBLIC_VENDOR_SELECT,
+  email: true,
+  phone: true,
+  website: true,
+  address: true,
+  updatedAt: true,
+} as const;
+
+/** Sellers that have been suspended or delisted by the platform are not shown to anyone else. */
+const VISIBLE_VENDOR: Prisma.VendorWhereInput = { status: { notIn: ['SUSPENDED', 'DELISTED'] } };
+
+/** Only live listings of sellers in good standing are public. */
+const PUBLIC_LISTING: Prisma.ListingWhereInput = { isActive: true, status: 'PUBLISHED', vendor: VISIBLE_VENDOR };
+
 /** Allowed provider-driven booking status transitions. PAID / REFUNDED are set by the payments module. */
 const BOOKING_TRANSITIONS: Record<string, string[]> = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
@@ -47,6 +84,33 @@ const toPublicVendor = <T extends { verifiedAt?: Date | null; status?: string }>
   return { ...rest, verified: !!verifiedAt || v.status === 'VERIFIED' };
 };
 
+/** The public face of a listing: no internal flags, counts or organization ids. */
+function toPublicListing(l: any) {
+  return {
+    id: l.id,
+    vendorId: l.vendorId,
+    type: l.type,
+    name: l.name,
+    nameAr: l.nameAr,
+    description: l.description,
+    priceCents: Number(l.priceCents),
+    currency: l.currency,
+    pricingModel: l.pricingModel,
+    attributes: l.attributes ?? {},
+    imageUrls: l.imageUrls ?? [],
+    city: l.city ?? null,
+    status: l.status,
+    createdAt: l.createdAt,
+    updatedAt: l.updatedAt,
+    ...(l.vendor ? { vendor: toPublicVendor(l.vendor) } : {}),
+  };
+}
+
+/** The owner's view: the whole row with money as numbers. */
+function toOwnerListing(l: any) {
+  return { ...l, priceCents: Number(l.priceCents), ...(l.vendor ? { vendor: toPublicVendor(l.vendor) } : {}) };
+}
+
 const dateOnly = (iso: string) => iso.slice(0, 10);
 
 /** CreateVendorDto.type → Vendor.type (TenantType). OTHER keeps the caller organization's type. */
@@ -58,11 +122,14 @@ const VENDOR_TYPE_TO_TENANT_TYPE: Record<string, string> = {
   VISA_AGENT: 'VENDOR_VISA',
 };
 
+const insensitive = (value: string) => ({ contains: value, mode: 'insensitive' as const });
+
 @Injectable()
 export class MarketplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly media: MediaRegistryService,
   ) {}
 
   // ── Ownership helpers ────────────────────────────────────────────────────────
@@ -76,143 +143,258 @@ export class MarketplaceService {
     return listing;
   }
 
-  // ── Listings ──────────────────────────────────────────────────────────────────
+  /** The seller profile a new listing belongs to: the one named (if it is the caller's), else the first. */
+  private async resolveOwnVendor(tenantId: string, vendorId?: string, type?: string) {
+    if (vendorId) {
+      const vendor = await this.prisma.vendor.findFirst({
+        where: { id: requireId(vendorId, 'Vendor'), tenantId },
+        select: { id: true },
+      });
+      if (!vendor) throw new NotFoundException('Vendor not found');
+      return vendor.id;
+    }
+    const first = await this.prisma.vendor.findFirst({
+      where: { tenantId, ...(type ? { type: type as TenantType } : {}) },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (first) return first.id;
+    // API clients that skip the seller-profile step get one built from the organization profile.
+    return (await this.createVendorFromTenant(tenantId, type)).id;
+  }
 
-  async findAllListings(query: any, _tenantId?: string) {
-    const { page = 1, limit = 20, type, category, search, vendorId, status, includeInactive } = query;
-    const skip = (+page - 1) * +limit;
-    // Public catalogue: only live listings. Owners manage drafts through /marketplace/listings/mine.
-    const where: any = { isActive: true, status: 'PUBLISHED' };
-    void includeInactive;
-    if (type) where.type = type;
-    if (category) where.type = category;
-    if (vendorId) where.vendorId = vendorId;
-    void status;
-    if (search) where.OR = [
-      { name: { contains: search, mode: 'insensitive' } },
-      { description: { contains: search, mode: 'insensitive' } },
-    ];
-    const [items, total] = await Promise.all([
+  private async createVendorFromTenant(tenantId: string, type?: string) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Organization not found');
+    return this.prisma.vendor.create({
+      data: {
+        tenantId,
+        type: (type as TenantType) ?? tenant.type,
+        name: tenant.name,
+        email: tenant.email,
+        phone: tenant.phone ?? undefined,
+        country: tenant.country ?? 'SA',
+        status: 'PENDING_KYC',
+        kycDocuments: [],
+        images: [],
+      },
+    });
+  }
+
+  // ── Listings: public catalogue ────────────────────────────────────────────────
+
+  private searchConditions(query: { search?: string; category?: string }): Prisma.ListingWhereInput[] {
+    const and: Prisma.ListingWhereInput[] = [];
+    if (query.category) and.push({ type: { in: CATEGORY_TYPES[query.category] ?? [query.category] } });
+    const q = query.search?.trim();
+    if (q) {
+      and.push({
+        OR: [
+          { name: insensitive(q) },
+          { nameAr: insensitive(q) },
+          { description: insensitive(q) },
+          { city: insensitive(q) },
+          { vendor: { name: insensitive(q) } },
+        ],
+      });
+    }
+    return and;
+  }
+
+  async searchListings(query: QueryListingDto) {
+    const { page, limit, skip } = pageWindow(query.page, query.limit);
+    const and: Prisma.ListingWhereInput[] = [PUBLIC_LISTING, ...this.searchConditions(query)];
+    if (query.vendorId) and.push({ vendorId: query.vendorId });
+    if (query.city) and.push({ city: insensitive(query.city.trim()) });
+    if (query.currency) and.push({ currency: query.currency });
+    if (query.minPriceCents != null || query.maxPriceCents != null) {
+      if (query.minPriceCents != null && query.maxPriceCents != null && query.minPriceCents > query.maxPriceCents) {
+        throw new BadRequestException('The minimum price cannot be higher than the maximum price');
+      }
+      and.push({
+        priceCents: {
+          ...(query.minPriceCents != null ? { gte: BigInt(query.minPriceCents) } : {}),
+          ...(query.maxPriceCents != null ? { lte: BigInt(query.maxPriceCents) } : {}),
+        },
+      });
+    }
+    const where: Prisma.ListingWhereInput = { AND: and };
+    const [rows, total] = await Promise.all([
       this.prisma.listing.findMany({
-        where, skip, take: +limit, orderBy: { createdAt: 'desc' },
+        where,
+        skip,
+        take: limit,
+        orderBy: listingOrderBy(query.sort),
+        include: { vendor: { select: PUBLIC_VENDOR_SELECT } },
+      }),
+      this.prisma.listing.count({ where }),
+    ]);
+    return {
+      items: rows.map(toPublicListing),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
+  }
+
+  async findPublicListing(id: string) {
+    const listing = await this.prisma.listing.findFirst({
+      where: { ...PUBLIC_LISTING, id: requireId(id, 'Listing') },
+      include: { vendor: { select: PUBLIC_VENDOR_SELECT } },
+    });
+    if (!listing) throw new NotFoundException('Listing not found');
+    return toPublicListing(listing);
+  }
+
+  // ── Listings: the seller's own ────────────────────────────────────────────────
+
+  async myListings(tenantId: string, query: MyListingsQueryDto) {
+    const { page, limit, skip } = pageWindow(query.page, query.limit);
+    const and: Prisma.ListingWhereInput[] = [{ vendor: { tenantId } }, ...this.searchConditions(query)];
+    if (query.status) and.push({ status: query.status });
+    const where: Prisma.ListingWhereInput = { AND: and };
+    const [rows, total] = await Promise.all([
+      this.prisma.listing.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: listingOrderBy(query.sort),
         include: {
-          vendor: { select: { id: true, name: true, nameAr: true, rating: true, status: true, city: true, country: true, logoUrl: true } },
+          vendor: { select: PUBLIC_VENDOR_SELECT },
           _count: { select: { inquiries: true, bookings: true, quotes: true } },
         },
       }),
       this.prisma.listing.count({ where }),
     ]);
-    return { items: items.map((i: any) => ({ ...i, priceCents: Number(i.priceCents) })), total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
+    return {
+      items: rows.map(toOwnerListing),
+      total,
+      page,
+      limit,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    };
   }
 
-  async findOneListing(id: string) {
-    const listing = await this.prisma.listing.findFirst({
-      where: { id: requireId(id, 'Listing'), isActive: true, status: 'PUBLISHED' },
+  async myListing(tenantId: string, id: string) {
+    await this.findOwnedListing(tenantId, id);
+    const listing = await this.prisma.listing.findUniqueOrThrow({
+      where: { id },
       include: {
         vendor: { select: PUBLIC_VENDOR_SELECT },
-        _count: { select: { inquiries: true, bookings: true } },
+        _count: { select: { inquiries: true, bookings: true, quotes: true } },
       },
     });
-    if (!listing) throw new NotFoundException(`Listing ${id} not found`);
-    return { ...listing, vendor: toPublicVendor(listing.vendor), priceCents: Number(listing.priceCents) };
+    return toOwnerListing(listing);
   }
 
-  async createListing(tenantId: string, dto: any) {
-    const name = dto.name ?? dto.title ?? '';
-    if (!name) throw new BadRequestException('Listing name/title is required');
-
-    // The vendor must be the caller organization's own vendor record.
-    let vendorId: string;
-    if (dto.vendorId) {
-      const vendor = await this.prisma.vendor.findFirst({
-        where: { id: requireId(dto.vendorId, 'Vendor'), tenantId },
-        select: { id: true },
-      });
-      if (!vendor) throw new NotFoundException('Vendor not found');
-      vendorId = vendor.id;
-    } else {
-      vendorId = (await this.findVendorForTenant(tenantId, dto.vendorType)).id;
-    }
-
-    const priceCentsRaw = dto.priceCents != null
-      ? Number(dto.priceCents)
-      : dto.priceFrom != null
-        ? Number(dto.priceFrom) * 100
-        : 0;
-
-    const attributes: Record<string, any> = { ...(dto.attributes ?? {}) };
-    if (dto.city) attributes.city = dto.city;
-    if (dto.maxCapacity != null) attributes.maxCapacity = Number(dto.maxCapacity);
+  async createListing(tenantId: string, dto: CreateListingDto) {
+    const vendorId = await this.resolveOwnVendor(tenantId, dto.vendorId, dto.vendorType);
+    const attributes = normalizeAttributes(dto.attributes);
+    const city = dto.city?.trim() || (typeof attributes.city === 'string' ? attributes.city.trim() : '');
+    if (city) attributes.city = city;
+    if (dto.maxCapacity != null) attributes.maxCapacity = dto.maxCapacity;
+    const imageUrls = dto.imageUrls ?? [];
+    await this.media.assertListingImages(tenantId, imageUrls);
 
     const listing = await this.prisma.listing.create({
       data: {
         vendorId,
-        type: dto.type ?? dto.category ?? 'other',
-        name,
-        nameAr: dto.nameAr ?? dto.titleAr,
+        type: dto.category,
+        name: dto.title.trim(),
+        nameAr: dto.titleAr,
         description: dto.description,
-        priceCents: BigInt(Math.round(priceCentsRaw)),
+        priceCents: priceCentsFrom(dto) ?? 0n,
         currency: dto.currency ?? 'SAR',
-        pricingModel: this.normalizePricingModel(dto.pricingModel ?? dto.unit ?? 'PER_PERSON'),
-        attributes,
-        imageUrls: dto.imageUrls ?? [],
-        status: this.normalizeListingStatus(dto.status ?? 'PUBLISHED'),
-        isActive: dto.isActive ?? true,
+        pricingModel: normalizePricingModel(dto.pricingModel ?? dto.unit ?? 'PER_PERSON', PRICING_MODELS),
+        attributes: attributes as Prisma.InputJsonObject,
+        imageUrls,
+        city: city ? city.slice(0, 100) : null,
+        status: dto.status ?? 'PUBLISHED',
+        isActive: true,
+      },
+      include: { vendor: { select: PUBLIC_VENDOR_SELECT } },
+    });
+    return toOwnerListing(listing);
+  }
+
+  async updateListing(tenantId: string, id: string, dto: UpdateListingDto) {
+    const existing = await this.findOwnedListing(tenantId, id);
+    const data: Prisma.ListingUpdateInput = {};
+
+    const name = dto.name ?? dto.title;
+    if (name !== undefined) data.name = name.trim();
+    const nameAr = dto.nameAr ?? dto.titleAr;
+    if (nameAr !== undefined) data.nameAr = nameAr || null;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.category !== undefined) data.type = dto.category;
+    const price = priceCentsFrom(dto);
+    if (price !== undefined) data.priceCents = price;
+    if (dto.currency !== undefined) data.currency = dto.currency;
+    if (dto.pricingModel !== undefined || dto.unit !== undefined) {
+      data.pricingModel = normalizePricingModel(dto.pricingModel ?? dto.unit, PRICING_MODELS);
+    }
+
+    // Category details replace the old ones when sent; city and capacity are merged in.
+    let attributes: Record<string, unknown> | undefined =
+      dto.attributes !== undefined ? normalizeAttributes(dto.attributes) : undefined;
+    if (dto.city !== undefined || dto.maxCapacity !== undefined) {
+      attributes = { ...((attributes ?? existing.attributes ?? {}) as Record<string, unknown>) };
+      if (dto.maxCapacity != null) attributes.maxCapacity = dto.maxCapacity;
+      if (dto.city !== undefined) {
+        const city = dto.city?.trim() ?? '';
+        if (city) attributes.city = city;
+        else delete attributes.city;
+      }
+    }
+    if (attributes) {
+      data.attributes = attributes as Prisma.InputJsonObject;
+      data.city = typeof attributes.city === 'string' && attributes.city ? attributes.city.slice(0, 100) : null;
+    }
+
+    if (dto.imageUrls !== undefined) {
+      await this.media.assertListingImages(tenantId, dto.imageUrls, existing.imageUrls);
+      data.imageUrls = dto.imageUrls;
+    }
+    if (dto.status !== undefined) {
+      assertListingTransition(existing.status, dto.status);
+      data.status = dto.status;
+      // `isActive` is the soft-delete flag: only an archived listing is inactive.
+      data.isActive = dto.status !== 'ARCHIVED';
+    }
+
+    const listing = await this.prisma.listing.update({
+      where: { id: existing.id },
+      data,
+      include: {
+        vendor: { select: PUBLIC_VENDOR_SELECT },
+        _count: { select: { inquiries: true, bookings: true, quotes: true } },
       },
     });
-    return { ...listing, priceCents: Number((listing as any).priceCents) };
+    return toOwnerListing(listing);
   }
 
-  async updateListing(tenantId: string, id: string, dto: any) {
-    await this.findOwnedListing(tenantId, id);
-    const data: any = {};
-    if (dto.name !== undefined) data.name = dto.name;
-    if (dto.title !== undefined) data.name = dto.title;
-    if (dto.nameAr !== undefined) data.nameAr = dto.nameAr;
-    if (dto.description !== undefined) data.description = dto.description;
-    if (dto.isActive !== undefined) data.isActive = dto.isActive;
-    if (dto.status !== undefined) data.status = this.normalizeListingStatus(dto.status);
-    if (dto.priceCents !== undefined) data.priceCents = BigInt(Math.round(Number(dto.priceCents)));
-    if (dto.priceFrom !== undefined) data.priceCents = BigInt(Math.round(Number(dto.priceFrom) * 100));
-    if (dto.currency !== undefined) data.currency = dto.currency;
-    if (dto.pricingModel !== undefined) data.pricingModel = this.normalizePricingModel(dto.pricingModel);
-    else if (dto.unit !== undefined) data.pricingModel = this.normalizePricingModel(dto.unit);
-    if (dto.attributes !== undefined) data.attributes = dto.attributes;
-    if (dto.imageUrls !== undefined) data.imageUrls = dto.imageUrls;
-    if (dto.type !== undefined) data.type = dto.type;
-    if (dto.category !== undefined) data.type = dto.category;
-    const listing = await this.prisma.listing.update({ where: { id }, data });
-    return { ...listing, priceCents: Number((listing as any).priceCents) };
-  }
-
-  async deactivateListing(tenantId: string, id: string) {
-    await this.findOwnedListing(tenantId, id);
-    return this.prisma.listing.update({ where: { id }, data: { isActive: false, status: 'ARCHIVED' } });
-  }
-
-  private normalizePricingModel(v: unknown): string {
-    const m = String(v ?? '').trim().toUpperCase();
-    if (!(PRICING_MODELS as readonly string[]).includes(m)) {
-      throw new BadRequestException(`pricingModel must be one of: ${PRICING_MODELS.join(', ')}`);
-    }
-    return m;
-  }
-
-  private normalizeListingStatus(v: unknown): string {
-    const s = String(v ?? '').trim().toUpperCase();
-    if (!(LISTING_STATUSES as readonly string[]).includes(s)) {
-      throw new BadRequestException(`status must be one of: ${LISTING_STATUSES.join(', ')}`);
-    }
-    return s;
+  /** Soft delete: the listing leaves the catalogue; its inquiries, quotes and bookings stay. */
+  async archiveListing(tenantId: string, id: string) {
+    const existing = await this.findOwnedListing(tenantId, id);
+    if (existing.status === 'ARCHIVED' && !existing.isActive) return toOwnerListing(existing);
+    const listing = await this.prisma.listing.update({
+      where: { id: existing.id },
+      data: { status: 'ARCHIVED', isActive: false },
+    });
+    return toOwnerListing(listing);
   }
 
   // ── Inquiries (lightweight contact-vendor request) ──────────────────────────
   async createInquiry(listingId: string, userId: string | null, dto: CreateListingInquiryDto) {
-    const listing = await this.prisma.listing.findUnique({ where: { id: listingId }, include: { vendor: true } });
+    const listing = await this.prisma.listing.findFirst({
+      where: { ...PUBLIC_LISTING, id: requireId(listingId, 'Listing') },
+      include: { vendor: true },
+    });
     if (!listing) throw new NotFoundException('Listing not found');
     const inq = await this.prisma.listingInquiry.create({
       data: {
-        listingId,
+        listingId: listing.id,
         fromUserId: userId && userId.length === 36 ? userId : null,
         fromName: dto.name ?? dto.fromName,
         fromEmail: dto.email ?? dto.fromEmail,
@@ -224,9 +406,8 @@ export class MarketplaceService {
         status: 'NEW',
       },
     });
-    // Best-effort notification to vendor's tenant
+    // Best-effort notification to the seller's organization.
     if (listing.vendor.tenantId) {
-      // Find the vendor tenant's first admin user to notify
       const adminUser = await this.prisma.user.findFirst({
         where: { tenantId: listing.vendor.tenantId },
         orderBy: { createdAt: 'asc' },
@@ -239,19 +420,19 @@ export class MarketplaceService {
           type: 'REQUEST_OFFER',
           title: `New inquiry on "${listing.name}"`,
           body: dto.message?.slice(0, 200),
-          link: `/marketplace/${listingId}`,
-          data: { listingId, inquiryId: inq.id },
+          link: `/marketplace/${listing.id}`,
+          data: { listingId: listing.id, inquiryId: inq.id },
         });
       }
     }
     return inq;
   }
 
-  async listInquiries(filter: { listingId?: string; vendorId?: string; userId?: string }) {
-    const where: any = {};
+  /** Inquiries on one listing, or on every listing of the organization. */
+  async listInquiries(filter: { listingId?: string; tenantId?: string }) {
+    const where: Prisma.ListingInquiryWhereInput = {};
     if (filter.listingId) where.listingId = filter.listingId;
-    if (filter.userId) where.fromUserId = filter.userId;
-    if (filter.vendorId) where.listing = { vendorId: filter.vendorId };
+    if (filter.tenantId) where.listing = { vendor: { tenantId: filter.tenantId } };
     return this.prisma.listingInquiry.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -275,10 +456,10 @@ export class MarketplaceService {
 
   // ── Bookings on a listing ────────────────────────────────────────────────
   async createBooking(listingId: string, customerUserId: string, dto: CreateListingBookingDto) {
-    const listing = await this.prisma.listing.findUnique({ where: { id: requireId(listingId, 'Listing') } });
-    if (!listing || !listing.isActive || String(listing.status).toUpperCase() !== 'PUBLISHED') {
-      throw new NotFoundException('Listing not found');
-    }
+    const listing = await this.prisma.listing.findFirst({
+      where: { ...PUBLIC_LISTING, id: requireId(listingId, 'Listing') },
+    });
+    if (!listing) throw new NotFoundException('Listing not found');
 
     const partySize = dto.partySize ?? 1;
     const capacity = this.listingCapacity(listing.attributes);
@@ -346,11 +527,12 @@ export class MarketplaceService {
     return null;
   }
 
-  async listBookings(filter: { listingId?: string; vendorId?: string; userId?: string }) {
-    const where: any = {};
+  /** Bookings on one listing, of every listing of an organization, or placed by a user. */
+  async listBookings(filter: { listingId?: string; tenantId?: string; userId?: string }) {
+    const where: Prisma.ListingBookingWhereInput = {};
     if (filter.listingId) where.listingId = filter.listingId;
     if (filter.userId) where.customerUserId = filter.userId;
-    if (filter.vendorId) where.listing = { vendorId: filter.vendorId };
+    if (filter.tenantId) where.listing = { vendor: { tenantId: filter.tenantId } };
     const items = await this.prisma.listingBooking.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -402,68 +584,98 @@ export class MarketplaceService {
     return { ...booking, totalAmountCents: Number((booking as any).totalAmountCents) };
   }
 
-  // ── Vendors ───────────────────────────────────────────────────────────────────
+  // ── Vendors (seller profiles) ─────────────────────────────────────────────────
 
   async findAllVendors(type?: string, city?: string) {
-    const where: any = {};
-    if (type) where.type = type;
-    if (city) where.city = { contains: city, mode: 'insensitive' };
+    const where: Prisma.VendorWhereInput = { ...VISIBLE_VENDOR };
+    if (type) {
+      if (!(Object.values(TenantType) as string[]).includes(type)) throw new BadRequestException('Unknown vendor type');
+      where.type = type as TenantType;
+    }
+    if (city) where.city = insensitive(city);
     const items = await this.prisma.vendor.findMany({
-      where, orderBy: { createdAt: 'desc' },
-      select: { ...PUBLIC_VENDOR_SELECT, _count: { select: { listings: true, ratings: true } } },
+      where,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        ...PUBLIC_VENDOR_SELECT,
+        _count: { select: { listings: { where: { isActive: true, status: 'PUBLISHED' } }, ratings: true } },
+      },
     });
     return items.map(toPublicVendor);
   }
 
   async findOneVendor(id: string) {
     const vendor = await this.prisma.vendor.findFirst({
-      where: { id: requireId(id, 'Vendor') },
+      where: { ...VISIBLE_VENDOR, id: requireId(id, 'Vendor') },
       select: {
         ...PUBLIC_VENDOR_SELECT,
-        listings: { where: { isActive: true } },
+        listings: { where: { isActive: true, status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' } },
         _count: { select: { ratings: true } },
       },
     });
     if (!vendor) throw new NotFoundException(`Vendor ${id} not found`);
-    return toPublicVendor(vendor);
+    const { listings, ...rest } = vendor as any;
+    return { ...toPublicVendor(rest), listings: listings.map(toPublicListing) };
   }
 
-  async findVendorForTenant(tenantId: string, type?: string) {
-    // Locate or auto-create a Vendor record for the current operator/tenant so they can create listings.
-    let vendor = await this.prisma.vendor.findFirst({ where: { tenantId, ...(type ? { type: type as any } : {}) } });
-    if (vendor) return vendor;
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
-    vendor = await this.prisma.vendor.create({
+  /** Every seller profile of the caller's organization, oldest (primary) first. */
+  async findMyVendors(tenantId: string) {
+    const items = await this.prisma.vendor.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+      select: { ...OWN_VENDOR_SELECT, _count: { select: { listings: true } } },
+    });
+    return items.map(toPublicVendor);
+  }
+
+  /** The organization's primary seller profile, or null when it has not created one yet. */
+  async findMyVendor(tenantId: string) {
+    return (await this.findMyVendors(tenantId))[0] ?? null;
+  }
+
+  async createVendor(tenantId: string, dto: CreateVendorDto) {
+    // The public vendor type (HOTEL, TRANSPORT, …) maps onto the organization type the column stores.
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { type: true, email: true, country: true },
+    });
+    if (!tenant) throw new NotFoundException('Organization not found');
+    const type = VENDOR_TYPE_TO_TENANT_TYPE[String(dto.type ?? '').toUpperCase()] ?? tenant.type;
+    const vendor = await this.prisma.vendor.create({
       data: {
-        tenantId,
-        type: (type as any) ?? (tenant?.type as any) ?? 'OPERATOR',
-        name: tenant?.name ?? 'Vendor',
-        email: tenant?.email ?? `vendor+${tenantId.slice(0, 8)}@umrahconnects.com`,
-        phone: tenant?.phone ?? undefined,
-        country: tenant?.country ?? 'SA',
+        name: dto.name.trim(),
+        nameAr: dto.nameAr,
+        type: type as TenantType,
+        email: dto.email ?? tenant.email,
+        phone: dto.phone,
+        country: dto.country ?? tenant.country ?? 'SA',
+        city: dto.city,
+        website: dto.website,
+        description: dto.description,
         status: 'PENDING_KYC',
+        tenantId,
         kycDocuments: [],
         images: [],
       },
+      select: OWN_VENDOR_SELECT,
     });
-    return vendor;
+    return toPublicVendor(vendor);
   }
 
-  async createVendor(tenantId: string, dto: any) {
-    // The public vendor type (HOTEL, TRANSPORT, …) maps onto the organization type the column stores.
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { type: true } });
-    const type = VENDOR_TYPE_TO_TENANT_TYPE[String(dto.type ?? '').toUpperCase()] ?? tenant?.type;
-    if (!type) throw new BadRequestException('Unknown vendor type');
-    return this.prisma.vendor.create({
-      data: {
-        name: dto.name, nameAr: dto.nameAr, type: type as any,
-        email: dto.email ?? `vendor+${Date.now()}@umrahconnects.com`,
-        phone: dto.phone, country: dto.country ?? 'SA', city: dto.city,
-        description: dto.description, status: 'PENDING_KYC',
-        tenantId,
-        kycDocuments: [], images: [],
-      },
-    });
+  async updateVendor(tenantId: string, id: string, dto: UpdateVendorDto) {
+    const vendor = await this.prisma.vendor.findFirst({ where: { id: requireId(id, 'Vendor'), tenantId } });
+    if (!vendor) throw new NotFoundException('Vendor not found');
+    const data: Prisma.VendorUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.nameAr !== undefined) data.nameAr = dto.nameAr || null;
+    if (dto.type !== undefined) {
+      data.type = (VENDOR_TYPE_TO_TENANT_TYPE[dto.type] ?? vendor.type) as TenantType;
+    }
+    for (const key of ['email', 'phone', 'country', 'city', 'website', 'description'] as const) {
+      if (dto[key] !== undefined) (data as any)[key] = dto[key];
+    }
+    const updated = await this.prisma.vendor.update({ where: { id: vendor.id }, data, select: OWN_VENDOR_SELECT });
+    return toPublicVendor(updated);
   }
 
   /**
@@ -489,7 +701,10 @@ export class MarketplaceService {
 
     const existing = await this.prisma.vendorRating.findFirst({ where: { vendorId, tenantId, bookingRef } });
     const rating = existing
-      ? await this.prisma.vendorRating.update({ where: { id: existing.id }, data: { score, review: review ?? null, isVerified } })
+      ? await this.prisma.vendorRating.update({
+          where: { id: existing.id },
+          data: { score, review: review ?? null, isVerified },
+        })
       : await this.prisma.vendorRating.create({ data: { vendorId, tenantId, score, review, bookingRef, isVerified } });
 
     const agg = await this.prisma.vendorRating.aggregate({ where: { vendorId }, _avg: { score: true }, _count: true });
@@ -500,23 +715,50 @@ export class MarketplaceService {
     return rating;
   }
 
-  // ── Quotes ───────────────────────────────────────────────────────────────────
+  // ── Quotes (an organization asks a seller for a price) ────────────────────────
 
-  async requestQuote(tenantId: string, dto: any) {
-    const vendorId = requireId(dto.vendorId, 'Vendor');
-    const listingId = requireId(dto.listingId, 'Listing');
+  private normalizeQuote(q: any) {
+    return { ...q, offeredPriceCents: q.offeredPriceCents != null ? Number(q.offeredPriceCents) : null };
+  }
+
+  async requestQuote(tenantId: string, dto: CreateQuoteDto) {
     const listing = await this.prisma.listing.findFirst({
-      where: { id: listingId, vendorId, isActive: true },
-      select: { id: true },
+      where: { ...PUBLIC_LISTING, id: requireId(dto.listingId, 'Listing') },
+      select: { id: true, vendorId: true, currency: true, vendor: { select: { tenantId: true } } },
     });
-    if (!listing) throw new NotFoundException('Listing not found for this vendor');
-    return this.prisma.quote.create({
-      data: { tenantId, vendorId, listingId, status: 'PENDING', requirements: dto.requirements ?? {}, currency: dto.currency ?? 'SAR', notes: dto.notes },
+    if (!listing || (dto.vendorId && dto.vendorId !== listing.vendorId)) {
+      throw new NotFoundException('Listing not found for this vendor');
+    }
+    if (listing.vendor.tenantId === tenantId) {
+      throw new ForbiddenException('You cannot request a quote from your own organization');
+    }
+    const legacyDates = dto.requestedDates ?? {};
+    const startDate = dto.startDate ?? (typeof legacyDates.from === 'string' ? legacyDates.from : undefined);
+    const endDate = dto.endDate ?? (typeof legacyDates.to === 'string' ? legacyDates.to : undefined);
+    if (startDate && endDate && dateOnly(endDate) < dateOnly(startDate)) {
+      throw new BadRequestException('endDate cannot be before startDate');
+    }
+    const requirements: Record<string, unknown> = {};
+    if (dto.requirements?.trim()) requirements.text = dto.requirements.trim();
+    if (dto.requestedPax != null) requirements.pax = dto.requestedPax;
+    if (startDate) requirements.startDate = dateOnly(startDate);
+    if (endDate) requirements.endDate = dateOnly(endDate);
+    const quote = await this.prisma.quote.create({
+      data: {
+        tenantId,
+        vendorId: listing.vendorId,
+        listingId: listing.id,
+        status: 'PENDING',
+        requirements: requirements as Prisma.InputJsonObject,
+        currency: listing.currency,
+      },
     });
+    return this.normalizeQuote(quote);
   }
 
   createQuote = this.requestQuote.bind(this);
 
+  /** Quotes the caller's organization has asked for. */
   async findMyQuotes(tenantId: string) {
     const items = await this.prisma.quote.findMany({
       where: { tenantId },
@@ -526,11 +768,29 @@ export class MarketplaceService {
         listing: { select: { id: true, name: true, type: true } },
       },
     });
-    return items.map((q: any) => ({ ...q, offeredPriceCents: q.offeredPriceCents ? Number(q.offeredPriceCents) : null }));
+    return items.map((q) => this.normalizeQuote(q));
+  }
+
+  /** Quotes other organizations have asked the caller's seller profiles for. */
+  async findIncomingQuotes(tenantId: string) {
+    const items = await this.prisma.quote.findMany({
+      where: { vendor: { tenantId } },
+      orderBy: { requestedAt: 'desc' },
+      include: {
+        vendor: { select: { id: true, name: true } },
+        listing: { select: { id: true, name: true, type: true } },
+      },
+    });
+    const requesters = await this.prisma.tenant.findMany({
+      where: { id: { in: [...new Set(items.map((q) => q.tenantId))] } },
+      select: { id: true, name: true },
+    });
+    const names = new Map(requesters.map((t) => [t.id, t.name]));
+    return items.map((q) => ({ ...this.normalizeQuote(q), requesterName: names.get(q.tenantId) ?? null }));
   }
 
   /** Only the quoted vendor's organization may respond, and only while the quote is open. */
-  async respondToQuote(tenantId: string, id: string, dto: any) {
+  async respondToQuote(tenantId: string, id: string, dto: RespondQuoteDto) {
     const safeId = requireId(id, 'Quote');
     if (!tenantId) throw new NotFoundException('Quote not found');
     const quote = await this.prisma.quote.findFirst({ where: { id: safeId, vendor: { tenantId } } });
@@ -538,20 +798,28 @@ export class MarketplaceService {
     if (!['PENDING', 'OFFERED'].includes(quote.status)) {
       throw new ConflictException(`Quote is already ${quote.status.toLowerCase()}`);
     }
+    const cents =
+      dto.offeredPriceCents != null
+        ? BigInt(dto.offeredPriceCents)
+        : dto.quotedPrice != null
+          ? BigInt(Math.round(Number(dto.quotedPrice) * 100))
+          : null;
+    if (cents == null || cents <= 0n) throw new BadRequestException('Enter a price greater than zero');
     if (dto.validUntil && new Date(dto.validUntil).getTime() <= Date.now()) {
       throw new BadRequestException('validUntil must be in the future');
     }
-    return this.prisma.quote.update({
+    const updated = await this.prisma.quote.update({
       where: { id: safeId },
       data: {
         status: 'OFFERED',
-        offeredPriceCents: dto.quotedPrice != null ? BigInt(Math.round(Number(dto.quotedPrice) * 100)) : undefined,
+        offeredPriceCents: cents,
         currency: dto.currency ?? undefined,
         validUntil: dto.validUntil ? new Date(dto.validUntil) : undefined,
         notes: dto.notes,
         respondedAt: new Date(),
       },
     });
+    return this.normalizeQuote(updated);
   }
 
   /** Only the requesting organization may accept, and only an offered, unexpired quote. */
@@ -569,6 +837,20 @@ export class MarketplaceService {
       data: { status: 'ACCEPTED', acceptedAt: new Date() },
     });
     if (res.count !== 1) throw new ConflictException('Quote is no longer open');
-    return this.prisma.quote.findUnique({ where: { id: safeId } });
+    return this.normalizeQuote(await this.prisma.quote.findUniqueOrThrow({ where: { id: safeId } }));
+  }
+
+  /** The requesting organization declines (or withdraws) a quote that is still open. */
+  async rejectQuote(tenantId: string, id: string) {
+    const safeId = requireId(id, 'Quote');
+    if (!tenantId) throw new NotFoundException('Quote not found');
+    const quote = await this.prisma.quote.findFirst({ where: { id: safeId, tenantId } });
+    if (!quote) throw new NotFoundException('Quote not found');
+    const res = await this.prisma.quote.updateMany({
+      where: { id: safeId, tenantId, status: { in: ['PENDING', 'OFFERED'] } },
+      data: { status: 'REJECTED', rejectedAt: new Date() },
+    });
+    if (res.count !== 1) throw new ConflictException(`Quote is already ${quote.status.toLowerCase()}`);
+    return this.normalizeQuote(await this.prisma.quote.findUniqueOrThrow({ where: { id: safeId } }));
   }
 }

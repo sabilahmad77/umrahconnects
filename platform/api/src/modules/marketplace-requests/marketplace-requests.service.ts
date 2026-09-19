@@ -90,7 +90,7 @@ export class MarketplaceRequestsService {
       }),
       this.prisma.marketplaceRequest.count({ where }),
     ]);
-    return { items: items.map((i) => this.normalize(i)), total, page, limit };
+    return { items: await this.attachSellers(items.map((i) => this.normalize(i))), total, page, limit };
   }
 
   // ─── Provider-side: browse open requests of OTHER organizations ─────────
@@ -128,6 +128,10 @@ export class MarketplaceRequestsService {
    * holding marketplace:listing:manage while the request accepts offers (no offers shown).
    */
   async findOne(id: string, user: Principal) {
+    return (await this.attachSellers([await this.findVisible(id, user)]))[0];
+  }
+
+  private async findVisible(id: string, user: Principal) {
     const r = await this.prisma.marketplaceRequest.findUnique({
       where: { id },
       include: { offers: { orderBy: { createdAt: 'desc' } } },
@@ -301,8 +305,13 @@ export class MarketplaceRequestsService {
    */
   async convertOfferToBooking(requestId: string, offerId: string, actorUserId: string, dto: ConvertOfferDto = {}) {
     const req = await this.prisma.marketplaceRequest.findUnique({ where: { id: requestId }, include: { offers: true } });
-    if (!req || req.travelerId !== actorUserId) throw new NotFoundException('Request not found');
+    if (!req) throw new NotFoundException('Request not found');
     const offer = req.offers.find((o) => o.id === offerId);
+    // The requester converts; for TRANSPORT the offering provider may too, because
+    // only the provider knows which of its vehicles will run the trip.
+    const isRequester = req.travelerId === actorUserId;
+    const isTransportProvider = req.serviceType === 'TRANSPORT' && offer?.providerId === actorUserId;
+    if (!isRequester && !isTransportProvider) throw new NotFoundException('Request not found');
     if (!offer) throw new NotFoundException('Offer not found');
     if (offer.status !== 'ACCEPTED' || (req.acceptedOfferId && req.acceptedOfferId !== offerId)) {
       throw new BadRequestException('Offer must be accepted before conversion');
@@ -391,14 +400,10 @@ export class MarketplaceRequestsService {
         kind = 'LISTING_BOOKING';
         let listing: { id: string } | null = chosenListing;
         if (!listing) {
-          listing = await tx.listing.findFirst({
-            where: { vendorId: vendor!.id, isActive: true },
-            orderBy: { createdAt: 'desc' },
-            select: { id: true },
-          });
-        }
-        if (!listing) {
-          // Spin up a quick listing record so the booking has a parent
+          // No listing chosen: record the negotiated service as a private, archived
+          // listing of the provider. It never appears in the public catalogue (a
+          // private offer must not become a public product) and the booking is not
+          // attached to some unrelated listing the provider happens to have.
           listing = await tx.listing.create({
             data: {
               vendorId: vendor!.id,
@@ -407,9 +412,10 @@ export class MarketplaceRequestsService {
               description: offer.description,
               priceCents: BigInt(offer.priceCents),
               currency: offer.currency,
-              pricingModel: 'PER_PERSON',
-              attributes: {},
-              status: 'PUBLISHED',
+              pricingModel: 'PER_GROUP',
+              attributes: { source: 'request_offer', requestId, offerId },
+              status: 'ARCHIVED',
+              isActive: false,
             },
             select: { id: true },
           });
@@ -501,6 +507,41 @@ export class MarketplaceRequestsService {
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  /**
+   * Adds `seller` to every offer: the offer's seller profile when it has one,
+   * otherwise the provider's organization — so a traveler compares real sellers
+   * instead of anonymous user ids.
+   */
+  private async attachSellers(requests: any[]): Promise<any[]> {
+    const offers = requests.flatMap((r) => (Array.isArray(r?.offers) ? r.offers : []));
+    if (!offers.length) return requests;
+    const vendorIds = [...new Set(offers.map((o: any) => o.vendorId).filter(Boolean))] as string[];
+    const providerIds = [...new Set(offers.map((o: any) => o.providerId).filter(Boolean))] as string[];
+    const [vendors, providers] = await Promise.all([
+      vendorIds.length
+        ? this.prisma.vendor.findMany({
+            where: { id: { in: vendorIds } },
+            select: { id: true, name: true, status: true, verifiedAt: true },
+          })
+        : Promise.resolve([]),
+      this.prisma.user.findMany({
+        where: { id: { in: providerIds } },
+        select: { id: true, tenant: { select: { name: true } } },
+      }),
+    ]);
+    const vendorById = new Map(vendors.map((v) => [v.id, v]));
+    const orgByUser = new Map(providers.map((u) => [u.id, u.tenant?.name ?? null]));
+    const seller = (o: any) => {
+      const v = o.vendorId ? vendorById.get(o.vendorId) : undefined;
+      if (v) return { name: v.name, vendorId: v.id, verified: !!v.verifiedAt || v.status === 'VERIFIED' };
+      const org = orgByUser.get(o.providerId);
+      return org ? { name: org, vendorId: null, verified: false } : null;
+    };
+    return requests.map((r) =>
+      Array.isArray(r?.offers) ? { ...r, offers: r.offers.map((o: any) => ({ ...o, seller: seller(o) })) } : r,
+    );
+  }
   private normalize(r: any): any {
     return {
       ...r,
