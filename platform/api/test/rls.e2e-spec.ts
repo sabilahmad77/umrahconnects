@@ -505,6 +505,20 @@ describe('R05: database-level Row-Level Security', () => {
     });
   });
 
+  // ── a real service-layer gap that RLS contains ─────────────────────────────
+  it('the hotel list no longer counts OTHER operators\' allotments on a shared hotel (service-layer _count leak, D-A08-2)', async () => {
+    const shared = await ctx.prisma.hotel.create({ data: { name: `Shared allot ${uniq()}`, city: 'Makkah', tenantId: null } as any });
+    const allot = { checkIn: '2027-01-10', checkOut: '2027-01-15', totalRooms: 5 };
+    await ok(w.opA, 'post', `/hotels/${shared.id}/allotments`, allot);
+    await ok(w.opB, 'post', `/hotels/${shared.id}/allotments`, allot);
+    await ok(w.opB, 'post', `/hotels/${shared.id}/allotments`, allot);
+    expect(await ownerCount(`plugin_hotel.allotments WHERE hotel_id = '${shared.id}'`)).toBe(3);
+    const list = await ok(w.opA, 'get', '/hotels?limit=100');
+    const row = list.items.find((h: any) => h.id === shared.id);
+    // The service counts `allotments` without a tenant filter; RLS confines it to operator A's own.
+    expect(row._count.allotments).toBe(1);
+  });
+
   // ── cross-organization flows that must keep working (explicit system scope) ──
   describe('legitimate cross-organization flows run in explicit system scope', () => {
     const offerFlow = async (serviceType: 'TRANSPORT' | 'VISA', provider: Actor) => {
