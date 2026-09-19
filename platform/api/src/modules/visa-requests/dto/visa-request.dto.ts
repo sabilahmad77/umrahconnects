@@ -1,8 +1,8 @@
 import {
   IsString, IsOptional, IsEnum, IsUUID, IsDateString, IsInt, Min, Max,
-  MaxLength, MinLength, IsIn,
+  MaxLength, MinLength, IsIn, IsEmail,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   VisaRequestCategory,
   VisaRequestPriority,
@@ -15,6 +15,10 @@ import {
  * Terminal transitions (resolve/close/reopen/escalate) have dedicated
  * routes so their side effects (timestamps, notifications) always run.
  */
+/** '' from a cleared form field means "no value". */
+const emptyToNull = ({ value }: { value: unknown }) => (value === '' ? null : value);
+const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+
 export const WORKFLOW_STATUSES = [
   VisaRequestStatus.OPEN,
   VisaRequestStatus.IN_PROGRESS,
@@ -22,13 +26,13 @@ export const WORKFLOW_STATUSES = [
 ] as const;
 
 export class CreateVisaRequestDto {
-  @IsString() @MinLength(3) @MaxLength(200) subject: string;
+  @Transform(trim) @IsString() @MinLength(3) @MaxLength(200) subject: string;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsEnum(VisaRequestCategory) category?: VisaRequestCategory;
   @IsOptional() @IsEnum(VisaRequestPriority) priority?: VisaRequestPriority;
 
   @IsOptional() @IsString() @MaxLength(150) requesterName?: string;
-  @IsOptional() @IsString() @MaxLength(255) requesterEmail?: string;
+  @IsOptional() @Transform(emptyToNull) @IsEmail({}, { message: 'requesterEmail must be an email address' }) @MaxLength(255) requesterEmail?: string | null;
   @IsOptional() @IsString() @MaxLength(30) requesterPhone?: string;
 
   @IsOptional() @IsUUID() pilgrimId?: string;
@@ -38,14 +42,15 @@ export class CreateVisaRequestDto {
 }
 
 export class UpdateVisaRequestDto {
-  @IsOptional() @IsString() @MinLength(3) @MaxLength(200) subject?: string;
+  @IsOptional() @Transform(trim) @IsString() @MinLength(3) @MaxLength(200) subject?: string;
   @IsOptional() @IsString() @MaxLength(5000) description?: string;
   @IsOptional() @IsEnum(VisaRequestCategory) category?: VisaRequestCategory;
   @IsOptional() @IsEnum(VisaRequestPriority) priority?: VisaRequestPriority;
   @IsOptional() @IsString() @MaxLength(150) requesterName?: string;
-  @IsOptional() @IsString() @MaxLength(255) requesterEmail?: string;
+  @IsOptional() @Transform(emptyToNull) @IsEmail({}, { message: 'requesterEmail must be an email address' }) @MaxLength(255) requesterEmail?: string | null;
   @IsOptional() @IsString() @MaxLength(30) requesterPhone?: string;
-  @IsOptional() @IsDateString() dueAt?: string;
+  /** null clears the due date. */
+  @IsOptional() @IsDateString() dueAt?: string | null;
 }
 
 export class AssignVisaRequestDto {
