@@ -26,10 +26,10 @@ No real messaging channel to Codex exists, so none was claimed.
 | A03 | Capability UI, onboarding + KYC, Super Admin (W09 W15) | a7c7cfa2e2d42e975 | 17:14 | `…/eng100/a03` / `eng100/a03` | running | — | — |
 | A03b | Role workflows: operator, hotel, transport, visa | a9d2ba181767ae884 | 17:14 (429 after baseline); restarted 17:04 (19 Sep) | `…/eng100/a03b` / `eng100/a03b` | running | — | — |
 | A04 | Booking, Stripe checkout, finance (W16) | ad331e5a81107a4aa | 17:14; 429-interrupted twice; resumed 20:52 and 16:53 (19 Sep) | `…/eng100/a04` / `eng100/a04` | **completed 17:01 (19 Sep)** | 8149a4b c0178d4 a13392e b8c36ed 6342dd3 5c5f087 78e5455 62f03c8 ccf3438 2c88147 809ccaa → merged `a299da6` | W16 engineering done (sandbox + stripe-mock; real Stripe T04 unverified); 8 money defects fixed; e2e 167 + 5 stripe-mock, web 82/82, browser 26/26 + 6/6 + 15/15 |
-| A05 | Social, comments, groups, notifications | a8b2d0e572037466b | 17:14 | `…/eng100/a05` / `eng100/a05` | running | — | — |
+| A05 | Social, comments, groups, notifications | a8b2d0e572037466b | 17:14; 429-interrupted twice; resumed 20:52 and 16:53 (19 Sep) | `…/eng100/a05` / `eng100/a05` | **completed ~17:20 (19 Sep)** | 3d09e70 8eeba79 4b15584 879eede 9bc02ce ef29680 59ee3c5 → merged | comments defect root-caused and fixed; replies/edit/delete, likes/saves, connections (now enveloped), messages, groups for members, notifications page; e2e 166/166, web 74/74, browser 17/17; migration `20260918150000_social_comment_threads`; XW-1 applied by A01 in 88ab60f |
 | A06 | Listings, media, uploads, storage, O04 | a61186878f8268378 | 17:14 | `…/eng100/a06` / `eng100/a06` | running | — | — |
 | A07 | Traveler linkage (P06), seeds (D08), QA identities | a753066d747b73adb | 17:14 (interrupted by the account usage limit), resumed 20:52 | `…/eng100/a07` / `eng100/a07` | **completed 21:22** (82 tool uses, 567k tokens) | 09207dd 170d8fb 319c06f 72a6c1c 20d3458 9fed6fc 4393138 → merged `ce5e142` | P06 + D08 done; e2e 164/164 in its worktree; browser 15/15 steps; migration `20260918170000_pilgrim_account_links` |
-| A09 | Render retirement, KVM, backups, monitoring (I08) | ab88b88c8089253bb | 17:14 | `…/eng100/a09` / `eng100/a09` | running | — | — |
+| A09 | Render retirement, KVM, backups, monitoring (I08) | ab88b88c8089253bb | 17:14 (429 early); restarted ~17:25 (19 Sep) | `…/eng100/a09` / `eng100/a09` | running | — | — |
 
 Not yet launched (wave 2, after wave 1 integrates): A08 security + RLS (R05) +
 envelope (P08), A10 browser QA, A11 accessibility + responsive, A12 independent
