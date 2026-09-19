@@ -248,7 +248,9 @@ async function openPay(page) {
   await sp.getByText('Payments (').first().waitFor();
   const refundButtons = await sp.getByRole('button', { name: /^Refund payment/ }).count();
   check('F2a', 'staff without finance:payment:refund sees no refund action', refundButtons === 0 && (await sp.getByText(/Refunds need the refund permission/).isVisible()));
-  check('F2b', 'staff without finance:payment:process sees the card panel as view only', await sp.getByText('View only').isVisible());
+  // The panel shows "Checking payment options…" until the capabilities and provider load.
+  const viewOnly = await sp.getByText('View only').waitFor({ timeout: 20_000 }).then(() => true, () => false);
+  check('F2b', 'staff without finance:payment:process sees the card panel as view only', viewOnly);
   await shot(sp, 'a04-f2-staff-view-only');
   const refused = await api(staffToken, 'POST', `/payments/${cardPayment.id}/refund`, { amount: 1, reason: 'not allowed' });
   check('F2c', 'the API refuses the refund for staff (403)', refused.status === 403, `HTTP ${refused.status}`);
