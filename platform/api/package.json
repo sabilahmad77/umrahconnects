@@ -15,6 +15,7 @@
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "ts-node prisma/seed.ts",
+    "storage:cleanup-orphans": "ts-node --transpile-only src/modules/storage/cleanup/orphan-cleanup.cli.ts",
     "db:reset": "prisma migrate reset",
     "clean": "rm -rf dist",
     "test:all": "vitest run && vitest run --config vitest.e2e.config.ts"
