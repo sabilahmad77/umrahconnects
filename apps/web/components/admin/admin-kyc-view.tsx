@@ -93,7 +93,7 @@ export function AdminKycView({ tenantId }: { tenantId?: string }) {
             onClick={() => setFilter(f.value)}
             className={cn(
               'rounded-full border px-3 py-1.5 text-xs font-medium transition-all',
-              filter === f.value ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-200 text-gray-600 hover:border-gray-300',
+              filter === f.value ? 'border-brand-500 bg-brand-500 text-white hover:bg-brand-600 hover:text-white' : 'border-gray-200 text-gray-600 hover:border-gray-300',
             )}
           >
             {f.label}

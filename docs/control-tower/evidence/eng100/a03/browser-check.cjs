@@ -587,7 +587,14 @@ async function phaseAdmin(browser) {
       check('admin', 'listings: there is a listing to moderate', false);
     }
 
-    // Inquiries: change a status → read back → restore.
+    // Inquiries: a visitor writes through the public website endpoint; the
+    // platform changes its status, reads it back, and restores it.
+    const submitted = await fetch(`${WEB}/proxy-api/inquiries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'SUPPORT', name: 'QA Visitor', email: 'qa.visitor@example.com', message: 'A03 browser check: please ignore.' }),
+    });
+    check('admin', 'inquiries: a public website inquiry is accepted', submitted.status === 201, submitted.status);
     await visit('/admin-inquiries');
     const inquiry = await page.$('tbody tr select');
     if (inquiry) {

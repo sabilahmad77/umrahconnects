@@ -128,7 +128,7 @@ export function AdminUsersView() {
               key={s}
               onClick={() => { setStatus(s); setPage(1); }}
               className={cn('text-xs px-3 py-1.5 rounded-full border font-medium transition-all',
-                status === s ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
+                status === s ? 'bg-brand-500 text-white border-brand-500 hover:bg-brand-600 hover:text-white' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
             >
               {s === 'ALL' ? 'All' : USER_STATUS_META[s]?.label ?? s}
             </Button>

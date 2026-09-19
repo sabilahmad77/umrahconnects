@@ -121,6 +121,10 @@ export function useAdminKyc(params: { status?: string; tenantId?: string } = {})
   return useQuery({
     queryKey: ['admin', 'kyc', params],
     queryFn: async () => (await apiClient.get('/admin/kyc', { params })).data.data as any[],
+    // A review queue must be current: organizations submit while it is open,
+    // so every filter switch and every return to the tab reads it again.
+    staleTime: 0,
+    refetchOnWindowFocus: 'always',
   });
 }
 export function useApproveKyc() {
