@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { VisaDocumentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -31,9 +31,18 @@ export class VisaDocumentsService {
     if (!applicationId) throw new BadRequestException('Application id is required');
     const app = await this.prisma.visaApplication.findFirst({
       where: { id: applicationId, tenantId },
-      select: { id: true, applicantName: true, applicationNumber: true, createdBy: true },
+      select: { id: true, applicantName: true, applicationNumber: true, createdBy: true, status: true },
     });
     if (!app) throw new NotFoundException('Visa application not found');
+    return app;
+  }
+
+  /** A cancelled application is closed: its documents are kept as they were. */
+  private async mustFindOpenApplication(tenantId: string, applicationId: string) {
+    const app = await this.mustFindApplication(tenantId, applicationId);
+    if (app.status === 'CANCELLED') {
+      throw new ConflictException('This application is cancelled; its documents can no longer change');
+    }
     return app;
   }
 
@@ -217,11 +226,13 @@ export class VisaDocumentsService {
     dto: { name: string; type?: string; url?: string; status?: string; expiresAt?: string; notes?: string },
     actor?: DocActor,
   ) {
-    await this.mustFindApplication(tenantId, applicationId);
+    await this.mustFindOpenApplication(tenantId, applicationId);
     const name = (dto?.name ?? '').trim();
     if (!name) throw new BadRequestException('Document name is required');
 
-    const status = this.coerceStatus(dto.status) ?? (dto.url ? VisaDocumentStatus.RECEIVED : VisaDocumentStatus.MISSING);
+    const requested = this.coerceStatus(dto.status);
+    this.assertRecordableStatus(requested);
+    const status = requested ?? (dto.url ? VisaDocumentStatus.RECEIVED : VisaDocumentStatus.MISSING);
     const doc = await this.prisma.visaDocument.create({
       data: {
         tenantId,
@@ -249,6 +260,20 @@ export class VisaDocumentsService {
     return this.decorate(doc);
   }
 
+  /**
+   * Only MISSING and RECEIVED are recorded by hand. VERIFIED and REJECTED are
+   * attributable decisions (verify / reject) and EXPIRED is derived from the date.
+   */
+  private assertRecordableStatus(status?: VisaDocumentStatus) {
+    if (status && !([VisaDocumentStatus.MISSING, VisaDocumentStatus.RECEIVED] as VisaDocumentStatus[]).includes(status)) {
+      throw new BadRequestException(
+        status === VisaDocumentStatus.EXPIRED
+          ? 'EXPIRED follows the document expiry date; set expiresAt instead'
+          : `Use /verify or /reject to move a document to ${status} so the decision is attributable`,
+      );
+    }
+  }
+
   private coerceStatus(v?: string): VisaDocumentStatus | undefined {
     if (!v) return undefined;
     const up = String(v).toUpperCase();
@@ -266,7 +291,7 @@ export class VisaDocumentsService {
     file: { buffer: Buffer; originalname: string; mimetype?: string },
     actor?: DocActor,
   ) {
-    const app = await this.mustFindApplication(tenantId, applicationId);
+    const app = await this.mustFindOpenApplication(tenantId, applicationId);
     const before = await this.mustFindDoc(tenantId, applicationId, docId);
     if (!file?.buffer) throw new BadRequestException('No file uploaded (field name must be "file")');
 
@@ -331,23 +356,31 @@ export class VisaDocumentsService {
     body: { status?: string; url?: string; expiresAt?: string; notes?: string },
     actor?: DocActor,
   ) {
+    await this.mustFindOpenApplication(tenantId, applicationId);
     const before = await this.mustFindDoc(tenantId, applicationId, docId);
     const status = this.coerceStatus(body?.status);
+    // Verification decisions carry an actor and a timestamp; a plain status
+    // edit must not fabricate one.
+    this.assertRecordableStatus(status);
+    // A file only ever arrives through a new version, so the history stays complete
+    // and a decision on the old file cannot silently cover a different one.
+    if (body.url !== undefined && body.url !== before.url) {
+      throw new BadRequestException('Upload the file as a new version (POST …/versions) instead of changing its link');
+    }
+    if (status && status !== before.status && DECISION_STATUSES.includes(before.status)) {
+      throw new BadRequestException(
+        `This document is ${before.status}; upload a new version (which reopens it) or use /verify or /reject`,
+      );
+    }
+    if (status === VisaDocumentStatus.MISSING && before.url) {
+      throw new BadRequestException('A document with a file cannot be marked missing; upload a replacement instead');
+    }
 
     const data: Prisma.VisaDocumentUpdateInput = {};
     if (status) data.status = status;
-    if (body.url !== undefined) data.url = body.url;
     if (body.notes !== undefined) data.notes = body.notes;
     if (body.expiresAt !== undefined) data.expiresAt = body.expiresAt ? new Date(body.expiresAt) : null;
     if (!Object.keys(data).length) throw new BadRequestException('No document fields supplied');
-
-    // Verification decisions carry an actor and a timestamp; a plain status
-    // edit must not fabricate one.
-    if (status && DECISION_STATUSES.includes(status)) {
-      throw new BadRequestException(
-        `Use /verify or /reject to move a document to ${status} so the decision is attributable`,
-      );
-    }
 
     const doc = await this.prisma.visaDocument.update({ where: { id: docId }, data });
     await this.trail(tenantId, actor, 'UPDATE', docId, before, doc, { applicationId });
@@ -355,7 +388,7 @@ export class VisaDocumentsService {
   }
 
   async verify(tenantId: string, applicationId: string, docId: string, actor?: DocActor) {
-    const app = await this.mustFindApplication(tenantId, applicationId);
+    const app = await this.mustFindOpenApplication(tenantId, applicationId);
     const before = await this.mustFindDoc(tenantId, applicationId, docId);
     if (before.status === VisaDocumentStatus.MISSING || !before.url) {
       throw new BadRequestException('Cannot verify a document that has no file');
@@ -387,7 +420,7 @@ export class VisaDocumentsService {
   }
 
   async reject(tenantId: string, applicationId: string, docId: string, reason: string, actor?: DocActor) {
-    const app = await this.mustFindApplication(tenantId, applicationId);
+    const app = await this.mustFindOpenApplication(tenantId, applicationId);
     const before = await this.mustFindDoc(tenantId, applicationId, docId);
     const clean = (reason ?? '').trim();
     if (clean.length < 3) throw new BadRequestException('A rejection reason is required');
@@ -413,8 +446,12 @@ export class VisaDocumentsService {
     return this.decorate(doc);
   }
 
-  async remove(tenantId: string, applicationId: string, docId: string, actor?: DocActor) {
+  async remove(tenantId: string, applicationId: string, docId: string, actor?: DocActor, opts: { canManage?: boolean } = {}) {
+    await this.mustFindOpenApplication(tenantId, applicationId);
     const before = await this.mustFindDoc(tenantId, applicationId, docId);
+    if (before.status === VisaDocumentStatus.VERIFIED && !opts.canManage) {
+      throw new ForbiddenException('Removing a verified document requires visa:application:manage');
+    }
     const versions = await this.prisma.visaDocumentVersion.findMany({ where: { documentId: docId } });
     await this.prisma.visaDocument.delete({ where: { id: docId } });
     for (const v of versions) await this.storage.remove(v.storageKey, v.driver as any);

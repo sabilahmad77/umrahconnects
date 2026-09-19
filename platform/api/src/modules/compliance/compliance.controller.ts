@@ -1,10 +1,10 @@
 import {
-  Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe,
+  Controller, Get, Post, Put, Delete, Body, Param, Query, ParseUUIDPipe, Req,
   UploadedFile, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
-import { ComplianceService } from './compliance.service';
+import { ComplianceService, VisaActor } from './compliance.service';
 import { VisaDocumentsService } from './visa-documents.service';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -17,9 +17,9 @@ import {
   CreateVisaDto,
   RejectVisaDocumentDto,
   RejectVisaDto,
+  QueryVisaDto,
   UpdateVisaDocumentDto,
   UpdateVisaDto,
-  VISA_DECISION_STATUSES,
 } from './dto/compliance.dto';
 
 @ApiTags('compliance')
@@ -32,9 +32,15 @@ export class ComplianceController {
     private readonly rbac: RbacService,
   ) {}
 
+  /** The caller plus whether it may decide (the guard has already loaded its capability set). */
+  private async actor(req: any, user: Principal): Promise<VisaActor> {
+    const granted = await this.rbac.permissionsFor(req);
+    return { sub: user?.sub, canManage: granted.has('visa:application:manage') };
+  }
+
   @Get('visas')
   @RequirePermissions('visa:application:read')
-  async findVisas(@TenantId() tenantId: string, @Query() query: any) {
+  async findVisas(@TenantId() tenantId: string, @Query() query: QueryVisaDto) {
     return { success: true, data: await this.service.findVisas(tenantId, query) };
   }
 
@@ -88,39 +94,42 @@ export class ComplianceController {
   @Put('visas/:id')
   @RequirePermissions('visa:application:submit')
   async updateVisa(
-    @TenantId() tenantId: string, @CurrentUser() user: Principal,
+    @TenantId() tenantId: string, @CurrentUser() user: Principal, @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateVisaDto,
   ) {
-    // Moving an application to APPROVED/REJECTED is a decision: it needs the
-    // same capability as the dedicated approve/reject routes.
-    const canDecide = dto.status && VISA_DECISION_STATUSES.includes(dto.status)
-      ? await this.rbac.userHasPermissions(user.sub, tenantId, ['visa:application:manage'])
-      : false;
-    return { success: true, data: await this.service.updateVisa(tenantId, id, dto, { canDecide, actorId: user?.sub }) };
+    // Decisions and the visa number need visa:application:manage; the service checks.
+    return { success: true, data: await this.service.updateVisa(tenantId, id, dto, await this.actor(req, user)) };
   }
 
+  /** Cancels (withdraws) the application; the record and its timeline stay. */
   @Delete('visas/:id')
   @RequirePermissions('visa:application:submit')
-  async deleteVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.deleteVisa(tenantId, id) };
+  async deleteVisa(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.deleteVisa(tenantId, id, { sub: user?.sub }) };
   }
 
   @Put('visas/:id/submit')
   @RequirePermissions('visa:application:submit')
-  async submitVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.submitVisa(tenantId, id) };
+  async submitVisa(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.submitVisa(tenantId, id, { sub: user?.sub }) };
   }
 
   @Put('visas/:id/approve')
   @RequirePermissions('visa:application:manage')
-  async approveVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: ApproveVisaDto) {
-    return { success: true, data: await this.service.approveVisa(tenantId, id, body?.visaNumber) };
+  async approveVisa(
+    @TenantId() tenantId: string, @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string, @Body() body: ApproveVisaDto,
+  ) {
+    return { success: true, data: await this.service.approveVisa(tenantId, id, body ?? {}, { sub: user?.sub, canManage: true }) };
   }
 
   @Put('visas/:id/reject')
   @RequirePermissions('visa:application:manage')
-  async rejectVisa(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: RejectVisaDto) {
-    return { success: true, data: await this.service.rejectVisa(tenantId, id, body?.reason ?? '') };
+  async rejectVisa(
+    @TenantId() tenantId: string, @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string, @Body() body: RejectVisaDto,
+  ) {
+    return { success: true, data: await this.service.rejectVisa(tenantId, id, body?.reason ?? '', { sub: user?.sub, canManage: true }) };
   }
 
   // ── Documents on a single application ──────────────────────────────────
@@ -202,13 +211,15 @@ export class ComplianceController {
     return { success: true, data: await this.docs.reject(tenantId, id, docId, body?.reason ?? '', user) };
   }
 
+  /** Removing a verified document undoes a decision, so it needs visa:application:manage. */
   @Delete('visas/:id/documents/:docId')
   @RequirePermissions('visa:application:submit')
   async removeDocument(
-    @TenantId() tenantId: string, @CurrentUser() user: any,
+    @TenantId() tenantId: string, @CurrentUser() user: any, @Req() req: any,
     @Param('id', ParseUUIDPipe) id: string, @Param('docId', ParseUUIDPipe) docId: string,
   ) {
-    return { success: true, data: await this.docs.remove(tenantId, id, docId, user) };
+    const { canManage } = await this.actor(req, user);
+    return { success: true, data: await this.docs.remove(tenantId, id, docId, user, { canManage }) };
   }
 
   @Get('submissions')
