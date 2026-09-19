@@ -28,7 +28,12 @@ import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
 import { CreateQuoteDto, RespondQuoteDto } from './dto/create-quote.dto';
 import {
   assertListingTransition,
+  assertOwnerMayChangeStatus,
   CATEGORY_TYPES,
+  listingCapacity,
+  NOT_TAKEN_DOWN,
+  PUBLIC_LISTING,
+  VISIBLE_VENDOR,
   listingOrderBy,
   normalizeAttributes,
   normalizePricingModel,
@@ -64,11 +69,6 @@ const OWN_VENDOR_SELECT = {
   updatedAt: true,
 } as const;
 
-/** Sellers that have been suspended or delisted by the platform are not shown to anyone else. */
-const VISIBLE_VENDOR: Prisma.VendorWhereInput = { status: { notIn: ['SUSPENDED', 'DELISTED'] } };
-
-/** Only live listings of sellers in good standing are public. */
-const PUBLIC_LISTING: Prisma.ListingWhereInput = { isActive: true, status: 'PUBLISHED', vendor: VISIBLE_VENDOR };
 
 /** Allowed provider-driven booking status transitions. PAID / REFUNDED are set by the payments module. */
 const BOOKING_TRANSITIONS: Record<string, string[]> = {
@@ -110,9 +110,13 @@ function toPublicListing(l: any) {
   };
 }
 
-/** The owner's view: the whole row with money as numbers. */
+/**
+ * The owner's view: the whole row with money as numbers. A takedown and its reason
+ * are shown to the owner; which platform user decided is not.
+ */
 function toOwnerListing(l: any) {
-  return { ...l, priceCents: Number(l.priceCents), ...(l.vendor ? { vendor: toPublicVendor(l.vendor) } : {}) };
+  const { moderatedBy: _moderatedBy, ...row } = l;
+  return { ...row, priceCents: Number(l.priceCents), ...(l.vendor ? { vendor: toPublicVendor(l.vendor) } : {}) };
 }
 
 const dateOnly = (iso: string) => iso.slice(0, 10);
@@ -363,6 +367,8 @@ export class MarketplaceService {
       data.imageUrls = dto.imageUrls;
     }
     if (dto.status !== undefined) {
+      // A platform takedown is not the owner's to undo (F2): no publish, no restore to draft.
+      if (dto.status !== existing.status) assertOwnerMayChangeStatus(existing);
       assertListingTransition(existing.status, dto.status);
       data.status = dto.status;
       // `isActive` is the soft-delete flag: only an archived listing is inactive.
@@ -468,7 +474,7 @@ export class MarketplaceService {
     if (!listing) throw new NotFoundException('Listing not found');
 
     const partySize = dto.partySize ?? 1;
-    const capacity = this.listingCapacity(listing.attributes);
+    const capacity = listingCapacity(listing.attributes);
     const maxParty = capacity != null ? Math.min(capacity, MAX_PARTY_SIZE) : MAX_PARTY_SIZE;
     if (!Number.isInteger(partySize) || partySize < 1 || partySize > maxParty) {
       throw new BadRequestException(`partySize must be a whole number between 1 and ${maxParty}`);
@@ -521,16 +527,6 @@ export class MarketplaceService {
       },
     });
     return { ...booking, totalAmountCents: Number((booking as any).totalAmountCents) };
-  }
-
-  private listingCapacity(attributes: unknown): number | null {
-    if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) return null;
-    const a = attributes as Record<string, unknown>;
-    for (const key of ['maxCapacity', 'capacity', 'maxGuests', 'maxOccupancy', 'seats']) {
-      const n = Number(a[key]);
-      if (Number.isInteger(n) && n >= 1) return n;
-    }
-    return null;
   }
 
   /** Bookings on one listing, of every listing of an organization, or placed by a user. */
@@ -736,7 +732,7 @@ export class MarketplaceService {
       orderBy: { createdAt: 'desc' },
       select: {
         ...PUBLIC_VENDOR_SELECT,
-        _count: { select: { listings: { where: { isActive: true, status: 'PUBLISHED' } }, ratings: true } },
+        _count: { select: { listings: { where: { isActive: true, status: 'PUBLISHED', ...NOT_TAKEN_DOWN } }, ratings: true } },
       },
     });
     return items.map(toPublicVendor);
@@ -747,7 +743,7 @@ export class MarketplaceService {
       where: { ...VISIBLE_VENDOR, id: requireId(id, 'Vendor') },
       select: {
         ...PUBLIC_VENDOR_SELECT,
-        listings: { where: { isActive: true, status: 'PUBLISHED' }, orderBy: { createdAt: 'desc' } },
+        listings: { where: { isActive: true, status: 'PUBLISHED', ...NOT_TAKEN_DOWN }, orderBy: { createdAt: 'desc' } },
         _count: { select: { ratings: true } },
       },
     });

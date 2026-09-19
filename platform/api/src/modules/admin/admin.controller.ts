@@ -3,7 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
-import { SetTenantStatusDto, SetUserStatusDto, AssignRoleDto, AdminListQueryDto, CreateKycDto, KycDecisionDto, KycRejectDto } from './dto/admin.dto';
+import { SetTenantStatusDto, SetUserStatusDto, AssignRoleDto, AdminListQueryDto, CreateKycDto, KycDecisionDto, KycRejectDto, TakeDownListingDto, RemoveListingDto } from './dto/admin.dto';
 
 @ApiTags('admin')
 /**
@@ -173,10 +173,17 @@ export class AdminController {
     return { success: true, data: await this.service.approveListing(id, user) };
   }
 
+  /** Platform takedown with the reason the seller sees (F2). Only a platform restore (approve) lifts it. */
+  @Put('listings/:id/take-down')
+  @RequirePermissions('platform:marketplace:moderate')
+  async takeDownListing(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: TakeDownListingDto) {
+    return { success: true, data: await this.service.removeListing(id, user, body.reason) };
+  }
+
   @Delete('listings/:id')
   @RequirePermissions('platform:marketplace:moderate')
-  async removeListing(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.removeListing(id, user) };
+  async removeListing(@CurrentUser() user: any, @Param('id', ParseUUIDPipe) id: string, @Body() body: RemoveListingDto) {
+    return { success: true, data: await this.service.removeListing(id, user, body?.reason) };
   }
 
   // ── Cross-tenant bookings ──────────────────────────────────────────

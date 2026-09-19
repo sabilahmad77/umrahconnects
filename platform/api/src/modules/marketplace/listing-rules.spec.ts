@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { ForbiddenException } from '@nestjs/common';
 import {
   assertListingTransition,
+  assertOwnerMayChangeStatus,
   CATEGORY_TYPES,
+  listingCapacity,
+  PUBLIC_LISTING,
   listingOrderBy,
   normalizeAttributes,
   normalizePricingModel,
@@ -56,5 +60,26 @@ describe('listing rules', () => {
   it('maps every API category to the stored types it covers', () => {
     for (const c of Object.values(ListingCategory)) expect(CATEGORY_TYPES[c]).toContain(c);
     expect(CATEGORY_TYPES.guide_service).toContain('guide');
+  });
+
+  it('a platform takedown blocks every owner status change and names the reason (F2)', () => {
+    expect(() => assertOwnerMayChangeStatus({ moderationStatus: 'CLEAR' })).not.toThrow();
+    const down = { moderationStatus: 'TAKEN_DOWN', moderationReason: 'Misleading photos' };
+    expect(() => assertOwnerMayChangeStatus(down)).toThrow(ForbiddenException);
+    expect(() => assertOwnerMayChangeStatus(down)).toThrow(/taken down by the platform: Misleading photos/);
+    expect(() => assertOwnerMayChangeStatus({ moderationStatus: 'TAKEN_DOWN' })).toThrow(/^This listing was taken down by the platform\. /);
+  });
+
+  it('public listings exclude taken-down ones and suspended sellers', () => {
+    expect(PUBLIC_LISTING).toMatchObject({ isActive: true, status: 'PUBLISHED', moderationStatus: 'CLEAR' });
+    expect(PUBLIC_LISTING.vendor).toEqual({ status: { notIn: ['SUSPENDED', 'DELISTED'] } });
+  });
+
+  it('reads a listing capacity from its category details', () => {
+    expect(listingCapacity({ maxCapacity: 4 })).toBe(4);
+    expect(listingCapacity({ seats: '12' })).toBe(12);
+    expect(listingCapacity({ maxCapacity: 0 })).toBeNull();
+    expect(listingCapacity(null)).toBeNull();
+    expect(listingCapacity([3])).toBeNull();
   });
 });
