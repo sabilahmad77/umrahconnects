@@ -25,14 +25,25 @@ log "building $TAG"
 docker build --build-arg UC_RELEASE="$SHA" -t "$TAG" "$REPO"
 API_IMAGE="$TAG" compose run --rm --no-deps uc-api check-config
 
-log "pre-deploy backup"
-rc=0
-./scripts/pg-backup.sh || rc=$?
-case "$rc" in
-  0) ;;
-  3) warn "the pre-deploy backup exists locally but its off-site copy failed; continuing (the alert stays raised)" ;;
-  *) die "pre-deploy backup failed; nothing was changed" ;;
-esac
+log "database"
+compose up -d --wait --wait-timeout 120 uc-postgres
+DB="$(env_get POSTGRES_DB)"
+DB_USER="$(env_get POSTGRES_USER)"
+TABLES="$(compose exec -T uc-postgres psql -X -At -U "${DB_USER:-umrah}" -d "${DB:-umrah_connects}" \
+  -c "SELECT count(*) FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')")" ||
+  die "cannot query database ${DB:-umrah_connects}; nothing was changed"
+if [ "$TABLES" = "0" ]; then
+  log "database ${DB:-umrah_connects} is empty (first deployment): nothing to back up yet"
+else
+  log "pre-deploy backup"
+  rc=0
+  ./scripts/pg-backup.sh || rc=$?
+  case "$rc" in
+    0) ;;
+    3) warn "the pre-deploy backup exists locally but its off-site copy failed; continuing (the alert stays raised)" ;;
+    *) die "pre-deploy backup failed; nothing was changed" ;;
+  esac
+fi
 
 log "migrating"
 API_IMAGE="$TAG" compose run --rm uc-api migrate
