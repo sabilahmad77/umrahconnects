@@ -10,7 +10,10 @@
 export function formatAmount(cents: number | string | null | undefined, currency = 'SAR'): string {
   const value = Number(cents);
   if (!Number.isFinite(value)) return '—';
-  const major = (value / 100).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const major = (value / 100).toLocaleString('en', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   return `${currency} ${major}`;
 }
 
@@ -31,7 +34,8 @@ export function parseMajorToCents(input: string | number | null | undefined): nu
 export const centsToMajor = (cents: number): number => Math.round(cents) / 100;
 
 /** A form value for an amount field, from cents ("1234.50"). */
-export const centsToInput = (cents: number): string => (Math.max(0, Math.round(cents)) / 100).toFixed(2);
+export const centsToInput = (cents: number): string =>
+  (Math.max(0, Math.round(cents)) / 100).toFixed(2);
 
 /**
  * Validate a typed amount against a server-computed ceiling. Returns an error
@@ -41,6 +45,7 @@ export function amountProblem(input: string, maxCents: number, currency = 'SAR')
   const cents = parseMajorToCents(input);
   if (cents === null) return 'Enter an amount such as 150 or 150.50.';
   if (cents <= 0) return 'Enter an amount greater than zero.';
-  if (cents > maxCents) return `The amount cannot be more than ${formatAmount(maxCents, currency)}.`;
+  if (cents > maxCents)
+    return `The amount cannot be more than ${formatAmount(maxCents, currency)}.`;
   return null;
 }

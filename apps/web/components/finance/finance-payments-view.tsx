@@ -34,21 +34,34 @@ export function FinancePaymentsView() {
     (p: any) =>
       !needle ||
       [p.invoice?.invoiceRef, p.invoice?.issuedToName, p.gatewayRef, p.gateway].some((v) =>
-        String(v ?? '').toLowerCase().includes(needle),
+        String(v ?? '')
+          .toLowerCase()
+          .includes(needle),
       ),
   );
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   // Net money actually kept, per currency, for the rows on this page.
   const collected = items.reduce<Record<string, number>>((acc, p: any) => {
     if (['COMPLETED', 'PARTIALLY_REFUNDED'].includes(p.status)) {
-      acc[p.currency ?? 'SAR'] = (acc[p.currency ?? 'SAR'] ?? 0) + Number(p.amountCents) - Number(p.refundedCents ?? 0);
+      acc[p.currency ?? 'SAR'] =
+        (acc[p.currency ?? 'SAR'] ?? 0) + Number(p.amountCents) - Number(p.refundedCents ?? 0);
     }
     return acc;
   }, {});
 
   const exportCsv = () => {
     const rows = [
-      ['Reference', 'Invoice', 'Counterparty', 'Method', 'Currency', 'Amount', 'Refunded', 'Status', 'Paid at'],
+      [
+        'Reference',
+        'Invoice',
+        'Counterparty',
+        'Method',
+        'Currency',
+        'Amount',
+        'Refunded',
+        'Status',
+        'Paid at',
+      ],
       ...items.map((p: any) => [
         p.gatewayRef ?? '',
         p.invoice?.invoiceRef ?? '',
@@ -61,7 +74,9 @@ export function FinancePaymentsView() {
         p.paidAt ? new Date(p.paidAt).toISOString() : '',
       ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const a = document.createElement('a');
     a.href = url;
@@ -122,14 +137,24 @@ export function FinancePaymentsView() {
       ) : items.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white py-16 text-center">
           <CreditCard aria-hidden="true" className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-          <p className="text-sm text-gray-600">{needle ? 'No payments on this page match' : 'No payments recorded yet'}</p>
-          <Link href="/finance" className="mt-2 inline-block text-xs text-brand-600 hover:underline">
+          <p className="text-sm text-gray-600">
+            {needle ? 'No payments on this page match' : 'No payments recorded yet'}
+          </p>
+          <Link
+            href="/finance"
+            className="text-brand-600 mt-2 inline-block text-xs hover:underline"
+          >
             Record a payment from an invoice →
           </Link>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <div role="region" aria-label="Payments" tabIndex={0} className="max-w-full overflow-x-auto">
+          <div
+            role="region"
+            aria-label="Payments"
+            tabIndex={0}
+            className="max-w-full overflow-x-auto"
+          >
             <table className="w-full text-sm">
               <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs text-gray-600">
                 <tr>
@@ -149,12 +174,17 @@ export function FinancePaymentsView() {
                 {items.map((p: any) => {
                   const gateway = isGatewayPayment(p);
                   const refundable = refundableCents(p);
-                  const settledOrRefunded = ['REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED'].includes(p.status);
+                  const settledOrRefunded = ['REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED'].includes(
+                    p.status,
+                  );
                   return (
                     <tr key={p.id} className="hover:bg-gray-50/60">
                       <td className="p-3">
                         {p.invoiceId ? (
-                          <Link href={`/finance/invoices/${p.invoiceId}`} className="font-medium text-brand-600 hover:underline">
+                          <Link
+                            href={`/finance/invoices/${p.invoiceId}`}
+                            className="text-brand-600 font-medium hover:underline"
+                          >
                             {p.invoice?.invoiceRef ?? p.invoiceId.slice(0, 8)}
                           </Link>
                         ) : p.listingBookingId ? (
@@ -172,15 +202,23 @@ export function FinancePaymentsView() {
                       <td className="p-3 font-medium">
                         {formatAmount(p.amountCents, p.currency)}
                         {Number(p.refundedCents) > 0 && (
-                          <span className="block text-xs text-red-700">−{formatAmount(p.refundedCents, p.currency)} refunded</span>
+                          <span className="block text-xs text-red-700">
+                            −{formatAmount(p.refundedCents, p.currency)} refunded
+                          </span>
                         )}
                       </td>
-                      <td className="p-3 text-xs text-gray-600">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
+                      <td className="p-3 text-xs text-gray-600">
+                        {p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}
+                      </td>
                       <td className="p-3">
                         {gateway || settledOrRefunded || !canProcess ? (
                           <span className="text-xs font-medium">
                             {String(p.status).replace(/_/g, ' ')}
-                            {gateway && <span className="block font-normal text-gray-600">Managed by the provider</span>}
+                            {gateway && (
+                              <span className="block font-normal text-gray-600">
+                                Managed by the provider
+                              </span>
+                            )}
                           </span>
                         ) : (
                           <Select
@@ -200,7 +238,11 @@ export function FinancePaymentsView() {
                       </td>
                       <td className="p-3 text-right">
                         {canRefund && refundable > 0 && (
-                          <Button variant="quiet" className="text-xs text-red-700" onClick={() => setRefunding(p)}>
+                          <Button
+                            variant="quiet"
+                            className="text-xs text-red-700"
+                            onClick={() => setRefunding(p)}
+                          >
                             Refund
                           </Button>
                         )}
@@ -222,15 +264,27 @@ export function FinancePaymentsView() {
           <span className="text-sm" aria-live="polite">
             Page {page} of {totalPages}
           </span>
-          <Button variant="secondary" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+          <Button
+            variant="secondary"
+            disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
+          >
             Next
           </Button>
         </nav>
       )}
       {!canRefund && (
-        <p className="text-xs text-gray-600">Refunds need the refund permission. Ask your workspace administrator.</p>
+        <p className="text-xs text-gray-600">
+          Refunds need the refund permission. Ask your workspace administrator.
+        </p>
       )}
-      {refunding && <RefundDialog payment={refunding} onClose={() => setRefunding(null)} onDone={() => void refetch()} />}
+      {refunding && (
+        <RefundDialog
+          payment={refunding}
+          onClose={() => setRefunding(null)}
+          onDone={() => void refetch()}
+        />
+      )}
     </div>
   );
 }

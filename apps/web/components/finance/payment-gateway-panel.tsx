@@ -21,12 +21,7 @@ import {
   withoutPaymentParam,
   withoutProviderParams,
 } from './checkout-machine';
-import {
-  amountProblem,
-  centsToInput,
-  formatAmount,
-  parseMajorToCents,
-} from './money';
+import { amountProblem, centsToInput, formatAmount, parseMajorToCents } from './money';
 import { PaymentFlowPanel, type PaymentPath } from './payment-flow-panel';
 
 export const PAYMENT_PARAM = 'payment';

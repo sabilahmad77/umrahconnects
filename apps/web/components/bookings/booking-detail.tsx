@@ -3,7 +3,20 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Bus, CreditCard, Edit3, FileCheck2, FileText, Hotel, ListChecks, Plus, Trash2, Users2, Wallet } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bus,
+  CreditCard,
+  Edit3,
+  FileCheck2,
+  FileText,
+  Hotel,
+  ListChecks,
+  Plus,
+  Trash2,
+  Users2,
+  Wallet,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
@@ -21,7 +34,16 @@ import {
 } from '@/hooks/use-bookings';
 import { useBookingInvoices } from '@/hooks/use-finance';
 import { useGroups, usePackages, usePilgrims } from '@/hooks/use-api';
-import { Alert, Button, Dialog, Input, LoadingState, QueryFailure, Select, Textarea } from '@/components/ui/system';
+import {
+  Alert,
+  Button,
+  Dialog,
+  Input,
+  LoadingState,
+  QueryFailure,
+  Select,
+  Textarea,
+} from '@/components/ui/system';
 import { formatAmount } from '@/components/finance/money';
 
 type TabKey = 'overview' | 'pilgrims' | 'assignments' | 'payment' | 'notes';
@@ -43,7 +65,11 @@ export const BOOKING_STATUS_TRANSITIONS: Record<string, string[]> = {
   REFUNDED: [],
 };
 
-const label = (s?: string) => String(s ?? '—').replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+const label = (s?: string) =>
+  String(s ?? '—')
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/^\w/, (c) => c.toUpperCase());
 
 export function BookingDetail({ id }: { id: string }) {
   const router = useRouter();
@@ -56,22 +82,28 @@ export function BookingDetail({ id }: { id: string }) {
   if (isLoading || !b) return <LoadingState label="Loading booking…" />;
 
   const canUpdate = can('booking:booking:update');
-  const cancellable = can('booking:booking:cancel') && !['CANCELLED', 'COMPLETED', 'REFUNDED'].includes(b.status);
+  const cancellable =
+    can('booking:booking:cancel') && !['CANCELLED', 'COMPLETED', 'REFUNDED'].includes(b.status);
   const outstanding = Math.max(0, Number(b.totalAmountCents ?? 0) - Number(b.paidAmountCents ?? 0));
 
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="quiet" aria-label="Back to bookings" onClick={() => router.push('/bookings')}>
+        <Button
+          variant="quiet"
+          aria-label="Back to bookings"
+          onClick={() => router.push('/bookings')}
+        >
           <ArrowLeft aria-hidden="true" className="h-4 w-4 text-gray-600" />
         </Button>
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50">
-          <CreditCard aria-hidden="true" className="h-6 w-6 text-brand-600" />
+        <div className="bg-brand-50 flex h-12 w-12 items-center justify-center rounded-xl">
+          <CreditCard aria-hidden="true" className="text-brand-600 h-6 w-6" />
         </div>
         <div className="min-w-0 flex-1 basis-[calc(100%_-_140px)] sm:basis-auto">
           <h1 className="text-2xl font-bold text-gray-900">{b.bookingRef}</h1>
           <p className="text-sm text-gray-600">
-            {b.package?.name ?? 'No package'} · {b.pilgrims?.length ?? 0} pilgrim{(b.pilgrims?.length ?? 0) === 1 ? '' : 's'} ·{' '}
+            {b.package?.name ?? 'No package'} · {b.pilgrims?.length ?? 0} pilgrim
+            {(b.pilgrims?.length ?? 0) === 1 ? '' : 's'} ·{' '}
             {formatAmount(b.totalAmountCents, b.currency)}
           </p>
         </div>
@@ -83,7 +115,11 @@ export function BookingDetail({ id }: { id: string }) {
         )}
       </div>
 
-      <div role="tablist" aria-label="Booking sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5">
+      <div
+        role="tablist"
+        aria-label="Booking sections"
+        className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5"
+      >
         {(['overview', 'pilgrims', 'assignments', 'payment', 'notes'] as TabKey[]).map((t) => (
           <Button
             key={t}
@@ -93,7 +129,9 @@ export function BookingDetail({ id }: { id: string }) {
             onClick={() => setTab(t)}
             className={cn(
               'rounded-xl px-3 py-2 text-sm font-medium capitalize',
-              tab === t ? 'border border-brand-100 bg-brand-50 text-brand-700' : 'text-gray-600 hover:bg-gray-50',
+              tab === t
+                ? 'border-brand-100 bg-brand-50 text-brand-700 border'
+                : 'text-gray-600 hover:bg-gray-50',
             )}
           >
             {t}
@@ -102,11 +140,19 @@ export function BookingDetail({ id }: { id: string }) {
       </div>
 
       {tab === 'overview' && <Overview b={b} outstanding={outstanding} />}
-      {tab === 'pilgrims' && <PilgrimsTab b={b} canUpdate={canUpdate} refetch={() => void refetch()} />}
-      {tab === 'assignments' && <AssignmentsTab b={b} canUpdate={canUpdate} refetch={() => void refetch()} />}
-      {tab === 'payment' && <PaymentTab b={b} outstanding={outstanding} refetch={() => void refetch()} />}
+      {tab === 'pilgrims' && (
+        <PilgrimsTab b={b} canUpdate={canUpdate} refetch={() => void refetch()} />
+      )}
+      {tab === 'assignments' && (
+        <AssignmentsTab b={b} canUpdate={canUpdate} refetch={() => void refetch()} />
+      )}
+      {tab === 'payment' && (
+        <PaymentTab b={b} outstanding={outstanding} refetch={() => void refetch()} />
+      )}
       {tab === 'notes' && <NotesTab b={b} canUpdate={canUpdate} refetch={() => void refetch()} />}
-      {cancelling && <CancelDialog b={b} onClose={() => setCancelling(false)} onDone={() => void refetch()} />}
+      {cancelling && (
+        <CancelDialog b={b} onClose={() => setCancelling(false)} onDone={() => void refetch()} />
+      )}
     </div>
   );
 }
@@ -123,7 +169,10 @@ function StatusBadge({ status }: { status: string }) {
             ? 'bg-red-50 text-red-700'
             : 'bg-gray-100 text-gray-700';
   return (
-    <span data-testid="booking-status" className={cn('rounded-full px-2 py-1 text-xs font-medium', color)}>
+    <span
+      data-testid="booking-status"
+      className={cn('rounded-full px-2 py-1 text-xs font-medium', color)}
+    >
       {label(status)}
     </span>
   );
@@ -146,7 +195,11 @@ function CancelDialog({ b, onClose, onDone }: { b: any; onClose: () => void; onD
     }
   };
   return (
-    <Dialog open onOpenChange={(open) => !open && !cancel.isPending && onClose()} title={`Cancel ${b.bookingRef}?`}>
+    <Dialog
+      open
+      onOpenChange={(open) => !open && !cancel.isPending && onClose()}
+      title={`Cancel ${b.bookingRef}?`}
+    >
       <form onSubmit={submit} className="space-y-4">
         <p className="text-sm text-gray-700">
           A cancelled booking cannot be reopened.
@@ -155,7 +208,13 @@ function CancelDialog({ b, onClose, onDone }: { b: any; onClose: () => void; onD
         </p>
         <label className="block text-sm font-medium text-gray-700">
           Reason (optional)
-          <Textarea value={reason} maxLength={1000} rows={3} onChange={(e) => setReason(e.target.value)} className="mt-1" />
+          <Textarea
+            value={reason}
+            maxLength={1000}
+            rows={3}
+            onChange={(e) => setReason(e.target.value)}
+            className="mt-1"
+          />
         </label>
         {error && <Alert title="Not cancelled">{error}</Alert>}
         <div className="flex justify-end gap-2">
@@ -188,10 +247,23 @@ function Overview({ b, outstanding }: { b: any; outstanding: number }) {
           <Field label="Return" value={date(b.returnDate)} />
           <Field
             label="Group"
-            value={b.groupId ? <Link href={`/groups/${b.groupId}`} className="text-brand-600 hover:underline">View group</Link> : '—'}
+            value={
+              b.groupId ? (
+                <Link href={`/groups/${b.groupId}`} className="text-brand-600 hover:underline">
+                  View group
+                </Link>
+              ) : (
+                '—'
+              )
+            }
           />
-          <Field label="Created" value={b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'} />
-          {b.status === 'CANCELLED' && <Field label="Cancellation reason" value={b.cancellationReason ?? '—'} />}
+          <Field
+            label="Created"
+            value={b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'}
+          />
+          {b.status === 'CANCELLED' && (
+            <Field label="Cancellation reason" value={b.cancellationReason ?? '—'} />
+          )}
         </dl>
         {b.notes && (
           <div className="border-t border-gray-100 pt-3">
@@ -211,7 +283,9 @@ function MoneyCard({ b, outstanding }: { b: any; outstanding: number }) {
       <p className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-gray-600">
         <Wallet aria-hidden="true" className="h-3.5 w-3.5" /> Totals (kept by the server)
       </p>
-      <p className="text-2xl font-bold text-gray-900">{formatAmount(b.totalAmountCents, b.currency)}</p>
+      <p className="text-2xl font-bold text-gray-900">
+        {formatAmount(b.totalAmountCents, b.currency)}
+      </p>
       <p className="mt-1 text-xs text-gray-600">Total amount</p>
       <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
         <div>
@@ -221,7 +295,9 @@ function MoneyCard({ b, outstanding }: { b: any; outstanding: number }) {
           <p className="text-xs text-gray-600">Paid</p>
         </div>
         <div>
-          <p className="text-base font-semibold text-orange-800">{formatAmount(outstanding, b.currency)}</p>
+          <p className="text-base font-semibold text-orange-800">
+            {formatAmount(outstanding, b.currency)}
+          </p>
           <p className="text-xs text-gray-600">Outstanding</p>
         </div>
       </div>
@@ -238,17 +314,31 @@ function Field({ label: name, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function PilgrimsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; refetch: () => void }) {
-  const { data: pilgrimsData, error: pilgrimsError, refetch: retryPilgrims } = usePilgrims({ limit: 100 });
+function PilgrimsTab({
+  b,
+  canUpdate,
+  refetch,
+}: {
+  b: any;
+  canUpdate: boolean;
+  refetch: () => void;
+}) {
+  const {
+    data: pilgrimsData,
+    error: pilgrimsError,
+    refetch: retryPilgrims,
+  } = usePilgrims({ limit: 100 });
   const add = useAddPilgrimToBooking();
   const remove = useRemovePilgrimFromBooking();
   const [selectedId, setSelectedId] = useState('');
   const pilgrimsList = pilgrimsData?.items ?? [];
   const inBooking = new Set((b.pilgrims ?? []).map((p: any) => p.pilgrimId));
   const available = pilgrimsList.filter((p: any) => !inBooking.has(p.id));
-  const nameOf = (p: any) => [p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || p.firstNameAr || p.id.slice(0, 8);
+  const nameOf = (p: any) =>
+    [p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || p.firstNameAr || p.id.slice(0, 8);
 
-  if (pilgrimsError) return <QueryFailure error={pilgrimsError} onRetry={() => void retryPilgrims()} />;
+  if (pilgrimsError)
+    return <QueryFailure error={pilgrimsError} onRetry={() => void retryPilgrims()} />;
   return (
     <div className="space-y-4">
       {canUpdate && (
@@ -257,7 +347,12 @@ function PilgrimsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; re
             <Users2 aria-hidden="true" className="h-4 w-4" /> Attach pilgrim
           </h2>
           <div className="flex gap-2">
-            <Select aria-label="Pilgrim to attach" value={selectedId} onChange={(e) => setSelectedId(e.target.value)} className="flex-1">
+            <Select
+              aria-label="Pilgrim to attach"
+              value={selectedId}
+              onChange={(e) => setSelectedId(e.target.value)}
+              className="flex-1"
+            >
               <option value="">Select pilgrim…</option>
               {available.map((p: any) => (
                 <option key={p.id} value={p.id}>
@@ -286,10 +381,14 @@ function PilgrimsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; re
       )}
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-4">
-          <h2 className="text-sm font-bold text-gray-900">Pilgrims in booking ({b.pilgrims?.length ?? 0})</h2>
+          <h2 className="text-sm font-bold text-gray-900">
+            Pilgrims in booking ({b.pilgrims?.length ?? 0})
+          </h2>
         </div>
         {(b.pilgrims ?? []).length === 0 ? (
-          <div className="py-10 text-center text-sm text-gray-600">No pilgrims attached yet — add pilgrims so documents and visas can be tracked.</div>
+          <div className="py-10 text-center text-sm text-gray-600">
+            No pilgrims attached yet — add pilgrims so documents and visas can be tracked.
+          </div>
         ) : (
           <ul className="divide-y divide-gray-50">
             {b.pilgrims.map((bp: any) => {
@@ -297,9 +396,17 @@ function PilgrimsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; re
               const name = linked ? nameOf(linked) : bp.pilgrimId.slice(0, 8);
               return (
                 <li key={bp.id} className="flex items-center justify-between p-4">
-                  <Link href={`/pilgrims/${bp.pilgrimId}`} className="flex items-center gap-3 hover:text-brand-600">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-700">
-                      {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  <Link
+                    href={`/pilgrims/${bp.pilgrimId}`}
+                    className="hover:text-brand-600 flex items-center gap-3"
+                  >
+                    <div className="bg-brand-50 text-brand-700 flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold">
+                      {name
+                        .split(' ')
+                        .map((n: string) => n[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">{name}</p>
@@ -335,7 +442,15 @@ function PilgrimsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; re
   );
 }
 
-function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; refetch: () => void }) {
+function AssignmentsTab({
+  b,
+  canUpdate,
+  refetch,
+}: {
+  b: any;
+  canUpdate: boolean;
+  refetch: () => void;
+}) {
   const { data: groupsData, error: groupsError, refetch: retryGroups } = useGroups({ limit: 50 });
   const { data: pkgs, error: packagesError, refetch: retryPackages } = usePackages();
   const assignGroup = useAssignGroupToBooking();
@@ -346,7 +461,15 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
   const [packageId, setPackageId] = useState<string>(b.packageId ?? '');
 
   if (groupsError || packagesError) {
-    return <QueryFailure error={groupsError || packagesError} onRetry={() => { void retryGroups(); void retryPackages(); }} />;
+    return (
+      <QueryFailure
+        error={groupsError || packagesError}
+        onRetry={() => {
+          void retryGroups();
+          void retryPackages();
+        }}
+      />
+    );
   }
   const save = async (fn: () => Promise<unknown>, done: string) => {
     try {
@@ -364,7 +487,13 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
           <Users2 aria-hidden="true" className="h-4 w-4" /> Group
         </h2>
         <div className="flex gap-2">
-          <Select aria-label="Group" value={groupId} disabled={!canUpdate} onChange={(e) => setGroupId(e.target.value)} className="flex-1">
+          <Select
+            aria-label="Group"
+            value={groupId}
+            disabled={!canUpdate}
+            onChange={(e) => setGroupId(e.target.value)}
+            className="flex-1"
+          >
             <option value="">No group</option>
             {groups.map((g: any) => (
               <option key={g.id} value={g.id}>
@@ -373,7 +502,15 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
             ))}
           </Select>
           {canUpdate && (
-            <Button busy={assignGroup.isPending} onClick={() => save(() => assignGroup.mutateAsync({ id: b.id, groupId: groupId || null }), 'Group updated')}>
+            <Button
+              busy={assignGroup.isPending}
+              onClick={() =>
+                save(
+                  () => assignGroup.mutateAsync({ id: b.id, groupId: groupId || null }),
+                  'Group updated',
+                )
+              }
+            >
               Save
             </Button>
           )}
@@ -383,9 +520,18 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
         <h2 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
           <FileText aria-hidden="true" className="h-4 w-4" /> Package
         </h2>
-        <p className="text-xs text-gray-600">Changing the package does not change the booking total, which was fixed when the booking was made.</p>
+        <p className="text-xs text-gray-600">
+          Changing the package does not change the booking total, which was fixed when the booking
+          was made.
+        </p>
         <div className="flex gap-2">
-          <Select aria-label="Package" value={packageId} disabled={!canUpdate} onChange={(e) => setPackageId(e.target.value)} className="flex-1">
+          <Select
+            aria-label="Package"
+            value={packageId}
+            disabled={!canUpdate}
+            onChange={(e) => setPackageId(e.target.value)}
+            className="flex-1"
+          >
             {!packageId && <option value="">No package</option>}
             {packages.map((p: any) => (
               <option key={p.id} value={p.id}>
@@ -394,7 +540,13 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
             ))}
           </Select>
           {canUpdate && (
-            <Button disabled={!packageId} busy={assignPkg.isPending} onClick={() => save(() => assignPkg.mutateAsync({ id: b.id, packageId }), 'Package updated')}>
+            <Button
+              disabled={!packageId}
+              busy={assignPkg.isPending}
+              onClick={() =>
+                save(() => assignPkg.mutateAsync({ id: b.id, packageId }), 'Package updated')
+              }
+            >
               Save
             </Button>
           )}
@@ -404,15 +556,27 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
         <h2 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
           <Hotel aria-hidden="true" className="h-4 w-4" /> Hotel, transport and visa
         </h2>
-        <p className="text-xs text-gray-600">Source hotel rooms, transport or visa support for this booking through the marketplace requests workflow.</p>
+        <p className="text-xs text-gray-600">
+          Source hotel rooms, transport or visa support for this booking through the marketplace
+          requests workflow.
+        </p>
         <div className="flex flex-wrap gap-2 pt-2">
-          <Link href="/requests" className="rounded-lg bg-brand-50 px-3 py-1.5 text-xs text-brand-700 hover:bg-brand-100">
+          <Link
+            href="/requests"
+            className="bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg px-3 py-1.5 text-xs"
+          >
             Marketplace requests →
           </Link>
-          <Link href="/transport/assignments" className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-xs text-purple-700 hover:bg-purple-100">
+          <Link
+            href="/transport/assignments"
+            className="inline-flex items-center gap-1 rounded-lg bg-purple-50 px-3 py-1.5 text-xs text-purple-700 hover:bg-purple-100"
+          >
             <Bus aria-hidden="true" className="h-3 w-3" /> Transport assignments
           </Link>
-          <Link href="/compliance" className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs text-green-800 hover:bg-green-100">
+          <Link
+            href="/compliance"
+            className="inline-flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs text-green-800 hover:bg-green-100"
+          >
             <FileCheck2 aria-hidden="true" className="h-3 w-3" /> Visa workflow
           </Link>
         </div>
@@ -426,7 +590,15 @@ function AssignmentsTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean;
  * recorded on the booking's invoice (by card or manually), and the paid
  * statuses follow the paid amount. Only lifecycle moves are made here.
  */
-function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; refetch: () => void }) {
+function PaymentTab({
+  b,
+  outstanding,
+  refetch,
+}: {
+  b: any;
+  outstanding: number;
+  refetch: () => void;
+}) {
   const router = useRouter();
   const { can } = useCapabilities();
   const canUpdate = can('booking:booking:update');
@@ -437,7 +609,9 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
   const updateStatus = useUpdateBookingStatus();
   const moves = BOOKING_STATUS_TRANSITIONS[String(b.status)] ?? [];
   const [next, setNext] = useState('');
-  const live = (invoices.data?.items ?? []).filter((i: any) => !['VOID', 'CANCELLED'].includes(i.status));
+  const live = (invoices.data?.items ?? []).filter(
+    (i: any) => !['VOID', 'CANCELLED'].includes(i.status),
+  );
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -448,18 +622,26 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
           <FileText aria-hidden="true" className="h-4 w-4" /> Invoice and payments
         </h2>
         <p className="text-xs text-gray-600">
-          Payments are taken on the booking&apos;s invoice — by card or recorded by hand. The paid amount and the paid status
-          of this booking follow automatically.
+          Payments are taken on the booking&apos;s invoice — by card or recorded by hand. The paid
+          amount and the paid status of this booking follow automatically.
         </p>
         {canSeeInvoices && invoices.isLoading && <LoadingState label="Loading invoices…" />}
         {live.length > 0 && (
           <ul className="space-y-2">
             {live.map((inv: any) => (
-              <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm">
+              <li
+                key={inv.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2 text-sm"
+              >
                 <span>
-                  {inv.invoiceRef} · {label(inv.status)} · paid {formatAmount(inv.paidCents, inv.currency)} of {formatAmount(inv.totalCents, inv.currency)}
+                  {inv.invoiceRef} · {label(inv.status)} · paid{' '}
+                  {formatAmount(inv.paidCents, inv.currency)} of{' '}
+                  {formatAmount(inv.totalCents, inv.currency)}
                 </span>
-                <Link href={`/finance/invoices/${inv.id}`} className="text-xs font-medium text-brand-600 hover:underline">
+                <Link
+                  href={`/finance/invoices/${inv.id}`}
+                  className="text-brand-600 text-xs font-medium hover:underline"
+                >
                   Open invoice →
                 </Link>
               </li>
@@ -483,7 +665,9 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
           </Button>
         )}
         {!canInvoice && live.length === 0 && (
-          <p className="text-xs text-gray-600">Creating an invoice needs invoice rights. Ask a finance manager.</p>
+          <p className="text-xs text-gray-600">
+            Creating an invoice needs invoice rights. Ask a finance manager.
+          </p>
         )}
       </div>
 
@@ -496,7 +680,12 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
         </p>
         {canUpdate && moves.length > 0 ? (
           <div className="flex flex-wrap gap-2">
-            <Select aria-label="Next status" value={next} onChange={(e) => setNext(e.target.value)} className="w-56">
+            <Select
+              aria-label="Next status"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              className="w-56"
+            >
               <option value="">Move to…</option>
               {moves.map((s) => (
                 <option key={s} value={s}>
@@ -522,7 +711,11 @@ function PaymentTab({ b, outstanding, refetch }: { b: any; outstanding: number; 
             </Button>
           </div>
         ) : (
-          <p className="text-xs text-gray-600">{canUpdate ? 'No further manual moves from this status.' : 'Your account cannot change bookings.'}</p>
+          <p className="text-xs text-gray-600">
+            {canUpdate
+              ? 'No further manual moves from this status.'
+              : 'Your account cannot change bookings.'}
+          </p>
         )}
       </div>
     </div>
@@ -539,10 +732,16 @@ function NotesTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; refet
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (update.isPending) return;
-    if (departureDate && returnDate && returnDate < departureDate) return setError('The return date cannot be before the departure date.');
+    if (departureDate && returnDate && returnDate < departureDate)
+      return setError('The return date cannot be before the departure date.');
     setError(null);
     try {
-      await update.mutateAsync({ id: b.id, notes, departureDate: departureDate || undefined, returnDate: returnDate || undefined });
+      await update.mutateAsync({
+        id: b.id,
+        notes,
+        departureDate: departureDate || undefined,
+        returnDate: returnDate || undefined,
+      });
       toast.success('Saved');
       refetch();
     } catch (err) {
@@ -551,23 +750,43 @@ function NotesTab({ b, canUpdate, refetch }: { b: any; canUpdate: boolean; refet
   };
 
   return (
-    <form onSubmit={save} className="max-w-2xl space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+    <form
+      onSubmit={save}
+      className="max-w-2xl space-y-3 rounded-xl border border-gray-200 bg-white p-5"
+    >
       <h2 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
         <Edit3 aria-hidden="true" className="h-4 w-4" /> Operator notes and dates
       </h2>
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="mb-1 block text-xs font-semibold text-gray-600">Departure</span>
-          <Input type="date" value={departureDate} disabled={!canUpdate} onChange={(e) => setDepartureDate(e.target.value)} />
+          <Input
+            type="date"
+            value={departureDate}
+            disabled={!canUpdate}
+            onChange={(e) => setDepartureDate(e.target.value)}
+          />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-semibold text-gray-600">Return</span>
-          <Input type="date" value={returnDate} min={departureDate || undefined} disabled={!canUpdate} onChange={(e) => setReturnDate(e.target.value)} />
+          <Input
+            type="date"
+            value={returnDate}
+            min={departureDate || undefined}
+            disabled={!canUpdate}
+            onChange={(e) => setReturnDate(e.target.value)}
+          />
         </label>
       </div>
       <label className="block">
         <span className="mb-1 block text-xs font-semibold text-gray-600">Internal notes</span>
-        <Textarea value={notes} maxLength={5000} disabled={!canUpdate} onChange={(e) => setNotes(e.target.value)} rows={4} />
+        <Textarea
+          value={notes}
+          maxLength={5000}
+          disabled={!canUpdate}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={4}
+        />
       </label>
       {error && (
         <p role="alert" className="text-sm text-red-700">

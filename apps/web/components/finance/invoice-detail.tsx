@@ -37,12 +37,7 @@ import {
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { PaymentGatewayPanel } from './payment-gateway-panel';
 import { RefundDialog, isGatewayPayment, refundableCents } from './refund-dialog';
-import {
-  amountProblem,
-  centsToInput,
-  formatAmount,
-  parseMajorToCents,
-} from './money';
+import { amountProblem, centsToInput, formatAmount, parseMajorToCents } from './money';
 
 // Mirrors INVOICE_TRANSITIONS in the finance service. PAID and PARTIALLY_PAID are
 // derived from recorded payments and are refused as manual moves, so they are
