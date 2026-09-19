@@ -26,7 +26,7 @@ describe('user preferences', () => {
       locale: 'en',
       timezone: 'Asia/Riyadh',
       notifications: { inApp: Object.fromEntries(NOTIFICATION_CATEGORY_KEYS.map((k) => [k, true])) },
-      enforcement: { inApp: false },
+      enforcement: { inApp: true },
       options: { locales: ['en', 'ar'], notificationCategories: NOTIFICATION_CATEGORY_KEYS },
     });
   });
@@ -91,6 +91,26 @@ describe('user preferences', () => {
     expect(await prefs.allowsInApp(w.hotelA.id, 'POST_COMMENT')).toBe(true);
     const row = await ctx.prisma.userPreference.findUniqueOrThrow({ where: { userId: w.hotelA.id } });
     expect(row.notifications).toEqual({ inApp: {} });
+  });
+
+  it('a switched-off category stops the notification from being stored; switching it back on restores it', async () => {
+    const auth = (a: { token: string }) => ({ Authorization: `Bearer ${a.token}` });
+    const created = await ctx.http().post(api('/social/posts')).set(auth(w.travelerA)).send({ type: 'UPDATE', content: `muted ${Date.now()}` });
+    expect(created.status).toBe(201);
+    const postId = created.body.data.id;
+    const countAll = () =>
+      ctx.prisma.notification.count({ where: { recipientId: w.travelerA.id, type: 'POST_COMMENT', data: { path: ['postId'], equals: postId } } });
+
+    await put(w.travelerA.token, { notifications: { inApp: { community: false } } });
+    const before = await countAll();
+    const muted = await ctx.http().post(api(`/social/posts/${postId}/comments`)).set(auth(w.travelerB)).send({ content: 'while muted' });
+    expect(muted.status).toBe(201);
+    expect(await countAll()).toBe(before);
+
+    await put(w.travelerA.token, { notifications: { inApp: { community: true } } });
+    const heard = await ctx.http().post(api(`/social/posts/${postId}/comments`)).set(auth(w.travelerB)).send({ content: 'after unmuting' });
+    expect(heard.status).toBe(201);
+    expect(await countAll()).toBe(before + 1);
   });
 
   it('language and time zone are honoured in the account emails the server sends', async () => {

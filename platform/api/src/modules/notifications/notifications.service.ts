@@ -1,9 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PreferencesService } from '../preferences/preferences.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private preferences: PreferencesService,
+  ) {
+    // fire() consults each recipient's in-app preferences, so the settings page
+    // may offer the per-category switches (they would do nothing otherwise).
+    preferences.markInAppEnforced();
+  }
 
   /**
    * Server-side trigger called by other services to fire a notification.
@@ -22,6 +30,8 @@ export class NotificationsService {
   }) {
     // Don't notify yourself
     if (input.actorUserId === input.recipientUserId) return null;
+    // A category the recipient switched off is not stored at all (SYSTEM never mutes).
+    if (!(await this.preferences.allowsInApp(input.recipientUserId, input.type))) return null;
     return this.prisma.notification.create({
       data: {
         tenantId: input.tenantId,
