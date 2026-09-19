@@ -224,6 +224,7 @@ describe('provider onboarding + KYC lifecycle', () => {
     expect((await asFounder('/tenants/me/kyc')).status).toBe(200);
   });
 
+  let approvalNote = '';
   it('only approval activates, once, and the organization gets full access', async () => {
     expect((await ctx.http().put(api(`/admin/kyc/${secondSubmission}/approve`)).set(bearer(w.opA)).send({})).status).toBe(403);
     const [a, b] = await Promise.all([
@@ -231,6 +232,8 @@ describe('provider onboarding + KYC lifecycle', () => {
       asAdmin('put', `/admin/kyc/${secondSubmission}/approve`, { notes: 'Duplicate click' }),
     ]);
     expect([a.status, b.status].filter((s) => s === 200)).toHaveLength(1);
+    // Whichever request won is the decision on record.
+    approvalNote = a.status === 200 ? 'Registration verified by phone' : 'Duplicate click';
     expect([a.status, b.status].find((s) => s !== 200)).toBeGreaterThanOrEqual(400);
     expect(await tenantStatus()).toBe('ACTIVE');
 
@@ -247,7 +250,7 @@ describe('provider onboarding + KYC lifecycle', () => {
     expect(records.map((r) => r.id)).toEqual([secondSubmission, firstSubmission]);
     const [approved, rejected] = records;
     expect(approved.decisions).toEqual([
-      expect.objectContaining({ decision: 'APPROVED', by: 'root@platform.test', notes: 'Registration verified by phone' }),
+      expect.objectContaining({ decision: 'APPROVED', by: 'root@platform.test', notes: approvalNote }),
     ]);
     expect(rejected.decisions).toEqual([
       expect.objectContaining({ decision: 'REJECTED', by: 'root@platform.test', reason: expect.stringMatching(/unreadable/) }),

@@ -102,7 +102,7 @@ describe('navigation per identity (only what the capabilities open)', () => {
     expect(hrefs(operator)).toEqual([
       '/dashboard', '/pilgrims', '/bookings', '/packages', '/groups',
       '/hotels', '/transport', '/compliance', '/finance', '/reports',
-      '/marketplace', '/social', '/connections', '/requests',
+      '/marketplace', '/social', '/connections', '/requests', '/notifications',
     ]);
     expect(landingPathFor(operator)).toBe('/dashboard');
   });
@@ -117,7 +117,7 @@ describe('navigation per identity (only what the capabilities open)', () => {
   it('hotel manager: hotel CRM, finance and the shared platform; reports as an extra tool', () => {
     expect(hrefs(hotel)).toEqual([
       '/hotel-dashboard', '/hotels', '/hotel-bookings', '/finance',
-      '/marketplace', '/social', '/connections', '/requests', '/reports',
+      '/marketplace', '/social', '/connections', '/requests', '/reports', '/notifications',
     ]);
     expect(sectionOf(hotel, 'More tools')).toEqual(['/reports']);
     expect(canOpenRoute(hotel, '/pilgrims')).toBe(false);
@@ -129,7 +129,7 @@ describe('navigation per identity (only what the capabilities open)', () => {
     expect(hrefs(transport)).toEqual([
       '/transport-dashboard', '/transport/vehicles', '/transport/drivers', '/transport/routes',
       '/transport/assignments', '/transport/bookings', '/finance',
-      '/marketplace', '/social', '/connections', '/requests', '/reports',
+      '/marketplace', '/social', '/connections', '/requests', '/reports', '/notifications',
     ]);
     expect(canOpenRoute(transport, '/hotels')).toBe(false);
   });
@@ -137,7 +137,7 @@ describe('navigation per identity (only what the capabilities open)', () => {
   it('visa officer: visa CRM and applicants, no finance reports', () => {
     expect(hrefs(visa)).toEqual([
       '/visa-dashboard', '/compliance', '/pilgrims', '/visa-documents', '/visa-requests', '/finance',
-      '/marketplace', '/social', '/connections', '/groups', '/requests',
+      '/marketplace', '/social', '/connections', '/groups', '/requests', '/notifications',
     ]);
     expect(canOpenRoute(visa, '/reports')).toBe(false);
     expect(canOpenRoute(visa, '/hotels')).toBe(false);
@@ -146,7 +146,7 @@ describe('navigation per identity (only what the capabilities open)', () => {
   it('finance manager: finance, social read and package reads; no marketplace or CRM', () => {
     expect(hrefs(finance)).toEqual([
       '/finance-dashboard', '/finance', '/finance-payments', '/bookings', '/budget-plans', '/reports',
-      '/social', '/connections', '/packages',
+      '/social', '/connections', '/packages', '/notifications',
     ]);
     expect(sectionOf(finance, 'More tools')).toEqual(['/packages']);
     expect(canOpenRoute(finance, '/pilgrims')).toBe(false);
@@ -155,9 +155,9 @@ describe('navigation per identity (only what the capabilities open)', () => {
 
   it('traveler: community and own journey, plus the way to register an organization', () => {
     expect(hrefs(traveler)).toEqual([
-      '/social', '/discover', '/connections', '/messages', '/travel-plan#my-groups',
+      '/social', '/discover', '/connections', '/messages', '/social/groups',
       '/marketplace', '/requests', '/my-offers', '/my-bookings', '/travel-plan',
-      '/profile', '/onboarding',
+      '/profile', '/notifications', '/onboarding',
     ]);
     expect(landingPathFor(traveler)).toBe('/travel-plan');
     for (const path of ['/pilgrims', '/bookings', '/groups', '/finance', '/admin-dashboard']) {
@@ -169,6 +169,7 @@ describe('navigation per identity (only what the capabilities open)', () => {
     expect(hrefs(superAdmin)).toEqual([
       '/admin-dashboard', '/admin-tenants', '/admin-users', '/admin-listings',
       '/admin-kyc', '/admin-inquiries', '/admin-roles', '/admin-logs', '/admin-support', '/admin-settings',
+      '/notifications',
     ]);
     expect(workspaceKind(superAdmin)).toBe('platform');
     expect(landingPathFor(superAdmin)).toBe('/admin-dashboard');
@@ -219,18 +220,29 @@ describe('capabilities, not roles, decide', () => {
 
   it('a custom role sees exactly what it holds, whatever its dashboard', () => {
     const custom = account([], 'operator', { permissions: ['finance:invoice:read', 'social:post:read'] });
-    expect(hrefs(custom)).toEqual(['/finance', '/social', '/connections']);
+    expect(hrefs(custom)).toEqual(['/finance', '/social', '/connections', '/notifications']);
     // Its dashboard does not open, so it lands on the first page that does.
     expect(landingPathFor(custom)).toBe('/finance');
     expect(routeDecision(custom, '/dashboard')).toEqual({ kind: 'redirect', to: '/finance' });
     expect(routeDecision(custom, '/pilgrims')).toEqual({ kind: 'deny' });
   });
 
-  it('an account left with no capability lands on its settings', () => {
+  it('an account left with no capability keeps only its own pages', () => {
     const empty = account([], 'hotel', { permissions: [] });
-    expect(navigationFor(empty)).toEqual([]);
-    expect(landingPathFor(empty)).toBe('/settings');
-    expect(routeDecision(empty, '/hotel-dashboard')).toEqual({ kind: 'redirect', to: '/settings' });
+    expect(hrefs(empty)).toEqual(['/notifications']);
+    expect(landingPathFor(empty)).toBe('/notifications');
+    expect(routeDecision(empty, '/hotel-dashboard')).toEqual({ kind: 'redirect', to: '/notifications' });
+    expect(canOpenRoute(empty, '/settings')).toBe(true);
+  });
+
+  it('notifications and a traveler’s groups open for every active account, never while pending', () => {
+    for (const user of [operator, staff, hotel, transport, visa, finance, traveler, superAdmin]) {
+      expect(canOpenRoute(user, '/notifications')).toBe(true);
+      expect(canOpenRoute(user, '/social/groups/some-group')).toBe(true);
+    }
+    const pending = { ...hotel, tenantStatus: 'KYC_SUBMITTED' };
+    expect(canOpenRoute(pending, '/notifications')).toBe(false);
+    expect(routeDecision(pending, '/notifications')).toEqual({ kind: 'redirect', to: '/onboarding' });
   });
 });
 

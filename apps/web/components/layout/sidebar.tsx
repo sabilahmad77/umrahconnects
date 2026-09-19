@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, BookOpen, Hotel, FileCheck2, Bus, DollarSign, Users2, Store, Rss, BarChart3,
   Settings, ChevronLeft, ChevronRight, Globe, LogOut, Map, Shield, ClipboardList, FolderOpen, Inbox,
-  Building2, Zap, User, Package, BadgeCheck, MessageSquare, Clock, type LucideIcon,
+  Building2, Zap, User, Package, BadgeCheck, MessageSquare, Clock, Bell, type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/system';
 import { cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ const ICONS: Record<NavKey, LucideIcon> = {
   financeDashboard: LayoutDashboard, invoices: DollarSign, payments: ClipboardList, budgetPlans: BarChart3,
   marketplace: Store, social: Rss, connections: Users, requests: BookOpen, discover: Globe,
   messages: MessageSquare, myGroups: Users2, myRequests: FileCheck2, myOffers: DollarSign, myBookings: BookOpen,
-  travelPlan: Map, profile: Shield, registerOrganization: Building2, verification: BadgeCheck,
+  travelPlan: Map, profile: Shield, registerOrganization: Building2, verification: BadgeCheck, notifications: Bell,
 };
 
 // Single deep-green sidebar across all roles (matches design references); the

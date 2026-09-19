@@ -38,13 +38,14 @@ const IDENTITIES = {
 // What each identity's menu must be: computed by lib/workspace-access.ts from the
 // capabilities the API grants (the same lists the unit tests assert).
 const EXPECTED_NAV = {
-  operator: ['/dashboard', '/pilgrims', '/bookings', '/packages', '/groups', '/hotels', '/transport', '/compliance', '/finance', '/reports', '/marketplace', '/social', '/connections', '/requests'],
-  hotel: ['/hotel-dashboard', '/hotels', '/hotel-bookings', '/finance', '/marketplace', '/social', '/connections', '/requests', '/reports'],
-  transport: ['/transport-dashboard', '/transport/vehicles', '/transport/drivers', '/transport/routes', '/transport/assignments', '/transport/bookings', '/finance', '/marketplace', '/social', '/connections', '/requests', '/reports'],
-  visa: ['/visa-dashboard', '/compliance', '/pilgrims', '/visa-documents', '/visa-requests', '/finance', '/marketplace', '/social', '/connections', '/groups', '/requests'],
-  finance: ['/finance-dashboard', '/finance', '/finance-payments', '/bookings', '/budget-plans', '/reports', '/social', '/connections', '/packages'],
-  traveler: ['/social', '/discover', '/connections', '/messages', '/travel-plan', '/marketplace', '/requests', '/my-offers', '/my-bookings', '/travel-plan', '/profile', '/onboarding'],
-  superAdmin: ['/admin-dashboard', '/admin-tenants', '/admin-users', '/admin-listings', '/admin-kyc', '/admin-inquiries', '/admin-roles', '/admin-logs', '/admin-support', '/admin-settings'],
+  // '/notifications' and '/social/groups' are A05's pages (present in the integration candidate).
+  operator: ['/dashboard', '/pilgrims', '/bookings', '/packages', '/groups', '/hotels', '/transport', '/compliance', '/finance', '/reports', '/marketplace', '/social', '/connections', '/requests', '/notifications'],
+  hotel: ['/hotel-dashboard', '/hotels', '/hotel-bookings', '/finance', '/marketplace', '/social', '/connections', '/requests', '/reports', '/notifications'],
+  transport: ['/transport-dashboard', '/transport/vehicles', '/transport/drivers', '/transport/routes', '/transport/assignments', '/transport/bookings', '/finance', '/marketplace', '/social', '/connections', '/requests', '/reports', '/notifications'],
+  visa: ['/visa-dashboard', '/compliance', '/pilgrims', '/visa-documents', '/visa-requests', '/finance', '/marketplace', '/social', '/connections', '/groups', '/requests', '/notifications'],
+  finance: ['/finance-dashboard', '/finance', '/finance-payments', '/bookings', '/budget-plans', '/reports', '/social', '/connections', '/packages', '/notifications'],
+  traveler: ['/social', '/discover', '/connections', '/messages', '/social/groups', '/marketplace', '/requests', '/my-offers', '/my-bookings', '/travel-plan', '/profile', '/notifications', '/onboarding'],
+  superAdmin: ['/admin-dashboard', '/admin-tenants', '/admin-users', '/admin-listings', '/admin-kyc', '/admin-inquiries', '/admin-roles', '/admin-logs', '/admin-support', '/admin-settings', '/notifications'],
 };
 
 // A route each identity may not open, and the API call behind it (expected 403).
@@ -499,7 +500,7 @@ async function phaseAdmin(browser) {
   };
   try {
     await login(page, IDENTITIES.superAdmin);
-    for (const route of EXPECTED_NAV.superAdmin) {
+    for (const route of EXPECTED_NAV.superAdmin.filter((r) => r.startsWith('/admin-'))) {
       const r = await visit(route);
       check('admin', `${route} loads without errors`, !r.denied && !r.failed.length && !r.unavailable, r);
       await shot(page, `admin-${route.slice(1)}`);

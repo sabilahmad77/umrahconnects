@@ -52,6 +52,12 @@ export interface RouteRule {
   audience?: readonly WorkspaceKind[];
   /** Open to any signed-in account, including one whose organization is still being verified. */
   always?: boolean;
+  /**
+   * Open to any signed-in account whose organization is active (platform,
+   * traveler or organization). For pages whose API checks ownership itself
+   * and answers everyone except organizations still being verified.
+   */
+  authenticated?: boolean;
 }
 
 /**
@@ -65,6 +71,10 @@ export const ROUTE_RULES: Readonly<Record<string, RouteRule>> = {
   // Available to every signed-in account.
   '/settings': { always: true },
   '/onboarding': { always: true },
+  // Every account's own notifications and the groups it belongs to; the API
+  // scopes both to the caller (and refuses organizations still being verified).
+  '/notifications': { authenticated: true },
+  '/social/groups': { authenticated: true },
 
   // Platform administration (PLATFORM organization, platform:* capabilities only).
   '/admin-dashboard': { platform: true, all: ['platform:tenant:read'] },
@@ -170,6 +180,7 @@ export function canOpenRoute(user: AccessSubject | null | undefined, pathname: s
   if (!rule) return false;
   if (rule.always) return true;
   if (isPendingOrganization(user)) return false;
+  if (rule.authenticated) return true;
   const kind = workspaceKind(user);
   if (rule.platform ? kind !== 'platform' : kind === 'platform') return false;
   if (rule.audience && !rule.audience.includes(kind)) return false;
@@ -186,7 +197,8 @@ export type NavKey =
   | 'visaDashboard' | 'visaApplications' | 'applicants' | 'visaDocuments' | 'serviceRequests'
   | 'financeDashboard' | 'invoices' | 'payments' | 'budgetPlans'
   | 'marketplace' | 'social' | 'connections' | 'requests' | 'discover' | 'messages' | 'myGroups'
-  | 'myRequests' | 'myOffers' | 'myBookings' | 'travelPlan' | 'profile' | 'registerOrganization' | 'verification';
+  | 'myRequests' | 'myOffers' | 'myBookings' | 'travelPlan' | 'profile' | 'registerOrganization' | 'verification'
+  | 'notifications';
 
 export interface NavItem {
   key: NavKey;
@@ -329,7 +341,7 @@ const LAYOUTS: Record<DashboardType, NavSection[]> = {
         item('discover', 'Discover', '/discover'),
         item('connections', 'Connections', '/connections'),
         item('messages', 'Messages', '/messages'),
-        item('myGroups', 'My Groups', '/travel-plan#my-groups'),
+        item('myGroups', 'My Groups', '/social/groups'),
       ],
     },
     {
@@ -346,11 +358,15 @@ const LAYOUTS: Record<DashboardType, NavSection[]> = {
       section: 'Account',
       items: [
         item('profile', 'Profile', '/profile'),
+        item('notifications', 'Notifications', '/notifications'),
         item('registerOrganization', 'Register your organization', '/onboarding'),
       ],
     },
   ],
 };
+
+/** Every account's own entries, listed last in any menu that does not already have an Account section. */
+const ACCOUNT: NavSection = { section: 'Account', items: [item('notifications', 'Notifications', '/notifications')] };
 
 /**
  * Organization areas an account can reach through a capability its own
@@ -408,6 +424,10 @@ export function navigationFor(user: AccessSubject | null | undefined): NavSectio
     const covered = (path: string) => [...shownPaths].some((shown) => shown === path || shown.startsWith(`${path}/`));
     const more = DOMAIN_ENTRY_POINTS.filter((entry) => !covered(normalizePath(entry.href)) && visible(entry));
     if (more.length) sections.push({ section: 'More tools', items: more });
+  }
+  if (!sections.some((section) => section.section === ACCOUNT.section)) {
+    const account = ACCOUNT.items.filter(visible);
+    if (account.length) sections.push({ section: ACCOUNT.section, items: account });
   }
   return sections;
 }
