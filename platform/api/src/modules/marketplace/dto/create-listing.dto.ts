@@ -1,8 +1,26 @@
 import { RawJson } from '../../../common/decorators/raw-json.decorator';
-import { IsString, IsOptional, IsEnum, IsNumber, IsArray, IsDateString, IsUUID, IsObject, MaxLength, Min, Max, ArrayMaxSize } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { TenantType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import { blankToUndefined, PRICING_MODELS, upper } from './marketplace.dto';
+import { MAX_LISTING_IMAGES } from '../../storage/media-registry.service';
 
 export enum ListingCategory {
   HOTEL_ROOM = 'hotel_room',
@@ -13,6 +31,7 @@ export enum ListingCategory {
   OTHER = 'other',
 }
 
+/** Legacy lower-case pricing unit; `pricingModel` is the canonical field. */
 export enum PriceUnit {
   PER_PERSON = 'per_person',
   PER_NIGHT = 'per_night',
@@ -20,13 +39,19 @@ export enum PriceUnit {
   FLAT = 'flat',
 }
 
+/** Upper bound for a listing price: 100 million major units, in minor units (cents). */
+export const MAX_PRICE_CENTS = 10_000_000_000;
+
 export class CreateListingDto {
   @ApiProperty()
+  @Transform(blankToUndefined)
   @IsString()
+  @IsNotEmpty()
   @MaxLength(255)
   title: string;
 
   @ApiPropertyOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @IsOptional()
   @MaxLength(255)
@@ -38,84 +63,67 @@ export class CreateListingDto {
   @MaxLength(10000)
   description?: string;
 
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  @MaxLength(10000)
-  descriptionAr?: string;
-
   @ApiProperty({ enum: ListingCategory })
   @IsEnum(ListingCategory)
   category: ListingCategory;
 
-  @ApiPropertyOptional()
-  @IsNumber()
+  @ApiPropertyOptional({ description: 'Price in minor units (cents). 0 or omitted = "contact for pricing".' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(MAX_PRICE_CENTS)
+  @IsOptional()
+  priceCents?: number;
+
+  @ApiPropertyOptional({ description: 'Legacy: price in MAJOR units (e.g. SAR). Prefer priceCents.' })
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(100_000_000)
   @IsOptional()
-  @Type(() => Number)
   priceFrom?: number;
 
-  @ApiPropertyOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100_000_000)
+  @ApiPropertyOptional({ example: 'SAR' })
+  @Transform(upper)
+  @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter ISO code such as SAR' })
   @IsOptional()
-  @Type(() => Number)
-  priceTo?: number;
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  @MaxLength(3)
   currency?: string;
 
-  @ApiPropertyOptional({ enum: PriceUnit })
+  @ApiPropertyOptional({ enum: PRICING_MODELS })
+  @Transform(upper)
+  @IsIn(PRICING_MODELS as unknown as string[])
+  @IsOptional()
+  pricingModel?: string;
+
+  @ApiPropertyOptional({ enum: PriceUnit, description: 'Legacy alias of pricingModel' })
   @IsEnum(PriceUnit)
   @IsOptional()
   unit?: PriceUnit;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Images uploaded through POST /uploads; the first is the cover.' })
   @IsArray()
   @IsString({ each: true })
   @MaxLength(2048, { each: true })
-  @ArrayMaxSize(50)
+  @ArrayMaxSize(MAX_LISTING_IMAGES)
   @IsOptional()
-  images?: string[];
+  imageUrls?: string[];
 
   @ApiPropertyOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @MaxLength(2048, { each: true })
-  @ArrayMaxSize(50)
-  @IsOptional()
-  tags?: string[];
-
-  @ApiPropertyOptional()
+  @Transform(blankToUndefined)
   @IsString()
   @IsOptional()
   @MaxLength(100)
   city?: string;
 
   @ApiPropertyOptional()
-  @IsDateString()
-  @IsOptional()
-  availableFrom?: string;
-
-  @ApiPropertyOptional()
-  @IsDateString()
-  @IsOptional()
-  availableTo?: string;
-
-  @ApiPropertyOptional()
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   @Min(1)
   @Max(100_000)
   @IsOptional()
-  @Type(() => Number)
   maxCapacity?: number;
 
-  @ApiPropertyOptional({ description: 'If omitted, resolved from the requesting tenant' })
+  @ApiPropertyOptional({ description: "One of the caller organization's seller profiles; defaults to its first one" })
   @IsUUID()
   @IsOptional()
   vendorId?: string;
@@ -125,22 +133,15 @@ export class CreateListingDto {
   @IsOptional()
   vendorType?: TenantType;
 
-  @ApiPropertyOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @MaxLength(2048, { each: true })
-  @ArrayMaxSize(50)
+  @ApiPropertyOptional({ enum: ['DRAFT', 'PUBLISHED'], description: 'Defaults to PUBLISHED' })
+  @Transform(upper)
+  @IsIn(['DRAFT', 'PUBLISHED'])
   @IsOptional()
-  imageUrls?: string[];
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  @MaxLength(20)
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Category-specific structured data (roomType, vehicleType, etc.)' })
-  @IsObject() @RawJson()
+  @ApiPropertyOptional({ description: 'Category details (roomType, vehicleType…): flat values only' })
+  @IsObject()
+  @RawJson()
   @IsOptional()
   attributes?: Record<string, any>;
 }

@@ -1,0 +1,221 @@
+{
+  "run": "A06-mu8dj4it",
+  "at": "2026-09-19T12:39:16.443Z",
+  "web": "http://localhost:3406",
+  "identities": [
+    "hotel@makkahgrand.dev (provider A)",
+    "hotel.b@madinahcomfort.dev (provider B)",
+    "traveler@umrahconnect.dev (traveler)",
+    "visa@fastvisa.dev (document owner)"
+  ],
+  "listingId": "a244e42a-8098-4145-b6a0-8b522d0d5ab6",
+  "passed": 41,
+  "failed": 0,
+  "checks": [
+    {
+      "label": "a provider without a seller profile (hotel.b) is asked to create one before listing",
+      "ok": true,
+      "detail": "screenshot a06-00"
+    },
+    {
+      "label": "provider A: seller profile already present",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "wrong type is refused before upload with a clear message",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "oversize is refused before upload with the real limit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "renamed text file passes the picker but the server refuses it by content",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "a failed upload offers Retry",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "two images upload with progress and preview",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "uploaded previews are real, decodable images",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "the second image can be made the cover",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "draft appears in My listings",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "provider A publishes the listing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "server stored price in cents (1250.50 SAR → 125050)",
+      "ok": true,
+      "detail": "125050 SAR"
+    },
+    {
+      "label": "server stored two uploaded images, cover first",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "label": "server refuses an oversize upload that skipped the browser check (413)",
+      "ok": true,
+      "detail": "{\"status\":413,\"message\":\"Images must be 5 MB or smaller\"}"
+    },
+    {
+      "label": "traveler has no seller controls (capability-gated)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "traveler sees no \"My listings\" tab",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "search finds all 13 listings of this run",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "results are paginated (page 1 of 2)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "page 2 holds the remaining listing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "sorting by price puts the suite first",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "a non-matching category filter empties the results",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "price filter (SAR → cents) keeps only the suite",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "card shows the real seller",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "card shows the uploaded cover photo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "listing page shows the seller card",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "listing page shows SAR 1,250.50",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "gallery shows both uploaded photos",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "traveler sees buyer actions only (no Edit / Unpublish)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "provider A saves the new price",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "API now reports 137525 cents",
+      "ok": true,
+      "detail": "137525"
+    },
+    {
+      "label": "traveler sees SAR 1,375.25 after reload",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "provider B gets the buyer view: no Edit tab, no status actions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "provider B edit/archive/owner-read refused by the server (404)",
+      "ok": true,
+      "detail": "404/404/404"
+    },
+    {
+      "label": "record unchanged after provider B attempts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "provider A unpublishes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "traveler search no longer finds it",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "direct link tells the traveler it is not available",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "visa officer uploads a private document",
+      "ok": true,
+      "detail": "{\"upload\":201}"
+    },
+    {
+      "label": "document opens in a new tab (popup), not in the current one",
+      "ok": true,
+      "detail": "http://localhost:3406/visa-documents"
+    },
+    {
+      "label": "the new tab has no opener (isolated like noopener)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "the new tab receives the signed file (PDF download)",
+      "ok": true,
+      "detail": "A06 passport A06-mu8dj4it-v1.pdf"
+    }
+  ]
+}

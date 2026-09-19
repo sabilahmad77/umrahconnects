@@ -21,8 +21,8 @@ import type { Principal } from '../auth/principal';
 import { MarketplaceService } from './marketplace.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
-import { QueryListingDto } from './dto/query-listing.dto';
-import { CreateVendorDto } from './dto/create-vendor.dto';
+import { MyListingsQueryDto, QueryListingDto } from './dto/query-listing.dto';
+import { CreateVendorDto, UpdateVendorDto } from './dto/create-vendor.dto';
 import { CreateQuoteDto, RespondQuoteDto } from './dto/create-quote.dto';
 import {
   CreateListingBookingDto,
@@ -42,92 +42,84 @@ export class MarketplaceController {
 
   @Get('listings')
   @Public()
-  @ApiOperation({ summary: 'Public listing search' })
+  @ApiOperation({ summary: 'Public catalogue: search, category/city/price filters, sorting, pagination' })
   async findAllListings(@Query() query: QueryListingDto) {
-    const data = await this.marketplaceService.findAllListings(query);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.searchListings(query) };
   }
 
   @Get('listings/mine')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: "Vendor's own listings (resolves vendor from tenant)" })
-  async findMyListings(@TenantId() tenantId: string, @Query() query: any) {
-    const vendor = await this.marketplaceService.findVendorForTenant(tenantId);
-    const data = await this.marketplaceService.findAllListings({ ...query, vendorId: vendor.id, includeInactive: true });
-    return { success: true, data };
+  @ApiOperation({ summary: "The caller organization's listings in every status" })
+  async findMyListings(@TenantId() tenantId: string, @Query() query: MyListingsQueryDto) {
+    return { success: true, data: await this.marketplaceService.myListings(tenantId, query) };
+  }
+
+  @Get('listings/mine/:id')
+  @RequirePermissions('marketplace:listing:read')
+  @ApiOperation({ summary: 'One of my listings, in any status (404 for anyone else)' })
+  async findMyListing(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.myListing(tenantId, id) };
   }
 
   @Get('listings/:id')
   @Public()
-  @ApiOperation({ summary: 'Get listing detail' })
+  @ApiOperation({ summary: 'Published listing detail' })
   async findOneListing(@Param('id', ParseUUIDPipe) id: string) {
-    const data = await this.marketplaceService.findOneListing(id);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.findPublicListing(id) };
   }
 
   @Post('listings')
   @RequirePermissions('marketplace:listing:manage')
-  @ApiOperation({ summary: 'Vendor creates listing' })
+  @ApiOperation({ summary: "Create a listing for one of the caller organization's seller profiles" })
   async createListing(@TenantId() tenantId: string, @Body() dto: CreateListingDto) {
-    // The vendor must belong to the caller's organization; if omitted it is resolved from the tenant.
-    const data = await this.marketplaceService.createListing(tenantId, dto);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.createListing(tenantId, dto) };
   }
 
   @Put('listings/:id')
   @RequirePermissions('marketplace:listing:manage')
-  @ApiOperation({ summary: 'Update listing' })
+  @ApiOperation({ summary: 'Update my listing (details, price, images, status transitions)' })
   async updateListing(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateListingDto,
   ) {
-    const data = await this.marketplaceService.updateListing(tenantId, id, dto);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.updateListing(tenantId, id, dto) };
   }
 
   @Delete('listings/:id')
   @RequirePermissions('marketplace:listing:manage')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Archive listing (soft-delete)' })
-  async deactivateListing(
-    @TenantId() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    const data = await this.marketplaceService.deactivateListing(tenantId, id);
-    return { success: true, data };
+  @ApiOperation({ summary: 'Archive my listing (soft delete)' })
+  async deactivateListing(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.archiveListing(tenantId, id) };
   }
 
   // ── Inquiries ─────────────────────────────────────────────────────────────
   @Post('listings/:id/inquiries')
   @Public()
   @Throttle({ default: { limit: 5, ttl: 10 * 60_000 } })
-  @ApiOperation({ summary: 'Send inquiry on a listing (auth or anon)' })
+  @ApiOperation({ summary: 'Send an inquiry about a published listing' })
   async createInquiry(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: CreateListingInquiryDto,
     @CurrentUser() user?: Principal,
   ) {
-    const data = await this.marketplaceService.createInquiry(id, user?.sub ?? null, body);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.createInquiry(id, user?.sub ?? null, body) };
   }
 
   @Get('listings/:id/inquiries')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: 'List inquiries on a listing' })
+  @ApiOperation({ summary: 'Inquiries on my listing' })
   async listInquiries(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     await this.marketplaceService.findOwnedListing(tenantId, id);
-    const data = await this.marketplaceService.listInquiries({ listingId: id });
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.listInquiries({ listingId: id }) };
   }
 
   @Get('inquiries')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: 'List inquiries received by my vendor' })
+  @ApiOperation({ summary: "Inquiries on every listing of the caller's organization" })
   async listMyInquiries(@TenantId() tenantId: string) {
-    const vendor = await this.marketplaceService.findVendorForTenant(tenantId);
-    const data = await this.marketplaceService.listInquiries({ vendorId: vendor.id });
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.listInquiries({ tenantId }) };
   }
 
   @Put('inquiries/:id')
@@ -151,34 +143,37 @@ export class MarketplaceController {
     @CurrentUser() user: Principal,
     @Body() body: CreateListingBookingDto,
   ) {
-    const data = await this.marketplaceService.createBooking(id, user.sub, body);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.createBooking(id, user.sub, body) };
   }
 
   @Get('listings/:id/bookings')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: 'List bookings on a listing' })
+  @ApiOperation({ summary: 'Bookings on my listing' })
   async listListingBookings(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     await this.marketplaceService.findOwnedListing(tenantId, id);
-    const data = await this.marketplaceService.listBookings({ listingId: id });
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.listBookings({ listingId: id }) };
   }
 
   @Get('bookings')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: 'List bookings received by my vendor' })
+  @ApiOperation({ summary: "Bookings on every listing of the caller's organization" })
   async listMyBookings(@TenantId() tenantId: string) {
-    const vendor = await this.marketplaceService.findVendorForTenant(tenantId);
-    const data = await this.marketplaceService.listBookings({ vendorId: vendor.id });
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.listBookings({ tenantId }) };
   }
 
   @Get('bookings/mine')
   @AnyAuthenticated()
   @ApiOperation({ summary: 'List bookings I placed as a customer/traveler' })
   async listMyTravelerBookings(@CurrentUser() user: Principal) {
-    const data = await this.marketplaceService.listBookings({ userId: user.sub });
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.listBookings({ userId: user.sub }) };
+  }
+
+  @Post('bookings/:id/cancel')
+  @AnyAuthenticated()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Customer cancels their own pending, unpaid booking' })
+  async cancelMyBooking(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.cancelOwnBooking(user, id) };
   }
 
   @Put('bookings/:id')
@@ -189,47 +184,55 @@ export class MarketplaceController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateListingBookingDto,
   ) {
-    const data = await this.marketplaceService.updateBooking(tenantId, id, body);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.updateBooking(tenantId, id, body) };
   }
 
-  // ── Vendors ───────────────────────────────────────────────────────────────────
+  // ── Vendors (seller profiles) ─────────────────────────────────────────────────
 
   @Get('vendors')
   @Public()
   @ApiOperation({ summary: 'List vendors (public discovery)' })
-  async findAllVendors(
-    @Query('type') type?: string,
-    @Query('city') city?: string,
-  ) {
-    const data = await this.marketplaceService.findAllVendors(type, city);
-    return { success: true, data };
+  async findAllVendors(@Query('type') type?: string, @Query('city') city?: string) {
+    return { success: true, data: await this.marketplaceService.findAllVendors(type, city) };
   }
 
   @Get('vendors/mine')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: 'Get/create my vendor record' })
+  @ApiOperation({ summary: "The organization's primary seller profile, or null if it has none yet" })
   async findMyVendor(@TenantId() tenantId: string) {
-    const data = await this.marketplaceService.findVendorForTenant(tenantId);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.findMyVendor(tenantId) };
+  }
+
+  @Get('vendors/mine/all')
+  @RequirePermissions('marketplace:listing:read')
+  @ApiOperation({ summary: "Every seller profile of the caller's organization" })
+  async findMyVendors(@TenantId() tenantId: string) {
+    return { success: true, data: await this.marketplaceService.findMyVendors(tenantId) };
   }
 
   @Post('vendors')
   @RequirePermissions('marketplace:listing:manage')
-  @ApiOperation({ summary: 'Register as vendor' })
+  @ApiOperation({ summary: 'Create a seller profile for my organization' })
   async createVendor(@TenantId() tenantId: string, @Body() dto: CreateVendorDto) {
-    const data = await this.marketplaceService.createVendor(tenantId, dto);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.createVendor(tenantId, dto) };
+  }
+
+  @Put('vendors/:id')
+  @RequirePermissions('marketplace:listing:manage')
+  @ApiOperation({ summary: "Edit one of my organization's seller profiles" })
+  async updateVendor(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateVendorDto,
+  ) {
+    return { success: true, data: await this.marketplaceService.updateVendor(tenantId, id, dto) };
   }
 
   @Get('vendors/:id')
   @Public()
-  @ApiOperation({ summary: 'Get vendor profile with listings' })
-  async findOneVendor(
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    const data = await this.marketplaceService.findOneVendor(id);
-    return { success: true, data };
+  @ApiOperation({ summary: 'Get vendor profile with its published listings' })
+  async findOneVendor(@Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.findOneVendor(id) };
   }
 
   @Post('vendors/:id/ratings')
@@ -249,40 +252,47 @@ export class MarketplaceController {
 
   @Post('quotes')
   @RequirePermissions('marketplace:listing:manage')
-  @ApiOperation({ summary: 'Request a quote for a listing' })
+  @ApiOperation({ summary: 'Ask the seller of a listing for a quote' })
   async createQuote(@TenantId() tenantId: string, @Body() dto: CreateQuoteDto) {
-    const data = await this.marketplaceService.createQuote(tenantId, dto);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.createQuote(tenantId, dto) };
   }
 
   @Get('quotes')
   @RequirePermissions('marketplace:listing:read')
-  @ApiOperation({ summary: 'List my quote requests' })
+  @ApiOperation({ summary: 'Quotes my organization asked for' })
   async findMyQuotes(@TenantId() tenantId: string) {
-    const data = await this.marketplaceService.findMyQuotes(tenantId);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.findMyQuotes(tenantId) };
+  }
+
+  @Get('quotes/incoming')
+  @RequirePermissions('marketplace:listing:read')
+  @ApiOperation({ summary: "Quotes other organizations asked my organization's seller profiles for" })
+  async findIncomingQuotes(@TenantId() tenantId: string) {
+    return { success: true, data: await this.marketplaceService.findIncomingQuotes(tenantId) };
   }
 
   @Put('quotes/:id')
   @RequirePermissions('marketplace:listing:manage')
-  @ApiOperation({ summary: 'Vendor responds to quote' })
+  @ApiOperation({ summary: 'Seller responds to a quote with a price' })
   async respondToQuote(
     @TenantId() tenantId: string,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RespondQuoteDto,
   ) {
-    const data = await this.marketplaceService.respondToQuote(tenantId, id, dto);
-    return { success: true, data };
+    return { success: true, data: await this.marketplaceService.respondToQuote(tenantId, id, dto) };
   }
 
   @Put('quotes/:id/accept')
   @RequirePermissions('marketplace:listing:manage')
-  @ApiOperation({ summary: 'Accept quote' })
-  async acceptQuote(
-    @TenantId() tenantId: string,
-    @Param('id', ParseUUIDPipe) id: string,
-  ) {
-    const data = await this.marketplaceService.acceptQuote(tenantId, id);
-    return { success: true, data };
+  @ApiOperation({ summary: 'Requester accepts an offered quote' })
+  async acceptQuote(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.acceptQuote(tenantId, id) };
+  }
+
+  @Put('quotes/:id/reject')
+  @RequirePermissions('marketplace:listing:manage')
+  @ApiOperation({ summary: 'Requester declines an open quote' })
+  async rejectQuote(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.rejectQuote(tenantId, id) };
   }
 }

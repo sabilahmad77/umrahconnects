@@ -5,10 +5,10 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import compression from 'compression';
 import * as express from 'express';
-import { join } from 'path';
 import { randomUUID } from 'crypto';
 import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
+import { resolveLocalStorageRoot } from '../modules/storage/storage.service';
 import { makeClientIpResolver } from './client-ip';
 
 // BigInt → JSON string (money is stored as bigint minor units).
@@ -82,7 +82,8 @@ export function configureApp(app: INestApplication) {
 
   // Public media only: top-level files written by /uploads (avatars, post and listing images).
   // Nested paths (visa documents, KYC, traveler documents) are never served statically.
-  const uploadsDir = join(process.cwd(), 'uploads');
+  // Same directory the local storage driver writes to (STORAGE_LOCAL_DIR, default ./uploads).
+  const uploadsDir = resolveLocalStorageRoot(config.get<string>('STORAGE_LOCAL_DIR'));
   const publicMedia = express.static(uploadsDir, { index: false, dotfiles: 'deny', fallthrough: false });
   app.use('/uploads', (req: any, res: any, next: (err?: unknown) => void) => {
     const segments = String(req.path || '').split('/').filter(Boolean);

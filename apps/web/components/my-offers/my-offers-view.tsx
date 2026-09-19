@@ -69,6 +69,7 @@ export function MyOffersView() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{o.title}</p>
+                        {o.seller?.name && <p className="text-xs text-gray-600">by {o.seller.name}</p>}
                         <p className="text-xs text-gray-600">{o.description?.slice(0, 100)}</p>
                       </div>
                       <span className={cn(
@@ -117,7 +118,14 @@ export function MyOffersView() {
                             </Button>
                           </>
                         )}
-                        {o.status === 'ACCEPTED' && (
+                        {/* Converted offers are booked already; transport offers are scheduled by the provider. */}
+                        {o.status === 'ACCEPTED' && r.requirements?._conversion && (
+                          <span className="text-xs font-medium text-green-700">Booked</span>
+                        )}
+                        {o.status === 'ACCEPTED' && !r.requirements?._conversion && r.serviceType === 'TRANSPORT' && (
+                          <span className="text-xs text-gray-600">Awaiting the provider&apos;s schedule</span>
+                        )}
+                        {o.status === 'ACCEPTED' && !r.requirements?._conversion && r.serviceType !== 'TRANSPORT' && (
                           <Button busy={convert.isPending} variant="quiet" type="button"
                             onClick={async () => {
                               try {

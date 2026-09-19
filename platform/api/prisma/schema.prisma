@@ -1918,8 +1918,11 @@ model Listing {
   inquiries ListingInquiry[]
   bookings  ListingBooking[]
 
+  city String? @db.VarChar(100) // eng100-a06: mirrors attributes.city so the marketplace can filter by city
+
   @@index([vendorId])
   @@index([type, status])
+  @@index([status, isActive, createdAt]) // eng100-a06: public catalogue scans
   @@map("listings")
   @@schema("marketplace")
 }
@@ -2012,6 +2015,32 @@ model VendorRating {
   @@unique([vendorId, tenantId, bookingRef])
   @@map("vendor_ratings")
   @@schema("marketplace")
+}
+
+// eng100-a06: registry of public media written by POST /uploads. It records who
+// uploaded each object so only the uploader can delete it, and so listing images
+// can be restricted to media the caller's organization actually uploaded. It is
+// not a reference: the orphan cleanup job ignores this table when deciding
+// whether an object is still in use.
+model MediaObject {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId     String?   @map("tenant_id") @db.Uuid
+  ownerUserId  String    @map("owner_user_id") @db.Uuid
+  storageKey   String    @unique @map("storage_key") @db.VarChar(512)
+  url          String
+  driver       String    @db.VarChar(20)
+  visibility   String    @default("public") @db.VarChar(20)
+  mimeType     String    @map("mime_type") @db.VarChar(120)
+  sizeBytes    Int       @map("size_bytes")
+  checksum     String    @db.VarChar(64)
+  originalName String?   @map("original_name") @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@index([ownerUserId, createdAt])
+  @@index([tenantId])
+  @@map("media_objects")
+  @@schema("core")
 }
 
 // ============================================================

@@ -6,7 +6,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Bus, CalendarCheck2, Hotel, ListChecks, Wallet } from 'lucide-react';
 import { Button, Dialog, LoadingState, QueryFailure } from '@/components/ui/system';
 import { cn } from '@/lib/utils';
-import { useMyMarketplaceBookings } from '@/hooks/use-marketplace';
+import { toast } from 'sonner';
+import { apiErrorMessage } from '@/lib/api-error';
+import { useCancelMarketplaceBooking, useMyMarketplaceBookings } from '@/hooks/use-marketplace';
 import {
   readReturn,
   withoutPaymentParam,
@@ -14,6 +16,11 @@ import {
 } from '@/components/finance/checkout-machine';
 import { formatAmount } from '@/components/finance/money';
 import { BookingCheckout, CHECKOUT_PARAM } from './booking-checkout';
+
+/** The server lets a customer cancel only a pending booking with no payment recorded or in progress. */
+export function customerMayCancel(b: { status?: string; paymentStatus?: string }): boolean {
+  return b.status === 'PENDING' && b.paymentStatus === 'UNPAID';
+}
 
 /** Bookings that still take money: unpaid or part-paid, and not closed. */
 export function canPayBooking(b: { status?: string; paymentStatus?: string }): boolean {
@@ -53,6 +60,8 @@ export function MyBookingsView() {
   const qc = useQueryClient();
   const { data: bookings = [], isLoading, error, refetch } = useMyMarketplaceBookings();
   const [checkout, setCheckout] = useState<CheckoutTarget | null>(null);
+  const [cancelling, setCancelling] = useState<any>(null);
+  const cancel = useCancelMarketplaceBooking();
 
   // A reload or a return from a bank page carries the attempt id: reopen it from the server.
   useEffect(() => {
@@ -101,6 +110,40 @@ export function MyBookingsView() {
         )}
       </Dialog>
 
+      <Dialog
+        open={!!cancelling}
+        onOpenChange={(open) => {
+          if (!open && !cancel.isPending) setCancelling(null);
+        }}
+        title="Cancel this booking?"
+        description={cancelling ? `${cancelling.listing?.name ?? 'Listing'} · ${cancelling.partySize} pax` : undefined}
+      >
+        <p className="text-sm text-gray-600">The provider is told that you cancelled. Nothing has been paid, so there is nothing to refund.</p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="secondary" disabled={cancel.isPending} onClick={() => setCancelling(null)}>
+            Keep booking
+          </Button>
+          <Button
+            variant="danger"
+            busy={cancel.isPending}
+            onClick={async () => {
+              try {
+                await cancel.mutateAsync(cancelling.id);
+                toast.success('Booking cancelled');
+              } catch (e) {
+                // For example a payment was started meanwhile, or the provider already confirmed.
+                toast.error(apiErrorMessage(e, 'The booking could not be cancelled.'));
+              } finally {
+                setCancelling(null);
+                refreshBookings();
+              }
+            }}
+          >
+            Cancel booking
+          </Button>
+        </div>
+      </Dialog>
+
       <div>
         <h1 className="text-2xl font-bold text-gray-900">My bookings</h1>
         <p className="mt-0.5 text-sm text-gray-600">
@@ -133,6 +176,7 @@ export function MyBookingsView() {
                   title: `Pay for ${b.listing?.name ?? 'your booking'}`,
                 })
               }
+              onCancel={() => setCancelling(b)}
             />
           ))}
         </ul>
@@ -141,7 +185,7 @@ export function MyBookingsView() {
   );
 }
 
-function BookingCard({ booking: b, onPay }: { booking: any; onPay: () => void }) {
+function BookingCard({ booking: b, onPay, onCancel }: { booking: any; onPay: () => void; onCancel: () => void }) {
   const [open, setOpen] = useState(false);
   const type = b.listing?.type ?? 'other';
   const Icon = type === 'transport_service' ? Bus : type === 'hotel_room' ? Hotel : ListChecks;
@@ -196,6 +240,11 @@ function BookingCard({ booking: b, onPay }: { booking: any; onPay: () => void })
         {payable && (
           <Button variant="secondary" onClick={onPay}>
             {b.paymentStatus === 'PARTIAL' ? 'Pay the balance' : 'Pay booking'}
+          </Button>
+        )}
+        {customerMayCancel(b) && (
+          <Button variant="quiet" onClick={onCancel}>
+            Cancel booking
           </Button>
         )}
         <Button

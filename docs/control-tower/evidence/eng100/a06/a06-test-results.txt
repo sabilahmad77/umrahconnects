@@ -1,0 +1,30 @@
+A06 test results (2026-09-19T12:43Z)
+
+API full e2e: cd platform/api && set -a && . ./.env.test-db && set +a && heavy npx vitest run --config vitest.e2e.config.ts
+ ✓ test/isolation.e2e-spec.ts (32 tests) 2247ms
+ ✓ test/marketplace-listings.e2e-spec.ts (16 tests) 892ms
+ ✓ test/auth.e2e-spec.ts (24 tests) 15390ms
+ ✓ test/rbac.e2e-spec.ts (45 tests) 1592ms
+ ✓ test/payments.e2e-spec.ts (11 tests) 707ms
+ ✓ test/marketplace.e2e-spec.ts (11 tests) 738ms
+ ✓ test/uploads.e2e-spec.ts (10 tests) 1536ms
+ ✓ test/google.e2e-spec.ts (8 tests) 1912ms
+ ✓ test/followups.e2e-spec.ts (9 tests) 593ms
+ ✓ test/rate-limit.e2e-spec.ts (4 tests) 2046ms
+ ✓ test/access-policy.e2e-spec.ts (2 tests) 123ms
+ Test Files  11 passed (11)
+      Tests  172 passed (172)
+
+Web vitest: cd apps/web && heavy npx vitest run
+ ✓ tests/private-documents.test.ts (6 tests) 5ms
+ ✓ tests/marketplace-rules.test.ts (8 tests) 17ms
+ ✓ tests/server-contracts.test.ts (19 tests) 6ms
+ ✓ tests/transaction-contracts.test.ts (34 tests) 5ms
+ ✓ tests/session-contracts.test.ts (2 tests) 3ms
+ ✓ tests/current-settings-contract.test.tsx (1 test) 7ms
+ ✓ tests/component-semantics.test.tsx (8 tests) 9ms
+ Test Files  7 passed (7)
+      Tests  78 passed (78)
+
+API unit: 7 files / 35 tests passed; API tsc + eslint clean; web tsc + eslint clean.
+Provider (MinIO 127.0.0.1:19406): storage-s3.int-spec 5/5, storage-cleanup-s3.int-spec 1/1 passed.
