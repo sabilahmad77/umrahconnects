@@ -1,6 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
-  ArrayMaxSize, IsArray, IsDateString, IsEmail, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID,
+  Allow, ArrayMaxSize, IsArray, IsDateString, IsEmail, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID,
   IsNotEmpty, IsObject, Matches, Max, MaxLength, Min,
 } from 'class-validator';
 import { HotelContractType } from '@prisma/client';
@@ -20,8 +20,13 @@ export const HOTEL_BOOKING_SOURCES = ['PLATFORM_USER', 'EXTERNAL', 'OPERATOR', '
 
 const upper = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim().toUpperCase() : value);
 const toStr = ({ value }: { value: unknown }) => (typeof value === 'number' ? String(value) : value);
+const toTrimmedStr = ({ value }: { value: unknown }) =>
+  typeof value === 'number' ? String(value) : typeof value === 'string' ? value.trim() : value;
 /** '' from a cleared form field means "no value". */
 const emptyToNull = ({ value }: { value: unknown }) => (value === '' ? null : value);
+const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
+/** 24-hour clock time such as 15:00. */
+const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const MAX_MONEY_MAJOR = 100_000_000; // 100M in major units
 const MAX_MONEY_CENTS = MAX_MONEY_MAJOR * 100;
 
@@ -37,8 +42,9 @@ export class QueryHotelDto {
 
 class HotelFieldsDto {
   @IsOptional() @IsString() @MaxLength(255) nameAr?: string;
-  @IsOptional() @IsString() @MaxLength(100) city?: string;
-  @IsOptional() @IsString() @MaxLength(2) country?: string;
+  /** Required on the record: an empty value is refused rather than silently ignored. */
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100) city?: string;
+  @IsOptional() @Transform(upper) @Matches(/^[A-Z]{2}$/, { message: 'country must be a 2-letter ISO code such as SA' }) country?: string;
   @IsOptional() @IsString() @MaxLength(120) area?: string;
   @IsOptional() @IsString() @MaxLength(1000) address?: string;
   @IsOptional() @IsString() @MaxLength(20) postalCode?: string;
@@ -50,8 +56,8 @@ class HotelFieldsDto {
   @IsOptional() @IsString() @MaxLength(150) contactPerson?: string;
   @IsOptional() @IsString() @MaxLength(40) phone?: string;
   @IsOptional() @Transform(emptyToNull) @IsEmail() @MaxLength(255) email?: string | null;
-  @IsOptional() @IsString() @MaxLength(10) checkInTime?: string;
-  @IsOptional() @IsString() @MaxLength(10) checkOutTime?: string;
+  @IsOptional() @Transform(emptyToNull) @Matches(HH_MM, { message: 'checkInTime must be a 24-hour time such as 15:00' }) checkInTime?: string | null;
+  @IsOptional() @Transform(emptyToNull) @Matches(HH_MM, { message: 'checkOutTime must be a 24-hour time such as 12:00' }) checkOutTime?: string | null;
   @IsOptional() @IsString() @MaxLength(5000) cancellationPolicy?: string;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
   @IsOptional() @Transform(upper) @IsIn(HOTEL_STATUSES) status?: string;
@@ -60,14 +66,14 @@ class HotelFieldsDto {
 }
 
 export class CreateHotelDto extends HotelFieldsDto {
-  @IsString() @MaxLength(255) name!: string;
+  @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(255) name!: string;
   @IsOptional() @IsInt() @Min(1) @Max(5) starRating?: number;
   /** Alias used by the audit scripts. */
   @IsOptional() @IsNumber() @Min(0) @Max(1_000_000) distanceFromHaram?: number;
 }
 
 export class UpdateHotelDto extends HotelFieldsDto {
-  @IsOptional() @IsString() @MaxLength(255) name?: string;
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(255) name?: string;
   /** The edit form sends 0 when the rating is cleared. */
   @IsOptional() @IsInt() @Min(0) @Max(5) starRating?: number | null;
 }
@@ -87,7 +93,7 @@ class RoomTypeFieldsDto {
 }
 
 export class CreateRoomTypeDto extends RoomTypeFieldsDto {
-  @IsString() @MaxLength(100) name!: string;
+  @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100) name!: string;
   /** Either a number of guests (e.g. 4) or a label such as DOUBLE / TRIPLE. */
   @IsOptional() @Transform(({ value }) => (value == null ? value : String(value).trim().toUpperCase()))
   @IsString() @Matches(/^(\d{1,2}|SINGLE|DOUBLE|TWIN|TRIPLE|QUAD|QUINTUPLE|SUITE)$/, { message: 'capacity must be a number or SINGLE/DOUBLE/TWIN/TRIPLE/QUAD/QUINTUPLE/SUITE' })
@@ -98,7 +104,7 @@ export class CreateRoomTypeDto extends RoomTypeFieldsDto {
 }
 
 export class UpdateRoomTypeDto extends RoomTypeFieldsDto {
-  @IsOptional() @IsString() @MaxLength(100) name?: string;
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(100) name?: string;
   @IsOptional() @IsInt() @Min(1) @Max(20) occupancy?: number;
 }
 
@@ -122,13 +128,14 @@ class RoomFieldsDto {
 }
 
 export class CreateRoomDto extends RoomFieldsDto {
+  /** Required (or `name`): the service refuses a room without a number. */
   @IsOptional() @Transform(toStr) @IsString() @MaxLength(40) roomNumber?: string;
   @IsOptional() @IsString() @MaxLength(40) name?: string;
   @IsOptional() @Transform(emptyToNull) @IsUUID() roomTypeId?: string | null;
 }
 
 export class UpdateRoomDto extends RoomFieldsDto {
-  @IsOptional() @Transform(toStr) @IsString() @MaxLength(40) roomNumber?: string;
+  @IsOptional() @Transform(toTrimmedStr) @IsString() @IsNotEmpty() @MaxLength(40) roomNumber?: string;
   /** null / '' detaches the room from its type. */
   @IsOptional() @Transform(emptyToNull) @IsUUID() roomTypeId?: string | null;
 }
@@ -146,21 +153,22 @@ class HotelBookingFieldsDto {
   @IsOptional() @IsNumber() @Min(0) @Max(MAX_MONEY_MAJOR) amount?: number;
   @IsOptional() @IsInt() @Min(0) @Max(MAX_MONEY_CENTS) totalAmountCents?: number;
   @IsOptional() @Transform(upper) @IsIn(HOTEL_BOOKING_STATUSES) status?: string;
-  @IsOptional() @Transform(upper) @IsIn(PAYMENT_STATUSES) paymentStatus?: string;
+  /** Whitelisted only so the server can refuse it explicitly — payment state comes from the payments module. */
+  @Allow() paymentStatus?: unknown;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
 }
 
 export class CreateHotelBookingDto extends HotelBookingFieldsDto {
   @IsUUID() hotelId!: string;
   @IsOptional() @IsUUID() customerUserId?: string;
-  @IsOptional() @IsString() @MaxLength(200) guestName?: string;
+  @Transform(trim) @IsString() @IsNotEmpty({ message: 'guestName is required' }) @MaxLength(200) guestName!: string;
   @IsDateString() checkIn!: string;
   @IsDateString() checkOut!: string;
   @IsOptional() @Transform(upper) @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter code' }) currency?: string;
 }
 
 export class UpdateHotelBookingDto extends HotelBookingFieldsDto {
-  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) guestName?: string;
+  @IsOptional() @Transform(trim) @IsString() @IsNotEmpty() @MaxLength(200) guestName?: string;
   @IsOptional() @IsDateString() checkIn?: string;
   @IsOptional() @IsDateString() checkOut?: string;
 }
@@ -179,6 +187,33 @@ export class CreateAllotmentDto {
   @IsOptional() @Transform(upper) @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter code' }) currency?: string;
   @IsOptional() @IsString() @MaxLength(200) contractRef?: string;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
+}
+
+/** Adjusts a contract. Dates are fixed once rooms are assigned against them; bookedRooms is server-owned. */
+export class UpdateAllotmentDto {
+  @IsOptional() @Transform(upper) @IsIn(Object.values(HotelContractType)) contractType?: HotelContractType;
+  @IsOptional() @IsInt() @Min(1) @Max(100_000) totalRooms?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(100_000) overbookBuffer?: number;
+  @IsOptional() @IsNumber() @Min(0) @Max(MAX_MONEY_MAJOR) contractPrice?: number;
+  @IsOptional() @IsInt() @Min(0) @Max(MAX_MONEY_CENTS) rateCents?: number;
+  @IsOptional() @Transform(upper) @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter code' }) currency?: string;
+  @IsOptional() @IsString() @MaxLength(5000) notes?: string;
+}
+
+/** GET /hotels/availability — contracted rooms that cover a stay. */
+export class QueryAvailabilityDto {
+  @IsOptional() @IsString() @MaxLength(100) city?: string;
+  @IsOptional() @IsUUID() hotelId?: string;
+  @IsOptional() @IsDateString() checkIn?: string;
+  @IsOptional() @IsDateString() checkOut?: string;
+}
+
+/** GET /hotels/:id/room-availability — which rooms are free for a stay. */
+export class QueryRoomAvailabilityDto {
+  @IsDateString() checkIn!: string;
+  @IsDateString() checkOut!: string;
+  /** Leave this booking out of the clash check (used when editing it). */
+  @IsOptional() @IsUUID() excludeBookingId?: string;
 }
 
 export class CreateRoomAssignmentDto {

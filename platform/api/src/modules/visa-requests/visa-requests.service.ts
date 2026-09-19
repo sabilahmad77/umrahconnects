@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
 import { assertOwnedIfPresent } from '../../common/tenant-scope';
+import { RbacService } from '../rbac/rbac.service';
 import {
   CreateVisaRequestDto, UpdateVisaRequestDto, QueryVisaRequestDto,
   AddNoteDto, EscalateDto, ResolveDto, CloseDto, ReopenDto, ChangeStatusDto,
@@ -42,6 +43,7 @@ export class VisaRequestsService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private audit: AuditService,
+    private rbac: RbacService,
   ) {}
 
   // ── helpers ────────────────────────────────────────────────────────────
@@ -144,15 +146,28 @@ export class VisaRequestsService {
     }
   }
 
-  /** Resolve an assignee to a live user inside this tenant, or 400. */
+  /**
+   * Resolve an assignee to an active user of this tenant who can open visa work,
+   * or 400 — a ticket assigned to someone who cannot read it would be a dead end.
+   */
   private async resolveAssignee(tenantId: string, assigneeId?: string | null) {
     if (!assigneeId) return null;
     const user = await this.prisma.user.findFirst({
-      where: { id: assigneeId, tenantId, deletedAt: null },
+      where: { id: assigneeId, tenantId, deletedAt: null, status: 'ACTIVE' },
       select: { id: true, firstName: true, lastName: true, email: true },
     });
     if (!user) throw new BadRequestException('Assignee must be an active user in this tenant');
+    if (!(await this.rbac.userHasPermissions(user.id, tenantId, ['visa:application:read']))) {
+      throw new BadRequestException('Assignee cannot work on visa requests (they lack visa:application:read)');
+    }
     return user;
+  }
+
+  /** Closed tickets are read-only until someone reopens them. */
+  private assertNotClosed(ticket: { status: VisaRequestStatus }) {
+    if (ticket.status === VisaRequestStatus.CLOSED) {
+      throw new BadRequestException('Ticket is closed — reopen it before changing it');
+    }
   }
 
   private static fullName(u: { firstName: string; lastName: string }) {
@@ -242,15 +257,18 @@ export class VisaRequestsService {
     };
   }
 
-  /** Users in this tenant who can be put on a ticket. */
+  /** Active users in this tenant who can open visa work (the same rule resolveAssignee enforces). */
   async assignees(tenantId: string) {
     const users = await this.prisma.user.findMany({
-      where: { tenantId, deletedAt: null },
+      where: { tenantId, deletedAt: null, status: 'ACTIVE' },
       select: { id: true, firstName: true, lastName: true, email: true },
       orderBy: [{ firstName: 'asc' }],
       take: 200,
     });
-    return users.map((u) => ({ id: u.id, name: VisaRequestsService.fullName(u), email: u.email }));
+    const allowed = await Promise.all(users.map((u) => this.rbac.userHasPermissions(u.id, tenantId, ['visa:application:read'])));
+    return users
+      .filter((_, i) => allowed[i])
+      .map((u) => ({ id: u.id, name: VisaRequestsService.fullName(u), email: u.email }));
   }
 
   async findOne(tenantId: string, id: string) {
@@ -377,6 +395,7 @@ export class VisaRequestsService {
 
   async update(tenantId: string, id: string, dto: UpdateVisaRequestDto, actor: Actor) {
     const before = await this.mustFind(tenantId, id);
+    this.assertNotClosed(before);
 
     const data: Prisma.VisaServiceRequestUpdateInput = {};
     if (dto.subject !== undefined) data.subject = dto.subject;
@@ -408,6 +427,7 @@ export class VisaRequestsService {
 
   async assign(tenantId: string, id: string, assigneeId: string | null | undefined, actor: Actor) {
     const before = await this.mustFind(tenantId, id);
+    this.assertNotClosed(before);
     const assignee = await this.resolveAssignee(tenantId, assigneeId);
 
     const ticket = await this.prisma.visaServiceRequest.update({
@@ -429,8 +449,9 @@ export class VisaRequestsService {
 
   async changeStatus(tenantId: string, id: string, dto: ChangeStatusDto, actor: Actor) {
     const before = await this.mustFind(tenantId, id);
-    if (before.status === VisaRequestStatus.CLOSED) {
-      throw new BadRequestException('Ticket is closed — reopen it before changing status');
+    // Resolved and closed tickets come back through /reopen, which records why.
+    if (TERMINAL_STATUSES.includes(before.status)) {
+      throw new BadRequestException(`Ticket is ${before.status.toLowerCase()} — reopen it before changing status`);
     }
     if (before.status === dto.status) {
       throw new BadRequestException(`Ticket is already ${dto.status}`);
@@ -455,6 +476,7 @@ export class VisaRequestsService {
 
   async addNote(tenantId: string, id: string, dto: AddNoteDto, actor: Actor) {
     const ticket = await this.mustFind(tenantId, id);
+    this.assertNotClosed(ticket);
     const body = (dto.body ?? '').trim();
     if (!body) throw new BadRequestException('Note body cannot be empty');
 

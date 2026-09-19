@@ -1,27 +1,55 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, VisaStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { assertAllOwned, assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
-import { VISA_DECISION_STATUSES } from './dto/compliance.dto';
+import { QueryVisaDto, VISA_DECISION_STATUSES } from './dto/compliance.dto';
+import { VisaDocumentsService } from './visa-documents.service';
+import {
+  BLOCKING_DOCUMENT_STATUSES, VISA_EDIT_STATUSES, VISA_TERMINAL_STATUSES, VISA_TRANSITIONS,
+  assertVisaTransition, rejectClientPaymentStatus,
+} from './visa-workflow';
 
 const OPERATOR_TENANT_TYPES = ['OPERATOR', 'MU_ASSASA', 'SUB_AGENT'];
+
+export interface VisaActor {
+  sub?: string;
+  /** Whether the caller holds visa:application:manage (resolved by the controller). */
+  canManage?: boolean;
+}
+
+interface TransitionExtras {
+  visaNumber?: string;
+  reason?: string;
+  expiresAt?: Date | null;
+  note?: string;
+}
+
+const pilgrimName = (p: any) =>
+  p ? [p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ').trim() || p.firstNameAr || null : null;
 
 @Injectable()
 export class ComplianceService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private docs: VisaDocumentsService,
   ) {}
 
+  /** Every application carries the moves the server will accept next, so the UI never offers a dead end. */
   private serialize(v: any) {
     if (!v) return v;
-    return { ...v, priceCents: v.priceCents != null ? Number(v.priceCents) : 0 };
+    return {
+      ...v,
+      priceCents: v.priceCents != null ? Number(v.priceCents) : 0,
+      allowedTransitions: VISA_TRANSITIONS[v.status] ?? [],
+    };
   }
 
-  async findVisas(tenantId: string, query: any) {
+  async findVisas(tenantId: string, query: QueryVisaDto) {
     const { status, system, pilgrimId, bookingId, search, page = 1, limit = 20 } = query;
     const skip = (+page - 1) * +limit;
-    const where: any = { tenantId };
+    const where: Prisma.VisaApplicationWhereInput = { tenantId };
     if (status) where.status = status;
     if (system) where.regulatorySystem = system;
     if (pilgrimId) where.pilgrimId = pilgrimId;
@@ -30,16 +58,30 @@ export class ComplianceService {
       { applicantName: { contains: search, mode: 'insensitive' } },
       { applicantPassport: { contains: search, mode: 'insensitive' } },
       { applicationNumber: { contains: search, mode: 'insensitive' } },
+      { externalRef: { contains: search, mode: 'insensitive' } },
     ];
     const [items, total] = await Promise.all([
       this.prisma.visaApplication.findMany({ where, skip, take: +limit, orderBy: { createdAt: 'desc' } }),
       this.prisma.visaApplication.count({ where }),
     ]);
-    return { items: items.map((v) => this.serialize(v)), total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit) };
+    // Applications filed for a traveler record show that traveler; tenant-scoped so a
+    // stale foreign link can never expose another organization's passport data.
+    const pilgrimIds = [...new Set(items.map((v) => v.pilgrimId).filter(Boolean))] as string[];
+    const pilgrims = pilgrimIds.length
+      ? await this.prisma.pilgrim.findMany({
+          where: { id: { in: pilgrimIds }, tenantId },
+          select: { id: true, firstNameEn: true, lastNameEn: true, firstNameAr: true, passportNumber: true, nationality: true },
+        })
+      : [];
+    const byId = new Map(pilgrims.map((p) => [p.id, p]));
+    return {
+      items: items.map((v) => ({ ...this.serialize(v), pilgrim: v.pilgrimId ? byId.get(v.pilgrimId) ?? null : null })),
+      total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit),
+    };
   }
 
   async findVisaById(tenantId: string, id: string) {
-    const visa = await this.prisma.visaApplication.findFirst({ where: { id, tenantId } });
+    const visa = await this.prisma.visaApplication.findFirst({ where: { id: requireId(id, 'Visa application'), tenantId } });
     if (!visa) throw new NotFoundException('Visa application not found');
     // Hydrate the linked pilgrim (if any) for display
     let pilgrim: any = null;
@@ -73,11 +115,23 @@ export class ComplianceService {
   }
 
   async createVisa(tenantId: string, dto: any, createdBy?: string) {
+    rejectClientPaymentStatus(dto.paymentStatus);
     await this.assertVisaLinks(tenantId, dto);
     const operatorId = await this.resolveOperatorId(tenantId, dto.operatorId);
     const status = dto.status ?? 'NOT_STARTED';
     if (!['NOT_STARTED', 'DOCUMENTS_COLLECTING'].includes(status)) {
       throw new BadRequestException('A new visa application must start as NOT_STARTED or DOCUMENTS_COLLECTING');
+    }
+    // The applicant snapshot comes from the linked traveler record unless typed in.
+    const pilgrim = dto.pilgrimId
+      ? await this.prisma.pilgrim.findFirst({
+          where: { id: dto.pilgrimId, tenantId },
+          select: { firstNameEn: true, lastNameEn: true, firstNameAr: true, passportNumber: true, nationality: true },
+        })
+      : null;
+    const applicantName = (dto.applicantName ?? '').trim() || pilgrimName(pilgrim);
+    if (!applicantName) {
+      throw new BadRequestException('Give the applicant\'s name or link a traveler record');
     }
     const appNo = dto.applicationNumber ?? `VISA-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
     const visa = await this.prisma.visaApplication.create({
@@ -88,9 +142,9 @@ export class ComplianceService {
         operatorId,
         regulatorySystem: (dto.regulatorySystem ?? dto.system ?? 'NUSUK_MASAR') as any,
         status: status as any,
-        applicantName: dto.applicantName,
-        applicantPassport: dto.applicantPassport ?? dto.passportNumber,
-        applicantNationality: dto.applicantNationality ?? dto.nationality,
+        applicantName,
+        applicantPassport: (dto.applicantPassport ?? dto.passportNumber ?? '').trim() || pilgrim?.passportNumber || null,
+        applicantNationality: dto.applicantNationality ?? dto.nationality ?? pilgrim?.nationality ?? null,
         visaType: dto.visaType ?? dto.type,
         destinationCountry: dto.destinationCountry,
         serviceCountry: dto.serviceCountry,
@@ -100,31 +154,103 @@ export class ComplianceService {
         expectedCompletionAt: dto.expectedCompletionAt ? new Date(dto.expectedCompletionAt) : undefined,
         priceCents: dto.priceCents != null ? BigInt(Math.round(Number(dto.priceCents))) : dto.price != null ? BigInt(Math.round(Number(dto.price) * 100)) : BigInt(0),
         currency: dto.currency ?? 'SAR',
-        paymentStatus: String(dto.paymentStatus ?? 'UNPAID').toUpperCase(),
+        // Payment state belongs to the payments module; an application always starts unpaid.
+        paymentStatus: 'UNPAID',
         notes: dto.notes,
         documents: dto.documents ?? [],
-        timeline: [{ at: new Date().toISOString(), event: 'CREATED', by: createdBy ?? 'system' }],
+        timeline: [{ at: new Date().toISOString(), event: 'CREATED', to: status, by: createdBy ?? 'system' }],
         createdBy: createdBy && createdBy.length === 36 ? createdBy : null,
       },
     });
     return this.serialize(visa);
   }
 
-  async updateVisa(
-    tenantId: string, id: string, dto: any,
-    opts: { canDecide?: boolean; actorId?: string } = {},
-  ) {
-    const current = await this.findVisaById(tenantId, id);
+  /**
+   * Everything a regulator filing needs: who the applicant is, their passport and
+   * nationality, the visa type — and no document still missing, rejected or expired.
+   */
+  private async assertReadyToSubmit(tenantId: string, visa: any) {
+    const problems: string[] = [];
+    const name = visa.applicantName || pilgrimName(visa.pilgrim);
+    if (!name) problems.push('the applicant\'s name');
+    if (!(visa.applicantPassport || visa.pilgrim?.passportNumber)) problems.push('the passport number');
+    if (!(visa.applicantNationality || visa.pilgrim?.nationality)) problems.push('the nationality');
+    if (!visa.visaType) problems.push('the visa type');
+    const docs = await this.docs.list(tenantId, visa.id);
+    const blocking = docs.filter((d: any) => BLOCKING_DOCUMENT_STATUSES.includes(d.effectiveStatus));
+    const parts: string[] = [];
+    if (problems.length) parts.push(`add ${problems.join(', ')}`);
+    if (blocking.length) {
+      parts.push(`resolve ${blocking.map((d: any) => `${d.name} (${String(d.effectiveStatus).toLowerCase()})`).join(', ')}`);
+    }
+    if (parts.length) throw new BadRequestException(`Before submitting: ${parts.join('; ')}`);
+  }
+
+  /**
+   * The single place an application changes status: checks the move against
+   * VISA_TRANSITIONS, stamps the server-owned fields, appends the timeline and
+   * notifies the filer on decisions.
+   */
+  private async transition(tenantId: string, current: any, to: string, actor: VisaActor, extras: TransitionExtras = {}, fields: Record<string, unknown> = {}) {
+    assertVisaTransition(current.status, to);
+    const now = new Date();
+    const data: any = { ...fields, status: to as VisaStatus };
+    if (to === 'SUBMITTED') data.submittedAt = now;
+    if (to === 'APPROVED') {
+      data.approvedAt = now;
+      data.externalRef = extras.visaNumber;
+      data.rejectedAt = null;
+      data.rejectionReason = null;
+      if (extras.expiresAt !== undefined) data.expiresAt = extras.expiresAt;
+    }
+    if (to === 'REJECTED') {
+      data.rejectedAt = now;
+      data.rejectionReason = extras.reason;
+    }
+    // The timeline is an append-only server log; clients cannot write it.
+    const tl = Array.isArray(current.timeline) ? current.timeline : [];
+    data.timeline = [...tl, {
+      at: now.toISOString(),
+      event: `STATUS_${to}`,
+      from: current.status,
+      to,
+      by: actor.sub ?? 'system',
+      ...(extras.visaNumber ? { visaNumber: extras.visaNumber } : {}),
+      ...(extras.reason ? { note: extras.reason } : extras.note ? { note: extras.note } : {}),
+    }];
+    const visa = await this.prisma.visaApplication.update({ where: { id: current.id }, data });
+    if ((to === 'APPROVED' || to === 'REJECTED') && visa.createdBy) {
+      this.notifications.fire({
+        tenantId,
+        recipientUserId: visa.createdBy,
+        actorUserId: actor.sub,
+        type: 'VISA_STATUS',
+        title: to === 'APPROVED' ? 'Visa approved' : 'Visa rejected',
+        body: to === 'APPROVED'
+          ? `Visa application ${visa.applicationNumber ?? visa.id.slice(0, 8)} was approved (visa ${extras.visaNumber}).`
+          : `Visa application ${visa.applicationNumber ?? visa.id.slice(0, 8)} was rejected: ${extras.reason}`,
+        link: `/compliance/${visa.id}`,
+      }).catch(() => undefined);
+    }
+    return visa;
+  }
+
+  async updateVisa(tenantId: string, id: string, dto: any, actor: VisaActor = {}) {
+    const current: any = await this.findVisaById(tenantId, id);
+    rejectClientPaymentStatus(dto.paymentStatus);
+    if (VISA_TERMINAL_STATUSES.includes(current.status)) {
+      const changed = Object.entries(dto).filter(([k, v]) => v !== undefined && k !== 'notes').map(([k]) => k);
+      if (changed.length) throw new ConflictException(`This application is ${current.status}; only its notes can still change`);
+    }
     await this.assertVisaLinks(tenantId, dto);
     const data: any = {};
     if (dto.pilgrimId !== undefined) data.pilgrimId = dto.pilgrimId || null;
     if (dto.bookingId !== undefined) data.bookingId = dto.bookingId || null;
-    for (const k of ['applicantName', 'applicantPassport', 'applicantNationality', 'visaType', 'destinationCountry', 'serviceCountry', 'applicationNumber', 'requiredDocuments', 'assignedOfficer', 'notes', 'externalRef', 'rejectionReason']) {
+    for (const k of ['applicantName', 'applicantPassport', 'applicantNationality', 'visaType', 'destinationCountry', 'serviceCountry', 'applicationNumber', 'requiredDocuments', 'assignedOfficer', 'notes']) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
     if (dto.type !== undefined) data.visaType = dto.type;
     if (dto.regulatorySystem !== undefined) data.regulatorySystem = dto.regulatorySystem;
-    if (dto.paymentStatus !== undefined) data.paymentStatus = String(dto.paymentStatus).toUpperCase();
     if (dto.priceCents !== undefined) data.priceCents = BigInt(Math.round(Number(dto.priceCents)));
     if (dto.price !== undefined) data.priceCents = BigInt(Math.round(Number(dto.price) * 100));
     if (data.priceCents !== undefined && data.priceCents < BigInt(0)) {
@@ -132,133 +258,60 @@ export class ComplianceService {
     }
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.expectedCompletionAt !== undefined) data.expectedCompletionAt = dto.expectedCompletionAt ? new Date(dto.expectedCompletionAt) : null;
-    if (dto.expiresAt !== undefined) data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
-    if (dto.submittedAt !== undefined) data.submittedAt = dto.submittedAt ? new Date(dto.submittedAt) : null;
+    if (dto.externalRef !== undefined && dto.externalRef !== current.externalRef) {
+      if (!actor.canManage) throw new ForbiddenException('Changing the visa number / regulator reference requires visa:application:manage');
+      data.externalRef = dto.externalRef || null;
+    }
+    if (dto.expiresAt !== undefined) {
+      if (current.status !== 'APPROVED' && dto.status !== 'EXPIRED') {
+        throw new BadRequestException('The visa expiry date is recorded once the visa is approved');
+      }
+      data.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
+    }
+
     if (dto.status && dto.status !== current.status) {
-      if (VISA_DECISION_STATUSES.includes(dto.status) && !opts.canDecide) {
-        throw new ForbiddenException('Approving or rejecting a visa application requires visa:application:manage');
+      if (VISA_DECISION_STATUSES.includes(dto.status)) {
+        if (!actor.canManage) throw new ForbiddenException('Approving or rejecting a visa application requires visa:application:manage');
+        throw new BadRequestException('Use the approve or reject action: approval records the visa number, rejection records the reason');
       }
-      data.status = dto.status;
-      // Decision / submission timestamps are server-stamped.
-      if (dto.status === 'APPROVED') data.approvedAt = new Date();
-      if (dto.status === 'REJECTED') data.rejectedAt = new Date();
-      if (dto.status === 'SUBMITTED' && data.submittedAt === undefined && !current.submittedAt) data.submittedAt = new Date();
-      // The timeline is an append-only server log; clients cannot write it.
-      const tl = Array.isArray((current as any).timeline) ? (current as any).timeline : [];
-      data.timeline = [...tl, { at: new Date().toISOString(), event: `STATUS_${dto.status}`, by: opts.actorId ?? 'system' }];
-    }
-    const visa = await this.prisma.visaApplication.update({ where: { id }, data });
-    return this.serialize(visa);
-  }
-
-  async deleteVisa(tenantId: string, id: string) {
-    await this.findVisaById(tenantId, id);
-    return this.serialize(await this.prisma.visaApplication.update({ where: { id }, data: { status: 'CANCELLED' as any } }));
-  }
-
-  async submitVisa(tenantId: string, id: string) {
-    await this.findVisaById(tenantId, id);
-    return this.serialize(await this.prisma.visaApplication.update({
-      where: { id },
-      data: { status: 'SUBMITTED', submittedAt: new Date() },
-    }));
-  }
-
-  async approveVisa(tenantId: string, id: string, externalRef?: string) {
-    await this.findVisaById(tenantId, id);
-    const visa = await this.prisma.visaApplication.update({
-      where: { id },
-      data: { status: 'APPROVED', approvedAt: new Date(), externalRef },
-    });
-    if (visa.createdBy) {
-      this.notifications.fire({
-        tenantId,
-        recipientUserId: visa.createdBy,
-        type: 'VISA_STATUS',
-        title: 'Visa approved',
-        body: `Visa application ${visa.id.slice(0, 8)}… has been APPROVED.`,
-        link: '/compliance',
-      }).catch(() => undefined);
-    }
-    return this.serialize(visa);
-  }
-
-  async rejectVisa(tenantId: string, id: string, reason: string) {
-    await this.findVisaById(tenantId, id);
-    const visa = await this.prisma.visaApplication.update({
-      where: { id },
-      data: { status: 'REJECTED', rejectedAt: new Date(), rejectionReason: reason },
-    });
-    if (visa.createdBy) {
-      this.notifications.fire({
-        tenantId,
-        recipientUserId: visa.createdBy,
-        type: 'VISA_STATUS',
-        title: 'Visa rejected',
-        body: `Visa application ${visa.id.slice(0, 8)}… was rejected: ${reason}`,
-        link: '/compliance',
-      }).catch(() => undefined);
-    }
-    return this.serialize(visa);
-  }
-
-  // ── Document management ────────────────────────────────────────────────
-  async listDocuments(tenantId: string, id: string) {
-    const visa = await this.findVisaById(tenantId, id);
-    return Array.isArray((visa as any).documents) ? (visa as any).documents : [];
-  }
-
-  async addDocument(tenantId: string, id: string, dto: { name: string; type?: string; url?: string; status?: string }) {
-    const visa = await this.findVisaById(tenantId, id);
-    const docs = Array.isArray((visa as any).documents) ? [...(visa as any).documents] : [];
-    docs.push({
-      id: `doc_${Date.now().toString(36)}`,
-      name: dto.name,
-      type: dto.type ?? 'OTHER',
-      url: dto.url ?? null,
-      status: (dto.status ?? (dto.url ? 'RECEIVED' : 'MISSING')).toUpperCase(),
-      addedAt: new Date().toISOString(),
-    });
-    return this.serialize(await this.prisma.visaApplication.update({ where: { id }, data: { documents: docs } }));
-  }
-
-  async updateDocumentStatus(tenantId: string, id: string, docId: string, status: string, url?: string) {
-    const visa = await this.findVisaById(tenantId, id);
-    const docs = (Array.isArray((visa as any).documents) ? (visa as any).documents : []).map((d: any) =>
-      d.id === docId ? { ...d, status: status.toUpperCase(), url: url ?? d.url, updatedAt: new Date().toISOString() } : d,
-    );
-    return this.serialize(await this.prisma.visaApplication.update({ where: { id }, data: { documents: docs } }));
-  }
-
-  async removeDocument(tenantId: string, id: string, docId: string) {
-    const visa = await this.findVisaById(tenantId, id);
-    const docs = (Array.isArray((visa as any).documents) ? (visa as any).documents : []).filter((d: any) => d.id !== docId);
-    return this.serialize(await this.prisma.visaApplication.update({ where: { id }, data: { documents: docs } }));
-  }
-
-  /** Aggregate of all documents across this tenant's visa applications. */
-  async allDocuments(tenantId: string, statusFilter?: string) {
-    const visas = await this.prisma.visaApplication.findMany({
-      where: { tenantId },
-      select: { id: true, applicationNumber: true, applicantName: true, documents: true, status: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    const rows: any[] = [];
-    for (const v of visas) {
-      const docs = Array.isArray(v.documents) ? v.documents : [];
-      for (const d of docs as any[]) {
-        if (!statusFilter || d.status === statusFilter) {
-          rows.push({
-            ...d,
-            visaId: v.id,
-            applicationNumber: v.applicationNumber,
-            applicantName: v.applicantName,
-            visaStatus: v.status,
-          });
-        }
+      if (dto.status === 'SUBMITTED') await this.assertReadyToSubmit(tenantId, { ...current, ...data });
+      else if (!VISA_EDIT_STATUSES.includes(dto.status) && dto.status !== 'CANCELLED') {
+        throw new BadRequestException(`Status ${dto.status} cannot be set from the edit form`);
       }
+      return this.serialize(await this.transition(tenantId, current, dto.status, actor, {}, data));
     }
-    return rows;
+    if (!Object.keys(data).length) return this.serialize(current);
+    const visa = await this.prisma.visaApplication.update({ where: { id: current.id }, data });
+    return this.serialize(visa);
+  }
+
+  /** Cancels (withdraws) an application. The record and its history stay. */
+  async deleteVisa(tenantId: string, id: string, actor: VisaActor = {}) {
+    const current = await this.findVisaById(tenantId, id);
+    return this.serialize(await this.transition(tenantId, current, 'CANCELLED', actor));
+  }
+
+  async submitVisa(tenantId: string, id: string, actor: VisaActor = {}) {
+    const current: any = await this.findVisaById(tenantId, id);
+    assertVisaTransition(current.status, 'SUBMITTED');
+    await this.assertReadyToSubmit(tenantId, current);
+    return this.serialize(await this.transition(tenantId, current, 'SUBMITTED', actor));
+  }
+
+  async approveVisa(tenantId: string, id: string, body: { visaNumber?: string; expiresAt?: string }, actor: VisaActor = {}) {
+    const current = await this.findVisaById(tenantId, id);
+    const visaNumber = (body?.visaNumber ?? '').trim();
+    if (!visaNumber) throw new BadRequestException('The issued visa number is required to approve an application');
+    const expiresAt = body?.expiresAt ? new Date(body.expiresAt) : undefined;
+    if (expiresAt && expiresAt.getTime() < Date.now()) throw new BadRequestException('The visa expiry date must be in the future');
+    return this.serialize(await this.transition(tenantId, current, 'APPROVED', actor, { visaNumber, expiresAt }));
+  }
+
+  async rejectVisa(tenantId: string, id: string, reason: string, actor: VisaActor = {}) {
+    const current = await this.findVisaById(tenantId, id);
+    const clean = (reason ?? '').trim();
+    if (clean.length < 3) throw new BadRequestException('A rejection reason of at least 3 characters is required');
+    return this.serialize(await this.transition(tenantId, current, 'REJECTED', actor, { reason: clean }));
   }
 
   async findSubmissions(tenantId: string) {
@@ -283,15 +336,16 @@ export class ComplianceService {
 
   // ── Stats ──────────────────────────────────────────────────────────────
   async getStats(tenantId: string) {
-    const statuses = ['NOT_STARTED', 'DOCUMENTS_COLLECTING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'EXPIRED', 'CANCELLED'];
-    const counts = await Promise.all(statuses.map((s) => this.prisma.visaApplication.count({ where: { tenantId, status: s as any } })));
-    const byStatus: Record<string, number> = {};
-    statuses.forEach((s, i) => { byStatus[s] = counts[i]; });
-    const total = counts.reduce((a, b) => a + b, 0);
+    const rows = await this.prisma.visaApplication.groupBy({ by: ['status'], where: { tenantId }, _count: true });
+    const byStatus: Record<string, number> = Object.fromEntries(Object.values(VisaStatus).map((s) => [s, 0]));
+    rows.forEach((r) => { byStatus[r.status] = r._count; });
+    const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
     const decided = byStatus.APPROVED + byStatus.REJECTED;
     return {
       total,
       byStatus,
+      decided,
+      /** Share of decided applications that were approved (0–1). */
       successRate: decided > 0 ? byStatus.APPROVED / decided : 0,
     };
   }
@@ -304,11 +358,12 @@ export class ComplianceService {
       select: { priceCents: true, paymentStatus: true, status: true, applicantName: true, applicationNumber: true, createdAt: true, id: true },
       orderBy: { createdAt: 'desc' },
     });
+    // Payment state is written by the payments module; these sums only read it.
     const revenueCollected = visas
       .filter((v) => v.paymentStatus === 'PAID')
       .reduce((s, v) => s + Number(v.priceCents), 0);
     const pendingPayment = visas
-      .filter((v) => ['UNPAID', 'PARTIAL'].includes(v.paymentStatus) && v.status !== 'CANCELLED')
+      .filter((v) => ['UNPAID', 'PARTIAL'].includes(v.paymentStatus) && !['CANCELLED', 'REJECTED'].includes(v.status))
       .reduce((s, v) => s + Number(v.priceCents), 0);
     const newRequests = visas.filter((v) => v.status === 'NOT_STARTED').length;
     const recentActivity = visas.slice(0, 6).map((v) => ({
@@ -319,10 +374,17 @@ export class ComplianceService {
       createdAt: v.createdAt,
     }));
 
-    // Marketplace requests of type VISA addressed to this tenant
-    const openServiceRequests = await this.prisma.marketplaceRequest.count({
-      where: { tenantId, serviceType: 'VISA', status: { in: ['OPEN', 'IN_NEGOTIATION'] } },
-    });
+    const [openServiceRequests, openTickets, documentsToReview] = await Promise.all([
+      // Marketplace demand an agency can answer: open VISA requests from travelers
+      // (they live in the travelers' organization, not this one).
+      this.prisma.marketplaceRequest.count({
+        where: { serviceType: 'VISA', status: { in: ['OPEN', 'IN_NEGOTIATION'] } },
+      }),
+      this.prisma.visaServiceRequest.count({
+        where: { tenantId, status: { in: ['OPEN', 'IN_PROGRESS', 'WAITING_ON_CUSTOMER', 'ESCALATED'] } },
+      }),
+      this.prisma.visaDocument.count({ where: { tenantId, status: 'RECEIVED' } }),
+    ]);
     const vendor = await this.prisma.vendor.findFirst({ where: { tenantId } });
     const activeListings = vendor
       ? await this.prisma.listing.count({ where: { vendorId: vendor.id, isActive: true, type: 'visa_service' } })
@@ -335,6 +397,8 @@ export class ComplianceService {
       revenueCollected,
       currency: 'SAR',
       openServiceRequests,
+      openTickets,
+      documentsToReview,
       activeListings,
       recentActivity,
     };

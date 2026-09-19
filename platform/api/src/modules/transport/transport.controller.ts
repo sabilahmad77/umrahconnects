@@ -3,7 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TransportService } from './transport.service';
 import {
   AssignDriverDto, CreateVehicleDto, UpdateVehicleDto, CreateDriverDto, UpdateDriverDto, CreateRouteDto, UpdateRouteDto,
-  CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryTransportDto,
+  CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryAssignmentsDto, QueryRoutesDto, QueryTransportDto,
 } from './dto/transport.dto';
 import { TenantId } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -91,7 +91,7 @@ export class TransportController {
   // ── Routes ──────────────────────────────────────────────────────────
   @Get('routes')
   @RequirePermissions('transport:vehicle:read')
-  async findRoutes(@TenantId() tenantId: string, @Query() query: any) {
+  async findRoutes(@TenantId() tenantId: string, @Query() query: QueryRoutesDto) {
     return { success: true, data: await this.service.findRoutes(tenantId, query) };
   }
 
@@ -122,7 +122,7 @@ export class TransportController {
   // ── Assignments / Bookings ──────────────────────────────────────────
   @Get('assignments')
   @RequirePermissions('transport:assignment:manage')
-  async findAssignments(@TenantId() tenantId: string, @Query() query: any) {
+  async findAssignments(@TenantId() tenantId: string, @Query() query: QueryAssignmentsDto) {
     return { success: true, data: await this.service.findAssignments(tenantId, query) };
   }
 
@@ -153,7 +153,7 @@ export class TransportController {
   // Bookings = assignments — alias for readability
   @Get('bookings')
   @RequirePermissions('transport:assignment:manage')
-  async findBookings(@TenantId() tenantId: string, @Query() query: any) {
+  async findBookings(@TenantId() tenantId: string, @Query() query: QueryAssignmentsDto) {
     return { success: true, data: await this.service.findAssignments(tenantId, query) };
   }
 

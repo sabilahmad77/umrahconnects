@@ -58,13 +58,16 @@ describe('status vocabularies match the server enums', () => {
 
   it('regulatory systems are all real RegulatorySystem members', () => {
     const real = prismaEnum('RegulatorySystem');
-    const offered = webList('components/compliance/visa-detail.tsx', 'REGULATORY_SYSTEMS');
+    // The visa application form (create + edit) owns the list since A03b.
+    const offered = webList('components/compliance/visa-form.tsx', 'REGULATORY_SYSTEMS');
+    expect(offered.length).toBeGreaterThan(0);
     expect(offered.filter((s) => !real.includes(s))).toEqual([]);
   });
 
   it('vehicle types match TransportType exactly', () => {
     const real = prismaEnum('TransportType');
-    for (const file of ['components/transport/vehicle-detail.tsx', 'components/transport/transport-tabs.tsx']) {
+    // The shared fleet form (add + edit vehicle) owns the list since A03b.
+    for (const file of ['components/transport/fleet-forms.tsx']) {
       expect(webList(file, 'VEHICLE_TYPES').sort()).toEqual([...real].sort());
     }
   });
@@ -89,6 +92,66 @@ describe('status vocabularies match the server enums', () => {
     };
     expect(grab(web)).not.toBeNull();
     expect(grab(web)).toBe(grab(svc));
+  });
+});
+
+/** A `NAME: Record<string, string[]> = { ... };` table, whitespace-free, from a source file. */
+function transitionTable(src: string, name: string): string | null {
+  const m = src.match(new RegExp(`${name}: Record<string, string\\[\\]> = \\{([\\s\\S]*?)\\};`));
+  return m ? m[1].replace(/\s/g, '') : null;
+}
+/** The string array assigned to `name` in an API source file. */
+function apiList(file: string, name: string): string[] {
+  const src = readFileSync(join(API, file), 'utf8');
+  const m = src.match(new RegExp(`const ${name}[^=]*=\\s*\\[([\\s\\S]*?)\\]`));
+  if (!m) throw new Error(`${name} not found in ${file}`);
+  return [...m[1].matchAll(/'([A-Z_]+)'/g)].map((x) => x[1]);
+}
+
+describe('business workflows mirror the server (hotels, transport, visa)', () => {
+  const pairs: [string, string, string][] = [
+    ['HOTEL_BOOKING_TRANSITIONS', 'src/modules/hotels/hotel-workflow.ts', 'hooks/use-hotels.ts'],
+    ['TRANSPORT_ASSIGNMENT_TRANSITIONS', 'src/modules/transport/transport-workflow.ts', 'hooks/use-transport.ts'],
+    ['VISA_TRANSITIONS', 'src/modules/compliance/visa-workflow.ts', 'hooks/use-visa.ts'],
+  ];
+  it.each(pairs)('%s is identical on web and server', (name, apiFile, webFile) => {
+    const api = transitionTable(readFileSync(join(API, apiFile), 'utf8'), name);
+    const web = transitionTable(readFileSync(join(__dirname, '..', webFile), 'utf8'), name);
+    expect(api).not.toBeNull();
+    expect(web).toBe(api);
+  });
+
+  it('status vocabularies match the DTOs and enums', () => {
+    expect(webList('hooks/use-hotels.ts', 'HOTEL_BOOKING_STATUSES')).toEqual(apiList('src/modules/hotels/dto/hotel.dto.ts', 'HOTEL_BOOKING_STATUSES'));
+    expect(webList('hooks/use-transport.ts', 'ASSIGNMENT_STATUSES')).toEqual(apiList('src/modules/transport/dto/transport.dto.ts', 'ASSIGNMENT_STATUSES'));
+    expect([...webList('hooks/use-visa.ts', 'VISA_STATUSES')].sort()).toEqual(prismaEnum('VisaStatus').sort());
+    expect([...webList('hooks/use-hotels.ts', 'HOTEL_CONTRACT_TYPES')].sort()).toEqual(prismaEnum('HotelContractType').sort());
+    const movements = webList('components/transport/fleet-forms.tsx', 'MOVEMENT_TYPES');
+    expect(movements.filter((m) => !prismaEnum('MovementType').includes(m))).toEqual([]);
+  });
+
+  it('hand-set statuses are exactly what the server lets a form set', () => {
+    const cases: [string, string, string][] = [
+      ['hooks/use-hotels.ts', 'src/modules/hotels/hotel-workflow.ts', 'ROOM_MANUAL_STATUSES'],
+      ['hooks/use-hotels.ts', 'src/modules/hotels/hotel-workflow.ts', 'HOTEL_BOOKING_INITIAL_STATUSES'],
+      ['hooks/use-transport.ts', 'src/modules/transport/transport-workflow.ts', 'VEHICLE_MANUAL_STATUSES'],
+      ['hooks/use-transport.ts', 'src/modules/transport/transport-workflow.ts', 'DRIVER_MANUAL_STATUSES'],
+      ['hooks/use-transport.ts', 'src/modules/transport/transport-workflow.ts', 'ROUTE_MANUAL_STATUSES'],
+      ['hooks/use-transport.ts', 'src/modules/transport/transport-workflow.ts', 'ASSIGNMENT_INITIAL_STATUSES'],
+      ['hooks/use-transport.ts', 'src/modules/transport/transport-workflow.ts', 'BOOKABLE_ROUTE_STATUSES'],
+      ['hooks/use-visa.ts', 'src/modules/compliance/visa-workflow.ts', 'VISA_EDIT_STATUSES'],
+      ['hooks/use-visa.ts', 'src/modules/compliance/visa-workflow.ts', 'VISA_TERMINAL_STATUSES'],
+    ];
+    for (const [webFile, apiFile, name] of cases) {
+      expect(webList(webFile, name), name).toEqual(apiList(apiFile, name));
+    }
+  });
+
+  it('no business form offers a payment status control', () => {
+    for (const file of ['components/hotels/hotel-bookings-view.tsx', 'components/transport/trip-shared.tsx', 'components/compliance/visa-form.tsx']) {
+      const src = readFileSync(join(__dirname, '..', file), 'utf8');
+      expect(src, file).not.toMatch(/paymentStatus:\s*(form|f)\./);
+    }
   });
 });
 

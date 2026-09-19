@@ -64,7 +64,7 @@ export function VisaDocumentsView() {
           <p>
             <span className="font-semibold">Storage: {storage.driver}</span>
             {storage.ephemeral
-              ? ' — files are written to the server disk, which is wiped on every deploy. Set STORAGE_DRIVER to s3 or cloudinary (and supply the keys) for durable storage.'
+              ? ' — files are written to the local server disk. They survive only as long as that disk does; production uses private object storage (STORAGE_DRIVER=r2).'
               : storage.configured
                 ? ' — durable object storage is configured.'
                 : ` — not configured. Missing: ${(storage.missing ?? []).join(', ')}.`}

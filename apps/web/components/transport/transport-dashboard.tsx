@@ -5,34 +5,39 @@ import { Button , QueryFailure } from '@/components/ui/system';
 import Link from 'next/link';
 import {
   Bus, UserCircle2, Map as MapIcon, ClipboardList, ListChecks,
-  DollarSign, Wrench, AlertTriangle, RefreshCw, ArrowRight,
+  DollarSign, AlertTriangle, RefreshCw, ArrowRight,
   Store, CheckCircle2, Calendar, Loader2, AlertCircle, Plus,
   Wallet, PauseCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useTransportStatsFull, useAssignments } from '@/hooks/use-transport';
-import { useTransportVehicles, useTransportDrivers, useTransportRoutes } from '@/hooks/use-api';
+import { useTransportStatsFull } from '@/hooks/use-transport';
+import { useCapabilities } from '@/hooks/use-capabilities';
 
 export function TransportDashboard() {
   const { data: stats, isLoading, error, refetch } = useTransportStatsFull();
-  const { data: upcoming , error: assignmentsError, refetch: retryAssignments} = useAssignments({ status: 'SCHEDULED', limit: 6 });
+  const { can } = useCapabilities();
+  const canDispatch = can('transport:assignment:manage');
+  const canFinance = can('finance:invoice:read');
+  const canMarketplace = can('marketplace:listing:read');
 
-  if (error || assignmentsError) return <QueryFailure error={error || assignmentsError} onRetry={() => { refetch(); retryAssignments(); }} />;
+  if (error) return <QueryFailure error={error} onRetry={() => refetch()} />;
   return (
     <div className="space-y-5 pb-10">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Transport operations</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Current records for of your fleet, drivers, routes and bookings</p>
+          <p className="text-sm text-gray-600 mt-0.5">Your fleet, drivers, routes and trips — from the records themselves</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="quiet" type="button" aria-label="Refresh dashboard" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
-          <Link href="/transport/assignments" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
-            <Plus className="h-4 w-4" /> New assignment
-          </Link>
+          {canDispatch && (
+            <Link href="/transport/assignments" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
+              <Plus className="h-4 w-4" /> New trip
+            </Link>
+          )}
         </div>
       </div>
 
@@ -46,15 +51,15 @@ export function TransportDashboard() {
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KPI label="Vehicles" value={stats.vehicles.total} sub={`${stats.vehicles.available} available`} icon={Bus} color="bg-brand-50 text-brand-700" href="/transport/vehicles" />
-            <KPI label="Drivers" value={stats.drivers.total} sub={`${stats.drivers.available} available`} icon={UserCircle2} color="bg-blue-50 text-blue-700" href="/transport/drivers" />
-            <KPI label="Routes" value={stats.routes.total} sub={`${stats.routes.active} active`} icon={MapIcon} color="bg-purple-50 text-purple-700" href="/transport/routes" />
-            <KPI label="Assignments" value={stats.assignments.total} sub={`${stats.assignments.scheduled} scheduled`} icon={ClipboardList} color="bg-yellow-50 text-yellow-700" href="/transport/assignments" />
+            <KPI label="Drivers" value={stats.drivers.active} sub={`${stats.drivers.available} available · ${stats.drivers.onTrip} on a trip`} icon={UserCircle2} color="bg-blue-50 text-blue-700" href="/transport/drivers" />
+            <KPI label="Routes" value={stats.routes.total} sub={`${stats.routes.seatsSold} of ${stats.routes.seatsOffered} seats sold`} icon={MapIcon} color="bg-purple-50 text-purple-700" href="/transport/routes" />
+            <KPI label="Trips" value={stats.assignments.total} sub={`${stats.assignments.scheduled} scheduled · ${stats.assignments.confirmed} confirmed`} icon={ClipboardList} color="bg-yellow-50 text-yellow-700" href="/transport/assignments" />
           </div>
 
           {/* Secondary KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <Tile label="Available" value={stats.vehicles.available} dot="bg-green-500" />
-            <Tile label="Booked" value={stats.vehicles.booked} dot="bg-blue-500" />
+            <Tile label="In service" value={stats.vehicles.inService} dot="bg-blue-500" />
             <Tile label="Maintenance" value={stats.vehicles.underMaintenance} dot="bg-yellow-500" />
             <Tile label="Inactive" value={stats.vehicles.inactive} dot="bg-gray-400" />
             <Tile label="In-progress trips" value={stats.assignments.inProgress} dot="bg-orange-500" />
@@ -64,14 +69,14 @@ export function TransportDashboard() {
             {/* Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-brand-600" /> Revenue
+                <Wallet className="h-4 w-4 text-brand-600" /> Trip payments
               </h3>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
                   {stats.revenue.currency} {(stats.revenue.collectedCents / 100).toLocaleString()}
                 </p>
                 <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1">
-                  <CheckCircle2 className="h-3 w-3" /> Collected
+                  <CheckCircle2 className="h-3 w-3" /> Trips recorded as paid
                 </p>
               </div>
               <div className="pt-2 border-t border-gray-50">
@@ -79,12 +84,15 @@ export function TransportDashboard() {
                   {stats.revenue.currency} {(stats.revenue.pendingCents / 100).toLocaleString()}
                 </p>
                 <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1">
-                  <PauseCircle className="h-3 w-3" /> Pending payments
+                  <PauseCircle className="h-3 w-3" /> Not yet paid (open trips)
                 </p>
               </div>
-              <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
-                Go to finance <ArrowRight className="h-3 w-3" />
-              </Link>
+              <p className="text-xs text-gray-600">Payment status comes from payments recorded in Finance.</p>
+              {canFinance && (
+                <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
+                  Go to finance <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
 
             {/* Marketplace */}
@@ -100,9 +108,11 @@ export function TransportDashboard() {
                 <p className="text-lg font-semibold text-gray-700">{stats.marketplace.openInquiries}</p>
                 <p className="text-xs text-blue-600 mt-1">Open inquiries</p>
               </div>
-              <Link href="/marketplace" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
-                Manage listings <ArrowRight className="h-3 w-3" />
-              </Link>
+              {canMarketplace && (
+                <Link href="/marketplace" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
+                  Manage listings <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
 
             {/* Upcoming trips */}
@@ -140,10 +150,8 @@ export function TransportDashboard() {
               <QuickAction href="/transport/routes" label="Routes" icon={MapIcon} bg="bg-purple-50 text-purple-600" />
               <QuickAction href="/transport/assignments" label="Assignments" icon={ClipboardList} bg="bg-yellow-50 text-yellow-800" />
               <QuickAction href="/transport/bookings" label="Bookings" icon={CheckCircle2} bg="bg-blue-50 text-blue-700" />
-              <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-pink-50 text-pink-600" />
-              <QuickAction href="/finance" label="Finance" icon={DollarSign} bg="bg-green-50 text-green-800" />
-              <QuickAction href="/transport/bookings?status=IN_PROGRESS" label="Active trips" icon={CheckCircle2} bg="bg-orange-50 text-orange-800" />
-              <QuickAction href="/transport/vehicles?status=UNDER_MAINTENANCE" label="Maintenance" icon={Wrench} bg="bg-yellow-50 text-yellow-700" />
+              {canMarketplace && <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-pink-50 text-pink-600" />}
+              {canFinance && <QuickAction href="/finance" label="Finance" icon={DollarSign} bg="bg-green-50 text-green-800" />}
               <QuickAction href="/social" label="Social Hub" icon={AlertTriangle} bg="bg-saudi-50 text-saudi-700" />
               <QuickAction href="/connections" label="Connections" icon={ListChecks} bg="bg-blue-50 text-blue-700" />
               <QuickAction href="/requests" label="Requests" icon={ListChecks} bg="bg-purple-50 text-purple-700" />

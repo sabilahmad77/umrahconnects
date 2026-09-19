@@ -1,6 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
-  ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional,
+  Allow, ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional,
   IsString, IsUUID, Matches, Max, MaxLength, Min,
 } from 'class-validator';
 import { MovementType, TransportType } from '@prisma/client';
@@ -88,17 +88,18 @@ export class CreateDriverDto extends DriverFieldsDto {
 }
 
 export class UpdateDriverDto extends DriverFieldsDto {
-  @IsOptional() @IsString() @MaxLength(100) firstName?: string;
-  @IsOptional() @IsString() @MaxLength(100) lastName?: string;
-  @IsOptional() @IsString() @MaxLength(30) phone?: string;
+  /** Required on the record: an empty value is refused rather than silently ignored. */
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(100) firstName?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(100) lastName?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(30) phone?: string;
   @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
 // ── Routes ───────────────────────────────────────────────────────────────
 class RouteFieldsDto {
   @IsOptional() @IsEnum(MovementType) movementType?: MovementType;
-  @IsOptional() @IsString() @MaxLength(100) originCity?: string;
-  @IsOptional() @IsString() @MaxLength(100) destCity?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(100) originCity?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(100) destCity?: string;
   @IsOptional() @IsString() @MaxLength(255) pickupPoint?: string;
   @IsOptional() @IsString() @MaxLength(255) dropoffPoint?: string;
   @IsOptional() @IsInt() @Min(0) @Max(10_000) distanceKm?: number | null;
@@ -132,7 +133,7 @@ export class CreateRouteDto extends RouteFieldsDto {
 }
 
 export class UpdateRouteDto extends RouteFieldsDto {
-  @IsOptional() @IsString() @MaxLength(200) name?: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(200) name?: string;
   /** Sent by the edit form; accepted but IGNORED — seat counters are maintained by assignments. */
   @IsOptional() @IsInt() @Min(0) bookedSeats?: number;
 }
@@ -156,7 +157,8 @@ class AssignmentFieldsDto {
   @IsOptional() @IsNumber() @Min(0) @Max(MAX_MONEY_MAJOR) price?: number;
   @IsOptional() @IsInt() @Min(0) @Max(MAX_MONEY_CENTS) priceCents?: number;
   @IsOptional() @Transform(upper) @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter code' }) currency?: string;
-  @IsOptional() @Transform(upper) @IsIn(PAYMENT_STATUSES) paymentStatus?: string;
+  /** Whitelisted only so the server can refuse it explicitly — payment state comes from the payments module. */
+  @Allow() paymentStatus?: unknown;
   @IsOptional() @Transform(upper) @IsIn(ASSIGNMENT_STATUSES) status?: string;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
 }
@@ -189,6 +191,23 @@ export class CreateTasreehDto {
   @IsOptional() @Transform(upper) @IsString() @MaxLength(50) zone?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(10) @IsString({ each: true }) @MaxLength(50, { each: true }) zones?: string[];
   @IsOptional() @IsString() @MaxLength(2048) documentUrl?: string;
+}
+
+export class QueryRoutesDto {
+  @IsOptional() @Transform(upper) @IsIn(ROUTE_STATUSES) status?: string;
+  @IsOptional() @IsString() @MaxLength(200) search?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 50;
+}
+
+export class QueryAssignmentsDto {
+  @IsOptional() @Transform(upper) @IsIn(ASSIGNMENT_STATUSES) status?: string;
+  @IsOptional() @IsString() @MaxLength(200) search?: string;
+  @IsOptional() @IsUUID() vehicleId?: string;
+  @IsOptional() @IsUUID() driverId?: string;
+  @IsOptional() @IsUUID() routeId?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 50;
 }
 
 export class QueryTransportDto {

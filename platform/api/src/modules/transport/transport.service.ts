@@ -4,8 +4,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { assertAllOwned, assertOwnedIfPresent, findOwned, requireId } from '../../common/tenant-scope';
 import {
   CreateVehicleDto, UpdateVehicleDto, CreateDriverDto, UpdateDriverDto, CreateRouteDto, UpdateRouteDto,
-  CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryTransportDto,
+  CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryAssignmentsDto, QueryRoutesDto, QueryTransportDto,
 } from './dto/transport.dto';
+import {
+  ASSIGNMENT_INITIAL_STATUSES, ASSIGNMENT_TERMINAL_STATUSES, BOOKABLE_ROUTE_STATUSES, DEFAULT_TRIP_MINUTES,
+  DRIVER_MANUAL_STATUSES, OPEN_ASSIGNMENT_STATUSES, ROUTE_MANUAL_STATUSES, TRANSPORT_ASSIGNMENT_TRANSITIONS,
+  VEHICLE_MANUAL_STATUSES, assertAssignmentTransition, assertManualStatus, rejectClientPaymentStatus, tripsOverlap,
+} from './transport-workflow';
+
+type Tx = Prisma.TransactionClient;
 
 // Prisma TransportType enum + common client aliases. Unknown values → 400, not 500.
 const VEHICLE_TYPES = ['BUS_SMALL', 'BUS_MEDIUM', 'BUS_LARGE', 'PRIVATE_CAR', 'VAN'] as const;
@@ -46,8 +53,6 @@ function scrubForeign<T extends Record<string, any>>(row: T, tenantId: string, k
   return out;
 }
 
-const ACTIVE_ASSIGNMENT = (status: string) => status !== 'CANCELLED';
-
 const serializeBigInt = <T extends Record<string, any>>(o: T): T => {
   const out: any = { ...o };
   for (const k of Object.keys(out)) {
@@ -55,6 +60,25 @@ const serializeBigInt = <T extends Record<string, any>>(o: T): T => {
   }
   return out;
 };
+
+/** Every trip carries the moves the server will accept next, so the UI never offers a dead end. */
+const serializeAssignment = (a: any) => ({
+  ...serializeBigInt(a),
+  allowedTransitions: TRANSPORT_ASSIGNMENT_TRANSITIONS[a.status] ?? [],
+});
+
+const sameText = (a?: string | null, b?: string | null) => (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
+const when = (d: Date) => `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+const unique = (ids: (string | null | undefined)[]) => [...new Set(ids.filter(Boolean))] as string[];
+const OPEN = { in: OPEN_ASSIGNMENT_STATUSES };
+
+interface Trip {
+  vehicleId: string;
+  driverId: string | null;
+  routeId: string | null;
+  scheduledAt: Date;
+  seats: number;
+}
 
 @Injectable()
 export class TransportService {
@@ -78,7 +102,7 @@ export class TransportService {
         where, skip, take: +limit, orderBy: { createdAt: 'desc' },
         include: {
           drivers: { include: { driver: { select: { id: true, firstName: true, lastName: true, phone: true } } }, take: 3 },
-          _count: { select: { assignments: true, routes: true } },
+          _count: { select: { assignments: { where: { status: OPEN } }, routes: true } },
         },
       }),
       this.prisma.vehicle.count({ where }),
@@ -99,19 +123,30 @@ export class TransportService {
     if (!vehicle) throw new NotFoundException('Vehicle not found');
     return {
       ...vehicle,
-      assignments: vehicle.assignments.map((a: any) => serializeBigInt(scrubForeign(a, tenantId, ['route', 'driver']))),
+      assignments: vehicle.assignments.map((a: any) => serializeAssignment(scrubForeign(a, tenantId, ['route', 'driver']))),
       routes: vehicle.routes.map((r: any) => serializeBigInt(r)),
     };
   }
 
+  private async assertPlateFree(tenantId: string, plate: string, exceptId?: string) {
+    const clash = await this.prisma.vehicle.findFirst({
+      where: { tenantId, plateNumber: { equals: plate.trim(), mode: 'insensitive' }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+      select: { id: true },
+    });
+    if (clash) throw new ConflictException(`A vehicle with plate ${plate.trim()} is already registered`);
+  }
+
   async createVehicle(tenantId: string, dto: CreateVehicleDto) {
+    assertManualStatus('vehicle', dto.status, VEHICLE_MANUAL_STATUSES, 'IN_SERVICE follows trips in progress');
+    const plateNumber = dto.plateNumber.trim();
+    await this.assertPlateFree(tenantId, plateNumber);
     return this.prisma.vehicle.create({
       data: {
         tenantId,
         type: normalizeVehicleType(dto.type) as any,
         name: dto.name,
         brand: dto.brand ?? dto.make,
-        plateNumber: dto.plateNumber,
+        plateNumber,
         registrationNumber: dto.registrationNumber,
         capacity: dto.capacity,
         luggageCapacity: dto.luggageCapacity,
@@ -130,44 +165,82 @@ export class TransportService {
     });
   }
 
+  /** Open trips that still need this vehicle or driver (they block archiving). */
+  private openTrips(tenantId: string, where: Prisma.TransportAssignmentWhereInput) {
+    return this.prisma.transportAssignment.count({ where: { ...where, tenantId, status: OPEN } });
+  }
+
   async updateVehicle(tenantId: string, id: string, dto: UpdateVehicleDto) {
     const vehicle = await this.findVehicleById(tenantId, id);
+    assertManualStatus('vehicle', dto.status, VEHICLE_MANUAL_STATUSES, 'IN_SERVICE follows trips in progress');
     const data: any = {};
-    for (const k of ['name', 'brand', 'registrationNumber', 'luggageCapacity', 'hasAc', 'model', 'year', 'features', 'imageUrls', 'documentUrls', 'status', 'isActive', 'notes'] as const) {
+    for (const k of ['name', 'brand', 'registrationNumber', 'luggageCapacity', 'hasAc', 'model', 'year', 'features', 'imageUrls', 'documentUrls', 'notes'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
     if (dto.make !== undefined && dto.brand === undefined) data.brand = dto.make;
-    if (dto.plateNumber) data.plateNumber = dto.plateNumber;
+    if (dto.plateNumber !== undefined) {
+      const plate = dto.plateNumber.trim();
+      if (!plate) throw new BadRequestException('plateNumber must not be empty');
+      if (!sameText(plate, vehicle.plateNumber)) await this.assertPlateFree(tenantId, plate, vehicle.id);
+      data.plateNumber = plate;
+    }
     if (dto.type !== undefined) data.type = normalizeVehicleType(dto.type);
-    if (dto.capacity !== undefined) {
-      if (dto.capacity < vehicle.bookedSeats) {
-        throw new BadRequestException(`capacity cannot be lower than the ${vehicle.bookedSeats} seats already booked`);
+    const statusChanges = dto.status !== undefined && dto.status !== vehicle.status;
+    const retiring = (statusChanges && dto.status === 'INACTIVE') || (dto.isActive === false && vehicle.isActive);
+    if ((statusChanges || dto.isActive === false) && vehicle.status === 'IN_SERVICE') {
+      throw new ConflictException('This vehicle is on a trip in progress; complete the trip first');
+    }
+    if (retiring) {
+      const open = await this.openTrips(tenantId, { vehicleId: vehicle.id });
+      if (open > 0) throw new ConflictException(`This vehicle has ${open} open trip(s); reassign or cancel them before archiving it`);
+    }
+    if (statusChanges) data.status = dto.status;
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
+    if (dto.capacity !== undefined && dto.capacity !== vehicle.capacity) {
+      const largest = await this.prisma.transportAssignment.aggregate({
+        where: { tenantId, vehicleId: vehicle.id, status: OPEN }, _max: { passengerCount: true },
+      });
+      const needed = largest._max.passengerCount ?? 0;
+      if (dto.capacity < needed) {
+        throw new BadRequestException(`capacity cannot be lower than the ${needed} passengers on an open trip of this vehicle`);
       }
       data.capacity = dto.capacity;
     }
-    // bookedSeats / currentDriverId are server-owned and ignored if sent.
+    // bookedSeats / currentDriverId are server-owned and not accepted.
     return this.prisma.vehicle.update({ where: { id: vehicle.id }, data });
   }
 
+  /** Archive: the vehicle leaves the active fleet; its trip history stays. */
   async deleteVehicle(tenantId: string, id: string) {
-    await this.findVehicleById(tenantId, id);
-    return this.prisma.vehicle.update({ where: { id }, data: { isActive: false, status: 'INACTIVE' } });
+    const vehicle = await this.findVehicleById(tenantId, id);
+    if (vehicle.status === 'IN_SERVICE') throw new ConflictException('This vehicle is on a trip in progress; complete the trip first');
+    const open = await this.openTrips(tenantId, { vehicleId: vehicle.id });
+    if (open > 0) throw new ConflictException(`This vehicle has ${open} open trip(s); reassign or cancel them before archiving it`);
+    return this.prisma.vehicle.update({ where: { id: vehicle.id }, data: { isActive: false, status: 'INACTIVE' } });
   }
 
   async assignDriver(tenantId: string, vehicleId: string, driverId: string, isPrimary = true) {
-    await this.findVehicleById(tenantId, vehicleId);
-    await this.findDriverById(tenantId, driverId);
-    return this.prisma.vehicleDriver.upsert({
-      where: { vehicleId_driverId: { vehicleId, driverId } },
-      update: { isPrimary },
-      create: { vehicleId, driverId, isPrimary },
+    const vehicle = await this.findVehicleById(tenantId, vehicleId);
+    if (!vehicle.isActive || vehicle.status === 'INACTIVE') throw new ConflictException('This vehicle is archived');
+    const driver = await this.findDriverById(tenantId, driverId);
+    if (!driver.isActive || driver.status === 'INACTIVE') throw new ConflictException('This driver is archived');
+    return this.prisma.$transaction(async (tx) => {
+      // One primary driver per vehicle: promoting a driver demotes the previous one.
+      if (isPrimary) {
+        await tx.vehicleDriver.updateMany({ where: { vehicleId: vehicle.id, driverId: { not: driver.id } }, data: { isPrimary: false } });
+      }
+      return tx.vehicleDriver.upsert({
+        where: { vehicleId_driverId: { vehicleId: vehicle.id, driverId: driver.id } },
+        update: { isPrimary },
+        create: { vehicleId: vehicle.id, driverId: driver.id, isPrimary },
+      });
     });
   }
 
   async unassignDriver(tenantId: string, vehicleId: string, driverId: string) {
-    await this.findVehicleById(tenantId, vehicleId);
+    const vehicle = await this.findVehicleById(tenantId, vehicleId);
     requireId(driverId, 'Driver');
-    await this.prisma.vehicleDriver.delete({ where: { vehicleId_driverId: { vehicleId, driverId } } }).catch(() => undefined);
+    await this.prisma.vehicleDriver.deleteMany({ where: { vehicleId: vehicle.id, driverId } });
     return { success: true };
   }
 
@@ -188,7 +261,7 @@ export class TransportService {
         where, skip, take: +limit, orderBy: { createdAt: 'desc' },
         include: {
           vehicles: { include: { vehicle: { select: { id: true, plateNumber: true, type: true } } } },
-          _count: { select: { assignments: true, routes: true } },
+          _count: { select: { assignments: { where: { status: OPEN } }, routes: true } },
         },
       }),
       this.prisma.driver.count({ where }),
@@ -206,16 +279,21 @@ export class TransportService {
       },
     });
     if (!driver) throw new NotFoundException('Driver not found');
-    return driver;
+    return {
+      ...driver,
+      assignments: driver.assignments.map((a: any) => serializeAssignment(scrubForeign(a, tenantId, ['route', 'vehicle']))),
+      routes: driver.routes.map((r: any) => serializeBigInt(r)),
+    };
   }
 
   async createDriver(tenantId: string, dto: CreateDriverDto) {
+    assertManualStatus('driver', dto.status, DRIVER_MANUAL_STATUSES, 'ON_TRIP follows trips in progress');
     return this.prisma.driver.create({
       data: {
         tenantId,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        phone: dto.phone,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        phone: dto.phone.trim(),
         email: dto.email,
         nationality: dto.nationality,
         idNumber: dto.idNumber,
@@ -233,25 +311,41 @@ export class TransportService {
 
   async updateDriver(tenantId: string, id: string, dto: UpdateDriverDto) {
     const driver = await this.findDriverById(tenantId, id);
+    assertManualStatus('driver', dto.status, DRIVER_MANUAL_STATUSES, 'ON_TRIP follows trips in progress');
     const data: any = {};
-    for (const k of ['email', 'nationality', 'idNumber', 'licenseNumber', 'languages', 'photoUrl', 'documentUrls', 'isActive', 'notes', 'status'] as const) {
+    for (const k of ['email', 'nationality', 'idNumber', 'licenseNumber', 'languages', 'photoUrl', 'documentUrls', 'notes'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    // Required columns: a cleared form field ('') leaves the stored value unchanged.
+    // Required columns: the DTO refuses empty values, so a present value is always usable.
     for (const k of ['firstName', 'lastName', 'phone'] as const) {
-      if (dto[k]) data[k] = dto[k];
+      if (dto[k] !== undefined) data[k] = String(dto[k]).trim();
     }
+    const statusChanges = dto.status !== undefined && dto.status !== driver.status;
+    if ((statusChanges || dto.isActive === false) && driver.status === 'ON_TRIP') {
+      throw new ConflictException('This driver is on a trip in progress; complete the trip first');
+    }
+    if ((statusChanges && dto.status === 'INACTIVE') || (dto.isActive === false && driver.isActive)) {
+      const open = await this.openTrips(tenantId, { driverId: driver.id });
+      if (open > 0) throw new ConflictException(`This driver has ${open} open trip(s); reassign or cancel them before archiving the driver`);
+    }
+    if (statusChanges) data.status = dto.status;
+    if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.licenseExpiry !== undefined) data.licenseExpiry = optionalDate(dto.licenseExpiry, 'licenseExpiry');
-    return this.prisma.driver.update({ where: { id: driver.id }, data });
+    const updated = await this.prisma.driver.update({ where: { id: driver.id }, data });
+    return updated;
   }
 
+  /** Archive: the driver leaves the active roster; trip history stays. */
   async deleteDriver(tenantId: string, id: string) {
-    await this.findDriverById(tenantId, id);
-    return this.prisma.driver.update({ where: { id }, data: { isActive: false, status: 'INACTIVE' } });
+    const driver = await this.findDriverById(tenantId, id);
+    if (driver.status === 'ON_TRIP') throw new ConflictException('This driver is on a trip in progress; complete the trip first');
+    const open = await this.openTrips(tenantId, { driverId: driver.id });
+    if (open > 0) throw new ConflictException(`This driver has ${open} open trip(s); reassign or cancel them before archiving the driver`);
+    return this.prisma.driver.update({ where: { id: driver.id }, data: { isActive: false, status: 'INACTIVE' } });
   }
 
   // ─── Routes ─────────────────────────────────────────────────────────
-  async findRoutes(tenantId: string, query: any = {}) {
+  async findRoutes(tenantId: string, query: QueryRoutesDto = {}) {
     const { status, search, page = 1, limit = 50 } = query;
     const where: any = { tenantId };
     if (status) where.status = status;
@@ -290,19 +384,33 @@ export class TransportService {
     if (!route) throw new NotFoundException('Route not found');
     return serializeBigInt({
       ...scrubForeign(route as any, tenantId, ['vehicle', 'driver']),
-      assignments: route.assignments.map((a: any) => serializeBigInt(scrubForeign(a, tenantId, ['vehicle']))),
+      assignments: route.assignments.map((a: any) => serializeAssignment(scrubForeign(a, tenantId, ['vehicle']))),
     });
   }
 
+  /** Seats a route can sell must fit the vehicle that runs it. */
+  private async assertSeatsFitVehicle(tenantId: string, vehicleId: string | null | undefined, totalSeats: number | null | undefined) {
+    if (!vehicleId || totalSeats == null) return;
+    const vehicle = await this.prisma.vehicle.findFirst({ where: { id: vehicleId, tenantId }, select: { capacity: true, plateNumber: true } });
+    if (vehicle && totalSeats > vehicle.capacity) {
+      throw new BadRequestException(`totalSeats (${totalSeats}) cannot exceed the ${vehicle.capacity} seats of vehicle ${vehicle.plateNumber}`);
+    }
+  }
+
   async createRoute(tenantId: string, dto: CreateRouteDto) {
+    assertManualStatus('route', dto.status, ROUTE_MANUAL_STATUSES, 'FULLY_BOOKED follows the seats sold');
+    const originCity = (dto.originCity ?? dto.origin ?? '').trim();
+    const destCity = (dto.destCity ?? dto.destination ?? '').trim();
+    if (!originCity || !destCity) throw new BadRequestException('originCity and destCity are required');
     await assertOwnedIfPresent(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle');
     await assertOwnedIfPresent(this.prisma.driver, dto.driverId, tenantId, 'Driver');
+    await this.assertSeatsFitVehicle(tenantId, dto.vehicleId, dto.totalSeats);
     const data: Prisma.TransportRouteUncheckedCreateInput = {
       tenantId,
-      name: dto.name,
+      name: dto.name.trim(),
       movementType: dto.movementType ?? dto.type ?? 'AIRPORT_PICKUP',
-      originCity: dto.originCity ?? dto.origin ?? '',
-      destCity: dto.destCity ?? dto.destination ?? '',
+      originCity,
+      destCity,
       pickupPoint: dto.pickupPoint || undefined,
       dropoffPoint: dto.dropoffPoint || undefined,
       distanceKm: dto.distanceKm ?? undefined,
@@ -328,13 +436,23 @@ export class TransportService {
 
   async updateRoute(tenantId: string, id: string, dto: UpdateRouteDto) {
     const existing = await this.findRouteById(tenantId, id);
+    // FULLY_BOOKED is derived; echoing the current value back from an edit form is harmless.
+    const requested = dto.status === 'FULLY_BOOKED' && existing.status === 'FULLY_BOOKED' ? undefined : dto.status;
+    assertManualStatus('route', requested, ROUTE_MANUAL_STATUSES, 'FULLY_BOOKED follows the seats sold');
     const data: any = {};
-    for (const k of ['pickupPoint', 'dropoffPoint', 'distanceKm', 'durationMins', 'notes', 'currency', 'movementType', 'status'] as const) {
+    for (const k of ['pickupPoint', 'dropoffPoint', 'distanceKm', 'durationMins', 'notes', 'currency', 'movementType'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
-    // Required columns: a cleared form field ('') leaves the stored value unchanged.
+    // Required columns: the DTO refuses empty values, so a present value is always usable.
     for (const k of ['name', 'originCity', 'destCity'] as const) {
-      if (dto[k]) data[k] = dto[k];
+      if (dto[k] !== undefined) data[k] = String(dto[k]).trim();
+    }
+    if (requested !== undefined && requested !== existing.status) {
+      if (['CANCELLED', 'INACTIVE', 'COMPLETED'].includes(requested)) {
+        const open = await this.openTrips(tenantId, { routeId: existing.id });
+        if (open > 0) throw new ConflictException(`This route has ${open} open trip(s); complete or cancel them first`);
+      }
+      data.status = requested;
     }
     if (dto.vehicleId !== undefined) {
       await assertOwnedIfPresent(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle');
@@ -345,31 +463,201 @@ export class TransportService {
       data.driverId = dto.driverId || null;
     }
     if (dto.totalSeats !== undefined) {
-      if (dto.totalSeats != null && dto.totalSeats < existing.bookedSeats) {
-        throw new BadRequestException(`totalSeats cannot be lower than the ${existing.bookedSeats} seats already booked`);
+      const sold = await this.seatsSold(this.prisma, tenantId, existing.id);
+      if (dto.totalSeats != null && dto.totalSeats < sold) {
+        throw new BadRequestException(`totalSeats cannot be lower than the ${sold} seats already sold`);
       }
       data.totalSeats = dto.totalSeats;
     }
+    await this.assertSeatsFitVehicle(
+      tenantId,
+      data.vehicleId !== undefined ? data.vehicleId : existing.vehicleId,
+      data.totalSeats !== undefined ? data.totalSeats : existing.totalSeats,
+    );
     if (dto.departureAt !== undefined) data.departureAt = optionalDate(dto.departureAt, 'departureAt');
     if (dto.arrivalAt !== undefined) data.arrivalAt = optionalDate(dto.arrivalAt, 'arrivalAt');
+    const departure = data.departureAt !== undefined ? data.departureAt : existing.departureAt;
+    const arrival = data.arrivalAt !== undefined ? data.arrivalAt : existing.arrivalAt;
+    if (departure && arrival && new Date(arrival) < new Date(departure)) {
+      throw new BadRequestException('arrivalAt must be after departureAt');
+    }
     if (dto.pricePerSeat !== undefined || dto.pricePerSeatCents !== undefined) {
       data.pricePerSeatCents = toCents(dto.pricePerSeat, dto.pricePerSeatCents);
     }
     if (dto.pricePerVehicle !== undefined || dto.pricePerVehicleCents !== undefined) {
       data.pricePerVehicleCents = toCents(dto.pricePerVehicle, dto.pricePerVehicleCents);
     }
-    // bookedSeats is server-owned (maintained by assignments) and ignored if sent.
-    const route = await this.prisma.transportRoute.update({ where: { id: existing.id }, data });
-    return serializeBigInt(route as any);
+    // bookedSeats is server-owned (maintained from the trips) and ignored if sent.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transportRoute.update({ where: { id: existing.id }, data });
+      await this.recountSeats(tx, tenantId, [], [existing.id]);
+    });
+    return this.findRouteById(tenantId, existing.id);
   }
 
+  /** Archive: the route stops selling seats; its trips stay on record. */
   async deleteRoute(tenantId: string, id: string) {
-    await this.findRouteById(tenantId, id);
-    return this.prisma.transportRoute.update({ where: { id }, data: { status: 'INACTIVE' } });
+    const route = await this.findRouteById(tenantId, id);
+    const open = await this.openTrips(tenantId, { routeId: route.id });
+    if (open > 0) throw new ConflictException(`This route has ${open} open trip(s); complete or cancel them first`);
+    return serializeBigInt(await this.prisma.transportRoute.update({ where: { id: route.id }, data: { status: 'INACTIVE' } }) as any);
+  }
+
+  // ─── Seat and fleet state (server-owned) ─────────────────────────────
+  private async seatsSold(db: Tx | PrismaService, tenantId: string, routeId: string, excludeId?: string) {
+    const agg = await db.transportAssignment.aggregate({
+      where: { tenantId, routeId, status: { not: 'CANCELLED' }, ...(excludeId ? { id: { not: excludeId } } : {}) },
+      _sum: { passengerCount: true },
+    });
+    return agg._sum.passengerCount ?? 0;
+  }
+
+  /**
+   * Recomputes the counters from the trips themselves instead of adding and
+   * subtracting deltas, so they self-heal from any past drift:
+   *  - vehicle.bookedSeats = passengers on its open trips;
+   *  - route.bookedSeats = seats sold on it (every trip that was not cancelled),
+   *    and ACTIVE ↔ FULLY_BOOKED follows those seats.
+   */
+  private async recountSeats(tx: Tx, tenantId: string, vehicleIds: (string | null | undefined)[], routeIds: (string | null | undefined)[]) {
+    for (const vehicleId of unique(vehicleIds)) {
+      const agg = await tx.transportAssignment.aggregate({ where: { tenantId, vehicleId, status: OPEN }, _sum: { passengerCount: true } });
+      await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId }, data: { bookedSeats: agg._sum.passengerCount ?? 0 } });
+    }
+    for (const routeId of unique(routeIds)) {
+      const sold = await this.seatsSold(tx, tenantId, routeId);
+      const route = await tx.transportRoute.findFirst({ where: { id: routeId, tenantId }, select: { totalSeats: true, status: true } });
+      if (!route) continue;
+      const data: any = { bookedSeats: sold };
+      if (route.totalSeats != null && route.status === 'ACTIVE' && sold >= route.totalSeats) data.status = 'FULLY_BOOKED';
+      if (route.status === 'FULLY_BOOKED' && (route.totalSeats == null || sold < route.totalSeats)) data.status = 'ACTIVE';
+      await tx.transportRoute.updateMany({ where: { id: routeId, tenantId }, data });
+    }
+  }
+
+  /** Vehicle IN_SERVICE / driver ON_TRIP exactly while one of their trips is in progress. */
+  private async syncFleetStatus(tx: Tx, tenantId: string, vehicleIds: (string | null | undefined)[], driverIds: (string | null | undefined)[]) {
+    for (const vehicleId of unique(vehicleIds)) {
+      const [moving, v] = await Promise.all([
+        tx.transportAssignment.count({ where: { tenantId, vehicleId, status: 'IN_PROGRESS' } }),
+        tx.vehicle.findFirst({ where: { id: vehicleId, tenantId }, select: { status: true } }),
+      ]);
+      if (!v) continue;
+      if (moving > 0 && ['AVAILABLE', 'BOOKED'].includes(v.status)) {
+        await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId }, data: { status: 'IN_SERVICE' } });
+      } else if (moving === 0 && v.status === 'IN_SERVICE') {
+        await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId }, data: { status: 'AVAILABLE' } });
+      }
+    }
+    for (const driverId of unique(driverIds)) {
+      const [moving, d] = await Promise.all([
+        tx.transportAssignment.count({ where: { tenantId, driverId, status: 'IN_PROGRESS' } }),
+        tx.driver.findFirst({ where: { id: driverId, tenantId }, select: { status: true } }),
+      ]);
+      if (!d) continue;
+      if (moving > 0 && ['AVAILABLE', 'ASSIGNED'].includes(d.status)) {
+        await tx.driver.updateMany({ where: { id: driverId, tenantId }, data: { status: 'ON_TRIP' } });
+      } else if (moving === 0 && d.status === 'ON_TRIP') {
+        await tx.driver.updateMany({ where: { id: driverId, tenantId }, data: { status: 'AVAILABLE' } });
+      }
+    }
+  }
+
+  /**
+   * Availability checks for a trip, inside the write transaction (vehicle and
+   * route rows are locked, so concurrent bookings cannot oversell):
+   *  - the vehicle carries the passengers and is not archived / under maintenance;
+   *  - the driver is active and licensed on the day;
+   *  - the route is selling and has the seats left;
+   *  - neither the vehicle nor the driver is already on another trip at that time.
+   *    Passengers booked onto the same departure (same route, same time) share it.
+   */
+  private async checkTrip(
+    tx: Tx, tenantId: string, trip: Trip,
+    opts: { excludeId?: string; vehicleChanged: boolean; driverChanged: boolean; routeChanged: boolean; clashes: boolean; starting?: boolean },
+  ) {
+    await tx.$queryRaw`SELECT id FROM plugin_transport.vehicles WHERE id = ${trip.vehicleId}::uuid FOR UPDATE`;
+    const vehicle = await tx.vehicle.findFirst({
+      where: { id: trip.vehicleId, tenantId }, select: { id: true, plateNumber: true, capacity: true, status: true, isActive: true },
+    });
+    if (!vehicle) throw new NotFoundException('Vehicle not found');
+    if (opts.vehicleChanged || opts.starting) {
+      if (!vehicle.isActive || vehicle.status === 'INACTIVE') throw new ConflictException(`Vehicle ${vehicle.plateNumber} is archived`);
+      if (vehicle.status === 'UNDER_MAINTENANCE') throw new ConflictException(`Vehicle ${vehicle.plateNumber} is under maintenance`);
+    }
+    if (trip.seats > vehicle.capacity) {
+      throw new ConflictException(`Passenger count ${trip.seats} exceeds the vehicle capacity of ${vehicle.capacity}`);
+    }
+
+    if (trip.driverId) {
+      const driver = await tx.driver.findFirst({
+        where: { id: trip.driverId, tenantId }, select: { firstName: true, lastName: true, status: true, isActive: true, licenseExpiry: true },
+      });
+      if (!driver) throw new NotFoundException('Driver not found');
+      const name = `${driver.firstName} ${driver.lastName}`.trim();
+      if (opts.driverChanged || opts.starting) {
+        if (!driver.isActive || driver.status === 'INACTIVE') throw new ConflictException(`Driver ${name} is archived`);
+        if (driver.licenseExpiry && driver.licenseExpiry < trip.scheduledAt) {
+          throw new ConflictException(`Driver ${name}'s licence expires before this trip`);
+        }
+      }
+    }
+
+    let tripMinutes = DEFAULT_TRIP_MINUTES;
+    if (trip.routeId) {
+      await tx.$queryRaw`SELECT id FROM plugin_transport.transport_routes WHERE id = ${trip.routeId}::uuid FOR UPDATE`;
+      const route = await tx.transportRoute.findFirst({
+        where: { id: trip.routeId, tenantId }, select: { name: true, status: true, totalSeats: true, durationMins: true },
+      });
+      if (!route) throw new NotFoundException('Route not found');
+      if (opts.routeChanged && !BOOKABLE_ROUTE_STATUSES.includes(route.status)) {
+        throw new ConflictException(`Route ${route.name} is ${route.status} and is not taking passengers`);
+      }
+      tripMinutes = route.durationMins || DEFAULT_TRIP_MINUTES;
+      if (route.totalSeats != null) {
+        const sold = await this.seatsSold(tx, tenantId, trip.routeId, opts.excludeId);
+        if (sold + trip.seats > route.totalSeats) {
+          throw new ConflictException(`Only ${Math.max(0, route.totalSeats - sold)} seat(s) left on route ${route.name}`);
+        }
+      }
+    }
+
+    if (!opts.clashes) return;
+    const dayMs = 86_400_000;
+    const others = await tx.transportAssignment.findMany({
+      where: {
+        tenantId,
+        status: OPEN,
+        ...(opts.excludeId ? { id: { not: opts.excludeId } } : {}),
+        scheduledAt: { gte: new Date(trip.scheduledAt.getTime() - dayMs), lte: new Date(trip.scheduledAt.getTime() + dayMs) },
+        OR: [{ vehicleId: trip.vehicleId }, ...(trip.driverId ? [{ driverId: trip.driverId }] : [])],
+      },
+      select: { vehicleId: true, driverId: true, routeId: true, scheduledAt: true, passengerCount: true, route: { select: { durationMins: true } } },
+    });
+    let sharedPassengers = 0;
+    for (const o of others) {
+      const sameDeparture = !!trip.routeId && o.routeId === trip.routeId && o.scheduledAt.getTime() === trip.scheduledAt.getTime();
+      if (sameDeparture) {
+        if (o.vehicleId === trip.vehicleId) sharedPassengers += o.passengerCount;
+        continue;
+      }
+      if (!tripsOverlap(trip.scheduledAt, tripMinutes, o.scheduledAt, o.route?.durationMins || DEFAULT_TRIP_MINUTES)) continue;
+      if (o.vehicleId === trip.vehicleId) {
+        throw new ConflictException(`Vehicle ${vehicle.plateNumber} already has a trip at ${when(o.scheduledAt)}`);
+      }
+      if (trip.driverId && o.driverId === trip.driverId) {
+        throw new ConflictException(`This driver already has a trip at ${when(o.scheduledAt)}`);
+      }
+    }
+    if (sharedPassengers + trip.seats > vehicle.capacity) {
+      throw new ConflictException(
+        `Vehicle ${vehicle.plateNumber} seats ${vehicle.capacity}; this departure already carries ${sharedPassengers}`,
+      );
+    }
   }
 
   // ─── Assignments / Bookings ─────────────────────────────────────────
-  async findAssignments(tenantId: string, query: any = {}) {
+  async findAssignments(tenantId: string, query: QueryAssignmentsDto = {}) {
     const { status, search, vehicleId, driverId, routeId, page = 1, limit = 50 } = query;
     const where: any = { tenantId };
     if (status) where.status = status;
@@ -393,7 +681,7 @@ export class TransportService {
       this.prisma.transportAssignment.count({ where }),
     ]);
     return {
-      items: items.map((a: any) => serializeBigInt(a)),
+      items: items.map(serializeAssignment),
       total, page: +page, limit: +limit, totalPages: Math.ceil(total / +limit),
     };
   }
@@ -406,7 +694,7 @@ export class TransportService {
     if (!a) throw new NotFoundException('Assignment not found');
     const out: any = scrubForeign(a as any, tenantId, ['vehicle', 'route', 'driver']);
     if (out.route) out.route = serializeBigInt(out.route);
-    return serializeBigInt(out);
+    return serializeAssignment(out);
   }
 
   /** Validates every foreign id an assignment may reference against the caller's tenant. */
@@ -421,36 +709,12 @@ export class TransportService {
     await assertOwnedIfPresent(this.prisma.tripGroup, refs.groupId, tenantId, 'Group');
   }
 
-  /**
-   * Moves seats between vehicles/routes inside a transaction. Claims are conditional on
-   * remaining capacity so concurrent requests cannot overbook; releases never go below 0.
-   */
-  private async claimSeats(tx: Prisma.TransactionClient, tenantId: string, vehicleId: string, routeId: string | null, seats: number) {
-    const vehicle = await tx.vehicle.findFirst({ where: { id: vehicleId, tenantId }, select: { capacity: true } });
-    if (!vehicle) throw new NotFoundException('Vehicle not found');
-    if (seats > vehicle.capacity) {
-      throw new ConflictException(`Passenger count ${seats} exceeds the vehicle capacity of ${vehicle.capacity}`);
-    }
-    if (routeId) {
-      const route = await tx.transportRoute.findFirst({ where: { id: routeId, tenantId }, select: { totalSeats: true } });
-      if (!route) throw new NotFoundException('Route not found');
-      const claimed = await tx.transportRoute.updateMany({
-        where: { id: routeId, tenantId, ...(route.totalSeats != null ? { bookedSeats: { lte: route.totalSeats - seats } } : {}) },
-        data: { bookedSeats: { increment: seats } },
-      });
-      if (claimed.count !== 1) throw new ConflictException('Not enough seats left on this route');
-    }
-    await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId }, data: { bookedSeats: { increment: seats } } });
-  }
-
-  private async releaseSeats(tx: Prisma.TransactionClient, tenantId: string, vehicleId: string, routeId: string | null, seats: number) {
-    if (routeId) {
-      await tx.transportRoute.updateMany({ where: { id: routeId, tenantId, bookedSeats: { gte: seats } }, data: { bookedSeats: { decrement: seats } } });
-    }
-    await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId, bookedSeats: { gte: seats } }, data: { bookedSeats: { decrement: seats } } });
-  }
-
   async createAssignment(tenantId: string, dto: CreateAssignmentDto) {
+    rejectClientPaymentStatus(dto.paymentStatus);
+    const status = dto.status ?? 'SCHEDULED';
+    if (!ASSIGNMENT_INITIAL_STATUSES.includes(status)) {
+      throw new BadRequestException(`A new trip starts as ${ASSIGNMENT_INITIAL_STATUSES.join(', ')}; departure and arrival are recorded on the trip`);
+    }
     const vehicle = await findOwned<{ id: string }>(this.prisma.vehicle, dto.vehicleId, tenantId, 'Vehicle', {}, { id: true });
     const groupId = dto.groupId ?? dto.tripGroupId;
     await this.assertAssignmentRefs(tenantId, { routeId: dto.routeId, driverId: dto.driverId, bookingId: dto.bookingId, groupId });
@@ -458,7 +722,10 @@ export class TransportService {
     const scheduledAt = optionalDate(dto.scheduledAt, 'scheduledAt');
     if (!scheduledAt) throw new BadRequestException('scheduledAt is required');
     const passengerCount = dto.passengerCount ?? dto.passengers ?? 1;
-    const status = dto.status ?? 'SCHEDULED';
+    const pilgrims = [...new Set(dto.pilgrims ?? [])];
+    if (pilgrims.length > passengerCount) {
+      throw new BadRequestException(`${pilgrims.length} pilgrims were listed for ${passengerCount} passenger(s)`);
+    }
 
     const data: Prisma.TransportAssignmentUncheckedCreateInput = {
       tenantId,
@@ -474,32 +741,45 @@ export class TransportService {
       pickupLocation: dto.pickupLocation,
       dropoffLocation: dto.dropoffLocation,
       scheduledAt,
-      pilgrims: dto.pilgrims ?? [],
+      pilgrims,
       passengerCount,
       priceCents: toCents(dto.price, dto.priceCents) ?? BigInt(0),
       currency: dto.currency ?? 'SAR',
-      paymentStatus: dto.paymentStatus ?? 'UNPAID',
+      // Payment state belongs to the payments module; a trip always starts unpaid.
+      paymentStatus: 'UNPAID',
       status,
       notes: dto.notes,
     };
 
     const assignment = await this.prisma.$transaction(async (tx) => {
-      if (ACTIVE_ASSIGNMENT(status)) await this.claimSeats(tx, tenantId, vehicle.id, dto.routeId || null, passengerCount);
-      return tx.transportAssignment.create({ data });
+      await this.checkTrip(tx, tenantId,
+        { vehicleId: vehicle.id, driverId: dto.driverId || null, routeId: dto.routeId || null, scheduledAt, seats: passengerCount },
+        { vehicleChanged: true, driverChanged: true, routeChanged: true, clashes: true });
+      const created = await tx.transportAssignment.create({ data });
+      await this.recountSeats(tx, tenantId, [created.vehicleId], [created.routeId]);
+      return created;
     });
-    return serializeBigInt(assignment as any);
+    return this.findAssignmentById(tenantId, assignment.id);
   }
 
   async updateAssignment(tenantId: string, id: string, dto: UpdateAssignmentDto) {
     const existing: any = await this.findAssignmentById(tenantId, id);
+    rejectClientPaymentStatus(dto.paymentStatus);
+    if (ASSIGNMENT_TERMINAL_STATUSES.includes(existing.status)) {
+      const changed = Object.entries(dto).filter(([k, v]) => v !== undefined && k !== 'notes').map(([k]) => k);
+      if (changed.length) throw new ConflictException(`This trip is ${existing.status}; only its notes can still change`);
+    }
+    if (dto.status !== undefined) assertAssignmentTransition(existing.status, dto.status);
     await this.assertAssignmentRefs(tenantId, {
       vehicleId: dto.vehicleId, routeId: dto.routeId, driverId: dto.driverId, bookingId: dto.bookingId, groupId: dto.groupId,
     });
     await assertAllOwned(this.prisma.pilgrim, dto.pilgrims, tenantId, 'Pilgrim');
+
     const data: any = {};
-    for (const k of ['customerName', 'customerPhone', 'pickupLocation', 'dropoffLocation', 'pilgrims', 'passengerCount', 'currency', 'notes', 'customerType', 'status', 'paymentStatus'] as const) {
+    for (const k of ['customerName', 'customerPhone', 'pickupLocation', 'dropoffLocation', 'passengerCount', 'currency', 'notes', 'customerType'] as const) {
       if (dto[k] !== undefined) data[k] = dto[k];
     }
+    if (dto.pilgrims !== undefined) data.pilgrims = [...new Set(dto.pilgrims)];
     if (dto.customerEmail !== undefined) data.customerEmail = dto.customerEmail || null;
     if (dto.vehicleId) data.vehicleId = dto.vehicleId; // vehicle is mandatory — cannot be cleared
     for (const k of ['routeId', 'driverId', 'bookingId', 'groupId'] as const) {
@@ -511,50 +791,64 @@ export class TransportService {
     if (dto.priceCents !== undefined || dto.price !== undefined) {
       data.priceCents = toCents(dto.price, dto.priceCents) ?? BigInt(0);
     }
+    const nextStatus: string = dto.status ?? existing.status;
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      data.status = dto.status;
+      // Departure and arrival are stamped when the trip starts and ends unless a time was given.
+      if (dto.status === 'IN_PROGRESS' && data.departedAt == null && !existing.departedAt) data.departedAt = new Date();
+      if (dto.status === 'COMPLETED' && data.arrivedAt == null && !existing.arrivedAt) data.arrivedAt = new Date();
+    }
 
-    const before = {
-      active: ACTIVE_ASSIGNMENT(existing.status),
-      vehicleId: existing.vehicleId as string,
-      routeId: (existing.routeId ?? null) as string | null,
-      seats: existing.passengerCount as number,
+    const trip: Trip = {
+      vehicleId: data.vehicleId ?? existing.vehicleId,
+      driverId: data.driverId !== undefined ? data.driverId : existing.driverId ?? null,
+      routeId: data.routeId !== undefined ? data.routeId : existing.routeId ?? null,
+      scheduledAt: data.scheduledAt ?? new Date(existing.scheduledAt),
+      seats: data.passengerCount ?? existing.passengerCount,
     };
-    const after = {
-      active: ACTIVE_ASSIGNMENT(data.status ?? existing.status),
-      vehicleId: (data.vehicleId ?? existing.vehicleId) as string,
-      routeId: (data.routeId !== undefined ? data.routeId : existing.routeId ?? null) as string | null,
-      seats: (data.passengerCount ?? existing.passengerCount) as number,
-    };
-    const seatsChanged =
-      before.active !== after.active || before.vehicleId !== after.vehicleId ||
-      before.routeId !== after.routeId || before.seats !== after.seats;
+    const pilgrimCount = Array.isArray(data.pilgrims ?? existing.pilgrims) ? (data.pilgrims ?? existing.pilgrims).length : 0;
+    if (pilgrimCount > trip.seats) {
+      throw new BadRequestException(`${pilgrimCount} pilgrims were listed for ${trip.seats} passenger(s)`);
+    }
+    const vehicleChanged = trip.vehicleId !== existing.vehicleId;
+    const driverChanged = !!trip.driverId && trip.driverId !== existing.driverId;
+    const routeChanged = !!trip.routeId && trip.routeId !== existing.routeId;
+    const scheduleChanged = trip.scheduledAt.getTime() !== new Date(existing.scheduledAt).getTime();
+    const seatsChanged = trip.seats !== existing.passengerCount;
+    const starting = nextStatus === 'IN_PROGRESS' && existing.status !== 'IN_PROGRESS';
+    const stillOpen = OPEN_ASSIGNMENT_STATUSES.includes(nextStatus);
 
-    const a = await this.prisma.$transaction(async (tx) => {
-      if (seatsChanged) {
-        if (before.active) await this.releaseSeats(tx, tenantId, before.vehicleId, before.routeId, before.seats);
-        if (after.active) await this.claimSeats(tx, tenantId, after.vehicleId, after.routeId, after.seats);
+    await this.prisma.$transaction(async (tx) => {
+      if (stillOpen && (vehicleChanged || driverChanged || routeChanged || scheduleChanged || seatsChanged || starting)) {
+        await this.checkTrip(tx, tenantId, trip, {
+          excludeId: existing.id, vehicleChanged, driverChanged, routeChanged, starting,
+          clashes: vehicleChanged || driverChanged || routeChanged || scheduleChanged || seatsChanged,
+        });
       }
-      return tx.transportAssignment.update({ where: { id: existing.id }, data });
+      await tx.transportAssignment.update({ where: { id: existing.id }, data });
+      await this.recountSeats(tx, tenantId, [existing.vehicleId, trip.vehicleId], [existing.routeId, trip.routeId]);
+      await this.syncFleetStatus(tx, tenantId, [existing.vehicleId, trip.vehicleId], [existing.driverId, trip.driverId]);
     });
-    return serializeBigInt(a as any);
+    return this.findAssignmentById(tenantId, existing.id);
   }
 
   async cancelAssignment(tenantId: string, id: string) {
     const a: any = await this.findAssignmentById(tenantId, id);
-    if (a.status === 'CANCELLED') {
-      const { vehicle: _v, route: _r, driver: _d, ...plain } = a;
-      return plain; // already cancelled — never release the seats twice
-    }
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await this.releaseSeats(tx, tenantId, a.vehicleId, a.routeId ?? null, a.passengerCount ?? 1);
-      return tx.transportAssignment.update({ where: { id: a.id }, data: { status: 'CANCELLED' } });
+    if (a.status === 'CANCELLED') return a; // already cancelled — idempotent
+    assertAssignmentTransition(a.status, 'CANCELLED');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transportAssignment.update({ where: { id: a.id }, data: { status: 'CANCELLED' } });
+      await this.recountSeats(tx, tenantId, [a.vehicleId], [a.routeId]);
+      await this.syncFleetStatus(tx, tenantId, [a.vehicleId], [a.driverId]);
     });
-    return serializeBigInt(updated as any);
+    return this.findAssignmentById(tenantId, a.id);
   }
 
   // ─── Tasreeh ─────────────────────────────────────────────────────────
   async findTasreeh(tenantId: string) {
     return this.prisma.tasreehPermit.findMany({
       where: { tenantId },
+      orderBy: { expiresAt: 'asc' },
       include: { vehicle: { select: { id: true, plateNumber: true } } },
     });
   }
@@ -580,30 +874,33 @@ export class TransportService {
 
   // ─── Stats (Transport dashboard overview) ───────────────────────────
   async getStats(tenantId: string) {
+    const now = new Date();
     const [
-      totalVehicles, availableVehicles, bookedVehicles, maintVehicles, inactiveVehicles,
-      totalDrivers, availableDrivers, onTripDrivers,
-      totalRoutes, activeRoutes, fullyBookedRoutes,
-      totalAssignments, scheduledAssignments, inProgressAssignments, completedAssignments,
-      upcomingAssignments, recentAssignments,
+      totalVehicles, availableVehicles, bookedVehicles, inServiceVehicles, maintVehicles, inactiveVehicles,
+      totalDrivers, activeDrivers, availableDrivers, onTripDrivers,
+      totalRoutes, activeRoutes, fullyBookedRoutes, seatTotals,
+      assignmentsByStatus, upcomingAssignments, recentAssignments,
     ] = await Promise.all([
       this.prisma.vehicle.count({ where: { tenantId } }),
       this.prisma.vehicle.count({ where: { tenantId, status: 'AVAILABLE', isActive: true } }),
-      this.prisma.vehicle.count({ where: { tenantId, status: 'BOOKED' } }),
+      this.prisma.vehicle.count({ where: { tenantId, status: 'BOOKED', isActive: true } }),
+      this.prisma.vehicle.count({ where: { tenantId, status: 'IN_SERVICE' } }),
       this.prisma.vehicle.count({ where: { tenantId, status: 'UNDER_MAINTENANCE' } }),
       this.prisma.vehicle.count({ where: { tenantId, OR: [{ status: 'INACTIVE' }, { isActive: false }] } }),
       this.prisma.driver.count({ where: { tenantId } }),
+      this.prisma.driver.count({ where: { tenantId, isActive: true, status: { not: 'INACTIVE' } } }),
       this.prisma.driver.count({ where: { tenantId, status: 'AVAILABLE', isActive: true } }),
       this.prisma.driver.count({ where: { tenantId, status: 'ON_TRIP' } }),
       this.prisma.transportRoute.count({ where: { tenantId } }),
       this.prisma.transportRoute.count({ where: { tenantId, status: 'ACTIVE' } }),
       this.prisma.transportRoute.count({ where: { tenantId, status: 'FULLY_BOOKED' } }),
-      this.prisma.transportAssignment.count({ where: { tenantId } }),
-      this.prisma.transportAssignment.count({ where: { tenantId, status: 'SCHEDULED' } }),
-      this.prisma.transportAssignment.count({ where: { tenantId, status: 'IN_PROGRESS' } }),
-      this.prisma.transportAssignment.count({ where: { tenantId, status: 'COMPLETED' } }),
+      this.prisma.transportRoute.aggregate({
+        where: { tenantId, status: { in: BOOKABLE_ROUTE_STATUSES }, totalSeats: { not: null } },
+        _sum: { totalSeats: true, bookedSeats: true },
+      }),
+      this.prisma.transportAssignment.groupBy({ by: ['status'], where: { tenantId }, _count: true }),
       this.prisma.transportAssignment.findMany({
-        where: { tenantId, scheduledAt: { gt: new Date() }, status: { in: ['SCHEDULED', 'CONFIRMED'] } },
+        where: { tenantId, scheduledAt: { gt: now }, status: { in: ['DRAFT', 'SCHEDULED', 'CONFIRMED'] } },
         orderBy: { scheduledAt: 'asc' },
         take: 5,
         include: { vehicle: { select: { plateNumber: true } }, route: { select: { name: true } } },
@@ -615,16 +912,17 @@ export class TransportService {
         include: { vehicle: { select: { plateNumber: true } }, route: { select: { name: true } } },
       }),
     ]);
+    const byStatus: Record<string, number> = Object.fromEntries(Object.keys(TRANSPORT_ASSIGNMENT_TRANSITIONS).map((s) => [s, 0]));
+    assignmentsByStatus.forEach((r) => { byStatus[r.status] = r._count; });
 
-    // Revenue from assignments
-    const revenue = await this.prisma.transportAssignment.aggregate({
-      where: { tenantId, paymentStatus: 'PAID' },
-      _sum: { priceCents: true },
-    });
-    const pendingRevenue = await this.prisma.transportAssignment.aggregate({
-      where: { tenantId, paymentStatus: { in: ['UNPAID', 'PARTIAL'] }, status: { not: 'CANCELLED' } },
-      _sum: { priceCents: true },
-    });
+    // Payment state is written by the payments module; these sums only read it.
+    const [revenue, pendingRevenue] = await Promise.all([
+      this.prisma.transportAssignment.aggregate({ where: { tenantId, paymentStatus: 'PAID' }, _sum: { priceCents: true } }),
+      this.prisma.transportAssignment.aggregate({
+        where: { tenantId, paymentStatus: { in: ['UNPAID', 'PARTIAL'] }, status: { not: 'CANCELLED' } },
+        _sum: { priceCents: true },
+      }),
+    ]);
 
     // Tenant marketplace listings tied to a vendor with same tenantId
     const vendor = await this.prisma.vendor.findFirst({ where: { tenantId } });
@@ -640,17 +938,27 @@ export class TransportService {
         total: totalVehicles,
         available: availableVehicles,
         booked: bookedVehicles,
+        inService: inServiceVehicles,
         underMaintenance: maintVehicles,
         inactive: inactiveVehicles,
         active: totalVehicles - inactiveVehicles,
       },
-      drivers: { total: totalDrivers, available: availableDrivers, onTrip: onTripDrivers, active: totalDrivers },
-      routes: { total: totalRoutes, active: activeRoutes, fullyBooked: fullyBookedRoutes },
+      drivers: { total: totalDrivers, active: activeDrivers, available: availableDrivers, onTrip: onTripDrivers },
+      routes: {
+        total: totalRoutes,
+        active: activeRoutes,
+        fullyBooked: fullyBookedRoutes,
+        seatsOffered: seatTotals._sum.totalSeats ?? 0,
+        seatsSold: seatTotals._sum.bookedSeats ?? 0,
+      },
       assignments: {
-        total: totalAssignments,
-        scheduled: scheduledAssignments,
-        inProgress: inProgressAssignments,
-        completed: completedAssignments,
+        total: Object.values(byStatus).reduce((a, b) => a + b, 0),
+        byStatus,
+        scheduled: byStatus.SCHEDULED,
+        confirmed: byStatus.CONFIRMED,
+        inProgress: byStatus.IN_PROGRESS,
+        completed: byStatus.COMPLETED,
+        cancelled: byStatus.CANCELLED,
         upcoming: upcomingAssignments.map((u: any) => serializeBigInt(u)),
         recent: recentAssignments.map((u: any) => serializeBigInt(u)),
       },

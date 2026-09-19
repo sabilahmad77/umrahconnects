@@ -1,6 +1,7 @@
 import { RawJson } from '../../../common/decorators/raw-json.decorator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  Allow,
   ArrayMaxSize,
   IsArray,
   IsDateString,
@@ -74,8 +75,8 @@ class VisaFieldsDto {
   @ApiPropertyOptional({ description: 'Price in major units (SAR)' })
   @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(1_000_000_000) price?: number;
   @IsOptional() @IsString() @MaxLength(8) currency?: string;
-  @ApiPropertyOptional({ enum: VISA_PAYMENT_STATUSES })
-  @IsOptional() @Transform(upper) @IsIn(VISA_PAYMENT_STATUSES as unknown as string[]) paymentStatus?: string;
+  /** Whitelisted only so the server can refuse it explicitly — payment state comes from the payments module. */
+  @ApiPropertyOptional({ deprecated: true }) @Allow() paymentStatus?: unknown;
 
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
 }
@@ -111,16 +112,20 @@ export class UpdateVisaDto extends VisaFieldsDto {
   @ApiPropertyOptional({ enum: VisaStatus })
   @IsOptional() @Transform(upper) @IsEnum(VisaStatus) status?: VisaStatus;
 
+  /**
+   * Regulator reference / issued visa number. Correcting it needs visa:application:manage.
+   * Submission and decision timestamps and the rejection reason are server-stamped by
+   * the submit / approve / reject actions and are not accepted here.
+   */
   @IsOptional() @IsString() @MaxLength(100) externalRef?: string;
-  @IsOptional() @IsString() @MaxLength(2000) rejectionReason?: string;
+  /** Visa validity end date — only meaningful once the visa is approved. */
   @IsOptional() @Transform(emptyToNull) @IsDateString() expiresAt?: string | null;
-  @IsOptional() @Transform(emptyToNull) @IsDateString() submittedAt?: string | null;
-  /** Accepted for client compatibility; decision timestamps are server-stamped. */
-  @IsOptional() @Transform(emptyToNull) @IsDateString() decisionAt?: string | null;
 }
 
 export class ApproveVisaDto {
+  /** Required by the service (checked after the application is found, so foreign ids stay 404). */
   @IsOptional() @IsString() @MaxLength(100) visaNumber?: string;
+  @IsOptional() @IsDateString() expiresAt?: string;
 }
 
 export class RejectVisaDto {
@@ -156,10 +161,11 @@ export class CreateSubmissionDto {
 }
 
 export class QueryVisaDto {
-  @IsOptional() @IsString() status?: string;
-  @IsOptional() @IsString() system?: string;
-  @IsOptional() @IsString() pilgrimId?: string;
-  @IsOptional() @IsString() bookingId?: string;
-  @IsOptional() @Type(() => Number) @IsNumber() page?: number = 1;
-  @IsOptional() @Type(() => Number) @IsNumber() limit?: number = 20;
+  @IsOptional() @Transform(upper) @IsEnum(VisaStatus) status?: VisaStatus;
+  @IsOptional() @Transform(upper) @IsEnum(RegulatorySystem) system?: RegulatorySystem;
+  @IsOptional() @IsUUID() pilgrimId?: string;
+  @IsOptional() @IsUUID() bookingId?: string;
+  @IsOptional() @IsString() @MaxLength(120) search?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number = 1;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limit?: number = 20;
 }
