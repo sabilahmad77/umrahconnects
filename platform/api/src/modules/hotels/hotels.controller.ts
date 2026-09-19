@@ -5,8 +5,8 @@ import { TenantId } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import {
   CreateAllotmentDto, CreateHotelBookingDto, CreateHotelDto, CreateRoomAssignmentDto, CreateRoomDto,
-  CreateRoomTypeDto, HOTEL_BOOKING_STATUSES, QueryHotelDto, UpdateHotelBookingDto, UpdateHotelDto,
-  UpdateRoomDto, UpdateRoomTypeDto,
+  CreateRoomTypeDto, HOTEL_BOOKING_STATUSES, QueryAvailabilityDto, QueryHotelDto, QueryRoomAvailabilityDto,
+  UpdateAllotmentDto, UpdateHotelBookingDto, UpdateHotelDto, UpdateRoomDto, UpdateRoomTypeDto,
 } from './dto/hotel.dto';
 
 @ApiTags('hotels')
@@ -35,7 +35,7 @@ export class HotelsController {
 
   @Get('availability')
   @RequirePermissions('hotel:allotment:read')
-  async checkAvailability(@TenantId() tenantId: string, @Query() query: any) {
+  async checkAvailability(@TenantId() tenantId: string, @Query() query: QueryAvailabilityDto) {
     return { success: true, data: await this.service.checkAvailability(tenantId, query) };
   }
 
@@ -90,6 +90,13 @@ export class HotelsController {
     return { success: true, data: await this.service.updateRoomType(tenantId, roomTypeId, dto) };
   }
 
+  // Adjusts a contract (rooms, buffer, rate, notes); bookedRooms stays server-owned.
+  @Put('allotments/:allotmentId')
+  @RequirePermissions('hotel:allotment:manage')
+  async updateAllotment(@TenantId() tenantId: string, @Param('allotmentId', ParseUUIDPipe) allotmentId: string, @Body() dto: UpdateAllotmentDto) {
+    return { success: true, data: await this.service.updateAllotment(tenantId, allotmentId, dto) };
+  }
+
   // ── Single hotel ───────────────────────────────────────────────────────
   @Get(':id')
   @RequirePermissions('hotel:allotment:read')
@@ -123,6 +130,13 @@ export class HotelsController {
   }
 
   // ── Rooms ──────────────────────────────────────────────────────────────
+  /** Which rooms are free for a stay (not archived, not held by an overlapping booking). */
+  @Get(':id/room-availability')
+  @RequirePermissions('hotel:allotment:read')
+  async roomAvailability(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Query() query: QueryRoomAvailabilityDto) {
+    return { success: true, data: await this.service.roomAvailability(tenantId, id, query) };
+  }
+
   @Get(':id/rooms')
   @RequirePermissions('hotel:allotment:read')
   async getRooms(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
@@ -136,8 +150,9 @@ export class HotelsController {
   }
 
   // ── Allotments ─────────────────────────────────────────────────────────
+  // Reading contracts is part of hotel:allotment:read ("view hotels, rooms, allotments and hotel bookings").
   @Get(':id/allotments')
-  @RequirePermissions('hotel:allotment:manage')
+  @RequirePermissions('hotel:allotment:read')
   async getAllotments(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.getAllotments(tenantId, id) };
   }
@@ -149,14 +164,26 @@ export class HotelsController {
   }
 
   @Get(':id/assignments')
-  @RequirePermissions('hotel:assignment:manage')
+  @RequirePermissions('hotel:allotment:read')
   async getAssignments(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.getAssignments(tenantId, id) };
   }
 
+  // Placing travelers into contracted rooms is hotel:room:assign ("assign rooms to travelers").
   @Post(':id/assignments')
-  @RequirePermissions('hotel:assignment:manage')
+  @RequirePermissions('hotel:room:assign')
   async createAssignment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateRoomAssignmentDto) {
     return { success: true, data: await this.service.createAssignment(tenantId, id, dto) };
+  }
+
+  // Releasing an assignment is a management action (hotel:assignment:manage).
+  @Delete(':id/assignments/:assignmentId')
+  @RequirePermissions('hotel:assignment:manage')
+  async deleteAssignment(
+    @TenantId() tenantId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('assignmentId', ParseUUIDPipe) assignmentId: string,
+  ) {
+    return { success: true, data: await this.service.deleteAssignment(tenantId, id, assignmentId) };
   }
 }
