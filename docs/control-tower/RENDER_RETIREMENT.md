@@ -9,13 +9,20 @@ Retirement is tracked as three separate states. Finishing one does not imply the
 
 | # | State | Status | Owner |
 |---|---|---|---|
-| 1 | Target runtime dependency on Render removed from the repository and the production stack | IN PROGRESS (eng100 A09) | engineering |
+| 1 | Target runtime dependency on Render removed from the repository and the production stack | **DONE** (eng100 A09, 2026-09-19; web `next build` with `API_PROXY_ORIGIN` is the coordinator's check) | engineering |
 | 2 | Exposed Render API key revoked | NOT DONE — see `CREDENTIAL_REMEDIATION.md` | coordinator / repository owner |
 | 3 | Old live Render service and database decommissioned | NOT DONE — needs the backup and an authorized KVM cutover first | repository owner |
 
 ## State 1 — target runtime dependency removed
 
-Evidence: `evidence/eng100/a09/` (inventory before/after, container build and smoke, blueprint validation).
+Evidence: `evidence/eng100/a09/` —
+- `render-inventory-before.txt` / `render-inventory-after.txt`: every mention classified; all runtime and deploy
+  surfaces (Dockerfile, compose files, Caddyfile, entrypoint, systemd units, workflows, `start-all.sh`, API source,
+  `next.config.mjs`, middleware, every env template) contain no `onrender.com`/`render.com`; no code reads a Render
+  variable.
+- `container-build-smoke.md`: the API image built and ran as the full KVM stack (Caddy TLS, PostgreSQL 16, migrations
+  from empty, sign-in) with a configuration containing no Render value at all; the only `onrender` strings inside the
+  image are the new guard; Render-era values are refused at boot and by `check-config`.
 
 ### Inventory and classification
 
