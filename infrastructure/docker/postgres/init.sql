@@ -24,31 +24,7 @@ CREATE SCHEMA IF NOT EXISTS plugin_group_ops;
 CREATE SCHEMA IF NOT EXISTS plugin_portal;
 CREATE SCHEMA IF NOT EXISTS plugin_reporting;
 
--- App role (used by the application connection pool)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'app_user') THEN
-    CREATE ROLE app_user WITH LOGIN PASSWORD 'change_me_in_production';
-  END IF;
-END
-$$;
-
-GRANT USAGE ON SCHEMA core TO app_user;
-GRANT USAGE ON SCHEMA marketplace TO app_user;
-GRANT USAGE ON SCHEMA social TO app_user;
-GRANT USAGE ON SCHEMA audit TO app_user;
-GRANT USAGE ON SCHEMA plugin_crm TO app_user;
-GRANT USAGE ON SCHEMA plugin_booking TO app_user;
-GRANT USAGE ON SCHEMA plugin_hotel TO app_user;
-GRANT USAGE ON SCHEMA plugin_visa TO app_user;
-GRANT USAGE ON SCHEMA plugin_transport TO app_user;
-GRANT USAGE ON SCHEMA plugin_finance TO app_user;
-GRANT USAGE ON SCHEMA plugin_group_ops TO app_user;
-GRANT USAGE ON SCHEMA plugin_portal TO app_user;
-GRANT USAGE ON SCHEMA plugin_reporting TO app_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA core TO app_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA marketplace TO app_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA social TO app_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA core GRANT ALL ON TABLES TO app_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA marketplace GRANT ALL ON TABLES TO app_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA social GRANT ALL ON TABLES TO app_user;
+-- No application login is created here. The API connects as the Row-Level Security runtime login that
+-- `platform/api/prisma/rls/runtime-role.sql` creates after `prisma migrate deploy` (member of uc_app_runtime,
+-- password from the environment) — docs/control-tower/RLS.md. The former `app_user` role carried a password
+-- written in this file and was used by nothing.
