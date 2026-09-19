@@ -21,7 +21,7 @@ import {
 } from '@/hooks/use-marketplace';
 import { cn } from '@/lib/utils';
 import { ListingForm, type ListingIntent } from './listing-form';
-import { formatMoney, listingPriceLabel, listingTransitions, STATUS_LABEL, toCents, TRANSITION_LABEL } from './listing-rules';
+import { formatMoney, isTakenDown, listingPriceLabel, listingTransitions, STATUS_LABEL, toCents, TRANSITION_LABEL } from './listing-rules';
 
 const VENDOR_TYPES = [
   { value: 'HOTEL', label: 'Hotel' },
@@ -146,6 +146,9 @@ export function ListingStatusActions({ listing, onDone, size = 'sm' }: { listing
     }
   };
 
+  if (isTakenDown(listing)) {
+    return <p className="text-xs font-medium text-red-700">Only the platform can restore this listing.</p>;
+  }
   return (
     <>
       <div className="flex flex-wrap gap-2">
@@ -306,8 +309,15 @@ export function SellerWorkspace({ canManage }: { canManage: boolean }) {
                   <Link href={`/marketplace/${l.id}`} className="truncate font-semibold text-gray-900 hover:text-brand-600">
                     {l.name}
                   </Link>
-                  <Badge tone={STATUS_TONE[l.status] ?? 'neutral'}>{STATUS_LABEL[l.status] ?? l.status}</Badge>
+                  {isTakenDown(l) ? (
+                    <Badge tone="danger">Taken down by the platform</Badge>
+                  ) : (
+                    <Badge tone={STATUS_TONE[l.status] ?? 'neutral'}>{STATUS_LABEL[l.status] ?? l.status}</Badge>
+                  )}
                 </div>
+                {isTakenDown(l) && l.moderationReason && (
+                  <p className="mt-0.5 text-xs text-red-700">Reason: {l.moderationReason}</p>
+                )}
                 <p className="mt-0.5 text-xs text-gray-600">
                   {listingPriceLabel(l)} · {l.vendor?.name} · {l._count?.inquiries ?? 0} inquiries · {l._count?.bookings ?? 0} bookings · {l._count?.quotes ?? 0} quotes
                 </p>

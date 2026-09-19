@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useAdminListings, useApproveListing, useAdminRemoveListing } from '@/hooks/use-admin';
 
-const STATUSES = ['ALL', 'DRAFT', 'PUBLISHED', 'PAUSED', 'ARCHIVED'];
+const STATUSES = ['ALL', 'DRAFT', 'PUBLISHED', 'PAUSED', 'ARCHIVED', 'TAKEN_DOWN'];
+const takenDown = (l: any) => l.moderationStatus === 'TAKEN_DOWN';
 
 export function AdminListingsView() {
   const [status, setStatus] = useState('ALL');
@@ -61,7 +62,7 @@ export function AdminListingsView() {
               className={cn('text-xs px-3 py-1.5 rounded-full border font-medium transition-all',
                 status === s ? 'bg-brand-500 text-white border-brand-500 hover:bg-brand-600 hover:text-white' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
             >
-              {s}
+              {s.replace(/_/g, ' ')}
             </Button>
           ))}
         </div>
@@ -103,18 +104,30 @@ export function AdminListingsView() {
                   <td className="p-3 text-xs text-gray-600">{l.vendor?.name ?? '—'} <span className="text-xs text-gray-600">{l.vendor?.status}</span></td>
                   <td className="p-3 font-medium">{l.currency} {(l.priceCents / 100).toLocaleString()}</td>
                   <td className="p-3">
-                    <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
-                      l.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' :
-                      l.status === 'PAUSED' ? 'bg-yellow-50 text-yellow-700' :
-                      l.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-600' :
-                      'bg-blue-50 text-blue-700')}>{l.status ?? 'DRAFT'}</span>
+                    {takenDown(l) ? (
+                      <>
+                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-red-50 text-red-700">TAKEN DOWN</span>
+                        {l.moderationReason && <p className="mt-1 max-w-xs text-xs text-gray-600">{l.moderationReason}</p>}
+                      </>
+                    ) : (
+                      <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
+                        l.status === 'PUBLISHED' ? 'bg-green-50 text-green-700' :
+                        l.status === 'PAUSED' ? 'bg-yellow-50 text-yellow-700' :
+                        l.status === 'ARCHIVED' ? 'bg-gray-100 text-gray-600' :
+                        'bg-blue-50 text-blue-700')}>{l.status ?? 'DRAFT'}</span>
+                    )}
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {l.status !== 'PUBLISHED' ? (
+                      {l.status !== 'PUBLISHED' || takenDown(l) ? (
                         <Button busy={approve.isPending} variant="quiet" type="button"
-                          aria-label={`Approve ${l.name}`}
-                          onClick={() => setConfirm({
+                          aria-label={`${takenDown(l) ? 'Restore' : 'Approve'} ${l.name}`}
+                          onClick={() => setConfirm(takenDown(l) ? {
+                            title: `Restore “${l.name}”?`,
+                            body: 'The takedown is lifted: the listing is published again and its seller can manage it as before.',
+                            cta: 'Restore and publish',
+                            onConfirm: () => run(() => approve.mutateAsync(l.id), `“${l.name}” is restored`),
+                          } : {
                             title: `Publish “${l.name}”?`,
                             body: 'The listing becomes visible and bookable on the marketplace.',
                             cta: 'Approve and publish',
@@ -122,7 +135,7 @@ export function AdminListingsView() {
                           })}
                           className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700"
                         >
-                          <CheckCircle2 className="h-3 w-3" /> Approve
+                          <CheckCircle2 className="h-3 w-3" /> {takenDown(l) ? 'Restore' : 'Approve'}
                         </Button>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-green-50 text-green-700">
@@ -130,19 +143,21 @@ export function AdminListingsView() {
                         </span>
                       )}
                       <Button busy={remove.isPending} variant="quiet" type="button"
-                        aria-label="Remove listing"
-                        title="Archive (remove) this listing"
-                        disabled={l.status === 'ARCHIVED'}
+                        aria-label={`Take down ${l.name}`}
+                        title="Take this listing down"
+                        disabled={takenDown(l)}
                         onClick={() => setConfirm({
-                          title: `Remove “${l.name}”?`,
-                          body: 'The listing is archived: it disappears from the marketplace and cannot be booked. Existing bookings are kept.',
-                          cta: 'Remove listing',
+                          title: `Take down “${l.name}”?`,
+                          body: 'The listing leaves the marketplace and cannot be booked. Its seller sees the reason and cannot publish it again; only a platform restore can. Existing bookings are kept.',
+                          cta: 'Take down listing',
                           tone: 'danger',
-                          onConfirm: () => run(() => remove.mutateAsync(l.id), `“${l.name}” was removed`),
+                          reasonLabel: 'Reason shown to the seller',
+                          reasonPlaceholder: 'e.g. Photos show a different property',
+                          onConfirm: (reason) => run(() => remove.mutateAsync({ id: l.id, reason: reason ?? '' }), `“${l.name}” was taken down`),
                         })}
                         className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
                       >
-                        <Trash2 className="h-3 w-3" /> Remove
+                        <Trash2 className="h-3 w-3" /> Take down
                       </Button>
                     </div>
                   </td>

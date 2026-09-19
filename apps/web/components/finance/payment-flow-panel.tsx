@@ -181,7 +181,14 @@ function StatusLine({
         </Alert>
       );
     case 'on_hold':
-      return (
+      // F1: a payment that reached the provider after its booking was cancelled is held
+      // for a refund; it never pays (or revives) the cancelled booking.
+      return state.view?.providerStatus === 'CAPTURED_AFTER_CANCEL' ? (
+        <Alert tone="info" title="Payment held for a refund">
+          This payment went through after the {subject} was cancelled, so it was not applied to it.
+          The money is held until it is refunded to the payer. Do not pay again.
+        </Alert>
+      ) : (
         <Alert tone="info" title="Payment on hold">
           The payment provider reported a problem with this payment, so it is held for review. Do
           not pay again; the organization will contact you.
