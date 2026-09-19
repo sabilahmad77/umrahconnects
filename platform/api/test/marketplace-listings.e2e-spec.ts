@@ -233,7 +233,81 @@ describe('marketplace listings lifecycle', () => {
     });
   });
 
+  describe('traveler booking cancellation', () => {
+    const book = async (a: Actor) =>
+      ok(a, 'post', `/marketplace/listings/${listing.id}/bookings`, { partySize: 2, customerName: 'Guest' });
+
+    it('only the customer cancels, and only a pending, unpaid booking; each cancellation is audited', async () => {
+      const b = await book(w.travelerA);
+      for (const other of [w.travelerB, w.transportA, w.hotelB]) {
+        expect((await call(other, 'post', `/marketplace/bookings/${b.id}/cancel`)).status, other.email).toBe(404);
+      }
+      expect((await call(null, 'post', `/marketplace/bookings/${b.id}/cancel`)).status).toBe(401);
+      const cancelled = await ok(w.travelerA, 'post', `/marketplace/bookings/${b.id}/cancel`);
+      expect([cancelled.status, cancelled.paymentStatus]).toEqual(['CANCELLED', 'UNPAID']);
+      const again = await call(w.travelerA, 'post', `/marketplace/bookings/${b.id}/cancel`);
+      expect([again.status, again.body.error.message]).toEqual([409, 'This booking is already cancelled']);
+      const audit = await ctx.prisma.auditLog.findFirst({ where: { resource: 'listing_booking', resourceId: b.id } });
+      expect(audit?.actorId).toBe(w.travelerA.id);
+      expect(audit?.afterState).toMatchObject({ status: 'CANCELLED' });
+    });
+
+    it('refuses paid, partially paid, confirmed and in-payment bookings with a clear 409', async () => {
+      const paid = await book(w.travelerA);
+      await ctx.prisma.listingBooking.update({ where: { id: paid.id }, data: { paymentStatus: 'PAID', status: 'CONFIRMED' } });
+      const r1 = await call(w.travelerA, 'post', `/marketplace/bookings/${paid.id}/cancel`);
+      expect([r1.status, r1.body.error.message]).toEqual([409, 'This booking is paid. Contact the provider to cancel and arrange a refund.']);
+
+      const partial = await book(w.travelerA);
+      await ctx.prisma.listingBooking.update({ where: { id: partial.id }, data: { paymentStatus: 'PARTIAL' } });
+      const r2 = await call(w.travelerA, 'post', `/marketplace/bookings/${partial.id}/cancel`);
+      expect([r2.status, r2.body.error.message]).toEqual([409, 'This booking is partially paid. Contact the provider to cancel and arrange a refund.']);
+
+      const confirmed = await book(w.travelerA);
+      await ok(w.transportA, 'put', `/marketplace/bookings/${confirmed.id}`, { status: 'CONFIRMED' });
+      const r3 = await call(w.travelerA, 'post', `/marketplace/bookings/${confirmed.id}/cancel`);
+      expect([r3.status, r3.body.error.message]).toEqual([409, 'A confirmed booking can only be cancelled by the provider. Contact them.']);
+
+      const inFlight = await book(w.travelerA);
+      await ctx.prisma.payment.create({
+        data: {
+          tenantId: w.tenants.transportA, amountCents: 1n, currency: 'SAR', gateway: 'sandbox',
+          idempotencyKey: `test_${uniq()}`, status: 'PENDING', listingBookingId: inFlight.id,
+        } as any,
+      });
+      const r4 = await call(w.travelerA, 'post', `/marketplace/bookings/${inFlight.id}/cancel`);
+      expect(r4.status).toBe(409);
+      expect(r4.body.error.message).toMatch(/payment for this booking has been started/);
+
+      for (const id of [paid.id, partial.id, confirmed.id, inFlight.id]) {
+        expect((await ctx.prisma.listingBooking.findUniqueOrThrow({ where: { id } })).status).not.toBe('CANCELLED');
+      }
+    });
+  });
+
   describe('request conversion', () => {
+    it('every marketplace request route answers with the { success, data } envelope', async () => {
+      const envelope = async (a: Actor, method: Method, path: string, body?: Record<string, unknown>) => {
+        const res = await call(a, method, path, body);
+        expect(res.status, `${method} ${path} ${JSON.stringify(res.body)}`).toBeLessThan(300);
+        expect(res.body.success, `${method} ${path}`).toBe(true);
+        expect(res.body, `${method} ${path}`).toHaveProperty('data');
+        return res.body.data;
+      };
+      const req = await envelope(w.travelerA, 'post', '/marketplace/requests', { serviceType: 'HOTEL', title: `Envelope ${tag}` });
+      await envelope(w.travelerA, 'get', '/marketplace/requests/mine');
+      await envelope(w.hotelA, 'get', '/marketplace/requests/open');
+      const o1 = await envelope(w.hotelA, 'post', `/marketplace/requests/${req.id}/offers`, { priceCents: 1000 });
+      const o2 = await envelope(w.hotelB, 'post', `/marketplace/requests/${req.id}/offers`, { priceCents: 2000 });
+      await envelope(w.hotelA, 'get', '/marketplace/requests/offers/mine');
+      await envelope(w.travelerA, 'get', `/marketplace/requests/${req.id}`);
+      await envelope(w.travelerA, 'post', `/marketplace/requests/${req.id}/offers/${o2.id}/reject`);
+      await envelope(w.travelerA, 'post', `/marketplace/requests/${req.id}/offers/${o1.id}/accept`);
+      await envelope(w.travelerA, 'post', `/marketplace/requests/${req.id}/offers/${o1.id}/convert-to-booking`, {});
+      const other = await envelope(w.travelerA, 'post', '/marketplace/requests', { serviceType: 'HOTEL', title: `Close ${tag}` });
+      await envelope(w.travelerA, 'post', `/marketplace/requests/${other.id}/close`);
+    });
+
     it('offers show the real seller; converting without a listing never publishes the offer', async () => {
       const req = await ok(w.travelerA, 'post', '/marketplace/requests', { serviceType: 'HOTEL', title: `Stay ${tag}`, travelers: 2 });
       const hotelVendor = await ok(w.hotelA, 'post', '/marketplace/vendors', { name: `Hotel seller ${tag}`, type: 'HOTEL' });

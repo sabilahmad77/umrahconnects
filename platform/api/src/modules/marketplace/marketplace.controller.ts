@@ -168,6 +168,14 @@ export class MarketplaceController {
     return { success: true, data: await this.marketplaceService.listBookings({ userId: user.sub }) };
   }
 
+  @Post('bookings/:id/cancel')
+  @AnyAuthenticated()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Customer cancels their own pending, unpaid booking' })
+  async cancelMyBooking(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.marketplaceService.cancelOwnBooking(user, id) };
+  }
+
   @Put('bookings/:id')
   @RequirePermissions('marketplace:listing:manage')
   @ApiOperation({ summary: 'Provider updates booking status / operational details' })

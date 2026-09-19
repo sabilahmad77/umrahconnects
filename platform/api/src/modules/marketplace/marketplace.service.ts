@@ -9,6 +9,8 @@ import { Prisma, TenantType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MediaRegistryService } from '../storage/media-registry.service';
+import { AuditService } from '../audit/audit.service';
+import type { Principal } from '../auth/principal';
 import { requireId } from '../../common/tenant-scope';
 import {
   CreateListingBookingDto,
@@ -130,6 +132,7 @@ export class MarketplaceService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly media: MediaRegistryService,
+    private readonly audit: AuditService,
   ) {}
 
   // ── Ownership helpers ────────────────────────────────────────────────────────
@@ -582,6 +585,86 @@ export class MarketplaceService {
 
     const booking = await this.prisma.listingBooking.update({ where: { id: safeId }, data });
     return { ...booking, totalAmountCents: Number((booking as any).totalAmountCents) };
+  }
+
+  /**
+   * The customer cancels their own booking. Allowed only while the provider has
+   * not confirmed it and no money has moved: status PENDING, payment UNPAID, and
+   * no captured, authorised or in-flight payment (a checkout opened in the last
+   * 24 hours could still be completed, so it blocks too). Anything else is a
+   * conversation with the provider (refunds belong to the payments module).
+   */
+  async cancelOwnBooking(user: Principal, id: string) {
+    const safeId = requireId(id, 'Booking');
+    const booking = await this.prisma.listingBooking.findFirst({
+      where: { id: safeId, customerUserId: user.sub },
+      include: { listing: { select: { name: true, vendor: { select: { tenantId: true } } } } },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.status === 'CANCELLED') throw new ConflictException('This booking is already cancelled');
+    if (booking.paymentStatus !== 'UNPAID') {
+      throw new ConflictException(
+        `This booking is ${booking.paymentStatus === 'PARTIAL' ? 'partially paid' : booking.paymentStatus.toLowerCase()}. Contact the provider to cancel and arrange a refund.`,
+      );
+    }
+    if (booking.status !== 'PENDING') {
+      throw new ConflictException(`A ${booking.status.toLowerCase()} booking can only be cancelled by the provider. Contact them.`);
+    }
+    const blocking = await this.prisma.payment.findFirst({
+      where: {
+        listingBookingId: booking.id,
+        OR: [
+          { status: { in: ['PROCESSING', 'AUTHORIZED', 'COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'] } },
+          { status: 'PENDING', createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        ],
+      },
+      select: { status: true },
+    });
+    if (blocking) {
+      throw new ConflictException(
+        ['COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'].includes(blocking.status)
+          ? 'A payment is recorded for this booking. Contact the provider to cancel and arrange a refund.'
+          : 'A payment for this booking has been started. Let it finish or expire, or contact the provider.',
+      );
+    }
+
+    // Conditional update: a confirmation or payment landing meanwhile wins.
+    const res = await this.prisma.listingBooking.updateMany({
+      where: { id: booking.id, customerUserId: user.sub, status: 'PENDING', paymentStatus: 'UNPAID' },
+      data: { status: 'CANCELLED' },
+    });
+    if (res.count !== 1) throw new ConflictException('This booking changed meanwhile. Refresh and try again.');
+
+    await this.audit.log({
+      tenantId: booking.listing.vendor.tenantId ?? undefined,
+      actorId: user.sub,
+      actorEmail: user.email ?? undefined,
+      action: 'UPDATE',
+      namespace: 'marketplace',
+      resource: 'listing_booking',
+      resourceId: booking.id,
+      beforeState: { status: booking.status, paymentStatus: booking.paymentStatus },
+      afterState: { status: 'CANCELLED', paymentStatus: booking.paymentStatus },
+      metadata: { cancelledBy: 'customer' },
+    });
+    const providerTenantId = booking.listing.vendor.tenantId;
+    if (providerTenantId) {
+      const recipient = await this.prisma.user.findFirst({ where: { tenantId: providerTenantId }, orderBy: { createdAt: 'asc' } });
+      if (recipient) {
+        await this.notifications.fire({
+          recipientUserId: recipient.id,
+          actorUserId: user.sub,
+          tenantId: providerTenantId,
+          type: 'BOOKING_STATUS',
+          title: `Booking cancelled by the customer`,
+          body: `The booking for "${booking.listing.name}" was cancelled before confirmation.`,
+          link: `/marketplace/${booking.listingId}`,
+          data: { listingBookingId: booking.id },
+        });
+      }
+    }
+    const updated = await this.prisma.listingBooking.findUniqueOrThrow({ where: { id: booking.id } });
+    return { ...updated, totalAmountCents: Number(updated.totalAmountCents) };
   }
 
   // ── Vendors (seller profiles) ─────────────────────────────────────────────────

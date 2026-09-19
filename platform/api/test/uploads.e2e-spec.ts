@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { randomUUID } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { api, createTestApp, TestContext } from './app';
@@ -209,6 +210,24 @@ describe('uploads, media ownership, document links and orphan cleanup', () => {
       const used = await uploaded(w.hotelA);
       await ctx.http().post(api('/marketplace/listings')).set(bearer(w.hotelA))
         .send({ title: `Cleanup keeper ${uniq()}`, category: 'hotel_room', imageUrls: [used.url] }).expect(201);
+      // Media referenced elsewhere: a social post (CDN-style URL form), an avatar and a group document.
+      const inPost = await uploaded(w.travelerA);
+      const inAvatar = await uploaded(w.travelerB);
+      const inGroupDoc = await uploaded(w.opA);
+      const account = await ctx.prisma.socialAccount.upsert({
+        where: { userId: w.travelerA.id },
+        create: { userId: w.travelerA.id, type: 'PILGRIM', displayName: 'Traveler A' },
+        update: {},
+      });
+      await ctx.prisma.post.create({
+        data: { authorId: account.id, type: 'UPDATE', mediaUrls: [`https://media.example.test/media/${inPost.url.split('/').pop()}`] },
+      });
+      await ctx.prisma.user.update({ where: { id: w.travelerB.id }, data: { avatarUrl: inAvatar.url } });
+      await ctx.prisma.groupDocument.create({
+        data: { groupId: randomUUID(), uploaderId: w.opA.id, name: 'Roster', url: inGroupDoc.url },
+      });
+      const elsewhere = [inPost, inAvatar, inGroupDoc].map((m) => fileOf(m.url));
+      for (const f of elsewhere) age(f, 10);
       const orphan = await uploaded(w.hotelA);
       const fresh = await uploaded(w.hotelA);
       const foreign = join(root, 'seed-photo.jpg');
@@ -224,7 +243,7 @@ describe('uploads, media ownership, document links and orphan cleanup', () => {
       expect(dry.deleted).toEqual([]);
       expect(dry.kept['too-recent']).toBeGreaterThanOrEqual(1);
       expect(dry.kept['unrecognised-name']).toBeGreaterThanOrEqual(1);
-      expect(dry.kept.referenced).toBeGreaterThanOrEqual(2);
+      expect(dry.kept.referenced).toBeGreaterThanOrEqual(5);
       expect(existsSync(fileOf(orphan.url))).toBe(true);
 
       const applied = await cleanup().run({ apply: true });
@@ -232,7 +251,9 @@ describe('uploads, media ownership, document links and orphan cleanup', () => {
       expect(applied.failed).toEqual([]);
       expect(existsSync(fileOf(orphan.url))).toBe(false);
       expect(existsSync(privateFile(orphanDoc.storageKey))).toBe(false);
-      for (const f of [fileOf(used.url), fileOf(fresh.url), foreign, privateFile(keptDoc.storageKey!)]) expect(existsSync(f), f).toBe(true);
+      for (const f of [fileOf(used.url), fileOf(fresh.url), foreign, privateFile(keptDoc.storageKey!), ...elsewhere]) {
+        expect(existsSync(f), f).toBe(true);
+      }
       expect((await ctx.prisma.mediaObject.findUniqueOrThrow({ where: { id: orphan.id } })).deletedAt).not.toBeNull();
       const audit = await ctx.prisma.auditLog.findMany({ where: { resource: 'orphaned_object', action: 'DOCUMENT_DELETE' } });
       expect(audit.map((a) => a.resourceId).sort()).toEqual(applied.deleted.map((o) => o.storageKey).sort());
