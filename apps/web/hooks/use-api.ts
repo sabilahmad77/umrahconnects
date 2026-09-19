@@ -254,27 +254,6 @@ export function useCreateGroup() {
   });
 }
 
-export function useCreateListing() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (dto: {
-      title: string;
-      category: string;
-      description?: string;
-      vendorId: string;
-      priceFrom?: number;
-      currency?: string;
-      city?: string;
-    }) => {
-      const { data } = await apiClient.post('/marketplace/listings', dto);
-      return data.data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['marketplace'] });
-    },
-  });
-}
-
 // ─── Transport ───────────────────────────────────────────────────────────────
 
 export function useTransportVehicles(params?: { page?: number; limit?: number; status?: string }) {
@@ -363,51 +342,6 @@ export function useFinanceStats(enabled = true) {
         draft: { amountCents: number; count: number };
       };
     },
-  });
-}
-
-// ─── Marketplace ─────────────────────────────────────────────────────────────
-
-export function useMarketplaceListings(params?: { page?: number; limit?: number; category?: string; status?: string }) {
-  return useQuery({
-    queryKey: ['marketplace', 'listings', params],
-    queryFn: async () => {
-      const { data } = await apiClient.get('/marketplace/listings', { params });
-      return data.data as { items: any[]; total: number };
-    },
-  });
-}
-
-export function useMarketplaceVendors() {
-  return useQuery({
-    queryKey: ['marketplace', 'vendors'],
-    queryFn: async () => {
-      const { data } = await apiClient.get('/marketplace/vendors');
-      return data.data as any[];
-    },
-  });
-}
-
-/**
- * The caller's OWN vendor record (the server gets-or-creates it per organization).
- *
- * `useMarketplaceVendors` above is the public directory of every vendor on the
- * platform, which is right for browsing but wrong for authoring: a listing may
- * only be created against the caller's own vendor, and the server 404s any
- * other `vendorId`. Anything that builds a listing has to use this hook.
- */
-export function useMyMarketplaceVendor(enabled = true) {
-  return useQuery({
-    queryKey: ['marketplace', 'vendors', 'mine'],
-    queryFn: async () => {
-      const { data } = await apiClient.get('/marketplace/vendors/mine');
-      return data.data as any;
-    },
-    // Only an account that can author listings may read this; a platform-scope
-    // account (Super Admin) has no marketplace capability and would just take a
-    // 403. Callers enable it when the authoring UI is actually in use.
-    enabled,
-    retry: false,
   });
 }
 
