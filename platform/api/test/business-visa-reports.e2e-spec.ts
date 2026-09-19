@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { api, createTestApp, TestContext } from './app';
 import { Actor, bearer, buildWorld, World } from './fixtures';
+import { RbacService } from '../src/modules/rbac/rbac.service';
 
 /**
  * Visa cases, visa service tickets and organization reports: explicit
@@ -159,12 +160,17 @@ describe('business workflows: visa cases, service tickets and reports', () => {
     });
 
     it('only people who can open visa work are assignable; staff cannot assign or close', async () => {
+      // A dedicated finance-only colleague (shared fixtures may gain roles in other suites).
+      const financeOnly = await ctx.prisma.user.create({
+        data: { tenantId: w.tenants.opA, email: `finance-only.${uniq()}@op-a.test`, firstName: 'Finance', lastName: 'Only', status: 'ACTIVE' },
+      });
+      await ctx.app.get(RbacService).grantSystemRole(financeOnly.id, 'FINANCE_MANAGER');
       const t = await ok(w.opA, 'post', '/visa-requests', { subject: 'Operator desk ticket' });
       const assignees = await expectStatus(w.opA, 'get', '/visa-requests/assignees', undefined, 200);
       const ids = assignees.map((a: any) => a.id);
       expect(ids).toContain(w.staffA.id);
-      expect(ids).not.toContain(w.financeA.id);
-      expect(await errorOf(w.opA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: w.financeA.id }, 400)).toMatch(/visa/);
+      expect(ids).not.toContain(financeOnly.id);
+      expect(await errorOf(w.opA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: financeOnly.id }, 400)).toMatch(/visa/);
       await expectStatus(w.staffA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: w.staffA.id }, 403);
       await expectStatus(w.staffA, 'put', `/visa-requests/${t.id}/close`, {}, 403);
       const assigned = await expectStatus(w.opA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: w.staffA.id }, 200);
