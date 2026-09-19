@@ -5,7 +5,8 @@
 # repeats it every ALERT_REPEAT_MINUTES while failing, and sends one recovery message.
 #   STATE_DIR=/var/lib/umrah-connect   BACKUP_DIR=/var/backups/umrah-connect
 #   ALERT_AFTER=2  ALERT_REPEAT_MINUTES=60  DISK_ALERT_PERCENT=85  BACKUP_MAX_AGE_HOURS=26
-#   HEALTH_EDGE_ADDRESS=127.0.0.1   where this host's :443 answers for API_DOMAIN ("" skips the edge check)
+#   HEALTH_EDGE_ADDRESS=127.0.0.1   where this host's HTTPS edge answers for API_DOMAIN ("" skips the edge check)
+#   HEALTH_EDGE_PORT=443
 #   UPTIME_CACERT                   passed through to the edge check (private CA in rehearsals)
 # Exit 0 healthy, 1 unhealthy (the unit then shows as failed).
 set -uo pipefail
@@ -19,6 +20,7 @@ ALERT_REPEAT_MINUTES="${ALERT_REPEAT_MINUTES:-60}"
 DISK_ALERT_PERCENT="${DISK_ALERT_PERCENT:-85}"
 BACKUP_MAX_AGE_HOURS="${BACKUP_MAX_AGE_HOURS:-26}"
 EDGE="${HEALTH_EDGE_ADDRESS-127.0.0.1}"
+EDGE_PORT="${HEALTH_EDGE_PORT:-443}"
 REPO_SCRIPTS="$(cd ../../scripts && pwd -P)"
 
 problems=""
@@ -55,7 +57,7 @@ fi
 # 3. This host's HTTPS edge (bundled Caddy or the shared proxy) for API_DOMAIN, including the certificate.
 DOMAIN="$(env_get API_DOMAIN)"
 if [ -n "$EDGE" ] && [ -n "$DOMAIN" ]; then
-  if out="$(UPTIME_API_URL="https://$DOMAIN" UPTIME_WEB_URL="" UPTIME_CONNECT_TO="$EDGE" UPTIME_ATTEMPTS=2 \
+  if out="$(UPTIME_API_URL="https://$DOMAIN:$EDGE_PORT" UPTIME_WEB_URL="" UPTIME_CONNECT_TO="$EDGE" UPTIME_ATTEMPTS=2 \
     UPTIME_RETRY_DELAY=3 UPTIME_TIMEOUT=10 "$REPO_SCRIPTS/uptime-check.sh" 2>&1)"; then
     ok "HTTPS edge for $DOMAIN via $EDGE"
   else

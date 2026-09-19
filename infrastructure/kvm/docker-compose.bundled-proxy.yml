@@ -14,7 +14,9 @@ services:
       - caddy_config:/config
     network_mode: none
     cap_drop: [ALL]
-    cap_add: [CHOWN, FOWNER]
+    # CHOWN/FOWNER to change owner and mode; DAC_READ_SEARCH to walk directories that already belong to
+    # uid 10002 with mode 0700 (every run after the first).
+    cap_add: [CHOWN, FOWNER, DAC_READ_SEARCH]
     security_opt:
       - no-new-privileges:true
     restart: "no"
@@ -22,8 +24,8 @@ services:
   uc-caddy:
     image: caddy:2.8
     restart: unless-stopped
-    # Non-root. Docker lets unprivileged processes bind ports below 1024 inside a container
-    # (net.ipv4.ip_unprivileged_port_start=0), so no capability is needed.
+    # Non-root. The image's caddy binary carries the file capability cap_net_bind_service=ep; the kernel
+    # refuses to exec it unless that capability is in the bounding set, so it is the one capability kept.
     user: "10002:10002"
     environment:
       API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
@@ -55,6 +57,7 @@ services:
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
     logging:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
