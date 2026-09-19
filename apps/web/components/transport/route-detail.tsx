@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Map as MapIcon, Pencil, Trash2, ListChecks, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiErrorMessage } from '@/lib/api-error';
 import { Button, LoadingState, QueryFailure } from '@/components/ui/system';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { useCapabilities } from '@/hooks/use-capabilities';
@@ -44,9 +43,9 @@ export function RouteDetail({ id }: { id: string }) {
             <Button variant="secondary" type="button" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Edit</Button>
             <Button variant="quiet" type="button" className="text-red-700 hover:bg-red-50" busy={remove.isPending} onClick={() => setConfirm({
               title: `Archive ${r.name}?`, body: 'The route stops selling seats; its trips stay on record. A route with open trips cannot be archived.', cta: 'Archive route', tone: 'danger',
+              failureMessage: 'The route could not be archived.',
               onConfirm: async () => {
-                try { await remove.mutateAsync(r.id); toast.success('Route archived'); router.push('/transport/routes'); }
-                catch (e) { toast.error(apiErrorMessage(e, 'The route could not be archived.')); }
+                await remove.mutateAsync(r.id); toast.success('Route archived'); router.push('/transport/routes');
               },
             })}><Trash2 className="h-4 w-4" /> Archive</Button>
           </div>
