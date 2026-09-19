@@ -102,7 +102,7 @@ export function ReportsView() {
         )}
       </Section>
 
-      <Section title="Bookings per month (last 6 months)" icon={BookOpen} query={bookings} empty={(bookings.data?.total ?? 0) === 0}>
+      <Section title="Bookings per month (last 6 months)" icon={BookOpen} query={bookings} empty={trend.every((t) => t.count === 0)}>
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={trend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} />

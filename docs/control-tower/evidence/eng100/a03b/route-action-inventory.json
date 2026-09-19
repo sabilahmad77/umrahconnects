@@ -1,0 +1,581 @@
+{
+  "summary": {
+    "run": "EUZ5N",
+    "generatedAt": "2026-09-19T13:18:03.297Z",
+    "web": "http://localhost:3413",
+    "total": 57,
+    "passed": 57
+  },
+  "results": [
+    {
+      "route": "/hotel-dashboard",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "open dashboard (figures from data)",
+      "request": "GET /hotels/stats",
+      "expected": "dashboard renders; \"Own hotels\" equals GET /hotels/stats",
+      "actual": "rendered=true; tile=\"7 Own hotels 3 active\"; api total=7",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "add hotel — required field missing",
+      "request": null,
+      "expected": "client error \"Enter the hotel name.\" and no request",
+      "actual": "inline error=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "add hotel — valid",
+      "request": "POST /hotels",
+      "expected": "hotel saved, listed after refresh",
+      "actual": "listed after reload=true; api found=true; checkInTime=14:00",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "add room — number required, duplicate refused, valid saved",
+      "request": "POST /hotels/:id/rooms",
+      "expected": "inline error; 409 shown for duplicate; room listed",
+      "actual": "required=true; duplicate refused=true; rooms=1",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "add room type (explicit guests kept)",
+      "request": "POST /hotels/:id/room-types",
+      "expected": "sleeps 3 persisted",
+      "actual": "occupancy=3",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "room status offers no OCCUPIED",
+      "request": null,
+      "expected": "status select has Available/Maintenance only",
+      "actual": "options=Available/Maintenance",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-bookings",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "new booking — guest required; room picker from availability; pending",
+      "request": "POST /hotels/bookings",
+      "expected": "inline errors, then booking PENDING with room 701, payment UNPAID",
+      "actual": "guest required=true; status=PENDING; room=701; payment=UNPAID",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-bookings",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "double booking of the same room refused",
+      "request": "POST /hotels/bookings (overlap)",
+      "expected": "409 \"already booked\" shown in the form",
+      "actual": "picker offers room 701=false; server=409 Room 701 is already booked from 2026-09-29 to 2026-10-01",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-bookings",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "confirm → check in → check out → complete (server transitions)",
+      "request": "PUT /hotels/bookings/:id {status}",
+      "expected": "only allowed moves offered; room OCCUPIED while checked in, AVAILABLE after",
+      "actual": "first offered=[Confirm, Cancel booking, ]; room while in=OCCUPIED; after=AVAILABLE; final=COMPLETED; row shows Completed=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-bookings",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "payment status is read-only",
+      "request": "PUT /hotels/bookings/:id {paymentStatus:PAID}",
+      "expected": "no payment select; API refuses paymentStatus",
+      "actual": "payment selects=0; server=400",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels",
+      "role": "HOTEL_MANAGER (B)",
+      "action": "empty state for a new tenant",
+      "request": null,
+      "expected": "no A hotels; empty state",
+      "actual": "A hotel visible=false",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "HOTEL_MANAGER (B)",
+      "action": "open A's hotel by URL",
+      "request": null,
+      "expected": "unavailable state (404)",
+      "actual": "unavailable=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-bookings",
+      "role": "HOTEL_MANAGER (B)",
+      "action": "move A's booking via API",
+      "request": "PUT /hotels/bookings/:id {status:CANCELLED}",
+      "expected": "404; A booking unchanged",
+      "actual": "B=404; A readback=COMPLETED",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport-dashboard",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "open dashboard",
+      "request": null,
+      "expected": "figures render",
+      "actual": "rendered=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/vehicles",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "add vehicle — required, then valid, then duplicate plate",
+      "request": "POST /transport/vehicles",
+      "expected": "inline errors; saved; 409 on duplicate",
+      "actual": "required=true; duplicate refused=true; found=1",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/routes",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "add route with 4 seats on the new vehicle",
+      "request": "POST /transport/routes",
+      "expected": "saved; seats 0/4",
+      "actual": "route=JED → MAK EUZ5N; seats 0/4",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/assignments",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "new trip — too many passengers refused client-side; valid trip saved",
+      "request": "POST /transport/assignments",
+      "expected": "inline seat error; trip SCHEDULED; route seats 3/4",
+      "actual": "seat error=true; trip=SCHEDULED; route seats 3/4; payment=UNPAID",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/assignments",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "overlapping trip on the same vehicle refused",
+      "request": "POST /transport/assignments (clash)",
+      "expected": "409 shown in the form",
+      "actual": "server=409 Vehicle A3B-EUZ5N already has a trip at 2026-09-24 05:00 UTC",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/assignments",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "start → complete trip; fleet status follows",
+      "request": "PUT /transport/assignments/:id {status}",
+      "expected": "vehicle IN_SERVICE while under way, AVAILABLE after; seats sold stay 3",
+      "actual": "during=IN_SERVICE; after=AVAILABLE bookedSeats=0; route sold=3; row Completed=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/bookings",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "bookings view: payment read-only, cancel needs confirmation",
+      "request": "POST /transport/assignments/:id/cancel",
+      "expected": "no payment select; confirm dialog; trip cancelled; seats released",
+      "actual": "payment selects=0; confirm=true; status=CANCELLED; route sold=3",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/vehicles/[id]",
+      "role": "TRANSPORT_MANAGER (B)",
+      "action": "open A's vehicle; cancel A's trip via API",
+      "request": "GET page; POST /transport/assignments/:id/cancel",
+      "expected": "unavailable; 404; A data unchanged",
+      "actual": "unavailable=true; B cancel=404; A readback=COMPLETED",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels",
+      "role": "TRANSPORT_MANAGER (B)",
+      "action": "route without the grant",
+      "request": null,
+      "expected": "workspace access required",
+      "actual": "denied=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/visa-dashboard",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "open dashboard",
+      "request": null,
+      "expected": "figures render (tickets, documents to review)",
+      "actual": "rendered=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "new application — applicant required, then created",
+      "request": "POST /compliance/visas",
+      "expected": "inline error; created and opened",
+      "actual": "required=true; status=NOT_STARTED; fee=35000",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "submit incomplete → readiness error shown",
+      "request": "PUT /compliance/visas/:id/submit",
+      "expected": "400 listing passport, nationality, visa type",
+      "actual": "readiness error=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "edit applicant details",
+      "request": "PUT /compliance/visas/:id",
+      "expected": "saved and shown after reload",
+      "actual": "shown after reload=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "documents: add, upload (version 1), verify",
+      "request": "POST documents; POST …/versions; PUT …/verify",
+      "expected": "document VERIFIED v1",
+      "actual": "status=VERIFIED; version=1",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "open file through the signed-URL helper",
+      "request": "GET /documents/visa/:docId/url",
+      "expected": "signed URL returned (valid ≤ 5 min)",
+      "actual": "status=200; has url=true; expiresAt=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "submit, then approve — visa number required",
+      "request": "PUT …/submit; PUT …/approve",
+      "expected": "SUBMITTED; empty number blocked; APPROVED with number",
+      "actual": "required=true; status=APPROVED; visaNumber=V-EUZ5N; shown=true; timeline=CREATED>STATUS_SUBMITTED>STATUS_APPROVED",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/visa-requests",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "ticket: invalid email blocked; create; resolve; reopen; close",
+      "request": "POST /visa-requests; PUT …/resolve|reopen|close",
+      "expected": "validation; lifecycle recorded; closed ticket takes no notes",
+      "actual": "email error=true; status buttons after resolve=0; final=CLOSED; reopenCount=1; note form after close=0",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER agency (B)",
+      "action": "open and decide A's case",
+      "request": "GET page; PUT …/reject",
+      "expected": "unavailable; 404; A unchanged",
+      "actual": "unavailable=true; B reject=404; A readback=APPROVED",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/dashboard",
+      "role": "OPERATOR_STAFF",
+      "action": "operator dashboard without finance grant",
+      "request": null,
+      "expected": "renders operational KPIs; no revenue panel; no error",
+      "actual": "kpis=true; revenue panels=0; permission errors=0",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/reports",
+      "role": "OPERATOR_STAFF",
+      "action": "reports with reporting:report:read only",
+      "request": "GET /reports/*",
+      "expected": "operational sections; money notice; no export; /reports/finance 403",
+      "actual": "overview=true; notice=1; export button=0; finance=403; export=403",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels",
+      "role": "OPERATOR_STAFF",
+      "action": "hotels read-only for staff",
+      "request": null,
+      "expected": "no Add hotel; read-only notice",
+      "actual": "add buttons=0; notice=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "OPERATOR_STAFF",
+      "action": "staff submits a case but cannot decide",
+      "request": "POST /compliance/visas; PUT …/submit; PUT …/approve",
+      "expected": "SUBMITTED; no Approve button; API approve 403",
+      "actual": "created=201; approve buttons=0; note=true; API approve=403",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance/[id]",
+      "role": "VISA_OFFICER (operator)",
+      "action": "reject with reason (required)",
+      "request": "PUT /compliance/visas/:id/reject",
+      "expected": "empty reason blocked; REJECTED with reason",
+      "actual": "required=true; status=REJECTED; reason=Passport photo page unreadable",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/dashboard",
+      "role": "OPERATOR_ADMIN",
+      "action": "operator dashboard with finance grant",
+      "request": null,
+      "expected": "KPIs and money panel",
+      "actual": "kpis=true; money=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/reports",
+      "role": "OPERATOR_ADMIN",
+      "action": "export CSV (server-built)",
+      "request": "GET /reports/export",
+      "expected": "CSV download with Finance section",
+      "actual": "file=umrah-connect-report-2026-09-19.csv; header ok=true; finance=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "OPERATOR_ADMIN",
+      "action": "contract an allotment and assign a room to a booking",
+      "request": "POST /hotels/:id/allotments; POST /hotels/:id/assignments",
+      "expected": "allotment 2 rooms; assignment listed; 1 left",
+      "actual": "allotment rooms=2; assigned=1; left=1; assignments=4",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "edit hotel — empty name refused, phone saved",
+      "request": "PUT /hotels/:id",
+      "expected": "inline error; phone persisted after reload",
+      "actual": "inline error=true; phone after reload=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "archive a room with a stay ahead",
+      "request": "DELETE /hotels/rooms/:id",
+      "expected": "409 explained; room unchanged",
+      "actual": "booking=201; refusal shown=true; room=AVAILABLE",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "route without the grant",
+      "request": null,
+      "expected": "workspace access required",
+      "actual": "denied=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-dashboard",
+      "role": "HOTEL_MANAGER (B)",
+      "action": "empty tenant dashboard",
+      "request": null,
+      "expected": "renders with zero figures, no error",
+      "actual": "rendered=true; own hotels=0; bookings=0",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/drivers",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "add driver — required fields, then saved",
+      "request": "POST /transport/drivers",
+      "expected": "inline errors; driver listed after reload",
+      "actual": "required=true; listed after reload=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/drivers/[id]",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "edit driver — empty phone refused, notes saved",
+      "request": "PUT /transport/drivers/:id",
+      "expected": "inline error; notes persisted",
+      "actual": "inline error=true; notes after reload=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/vehicles/[id]",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "assign primary driver; record Tasreeh permit (dates checked)",
+      "request": "POST /transport/vehicles/:id/drivers; POST /transport/tasreeh",
+      "expected": "driver shown as primary; bad dates refused; permit listed",
+      "actual": "primary=true; date error=true; permit stored=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/vehicles/[id]",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "archive a vehicle with an open trip",
+      "request": "DELETE /transport/vehicles/:id",
+      "expected": "409 explained; vehicle stays active",
+      "actual": "refusal shown=true; isActive=true; status=AVAILABLE",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/routes/[id]",
+      "role": "TRANSPORT_MANAGER (A)",
+      "action": "edit route — seats below sold refused, pickup point saved",
+      "request": "PUT /transport/routes/:id",
+      "expected": "inline error; pickup persisted",
+      "actual": "inline error=true; pickup after reload=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/visa-documents",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "document register lists the verified document",
+      "request": null,
+      "expected": "row with Verified status",
+      "actual": "verified row=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "search applications (server-side)",
+      "request": "GET /compliance/visas?search=",
+      "expected": "only the matching application",
+      "actual": "rows incl. header=2",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/visa-requests/[id]",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "ticket priority and due date set, due date cleared",
+      "request": "POST /visa-requests; PATCH /visa-requests/:id",
+      "expected": "values persisted after reload",
+      "actual": "priority=HIGH; due set=true; cleared=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/vehicles",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "route without the grant",
+      "request": null,
+      "expected": "workspace access required",
+      "actual": "denied=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotels/[id]",
+      "role": "OPERATOR_ADMIN",
+      "action": "adjust allotment (invalid refused, valid saved); release the assigned room",
+      "request": "PUT /hotels/allotments/:id; DELETE /hotels/:id/assignments/:aid",
+      "expected": "inline error; 3 rooms persisted; release confirmed; room back in the allotment",
+      "actual": "inline error=true; rooms=3; after release assigned=0 left=3; row gone after reload=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/visa-requests/[id]",
+      "role": "OPERATOR_ADMIN",
+      "action": "assign a ticket to staff (manager)",
+      "request": "PUT /visa-requests/:id/assign",
+      "expected": "assignee persisted; staff sees it read-only",
+      "actual": "persisted=true; staff assignee select options=0; staff close buttons=0",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/transport/vehicles",
+      "role": "OPERATOR_STAFF",
+      "action": "fleet read-only for staff",
+      "request": null,
+      "expected": "no Add vehicle; read-only notice",
+      "actual": "add buttons=0; notice=true",
+      "persisted": null,
+      "result": "PASS"
+    },
+    {
+      "route": "/hotel-bookings",
+      "role": "HOTEL_MANAGER (A)",
+      "action": "fresh login — records persisted",
+      "request": null,
+      "expected": "hotel, room and completed booking still there",
+      "actual": "completed booking shown=true",
+      "persisted": true,
+      "result": "PASS"
+    },
+    {
+      "route": "/compliance",
+      "role": "VISA_OFFICER agency (A)",
+      "action": "fresh login — approved case and closed ticket persisted",
+      "request": null,
+      "expected": "case APPROVED with visa number; ticket CLOSED",
+      "actual": "approved row=true; ticket closed=true",
+      "persisted": true,
+      "result": "PASS"
+    }
+  ]
+}

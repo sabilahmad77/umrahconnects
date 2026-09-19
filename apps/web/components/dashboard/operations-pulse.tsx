@@ -194,8 +194,8 @@ function BookingTrend() {
     <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
       <h2 className="font-semibold text-gray-900">Booking trend</h2>
       <p className="text-xs text-gray-600 mt-0.5 mb-4">New bookings per month, last 6 months</p>
-      {error ? <QueryFailure error={error} onRetry={() => refetch()} /> : isLoading ? <div className="h-48 bg-gray-50 rounded-xl animate-pulse" /> : (data?.total ?? 0) === 0 ? (
-        <div className="h-48 flex flex-col items-center justify-center text-gray-600"><AlertCircle className="h-8 w-8 mb-2 opacity-40" /><p className="text-sm">No bookings yet</p></div>
+      {error ? <QueryFailure error={error} onRetry={() => refetch()} /> : isLoading ? <div className="h-48 bg-gray-50 rounded-xl animate-pulse" /> : trend.every((t) => t.bookings === 0) ? (
+        <div className="h-48 flex flex-col items-center justify-center text-gray-600"><AlertCircle className="h-8 w-8 mb-2 opacity-40" /><p className="text-sm">No new bookings in the last 6 months</p></div>
       ) : (
         <ResponsiveContainer width="100%" height={192}>
           <AreaChart data={trend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
