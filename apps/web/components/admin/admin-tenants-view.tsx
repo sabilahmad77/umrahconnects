@@ -1,20 +1,19 @@
 'use client';
 import { apiErrorMessage } from '@/lib/api-error';
-import { Input, Select , Button , QueryFailure } from '@/components/ui/system';
+import { Input, Button, QueryFailure } from '@/components/ui/system';
 
 
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  Building2, RefreshCw, Loader2, AlertCircle, Search, Archive, Download,
+  Building2, RefreshCw, Loader2, Search, Download,
   CheckCircle2, Ban, Clock, ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import {
-  useAdminTenants, useSetTenantStatus, useArchiveTenant, useAdminExport, useAdminStats } from '@/hooks/use-admin';
+import { useAdminTenants, useAdminExport, useAdminStats } from '@/hooks/use-admin';
+import { TenantStatusActions } from './tenant-status-actions';
 import { TENANT_STATUSES, TENANT_STATUS_META } from '@/lib/statuses';
-import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 
 const FILTERS = ['ALL', ...TENANT_STATUSES] as const;
 const PAGE_SIZE = 20;
@@ -26,7 +25,6 @@ export function AdminTenantsView() {
   const [status, setStatus] = useState<string>('ALL');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
 
   const params = {
     status: status !== 'ALL' ? status : undefined,
@@ -35,8 +33,6 @@ export function AdminTenantsView() {
     limit: PAGE_SIZE,
   };
   const { data, isLoading, error, refetch } = useAdminTenants(params);
-  const setTenantStatus = useSetTenantStatus();
-  const archive = useArchiveTenant();
   const exportCsv = useAdminExport();
 
   const { data: stats } = useAdminStats();
@@ -110,7 +106,7 @@ export function AdminTenantsView() {
               key={s}
               onClick={() => { setStatus(s); setPage(1); }}
               className={cn('text-xs px-3 py-1.5 rounded-full border font-medium transition-all',
-                status === s ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
+                status === s ? 'bg-brand-500 text-white border-brand-500 hover:bg-brand-600 hover:text-white' : 'border-gray-200 text-gray-600 hover:border-gray-300')}
             >
               {s === 'ALL' ? 'All' : TENANT_STATUS_META[s]?.label ?? s}
             </Button>
@@ -140,7 +136,7 @@ export function AdminTenantsView() {
                   <th className="text-left p-3">Users</th>
                   <th className="text-left p-3">Created</th>
                   <th className="text-left p-3">Status</th>
-                  <th />
+                  <th className="text-right p-3">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -161,53 +157,12 @@ export function AdminTenantsView() {
                       <td className="p-3">{t._count?.users ?? 0}</td>
                       <td className="p-3 text-xs text-gray-600">{new Date(t.createdAt).toLocaleDateString()}</td>
                       <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium', meta.color)}>
-                            <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />{meta.label}
-                          </span>
-                          <Select disabled={setTenantStatus.isPending}
-                            value={t.status}
-                            aria-label={`Status for ${t.name}`}
-                            onChange={(e) => { try {
-                              const next = e.target.value;
-                              const blocking = next !== 'ACTIVE';
-                              setConfirm({
-                                title: `Set ${t.name} to ${TENANT_STATUS_META[next]?.label ?? next}?`,
-                                body: blocking
-                                  ? `Everyone in ${t.name} is signed out of the platform until the tenant is set back to Active. Their data is untouched.`
-                                  : `${t.name} regains access to the platform immediately.`,
-                                cta: 'Change status',
-                                tone: blocking ? 'danger' : 'default',
-                                onConfirm: () => run(
-                                  () => setTenantStatus.mutateAsync({ id: t.id, status: next }),
-                                  `${t.name} → ${TENANT_STATUS_META[next]?.label ?? next}`,
-                                ),
-                              });
-                            } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
-                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                          >
-                            {TENANT_STATUSES.map((s) => (
-                              <option key={s} value={s}>{TENANT_STATUS_META[s].label}</option>
-                            ))}
-                          </Select>
-                        </div>
+                        <span className={cn('inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium', meta.color)}>
+                          <span className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />{meta.label}
+                        </span>
                       </td>
                       <td className="p-3 text-right">
-                        <Button variant="quiet" type="button"
-                          aria-label={`Archive ${t.name}`}
-                          disabled={!!t.deletedAt}
-                          onClick={() => setConfirm({
-                            title: `Archive ${t.name}?`,
-                            body: `The tenant is marked Archived and everyone in it loses access. Records are retained, not deleted. This is not undone by a single click.`,
-                            cta: 'Archive tenant',
-                            tone: 'danger',
-                            typeToConfirm: t.slug,
-                            onConfirm: () => run(() => archive.mutateAsync(t.id), `${t.name} archived`),
-                          })}
-                          className="p-1.5 rounded hover:bg-red-50 text-red-700 disabled:opacity-30 disabled:hover:bg-transparent"
-                        >
-                          <Archive className="h-3.5 w-3.5" />
-                        </Button>
+                        <TenantStatusActions compact tenant={t} onChanged={() => void refetch()} />
                       </td>
                     </tr>
                   );
@@ -227,7 +182,6 @@ export function AdminTenantsView() {
         </div>
       )}
 
-      {confirm && <ConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }

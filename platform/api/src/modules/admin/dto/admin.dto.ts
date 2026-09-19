@@ -32,7 +32,7 @@ export class AssignRoleDto {
 }
 
 import { Type } from 'class-transformer';
-import { IsArray, IsIn, IsInt, IsObject, Max, Min, ArrayMaxSize, ValidateNested, IsNumber, Matches } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsObject, Max, Min, ArrayMaxSize, ArrayMinSize, ValidateNested, IsNumber, Matches, MinLength } from 'class-validator';
 
 /** Shared list/filter query for platform admin listings (unknown keys are rejected). */
 export class AdminListQueryDto {
@@ -71,13 +71,27 @@ export class KycDecisionDto {
   @IsOptional() @IsString() @MaxLength(1000) notes?: string;
 }
 
+/**
+ * The reason is shown to the organization so it can correct its submission,
+ * which is why an empty or one-word placeholder is refused.
+ */
 export class KycRejectDto {
-  @IsString() @MaxLength(1000) reason!: string;
+  @IsString() @MinLength(3, { message: 'Give the organization a reason of at least 3 characters' }) @MaxLength(1000) reason!: string;
 }
 
+/**
+ * An organization's own verification submission. At least one uploaded
+ * document is required: a submission with nothing to review would only sit in
+ * the queue and could never be approved on evidence.
+ */
 export class TenantKycSubmissionDto {
   @IsIn(REGISTRY_SOURCES as unknown as string[]) registrySource!: string;
   @IsOptional() @IsString() @MaxLength(100) licenseNumber?: string;
   @IsOptional() @IsObject() @RawJson() registryData?: Record<string, unknown>;
-  @IsOptional() @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => KycDocumentRefDto) documents?: KycDocumentRefDto[];
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Upload at least one verification document' })
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => KycDocumentRefDto)
+  documents!: KycDocumentRefDto[];
 }

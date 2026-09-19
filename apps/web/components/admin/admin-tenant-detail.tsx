@@ -1,36 +1,16 @@
 'use client';
-import { apiErrorMessage } from '@/lib/api-error';
-import { Select , Button , QueryFailure } from '@/components/ui/system';
 
-
-import { useState } from 'react';
 import Link from 'next/link';
-import {
-  ArrowLeft, Loader2, AlertCircle, Users, ShieldCheck, History, Archive,
-  Building2, Mail, Globe, Hash,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowLeft, Loader2, AlertCircle, Users, ShieldCheck, History, Building2, Mail, Globe, Hash } from 'lucide-react';
+import { QueryFailure } from '@/components/ui/system';
 import { cn } from '@/lib/utils';
-import {
-  useAdminTenant, useSetTenantStatus, useArchiveTenant, useAdminAuditLogs,
-} from '@/hooks/use-admin';
-import { TENANT_STATUSES, TENANT_STATUS_META, USER_STATUS_META, humanizeStatus } from '@/lib/statuses';
-import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
-
-/** Uses the shared helper so validation arrays render as a sentence. */
-const apiError = (e: any) => apiErrorMessage(e, 'Action failed');
+import { useAdminTenant, useAdminAuditLogs } from '@/hooks/use-admin';
+import { TENANT_STATUS_META, USER_STATUS_META, humanizeStatus } from '@/lib/statuses';
+import { TenantStatusActions } from './tenant-status-actions';
 
 export function AdminTenantDetail({ id }: { id: string }) {
   const { data: t, isLoading, error, refetch } = useAdminTenant(id);
-  const { data: logs , error: adminAuditLogsError, refetch: retryAdminAuditLogs} = useAdminAuditLogs({ resource: 'tenant', limit: 100 });
-  const setStatus = useSetTenantStatus();
-  const archive = useArchiveTenant();
-  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
-
-  const run = async (fn: () => Promise<unknown>, okMsg: string) => {
-    try { await fn(); toast.success(okMsg); refetch(); }
-    catch (e: any) { toast.error(apiError(e)); }
-  };
+  const { data: logs , error: adminAuditLogsError, refetch: retryAdminAuditLogs} = useAdminAuditLogs({ tenantId: id, limit: 100 });
 
   if (error || adminAuditLogsError) return <QueryFailure error={error || adminAuditLogsError} onRetry={() => { refetch(); retryAdminAuditLogs(); }} />;
   if (isLoading) {
@@ -51,7 +31,9 @@ export function AdminTenantDetail({ id }: { id: string }) {
   }
 
   const meta = TENANT_STATUS_META[t.status] ?? { label: t.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-  const trail = (logs?.items ?? []).filter((l: any) => l.resourceId === id || l.tenantId === id);
+  // Scoped by the server to this organization: status changes, KYC submissions and
+  // decisions, and account changes made inside it.
+  const trail = logs?.items ?? [];
 
 
   return (
@@ -83,42 +65,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Select disabled={setStatus.isPending}
-              value={t.status}
-              aria-label="Tenant status"
-              onChange={(e) => { try {
-                const next = e.target.value;
-                const blocking = next !== 'ACTIVE';
-                setConfirm({
-                  title: `Set ${t.name} to ${TENANT_STATUS_META[next]?.label ?? next}?`,
-                  body: blocking
-                    ? `Everyone in ${t.name} is signed out until the tenant is Active again. Their data is untouched.`
-                    : `${t.name} regains access to the platform immediately.`,
-                  cta: 'Change status',
-                  tone: blocking ? 'danger' : 'default',
-                  onConfirm: () => run(() => setStatus.mutateAsync({ id, status: next }), 'Status updated'),
-                });
-              } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
-              className="text-sm px-3 py-2 border border-gray-200 rounded-xl bg-white outline-none"
-            >
-              {TENANT_STATUSES.map((s) => <option key={s} value={s}>{TENANT_STATUS_META[s].label}</option>)}
-            </Select>
-            <Button variant="quiet" type="button"
-              disabled={!!t.deletedAt}
-              onClick={() => setConfirm({
-                title: `Archive ${t.name}?`,
-                body: 'The tenant is marked Archived and everyone in it loses access. Records are retained, not deleted.',
-                cta: 'Archive tenant',
-                tone: 'danger',
-                typeToConfirm: t.slug,
-                onConfirm: () => run(() => archive.mutateAsync(id), 'Tenant archived'),
-              })}
-              className="inline-flex items-center gap-1.5 text-sm px-3 py-2 border border-red-200 text-red-600 rounded-xl hover:bg-red-50 disabled:opacity-40"
-            >
-              <Archive className="h-3.5 w-3.5" /> Archive
-            </Button>
-          </div>
+          <TenantStatusActions tenant={t} onChanged={() => void refetch()} />
         </div>
       </div>
 
@@ -189,22 +136,26 @@ export function AdminTenantDetail({ id }: { id: string }) {
               <ShieldCheck className="h-4 w-4 text-gray-600" /> KYC
             </h2>
             {(t.kycRecords ?? []).length === 0 ? (
-              <p className="text-xs text-gray-600">No KYC record submitted.</p>
+              <p className="text-xs text-gray-600">No KYC submission yet.</p>
             ) : (
-              <div className="space-y-2">
+              <ul className="space-y-2">
                 {t.kycRecords.map((k: any) => (
-                  <div key={k.id} className="text-xs">
-                    <p className="text-gray-700 font-medium">
-                      {k.verifiedAt ? 'Approved' : k.rejectionReason ? 'Rejected' : 'Pending review'}
+                  <li key={k.id} className="text-xs">
+                    <p className="font-medium text-gray-700">
+                      {k.verifiedAt ? 'Approved' : k.rejectionReason ? 'Sent back' : 'Awaiting review'}
                     </p>
                     <p className="text-gray-600">
-                      {k.registrySource ?? '—'} · {new Date(k.createdAt).toLocaleDateString()}
+                      {k.registrySource ?? '—'} · submitted {new Date(k.createdAt).toLocaleDateString()}
+                      {k.verifiedAt ? ` · approved ${new Date(k.verifiedAt).toLocaleDateString()}` : ''}
                     </p>
-                    {k.rejectionReason && <p className="text-red-600 mt-1">{k.rejectionReason}</p>}
-                  </div>
+                    {k.rejectionReason && <p className="mt-1 whitespace-pre-line text-red-600">{k.rejectionReason}</p>}
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
+            <Link href={`/admin-kyc?tenant=${t.id}`} className="mt-3 inline-block text-xs font-medium text-brand-700 hover:underline">
+              Open in KYC review →
+            </Link>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -219,7 +170,6 @@ export function AdminTenantDetail({ id }: { id: string }) {
         </div>
       </div>
 
-      {confirm && <ConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }

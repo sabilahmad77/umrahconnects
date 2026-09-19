@@ -1,0 +1,173 @@
+{
+  "checks": [
+    {
+      "label": "/admin-dashboard loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-tenants loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-users loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-listings loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-kyc loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-inquiries loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-roles loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-logs loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-support loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "/admin-settings loads without errors",
+      "ok": true,
+      "detail": {
+        "denied": false,
+        "failed": [],
+        "unavailable": false
+      }
+    },
+    {
+      "label": "users: locking persists after reload",
+      "ok": true
+    },
+    {
+      "label": "users: unlocking persists after reload",
+      "ok": true
+    },
+    {
+      "label": "users: only grantable roles are offered (no SUPER_ADMIN or operator roles for a hotel account)",
+      "ok": true,
+      "detail": [
+        "+ Add role",
+        "FINANCE_MANAGER",
+        "PILGRIM"
+      ]
+    },
+    {
+      "label": "users: a granted role persists",
+      "ok": true
+    },
+    {
+      "label": "users: a revoked role stays revoked",
+      "ok": true
+    },
+    {
+      "label": "users: force logout reports the sessions revoked",
+      "ok": true
+    },
+    {
+      "label": "users: no control to lock your own account",
+      "ok": true
+    },
+    {
+      "label": "organizations: suspension persists and is in the audit trail",
+      "ok": true
+    },
+    {
+      "label": "organizations: lifting the suspension returns it to Active",
+      "ok": true
+    },
+    {
+      "label": "organizations: the API refuses setting a verification state directly (400)",
+      "ok": true,
+      "detail": {
+        "status": 400,
+        "message": "Verification states change only through KYC review"
+      }
+    },
+    {
+      "label": "listings: removal persists (ARCHIVED)",
+      "ok": true
+    },
+    {
+      "label": "listings: approval persists (PUBLISHED)",
+      "ok": true
+    },
+    {
+      "label": "inquiries: a public website inquiry is accepted",
+      "ok": true,
+      "detail": 201
+    },
+    {
+      "label": "inquiries: a status change persists",
+      "ok": true
+    },
+    {
+      "label": "logs: KYC decisions are in the audit log",
+      "ok": true
+    },
+    {
+      "label": "roles: the role’s capability matrix is shown",
+      "ok": true
+    },
+    {
+      "label": "the platform account is refused organization pages (denied state)",
+      "ok": true
+    }
+  ],
+  "ranAt": "2026-09-19T12:00:12.358Z"
+}

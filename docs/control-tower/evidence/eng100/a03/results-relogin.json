@@ -1,0 +1,57 @@
+{
+  "menus": {
+    "operator": [
+      "/dashboard",
+      "/pilgrims",
+      "/bookings",
+      "/packages",
+      "/groups",
+      "/hotels",
+      "/transport",
+      "/compliance",
+      "/finance",
+      "/reports",
+      "/marketplace",
+      "/social",
+      "/connections",
+      "/requests"
+    ],
+    "thenHotel": [
+      "/hotel-dashboard",
+      "/hotels",
+      "/hotel-bookings",
+      "/finance",
+      "/marketplace",
+      "/social",
+      "/connections",
+      "/requests",
+      "/reports"
+    ]
+  },
+  "checks": [
+    {
+      "label": "after re-login as another account the menu is that account’s",
+      "ok": true,
+      "detail": [
+        "/hotel-dashboard",
+        "/hotels",
+        "/hotel-bookings",
+        "/finance",
+        "/marketplace",
+        "/social",
+        "/connections",
+        "/requests",
+        "/reports"
+      ]
+    },
+    {
+      "label": "the stored profile is the new account",
+      "ok": true
+    },
+    {
+      "label": "the previous account’s pages are refused",
+      "ok": true
+    }
+  ],
+  "ranAt": "2026-09-19T12:05:58.613Z"
+}

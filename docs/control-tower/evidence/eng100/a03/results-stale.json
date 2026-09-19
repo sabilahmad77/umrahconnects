@@ -1,0 +1,51 @@
+{
+  "checks": [
+    {
+      "label": "finance starts without Pilgrims in the menu",
+      "ok": true
+    },
+    {
+      "label": "organization admin grants OPERATOR_STAFF through the API",
+      "ok": true,
+      "detail": 201
+    },
+    {
+      "label": "on returning to the tab (focus/visibility) the granted area appears without reload",
+      "ok": true
+    },
+    {
+      "label": "the granted page opens",
+      "ok": true
+    },
+    {
+      "label": "organization admin revokes the role through the API",
+      "ok": true,
+      "detail": 200
+    },
+    {
+      "label": "a 403 from the API refreshes the profile: menu entry gone, page denied (no reload, no tab switch)",
+      "ok": true,
+      "detail": {
+        "got403": true
+      }
+    },
+    {
+      "label": "re-granted: menu entry and page come back on focus",
+      "ok": true
+    },
+    {
+      "label": "revoked: on focus the menu entry disappears and the open page shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "the API independently refuses GET /pilgrims (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: crm:pilgrim:read"
+      }
+    }
+  ],
+  "focusMechanism": "focus + visibilitychange dispatched to the page (headless Chrome emits neither on a tab switch)",
+  "ranAt": "2026-09-19T12:05:44.539Z"
+}

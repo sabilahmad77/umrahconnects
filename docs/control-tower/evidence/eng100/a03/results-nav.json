@@ -1,0 +1,871 @@
+{
+  "operator": {
+    "landing": "/dashboard",
+    "nav": [
+      "/dashboard",
+      "/pilgrims",
+      "/bookings",
+      "/packages",
+      "/groups",
+      "/hotels",
+      "/transport",
+      "/compliance",
+      "/finance",
+      "/reports",
+      "/marketplace",
+      "/social",
+      "/connections",
+      "/requests"
+    ]
+  },
+  "checks": [
+    {
+      "label": "operator: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/dashboard",
+          "/pilgrims",
+          "/bookings",
+          "/packages",
+          "/groups",
+          "/hotels",
+          "/transport",
+          "/compliance",
+          "/finance",
+          "/reports",
+          "/marketplace",
+          "/social",
+          "/connections",
+          "/requests"
+        ]
+      }
+    },
+    {
+      "label": "operator: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "operator: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "operator: no menu page's API call is refused",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "operator: direct navigation to /admin-kyc shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "operator: API refuses GET /admin/kyc (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: platform:kyc:review"
+      }
+    },
+    {
+      "label": "hotel: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/hotel-dashboard",
+          "/hotels",
+          "/hotel-bookings",
+          "/finance",
+          "/marketplace",
+          "/social",
+          "/connections",
+          "/requests",
+          "/reports"
+        ]
+      }
+    },
+    {
+      "label": "hotel: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "hotel: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "hotel: no menu page's API call is refused",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "hotel: direct navigation to /pilgrims shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "hotel: API refuses GET /pilgrims (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: crm:pilgrim:read"
+      }
+    },
+    {
+      "label": "transport: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/transport-dashboard",
+          "/transport/vehicles",
+          "/transport/drivers",
+          "/transport/routes",
+          "/transport/assignments",
+          "/transport/bookings",
+          "/finance",
+          "/marketplace",
+          "/social",
+          "/connections",
+          "/requests",
+          "/reports"
+        ]
+      }
+    },
+    {
+      "label": "transport: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "transport: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "transport: no menu page's API call is refused",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "transport: direct navigation to /hotels shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "transport: API refuses GET /hotels (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: hotel:allotment:read"
+      }
+    },
+    {
+      "label": "visa: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/visa-dashboard",
+          "/compliance",
+          "/pilgrims",
+          "/visa-documents",
+          "/visa-requests",
+          "/finance",
+          "/marketplace",
+          "/social",
+          "/connections",
+          "/groups",
+          "/requests"
+        ]
+      }
+    },
+    {
+      "label": "visa: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "visa: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "visa: no menu page's API call is refused",
+      "ok": false,
+      "detail": [
+        {
+          "href": "/finance",
+          "denied": false,
+          "refused": [
+            "GET /finance/stats 403"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "visa: direct navigation to /finance-dashboard shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "visa: API refuses GET /finance/dashboard-stats (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: finance:report:read"
+      }
+    },
+    {
+      "label": "finance: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/finance-dashboard",
+          "/finance",
+          "/finance-payments",
+          "/bookings",
+          "/budget-plans",
+          "/reports",
+          "/social",
+          "/connections",
+          "/packages"
+        ]
+      }
+    },
+    {
+      "label": "finance: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "finance: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "finance: no menu page's API call is refused",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "finance: direct navigation to /pilgrims shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "finance: API refuses GET /pilgrims (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: crm:pilgrim:read"
+      }
+    },
+    {
+      "label": "traveler: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/social",
+          "/discover",
+          "/connections",
+          "/messages",
+          "/travel-plan",
+          "/marketplace",
+          "/requests",
+          "/my-offers",
+          "/my-bookings",
+          "/travel-plan",
+          "/profile",
+          "/onboarding"
+        ]
+      }
+    },
+    {
+      "label": "traveler: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "traveler: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler: no menu page's API call is refused",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "traveler: direct navigation to /bookings shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "traveler: API refuses GET /bookings (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: booking:booking:read"
+      }
+    },
+    {
+      "label": "superAdmin: menu is exactly its capability-permitted set",
+      "ok": true,
+      "detail": {
+        "got": [
+          "/admin-dashboard",
+          "/admin-tenants",
+          "/admin-users",
+          "/admin-listings",
+          "/admin-kyc",
+          "/admin-inquiries",
+          "/admin-roles",
+          "/admin-logs",
+          "/admin-support",
+          "/admin-settings"
+        ]
+      }
+    },
+    {
+      "label": "superAdmin: platform chrome only for the platform account",
+      "ok": true
+    },
+    {
+      "label": "superAdmin: every menu page opens without a denied state",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "superAdmin: no menu page's API call is refused",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "label": "superAdmin: direct navigation to /pilgrims shows the denied state",
+      "ok": true
+    },
+    {
+      "label": "superAdmin: API refuses GET /pilgrims (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Missing required permissions: crm:pilgrim:read"
+      }
+    }
+  ],
+  "operator-opened": [
+    {
+      "href": "/dashboard",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/pilgrims",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/bookings",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/packages",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/groups",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/hotels",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/transport",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/compliance",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/finance",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/reports",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/marketplace",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/social",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/connections",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/requests",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "operator-forbidden": {
+    "route": "/admin-kyc",
+    "deniedState": true,
+    "api": "/admin/kyc → 403"
+  },
+  "hotel": {
+    "landing": "/hotel-dashboard",
+    "nav": [
+      "/hotel-dashboard",
+      "/hotels",
+      "/hotel-bookings",
+      "/finance",
+      "/marketplace",
+      "/social",
+      "/connections",
+      "/requests",
+      "/reports"
+    ]
+  },
+  "hotel-opened": [
+    {
+      "href": "/hotel-dashboard",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/hotels",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/hotel-bookings",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/finance",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/marketplace",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/social",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/connections",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/requests",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/reports",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "hotel-forbidden": {
+    "route": "/pilgrims",
+    "deniedState": true,
+    "api": "/pilgrims → 403"
+  },
+  "transport": {
+    "landing": "/transport-dashboard",
+    "nav": [
+      "/transport-dashboard",
+      "/transport/vehicles",
+      "/transport/drivers",
+      "/transport/routes",
+      "/transport/assignments",
+      "/transport/bookings",
+      "/finance",
+      "/marketplace",
+      "/social",
+      "/connections",
+      "/requests",
+      "/reports"
+    ]
+  },
+  "transport-opened": [
+    {
+      "href": "/transport-dashboard",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/transport/vehicles",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/transport/drivers",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/transport/routes",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/transport/assignments",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/transport/bookings",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/finance",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/marketplace",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/social",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/connections",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/requests",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/reports",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "transport-forbidden": {
+    "route": "/hotels",
+    "deniedState": true,
+    "api": "/hotels → 403"
+  },
+  "visa": {
+    "landing": "/visa-dashboard",
+    "nav": [
+      "/visa-dashboard",
+      "/compliance",
+      "/pilgrims",
+      "/visa-documents",
+      "/visa-requests",
+      "/finance",
+      "/marketplace",
+      "/social",
+      "/connections",
+      "/groups",
+      "/requests"
+    ]
+  },
+  "visa-opened": [
+    {
+      "href": "/visa-dashboard",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/compliance",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/pilgrims",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/visa-documents",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/visa-requests",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/finance",
+      "denied": false,
+      "refused": [
+        "GET /finance/stats 403"
+      ]
+    },
+    {
+      "href": "/marketplace",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/social",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/connections",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/groups",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/requests",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "visa-forbidden": {
+    "route": "/finance-dashboard",
+    "deniedState": true,
+    "api": "/finance/dashboard-stats → 403"
+  },
+  "finance": {
+    "landing": "/finance-dashboard",
+    "nav": [
+      "/finance-dashboard",
+      "/finance",
+      "/finance-payments",
+      "/bookings",
+      "/budget-plans",
+      "/reports",
+      "/social",
+      "/connections",
+      "/packages"
+    ]
+  },
+  "finance-opened": [
+    {
+      "href": "/finance-dashboard",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/finance",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/finance-payments",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/bookings",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/budget-plans",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/reports",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/social",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/connections",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/packages",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "finance-forbidden": {
+    "route": "/pilgrims",
+    "deniedState": true,
+    "api": "/pilgrims → 403"
+  },
+  "traveler": {
+    "landing": "/travel-plan",
+    "nav": [
+      "/social",
+      "/discover",
+      "/connections",
+      "/messages",
+      "/travel-plan",
+      "/marketplace",
+      "/requests",
+      "/my-offers",
+      "/my-bookings",
+      "/travel-plan",
+      "/profile",
+      "/onboarding"
+    ]
+  },
+  "traveler-opened": [
+    {
+      "href": "/social",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/discover",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/connections",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/messages",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/travel-plan",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/marketplace",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/requests",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/my-offers",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/my-bookings",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/profile",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/onboarding",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "traveler-forbidden": {
+    "route": "/bookings",
+    "deniedState": true,
+    "api": "/bookings → 403"
+  },
+  "superAdmin": {
+    "landing": "/admin-dashboard",
+    "nav": [
+      "/admin-dashboard",
+      "/admin-tenants",
+      "/admin-users",
+      "/admin-listings",
+      "/admin-kyc",
+      "/admin-inquiries",
+      "/admin-roles",
+      "/admin-logs",
+      "/admin-support",
+      "/admin-settings"
+    ]
+  },
+  "superAdmin-opened": [
+    {
+      "href": "/admin-dashboard",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-tenants",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-users",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-listings",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-kyc",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-inquiries",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-roles",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-logs",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-support",
+      "denied": false,
+      "refused": []
+    },
+    {
+      "href": "/admin-settings",
+      "denied": false,
+      "refused": []
+    }
+  ],
+  "superAdmin-forbidden": {
+    "route": "/pilgrims",
+    "deniedState": true,
+    "api": "/pilgrims → 403"
+  },
+  "ranAt": "2026-09-19T12:01:14.802Z"
+}

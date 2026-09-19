@@ -1,0 +1,166 @@
+{
+  "founder": {
+    "email": "qa.founder.2f3eb2@example.com",
+    "organization": "QA Zamzam Hotel 2f3eb2"
+  },
+  "checks": [
+    {
+      "label": "a traveler finds “Register your organization” in the menu",
+      "ok": true,
+      "detail": [
+        "/social",
+        "/discover",
+        "/connections",
+        "/messages",
+        "/travel-plan",
+        "/marketplace",
+        "/requests",
+        "/my-offers",
+        "/my-bookings",
+        "/travel-plan",
+        "/profile",
+        "/onboarding"
+      ]
+    },
+    {
+      "label": "an unverified traveler gets an honest gate with a way to verify",
+      "ok": true
+    },
+    {
+      "label": "the API refuses onboarding before verification (403)",
+      "ok": true,
+      "detail": {
+        "status": 403,
+        "message": "Confirm your email address before registering an organization"
+      }
+    },
+    {
+      "label": "the development mail transport delivered a confirmation link",
+      "ok": true
+    },
+    {
+      "label": "the confirmation link verifies the email",
+      "ok": true
+    },
+    {
+      "label": "after verification the organization form is shown",
+      "ok": true
+    },
+    {
+      "label": "invalid phone and website are explained before anything is sent",
+      "ok": true
+    },
+    {
+      "label": "the consent to move the account is required",
+      "ok": true
+    },
+    {
+      "label": "the organization is created once and the page becomes the pending workspace",
+      "ok": true,
+      "detail": [
+        201
+      ]
+    },
+    {
+      "label": "a pending organization is offered only verification",
+      "ok": true,
+      "detail": [
+        "/onboarding"
+      ]
+    },
+    {
+      "label": "the pending organization does not land on dashboards: /hotel-dashboard → /onboarding",
+      "ok": true
+    },
+    {
+      "label": "the API refuses operational routes while pending (401, verification not complete)",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "message": "Organization verification is not complete yet"
+      }
+    },
+    {
+      "label": "a file of the wrong type is refused before upload",
+      "ok": true
+    },
+    {
+      "label": "two documents upload with progress to “uploaded”",
+      "ok": true
+    },
+    {
+      "label": "a document can be removed before submitting",
+      "ok": true
+    },
+    {
+      "label": "submission moves the organization to “Awaiting review”",
+      "ok": true
+    },
+    {
+      "label": "the submission is in the Super Admin review queue",
+      "ok": true
+    },
+    {
+      "label": "the reviewer opens the document through a signed URL (200)",
+      "ok": true,
+      "detail": {
+        "at": 1789819092500,
+        "path": "/documents/kyc/:id/0/url",
+        "status": 200,
+        "method": "GET"
+      }
+    },
+    {
+      "label": "the rejection is recorded and leaves the pending queue",
+      "ok": true
+    },
+    {
+      "label": "the rejected submission shows who sent it back and why",
+      "ok": true
+    },
+    {
+      "label": "the provider sees “Changes required” with the reason after refresh",
+      "ok": true
+    },
+    {
+      "label": "the corrected documents are resubmitted",
+      "ok": true
+    },
+    {
+      "label": "the approval is recorded",
+      "ok": true
+    },
+    {
+      "label": "after approval the hotel workspace appears without signing in again",
+      "ok": true,
+      "detail": [
+        "/hotel-dashboard",
+        "/hotels",
+        "/hotel-bookings",
+        "/finance",
+        "/marketplace",
+        "/social",
+        "/connections",
+        "/requests",
+        "/reports"
+      ]
+    },
+    {
+      "label": "the verification page shows the organization as verified",
+      "ok": true
+    },
+    {
+      "label": "the dashboard opens and the API now answers (200)",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "label": "the organization’s detail page shows its KYC and audit trail",
+      "ok": true
+    }
+  ],
+  "tenantId": ":id (not recorded)",
+  "ranAt": "2026-09-19T11:57:55.516Z"
+}

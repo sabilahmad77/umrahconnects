@@ -1,5 +1,5 @@
 'use client';
-import { Input , Button , QueryFailure } from '@/components/ui/system';
+import { Input, Button, QueryFailure, Pagination } from '@/components/ui/system';
 
 
 import { useState } from 'react';
@@ -7,15 +7,22 @@ import { FileBarChart, RefreshCw, Loader2, AlertCircle, Search, Download } from 
 import { cn } from '@/lib/utils';
 import { useAdminAuditLogs } from '@/hooks/use-admin';
 
+const PAGE_SIZE = 50;
+
 export function AdminLogsView() {
   const [action, setAction] = useState('');
   const [resource, setResource] = useState('');
+  const [page, setPage] = useState(1);
+  // The API pages the audit log; asking for one large page used to hide
+  // everything past the first 200 entries.
   const { data, isLoading, error, refetch } = useAdminAuditLogs({
     action: action || undefined,
     resource: resource || undefined,
-    limit: 200,
+    limit: PAGE_SIZE,
+    page,
   });
   const items = data?.items ?? [];
+  const pages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
 
   const exportCsv = () => {
     const rows = [
@@ -48,7 +55,7 @@ export function AdminLogsView() {
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
           <Button variant="quiet" type="button" onClick={exportCsv} className="flex items-center gap-2 text-sm px-3 py-2 border border-gray-200 rounded-xl hover:bg-gray-50">
-            <Download className="h-4 w-4" /> Export
+            <Download className="h-4 w-4" /> Export this page
           </Button>
         </div>
       </div>
@@ -56,13 +63,13 @@ export function AdminLogsView() {
       <div className="flex flex-col sm:flex-row gap-3">
         <Input aria-label="Action"
           value={action}
-          onChange={(e) => setAction(e.target.value.toUpperCase())}
+          onChange={(e) => { setAction(e.target.value.toUpperCase()); setPage(1); }}
           placeholder="Filter by action (CREATE / UPDATE / DELETE…)"
           className="text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none w-full sm:w-72"
         />
         <Input aria-label="Resource"
           value={resource}
-          onChange={(e) => setResource(e.target.value)}
+          onChange={(e) => { setResource(e.target.value); setPage(1); }}
           placeholder="Filter by resource (booking, listing, …)"
           className="text-sm px-3 py-2.5 border border-gray-200 rounded-xl outline-none w-full sm:w-72"
         />
@@ -109,6 +116,9 @@ export function AdminLogsView() {
               ))}
             </tbody>
           </table></div>
+          <div className="border-t border-gray-200 p-3">
+            <Pagination page={page} pages={pages} onChange={setPage} />
+          </div>
         </div>
       )}
     </div>
