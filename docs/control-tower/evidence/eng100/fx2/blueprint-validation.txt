@@ -1,0 +1,42 @@
+
+== shell syntax
+PASS bash -n scripts/alert.sh
+PASS bash -n scripts/check-offsite.sh
+PASS bash -n scripts/deploy.sh
+PASS bash -n scripts/firewall.sh
+PASS bash -n scripts/healthcheck.sh
+PASS bash -n scripts/host-setup.sh
+PASS bash -n scripts/lib.sh
+PASS bash -n scripts/orphan-cleanup.sh
+PASS bash -n scripts/pg-backup.sh
+PASS bash -n scripts/pg-restore.sh
+PASS bash -n scripts/preflight.sh
+PASS bash -n scripts/runtime-role.sh
+PASS bash -n scripts/validate-blueprint.sh
+PASS bash -n scripts/uptime-check.sh
+PASS sh -n api-entrypoint.sh
+SKIP shellcheck (not installed)
+
+== compose configuration (both proxy modes)
+PASS docker compose config (bundled proxy)
+PASS bundled mode publishes only uc-caddy 80/443 [uc-caddy:443 uc-caddy:443 uc-caddy:80]
+PASS bundled mode: uc-api runs as APP_DB_USER without the owner password; uc-migrate is the owner (tools) [ok]
+PASS shared mode without SHARED_PROXY_NETWORK is refused
+PASS docker compose config (shared proxy)
+PASS shared mode publishes no host port []
+PASS shared mode: uc-api runs as APP_DB_USER without the owner password; uc-migrate is the owner (tools) [ok]
+
+== Caddyfile
+{"level":"info","ts":1789837911.3880944,"msg":"using config from file","file":"/etc/caddy/Caddyfile"}
+{"level":"info","ts":1789837911.3911982,"msg":"adapted config to JSON","adapter":"caddyfile"}
+{"level":"info","ts":1789837911.391484,"logger":"http.auto_https","msg":"server is listening only on the HTTPS port but has no TLS connection policies; adding one to enable TLS","server_name":"srv0","https_port":443}
+{"level":"info","ts":1789837911.3915281,"logger":"http.auto_https","msg":"enabling automatic HTTP->HTTPS redirects","server_name":"srv0"}
+{"level":"info","ts":1789837911.3917022,"logger":"tls.cache.maintenance","msg":"started background certificate maintenance","cache":"0x40007f2c80"}
+Valid configuration
+{"level":"info","ts":1789837911.3918457,"logger":"tls.cache.maintenance","msg":"stopped background certificate maintenance","cache":"0x40007f2c80"}
+PASS caddy validate (caddy:2.8)
+
+== systemd units
+SKIP systemd-analyze (not available)
+
+validate-blueprint: all checks passed

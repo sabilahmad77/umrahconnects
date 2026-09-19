@@ -2,7 +2,8 @@
 
 Status: **prepared, not deployed.** Nothing here has run against a real server. The whole stack (image, both proxy
 modes, TLS through Caddy, migrations, backups, restore drills, health checks) was rehearsed locally in disposable
-containers: `docs/control-tower/evidence/eng100/a09/`. Render is retired (`docs/control-tower/RENDER_RETIREMENT.md`).
+containers: `docs/control-tower/evidence/eng100/a09/`; the database-role split (the API as the RLS runtime login, migrations
+as the owner, restores on a new host) in `docs/control-tower/evidence/eng100/fx2/`. Render is retired (`docs/control-tower/RENDER_RETIREMENT.md`).
 
 ## Architecture
 
