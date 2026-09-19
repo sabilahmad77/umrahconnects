@@ -55,14 +55,14 @@ export function assertManualStatus(kind: string, status: string | undefined, all
   }
 }
 
-/** Payment state is written by the payments module only — never from a form. */
-export function rejectClientPaymentStatus(paymentStatus: unknown) {
-  if (paymentStatus !== undefined) {
-    throw new BadRequestException(
-      'paymentStatus cannot be set here; it follows the payments recorded in Finance',
-    );
-  }
-}
+/**
+ * F13: hotel bookings, trips and visa applications have no payment linked to
+ * them (invoices link to operator bookings only), so their stored
+ * `payment_status` column never changes. It is neither accepted nor returned:
+ * showing it would claim a payment state nobody tracks. Money is billed and
+ * recorded as Finance invoices.
+ */
+export const withoutUntrackedPayment = <T extends { paymentStatus?: unknown }>({ paymentStatus: _untracked, ...row }: T) => row;
 
 /** [start, start + minutes) windows overlap. */
 export function tripsOverlap(aStart: Date, aMinutes: number, bStart: Date, bMinutes: number): boolean {

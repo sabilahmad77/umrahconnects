@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 
 /*
  * Hotel workflow rules. The server is authoritative; the web client mirrors
@@ -40,15 +40,6 @@ export function assertHotelBookingTransition(from: string, to: string) {
       allowed.length
         ? `A ${from} booking can move to ${allowed.join(' or ')}, not ${to}`
         : `A ${from} booking is closed and cannot change status`,
-    );
-  }
-}
-
-/** Payment state is written by the payments module only — never from a form. */
-export function rejectClientPaymentStatus(paymentStatus: unknown) {
-  if (paymentStatus !== undefined) {
-    throw new BadRequestException(
-      'paymentStatus cannot be set here; it follows the payments recorded in Finance',
     );
   }
 }

@@ -15,7 +15,7 @@ import { findOwned } from '../../common/tenant-scope';
 import type { Principal } from '../auth/principal';
 import { listingCapacity, PUBLIC_LISTING } from '../marketplace/listing-rules';
 import { MAX_PARTY_SIZE } from '../marketplace/dto/marketplace.dto';
-import { checkTrip, recountSeats } from '../transport/transport-workflow';
+import { checkTrip, recountSeats, withoutUntrackedPayment } from '../transport/transport-workflow';
 import { ConvertOfferDto, CreateMarketplaceRequestDto, CreateOfferDto } from './dto/marketplace-requests.dto';
 
 /** Request states in which providers may browse and make offers. */
@@ -428,14 +428,13 @@ export class MarketplaceRequestsService {
             passengerCount: trip.seats,
             priceCents: BigInt(offer.priceCents),
             currency: offer.currency,
-            paymentStatus: 'UNPAID',
             status: 'CONFIRMED',
             notes: dto.notes ?? offer.description,
           },
         });
         // Seat counters and FULLY_BOOKED follow the trips, exactly as for a trip booked by the provider.
         await recountSeats(tx, providerTenantId, [created.vehicleId], [created.routeId]);
-        created = { ...created, priceCents: Number(created.priceCents) };
+        created = { ...withoutUntrackedPayment(created), priceCents: Number(created.priceCents) };
       } else if (isListingType) {
         kind = 'LISTING_BOOKING';
         let listing: { id: string } | null = chosenListing;
@@ -491,13 +490,12 @@ export class MarketplaceRequestsService {
             requiredDocuments: ['PASSPORT', 'PHOTO'],
             priceCents: BigInt(offer.priceCents),
             currency: offer.currency,
-            paymentStatus: 'UNPAID',
             notes: dto.notes ?? offer.description,
             documents: [],
             timeline: [{ at: new Date().toISOString(), event: 'CREATED_FROM_REQUEST', requestId }],
           },
         });
-        created = { ...visa, priceCents: Number((visa as any).priceCents) };
+        created = { ...withoutUntrackedPayment(visa), priceCents: Number((visa as any).priceCents) };
       }
 
       await tx.marketplaceRequest.update({

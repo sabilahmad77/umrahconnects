@@ -1,6 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
-  Allow, ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional,
+  ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional,
   IsString, IsUUID, Matches, Max, MaxLength, Min,
 } from 'class-validator';
 import { MovementType, TransportType } from '@prisma/client';
@@ -157,8 +157,6 @@ class AssignmentFieldsDto {
   @IsOptional() @IsNumber() @Min(0) @Max(MAX_MONEY_MAJOR) price?: number;
   @IsOptional() @IsInt() @Min(0) @Max(MAX_MONEY_CENTS) priceCents?: number;
   @IsOptional() @Transform(upper) @Matches(/^[A-Z]{3}$/, { message: 'currency must be a 3-letter code' }) currency?: string;
-  /** Whitelisted only so the server can refuse it explicitly — payment state comes from the payments module. */
-  @Allow() paymentStatus?: unknown;
   @IsOptional() @Transform(upper) @IsIn(ASSIGNMENT_STATUSES) status?: string;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
 }

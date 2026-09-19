@@ -10,7 +10,7 @@ import {
   ASSIGNMENT_INITIAL_STATUSES, ASSIGNMENT_TERMINAL_STATUSES, BOOKABLE_ROUTE_STATUSES,
   DRIVER_MANUAL_STATUSES, OPEN_ASSIGNMENT_STATUSES, ROUTE_MANUAL_STATUSES, TRANSPORT_ASSIGNMENT_TRANSITIONS,
   VEHICLE_MANUAL_STATUSES, assertAssignmentTransition, assertManualStatus, checkTrip, recountSeats,
-  rejectClientPaymentStatus, seatsSold, type Trip,
+  seatsSold, type Trip, withoutUntrackedPayment,
 } from './transport-workflow';
 
 type Tx = Prisma.TransactionClient;
@@ -64,7 +64,7 @@ const serializeBigInt = <T extends Record<string, any>>(o: T): T => {
 
 /** Every trip carries the moves the server will accept next, so the UI never offers a dead end. */
 const serializeAssignment = (a: any) => ({
-  ...serializeBigInt(a),
+  ...serializeBigInt(withoutUntrackedPayment(a)),
   allowedTransitions: TRANSPORT_ASSIGNMENT_TRANSITIONS[a.status] ?? [],
 });
 
@@ -578,7 +578,6 @@ export class TransportService {
   }
 
   async createAssignment(tenantId: string, dto: CreateAssignmentDto) {
-    rejectClientPaymentStatus(dto.paymentStatus);
     const status = dto.status ?? 'SCHEDULED';
     if (!ASSIGNMENT_INITIAL_STATUSES.includes(status)) {
       throw new BadRequestException(`A new trip starts as ${ASSIGNMENT_INITIAL_STATUSES.join(', ')}; departure and arrival are recorded on the trip`);
@@ -613,8 +612,6 @@ export class TransportService {
       passengerCount,
       priceCents: toCents(dto.price, dto.priceCents) ?? BigInt(0),
       currency: dto.currency ?? 'SAR',
-      // Payment state belongs to the payments module; a trip always starts unpaid.
-      paymentStatus: 'UNPAID',
       status,
       notes: dto.notes,
     };
@@ -632,7 +629,6 @@ export class TransportService {
 
   async updateAssignment(tenantId: string, id: string, dto: UpdateAssignmentDto) {
     const existing: any = await this.findAssignmentById(tenantId, id);
-    rejectClientPaymentStatus(dto.paymentStatus);
     if (ASSIGNMENT_TERMINAL_STATUSES.includes(existing.status)) {
       const changed = Object.entries(dto).filter(([k, v]) => v !== undefined && k !== 'notes').map(([k]) => k);
       if (changed.length) throw new ConflictException(`This trip is ${existing.status}; only its notes can still change`);
@@ -783,14 +779,13 @@ export class TransportService {
     const byStatus: Record<string, number> = Object.fromEntries(Object.keys(TRANSPORT_ASSIGNMENT_TRANSITIONS).map((s) => [s, 0]));
     assignmentsByStatus.forEach((r) => { byStatus[r.status] = r._count; });
 
-    // Payment state is written by the payments module; these sums only read it.
-    const [revenue, pendingRevenue] = await Promise.all([
-      this.prisma.transportAssignment.aggregate({ where: { tenantId, paymentStatus: 'PAID' }, _sum: { priceCents: true } }),
-      this.prisma.transportAssignment.aggregate({
-        where: { tenantId, paymentStatus: { in: ['UNPAID', 'PARTIAL'] }, status: { not: 'CANCELLED' } },
-        _sum: { priceCents: true },
-      }),
-    ]);
+    // What was booked, not what was paid: no payment is linked to trips (F13) —
+    // money is recorded as Finance invoices.
+    const booked = await this.prisma.transportAssignment.aggregate({
+      where: { tenantId, currency: 'SAR', status: { not: 'CANCELLED' } },
+      _sum: { priceCents: true },
+      _count: { _all: true },
+    });
 
     // Tenant marketplace listings tied to a vendor with same tenantId
     const vendor = await this.prisma.vendor.findFirst({ where: { tenantId } });
@@ -827,12 +822,12 @@ export class TransportService {
         inProgress: byStatus.IN_PROGRESS,
         completed: byStatus.COMPLETED,
         cancelled: byStatus.CANCELLED,
-        upcoming: upcomingAssignments.map((u: any) => serializeBigInt(u)),
-        recent: recentAssignments.map((u: any) => serializeBigInt(u)),
+        upcoming: upcomingAssignments.map((u: any) => serializeBigInt(withoutUntrackedPayment(u))),
+        recent: recentAssignments.map((u: any) => serializeBigInt(withoutUntrackedPayment(u))),
       },
-      revenue: {
-        collectedCents: Number(revenue._sum.priceCents ?? 0),
-        pendingCents: Number(pendingRevenue._sum.priceCents ?? 0),
+      bookedValue: {
+        amountCents: Number(booked._sum.priceCents ?? 0),
+        count: booked._count._all,
         currency: 'SAR',
       },
       marketplace: { listings: listingsCount, openInquiries },
