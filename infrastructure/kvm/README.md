@@ -155,7 +155,8 @@ copy failed; the unit fails either way and `umrah-alert@` raises an alert.
 - rclone remote requirements (names only; values live in the deploy user's `~/.config/rclone/rclone.conf`, mode 600):
   `type = s3`, `provider = Cloudflare`, `endpoint = https://<account-id>.r2.cloudflarestorage.com`,
   `access_key_id`, `secret_access_key`, `acl = private`, **`no_check_bucket = true`** (a bucket-scoped token may not
-  create or list buckets). Create it with `rclone config` as `deploy`.
+  create or list buckets). Create it with `rclone config` as `deploy`. Create the bucket itself in the Cloudflare
+  dashboard: with `no_check_bucket = true`, `rclone mkdir` exits 0 without creating anything.
 - Cloudflare side: a dedicated bucket (e.g. `umrah-connect-db-backups`), never the application buckets; an R2 API
   token scoped to that one bucket with *Object Read & Write*; lifecycle rules to expire `daily/` after 35 days and
   `weekly/` after 120 days; optionally an R2 bucket lock (retention) rule against deletion by a compromised host.

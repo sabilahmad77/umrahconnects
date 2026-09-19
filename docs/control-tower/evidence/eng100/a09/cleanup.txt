@@ -1,0 +1,39 @@
+# Cleanup of every disposable resource created by the A09 rehearsal (2026-09-19)
+# Other projects' containers (supabase_*, flowdesk-*, imagetool-*, backend-*) were never touched.
+# Colima was started for this work (it was stopped at the start) and is left running, the machine's normal state.
+
+$ env COMPOSE_PROJECT_NAME=uc-a09-kvm docker compose --env-file .env.production down -v --remove-orphans
+[exit 0]
+$ docker rm -f uc-a09-minio uc-a09-pg-restore
+uc-a09-minio
+uc-a09-pg-restore
+[exit 0]
+$ docker network rm uc-a09-offsite
+uc-a09-offsite
+[exit 0]
+$ docker rmi uc-a09-api:test rhysd/actionlint:1.7.7 koalaman/shellcheck:stable rclone/rclone:1.68 ubuntu:24.04
+Untagged: uc-a09-api:test
+Untagged: rhysd/actionlint:1.7.7
+Untagged: koalaman/shellcheck:stable
+Untagged: rclone/rclone:1.68
+Untagged: ubuntu:24.04
+[exit 0]
+$ kill 26621
+[exit 0]
+$ rm -f .env.production
+[exit 0]
+$ rm -rf /Users/macbook/.uc-a09-rehearsal
+[exit 0]
+== verification: nothing named uc-a09 remains
+containers:
+0
+volumes:
+0
+networks:
+0
+images:
+0
+listening on 18409/18443/19409-19411:
+       0
+$ docker rmi 6097768f66ea   (untagged build-stage image left by my uc-a09-api:test build; identified from the build log)
+[exit 0]
