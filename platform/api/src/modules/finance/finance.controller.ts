@@ -45,14 +45,20 @@ export class FinanceController {
 
   @Put('invoices/:id')
   @RequirePermissions('finance:invoice:create')
-  async updateInvoice(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInvoiceDto) {
-    return { success: true, data: await this.service.updateInvoice(tenantId, id, dto) };
+  async updateInvoice(
+    @TenantId() tenantId: string, @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateInvoiceDto,
+  ) {
+    return { success: true, data: await this.service.updateInvoice(tenantId, id, dto, user) };
   }
 
   @Put('invoices/:id/status')
   @RequirePermissions('finance:invoice:approve')
-  async setStatus(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: SetInvoiceStatusDto) {
-    return { success: true, data: await this.service.setInvoiceStatus(tenantId, id, body.status) };
+  async setStatus(
+    @TenantId() tenantId: string, @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string, @Body() body: SetInvoiceStatusDto,
+  ) {
+    return { success: true, data: await this.service.setInvoiceStatus(tenantId, id, body.status, user) };
   }
 
   @Put('invoices/:id/issue')
@@ -63,14 +69,14 @@ export class FinanceController {
 
   @Put('invoices/:id/void')
   @RequirePermissions('finance:invoice:approve')
-  async void(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.voidInvoice(tenantId, id) };
+  async void(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.voidInvoice(tenantId, id, user) };
   }
 
   @Delete('invoices/:id')
   @RequirePermissions('finance:invoice:create')
-  async deleteInvoice(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.service.deleteInvoice(tenantId, id) };
+  async deleteInvoice(@TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.deleteInvoice(tenantId, id, user) };
   }
 
   @Post('invoices/:id/payments')

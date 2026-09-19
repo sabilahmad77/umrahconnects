@@ -252,7 +252,7 @@ describe('marketplace listings lifecycle', () => {
       expect(audit?.afterState).toMatchObject({ status: 'CANCELLED' });
     });
 
-    it('refuses paid, partially paid, confirmed and in-payment bookings with a clear 409', async () => {
+    it('refuses paid, partially paid and confirmed bookings with a clear 409; closes an open checkout instead of blocking', async () => {
       const paid = await book(w.travelerA);
       await ctx.prisma.listingBooking.update({ where: { id: paid.id }, data: { paymentStatus: 'PAID', status: 'CONFIRMED' } });
       const r1 = await call(w.travelerA, 'post', `/marketplace/bookings/${paid.id}/cancel`);
@@ -268,20 +268,23 @@ describe('marketplace listings lifecycle', () => {
       const r3 = await call(w.travelerA, 'post', `/marketplace/bookings/${confirmed.id}/cancel`);
       expect([r3.status, r3.body.error.message]).toEqual([409, 'A confirmed booking can only be cancelled by the provider. Contact them.']);
 
+      for (const id of [paid.id, partial.id, confirmed.id]) {
+        expect((await ctx.prisma.listingBooking.findUniqueOrThrow({ where: { id } })).status).not.toBe('CANCELLED');
+      }
+
+      // F1: an open checkout attempt no longer blocks (nor survives) the cancellation — it is
+      // closed with the booking, so it can never pay the cancelled booking afterwards.
       const inFlight = await book(w.travelerA);
-      await ctx.prisma.payment.create({
+      const attempt = await ctx.prisma.payment.create({
         data: {
           tenantId: w.tenants.transportA, amountCents: 1n, currency: 'SAR', gateway: 'sandbox',
           idempotencyKey: `test_${uniq()}`, status: 'PENDING', listingBookingId: inFlight.id,
         } as any,
       });
-      const r4 = await call(w.travelerA, 'post', `/marketplace/bookings/${inFlight.id}/cancel`);
-      expect(r4.status).toBe(409);
-      expect(r4.body.error.message).toMatch(/payment for this booking has been started/);
-
-      for (const id of [paid.id, partial.id, confirmed.id, inFlight.id]) {
-        expect((await ctx.prisma.listingBooking.findUniqueOrThrow({ where: { id } })).status).not.toBe('CANCELLED');
-      }
+      const r4 = await ok(w.travelerA, 'post', `/marketplace/bookings/${inFlight.id}/cancel`);
+      expect(r4.status).toBe('CANCELLED');
+      const closed = await ctx.prisma.payment.findUniqueOrThrow({ where: { id: attempt.id } });
+      expect([closed.status, closed.failureReason]).toEqual(['FAILED', 'booking cancelled by the customer']);
     });
   });
 

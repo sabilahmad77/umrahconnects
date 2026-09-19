@@ -11,6 +11,7 @@ import { withSystemScope } from '../../prisma/db-context';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MediaRegistryService } from '../storage/media-registry.service';
 import { AuditService } from '../audit/audit.service';
+import { PaymentsService } from '../payments/payments.service';
 import type { Principal } from '../auth/principal';
 import { requireId } from '../../common/tenant-scope';
 import {
@@ -134,6 +135,7 @@ export class MarketplaceService {
     private readonly notifications: NotificationsService,
     private readonly media: MediaRegistryService,
     private readonly audit: AuditService,
+    private readonly payments: PaymentsService,
   ) {}
 
   // ── Ownership helpers ────────────────────────────────────────────────────────
@@ -545,7 +547,7 @@ export class MarketplaceService {
     return items.map((b: any) => ({ ...b, totalAmountCents: Number(b.totalAmountCents) }));
   }
 
-  async updateBooking(tenantId: string, id: string, dto: UpdateListingBookingDto) {
+  async updateBooking(tenantId: string, id: string, dto: UpdateListingBookingDto, actor?: Principal) {
     if (dto.paymentStatus !== undefined) {
       throw new BadRequestException('paymentStatus cannot be set here; it is updated by the payments module');
     }
@@ -584,16 +586,51 @@ export class MarketplaceService {
     if (dto.startDate !== undefined) data.startDate = new Date(dto.startDate);
     if (dto.endDate !== undefined) data.endDate = new Date(dto.endDate);
 
-    const booking = await this.prisma.listingBooking.update({ where: { id: safeId }, data });
+    // Conditional on the status read above: a payment or a customer cancellation
+    // landing meanwhile is never overwritten (e.g. a cancelled booking revived as CONFIRMED).
+    const write = (db: Prisma.TransactionClient | PrismaService) =>
+      db.listingBooking.updateMany({ where: { id: safeId, status: existing.status }, data });
+    const changed = () => new ConflictException('This booking changed meanwhile. Refresh and try again.');
+
+    if (data.status === 'CANCELLED') {
+      // Cancelling closes every payment attempt still open on the booking first, in the
+      // section checkout opens and settles attempts under (F1): a capture can then no
+      // longer pay a cancelled booking. The attempts belong to the caller's organization.
+      await this.payments.closeWithOpenAttempts(
+        {
+          subject: 'booking',
+          lockKeys: [`checkout:${safeId}`],
+          attempts: { listingBookingId: safeId },
+          reason: 'booking cancelled by the provider',
+          actor: actor ?? undefined,
+        },
+        {
+          verify: async (tx) => {
+            const current = await tx.listingBooking.findUnique({ where: { id: safeId }, select: { status: true } });
+            if (current?.status !== existing.status) throw changed();
+          },
+          apply: async (tx) => {
+            if ((await write(tx)).count !== 1) throw changed();
+          },
+        },
+      );
+    } else if ((await write(this.prisma)).count !== 1) {
+      throw changed();
+    }
+    const booking = await this.prisma.listingBooking.findUniqueOrThrow({ where: { id: safeId } });
     return { ...booking, totalAmountCents: Number((booking as any).totalAmountCents) };
   }
 
   /**
    * The customer cancels their own booking. Allowed only while the provider has
    * not confirmed it and no money has moved: status PENDING, payment UNPAID, and
-   * no captured, authorised or in-flight payment (a checkout opened in the last
-   * 24 hours could still be completed, so it blocks too). Anything else is a
-   * conversation with the provider (refunds belong to the payments module).
+   * no captured or held payment. Anything else is a conversation with the
+   * provider (refunds belong to the payments module).
+   *
+   * Checkout attempts still open on the booking — however old — are cancelled at
+   * the payment provider and closed in the same serialised section (F1), so none
+   * of them can be paid afterwards. One the provider can no longer cancel (it is
+   * being processed, or was just paid) stops the cancellation with a 409 instead.
    */
   async cancelOwnBooking(user: Principal, id: string) {
     const safeId = requireId(id, 'Booking');
@@ -611,36 +648,47 @@ export class MarketplaceService {
     if (booking.status !== 'PENDING') {
       throw new ConflictException(`A ${booking.status.toLowerCase()} booking can only be cancelled by the provider. Contact them.`);
     }
+    const changed = () => new ConflictException('This booking changed meanwhile. Refresh and try again.');
     // The payment rows belong to the provider organization, which row-level security
     // hides from a traveler's request. The booking above was loaded by its owner, so
-    // reading that one booking's attempts in the traveler-checkout scope reveals nothing
-    // else — without it an in-progress payment is invisible and the cancel goes through.
-    const blocking = await withSystemScope('payments.traveler-checkout', () =>
-      this.prisma.payment.findFirst({
-        where: {
-          listingBookingId: booking.id,
-          OR: [
-            { status: { in: ['PROCESSING', 'AUTHORIZED', 'COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'] } },
-            { status: 'PENDING', createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-          ],
+    // reading and closing that one booking's attempts in the traveler-checkout scope
+    // reveals nothing else.
+    await withSystemScope('payments.traveler-checkout', () =>
+      this.payments.closeWithOpenAttempts(
+        {
+          subject: 'booking',
+          lockKeys: [`checkout:${booking.id}`],
+          attempts: { listingBookingId: booking.id },
+          reason: 'booking cancelled by the customer',
+          actor: user,
         },
-        select: { status: true },
-      }),
+        {
+          verify: async (tx) => {
+            const current = await tx.listingBooking.findFirst({
+              where: { id: booking.id, customerUserId: user.sub },
+              select: { status: true, paymentStatus: true },
+            });
+            if (current?.status !== 'PENDING' || current.paymentStatus !== 'UNPAID') throw changed();
+            // Money that moved (even money held for review) is settled with the provider, not here.
+            const recorded = await tx.payment.findFirst({
+              where: { listingBookingId: booking.id, status: { in: ['COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'] } },
+              select: { id: true },
+            });
+            if (recorded) {
+              throw new ConflictException('A payment is recorded for this booking. Contact the provider to cancel and arrange a refund.');
+            }
+          },
+          apply: async (tx) => {
+            // Conditional update: a confirmation landing meanwhile wins.
+            const res = await tx.listingBooking.updateMany({
+              where: { id: booking.id, customerUserId: user.sub, status: 'PENDING', paymentStatus: 'UNPAID' },
+              data: { status: 'CANCELLED' },
+            });
+            if (res.count !== 1) throw changed();
+          },
+        },
+      ),
     );
-    if (blocking) {
-      throw new ConflictException(
-        ['COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'].includes(blocking.status)
-          ? 'A payment is recorded for this booking. Contact the provider to cancel and arrange a refund.'
-          : 'A payment for this booking has been started. Let it finish or expire, or contact the provider.',
-      );
-    }
-
-    // Conditional update: a confirmation or payment landing meanwhile wins.
-    const res = await this.prisma.listingBooking.updateMany({
-      where: { id: booking.id, customerUserId: user.sub, status: 'PENDING', paymentStatus: 'UNPAID' },
-      data: { status: 'CANCELLED' },
-    });
-    if (res.count !== 1) throw new ConflictException('This booking changed meanwhile. Refresh and try again.');
 
     await this.audit.log({
       tenantId: booking.listing.vendor.tenantId ?? undefined,

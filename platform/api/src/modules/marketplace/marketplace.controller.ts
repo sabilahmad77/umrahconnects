@@ -181,10 +181,11 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Provider updates booking status / operational details' })
   async updateBooking(
     @TenantId() tenantId: string,
+    @CurrentUser() user: Principal,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateListingBookingDto,
   ) {
-    return { success: true, data: await this.marketplaceService.updateBooking(tenantId, id, body) };
+    return { success: true, data: await this.marketplaceService.updateBooking(tenantId, id, body, user) };
   }
 
   // ── Vendors (seller profiles) ─────────────────────────────────────────────────

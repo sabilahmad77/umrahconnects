@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BOOKING_STATUS_TRANSITIONS, DERIVED_BOOKING_STATUSES, derivedBookingStatus } from './booking-money';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PayActor, PaymentsService } from '../payments/payments.service';
 import { assertAllOwned, findOwned, requireId } from '../../common/tenant-scope';
 
 const BOOKING_STATUSES = [
@@ -35,6 +36,7 @@ export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly payments: PaymentsService,
   ) {}
 
   private normalizeBigInt(obj: any): any {
@@ -266,16 +268,45 @@ export class BookingsService {
     return this.updateStatus(tenantId, id, normalizeBookingStatus(dto.status));
   }
 
-  async cancel(tenantId: string, id: string, reason?: string) {
+  /**
+   * Cancel a booking. Card attempts still open on it or on its invoices are
+   * cancelled at the payment provider and closed first, in the section payments
+   * are opened and settled under (F1): none of them can pay the cancelled booking
+   * afterwards — a capture that still arrives is held for a refund. Money already
+   * received stays recorded and is refunded through Finance.
+   */
+  async cancel(tenantId: string, id: string, reason?: string, actor?: PayActor) {
     const current = await this.findOne(tenantId, id);
     if (current.status === 'CANCELLED') return current;
     if (['COMPLETED', 'REFUNDED'].includes(String(current.status))) {
       throw new BadRequestException(`A ${current.status} booking cannot be cancelled`);
     }
-    return this.normalizeBigInt(await this.prisma.booking.update({
-      where: { id },
-      data: { status: 'CANCELLED' as any, cancelledAt: new Date(), cancellationReason: reason },
-    }));
+    const invoiceIds = (
+      await this.prisma.invoice.findMany({ where: { tenantId, bookingId: id }, select: { id: true } })
+    ).map((i) => i.id);
+    const booking = await this.payments.closeWithOpenAttempts(
+      {
+        subject: 'booking',
+        lockKeys: [`pay:booking:${id}`, ...invoiceIds.map((inv) => `pay:invoice:${inv}`)],
+        attempts: { tenantId, OR: [{ bookingId: id }, { invoiceId: { in: invoiceIds } }] },
+        reason: 'booking cancelled',
+        actor,
+      },
+      {
+        verify: async (tx) => {
+          const fresh = await tx.booking.findFirst({ where: { id, tenantId }, select: { status: true } });
+          if (!fresh || ['CANCELLED', 'COMPLETED', 'REFUNDED'].includes(String(fresh.status))) {
+            throw new ConflictException('This booking changed meanwhile. Refresh and try again.');
+          }
+        },
+        apply: (tx) =>
+          tx.booking.update({
+            where: { id },
+            data: { status: 'CANCELLED' as any, cancelledAt: new Date(), cancellationReason: reason },
+          }),
+      },
+    );
+    return this.normalizeBigInt(booking);
   }
 
   /**
