@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, TenantType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { withSystemScope } from '../../prisma/db-context';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MediaRegistryService } from '../storage/media-registry.service';
 import { AuditService } from '../audit/audit.service';
@@ -610,16 +611,22 @@ export class MarketplaceService {
     if (booking.status !== 'PENDING') {
       throw new ConflictException(`A ${booking.status.toLowerCase()} booking can only be cancelled by the provider. Contact them.`);
     }
-    const blocking = await this.prisma.payment.findFirst({
-      where: {
-        listingBookingId: booking.id,
-        OR: [
-          { status: { in: ['PROCESSING', 'AUTHORIZED', 'COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'] } },
-          { status: 'PENDING', createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-        ],
-      },
-      select: { status: true },
-    });
+    // The payment rows belong to the provider organization, which row-level security
+    // hides from a traveler's request. The booking above was loaded by its owner, so
+    // reading that one booking's attempts in the traveler-checkout scope reveals nothing
+    // else — without it an in-progress payment is invisible and the cancel goes through.
+    const blocking = await withSystemScope('payments.traveler-checkout', () =>
+      this.prisma.payment.findFirst({
+        where: {
+          listingBookingId: booking.id,
+          OR: [
+            { status: { in: ['PROCESSING', 'AUTHORIZED', 'COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'] } },
+            { status: 'PENDING', createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+          ],
+        },
+        select: { status: true },
+      }),
+    );
     if (blocking) {
       throw new ConflictException(
         ['COMPLETED', 'PARTIALLY_REFUNDED', 'DISPUTED'].includes(blocking.status)
