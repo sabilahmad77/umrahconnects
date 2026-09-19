@@ -1,7 +1,7 @@
 {
   "summary": {
-    "run": "EUZ5N",
-    "generatedAt": "2026-09-19T13:18:03.297Z",
+    "run": "F399N",
+    "generatedAt": "2026-09-19T13:24:28.755Z",
     "web": "http://localhost:3413",
     "total": 57,
     "passed": 57
@@ -13,7 +13,7 @@
       "action": "open dashboard (figures from data)",
       "request": "GET /hotels/stats",
       "expected": "dashboard renders; \"Own hotels\" equals GET /hotels/stats",
-      "actual": "rendered=true; tile=\"7 Own hotels 3 active\"; api total=7",
+      "actual": "rendered=true; tile=\"8 Own hotels 4 active\"; api total=8",
       "persisted": null,
       "result": "PASS"
     },
@@ -163,7 +163,7 @@
       "action": "add route with 4 seats on the new vehicle",
       "request": "POST /transport/routes",
       "expected": "saved; seats 0/4",
-      "actual": "route=JED → MAK EUZ5N; seats 0/4",
+      "actual": "route=JED → MAK F399N; seats 0/4",
       "persisted": true,
       "result": "PASS"
     },
@@ -183,7 +183,7 @@
       "action": "overlapping trip on the same vehicle refused",
       "request": "POST /transport/assignments (clash)",
       "expected": "409 shown in the form",
-      "actual": "server=409 Vehicle A3B-EUZ5N already has a trip at 2026-09-24 05:00 UTC",
+      "actual": "server=409 Vehicle A3B-F399N already has a trip at 2026-09-24 05:00 UTC",
       "persisted": null,
       "result": "PASS"
     },
@@ -293,7 +293,7 @@
       "action": "submit, then approve — visa number required",
       "request": "PUT …/submit; PUT …/approve",
       "expected": "SUBMITTED; empty number blocked; APPROVED with number",
-      "actual": "required=true; status=APPROVED; visaNumber=V-EUZ5N; shown=true; timeline=CREATED>STATUS_SUBMITTED>STATUS_APPROVED",
+      "actual": "required=true; status=APPROVED; visaNumber=V-F399N; shown=true; timeline=CREATED>STATUS_SUBMITTED>STATUS_APPROVED",
       "persisted": true,
       "result": "PASS"
     },
