@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api';
+import { unwrap } from '@/hooks/use-marketplace-requests';
 
 // ─── Notifications ───────────────────────────────────────────────────────
 export function useNotifications(params: { unreadOnly?: boolean; page?: number; limit?: number } = {}) {
@@ -76,22 +77,24 @@ export function useRejectConnection() {
 }
 
 // ─── Marketplace Requests (traveler-side + provider-side) ────────────────
+// The API wraps these in { success, data } (P08); `unwrap` returns the payload.
+// hooks/use-marketplace-requests.ts holds the full set used by the request screens.
 export function useMyRequests(params: { status?: string } = {}) {
   return useQuery({
     queryKey: ['requests', 'mine', params],
-    queryFn: async () => (await apiClient.get('/marketplace/requests/mine', { params })).data,
+    queryFn: async () => unwrap((await apiClient.get('/marketplace/requests/mine', { params })).data),
   });
 }
 export function useOpenRequests(params: { serviceType?: string } = {}) {
   return useQuery({
     queryKey: ['requests', 'open', params],
-    queryFn: async () => (await apiClient.get('/marketplace/requests/open', { params })).data,
+    queryFn: async () => unwrap((await apiClient.get('/marketplace/requests/open', { params })).data),
   });
 }
 export function useMyOffers(params: { status?: string } = {}) {
   return useQuery({
     queryKey: ['requests', 'offers-mine', params],
-    queryFn: async () => (await apiClient.get('/marketplace/requests/offers/mine', { params })).data,
+    queryFn: async () => unwrap((await apiClient.get('/marketplace/requests/offers/mine', { params })).data),
   });
 }
 export function useCreateRequest() {
@@ -108,7 +111,7 @@ export function useCreateRequest() {
       budgetMinCents?: number;
       budgetMaxCents?: number;
       currency?: string;
-    }) => (await apiClient.post('/marketplace/requests', dto)).data,
+    }) => unwrap((await apiClient.post('/marketplace/requests', dto)).data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['requests'] }),
   });
 }
@@ -116,7 +119,7 @@ export function useSendOffer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ requestId, ...dto }: { requestId: string; title: string; description?: string; priceCents: number; currency?: string; validUntil?: string }) =>
-      (await apiClient.post(`/marketplace/requests/${requestId}/offers`, dto)).data,
+      unwrap((await apiClient.post(`/marketplace/requests/${requestId}/offers`, dto)).data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['requests'] }),
   });
 }
@@ -124,7 +127,7 @@ export function useAcceptOffer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ requestId, offerId }: { requestId: string; offerId: string }) =>
-      (await apiClient.post(`/marketplace/requests/${requestId}/offers/${offerId}/accept`)).data,
+      unwrap((await apiClient.post(`/marketplace/requests/${requestId}/offers/${offerId}/accept`)).data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['requests'] }),
   });
 }
@@ -132,7 +135,7 @@ export function useRejectOffer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ requestId, offerId }: { requestId: string; offerId: string }) =>
-      (await apiClient.post(`/marketplace/requests/${requestId}/offers/${offerId}/reject`)).data,
+      unwrap((await apiClient.post(`/marketplace/requests/${requestId}/offers/${offerId}/reject`)).data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['requests'] }),
   });
 }
