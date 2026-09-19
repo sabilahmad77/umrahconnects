@@ -31,9 +31,12 @@ No real messaging channel to Codex exists, so none was claimed.
 | A07 | Traveler linkage (P06), seeds (D08), QA identities | a753066d747b73adb | 17:14 (interrupted by the account usage limit), resumed 20:52 | `…/eng100/a07` / `eng100/a07` | **completed 21:22** (82 tool uses, 567k tokens) | 09207dd 170d8fb 319c06f 72a6c1c 20d3458 9fed6fc 4393138 → merged `ce5e142` | P06 + D08 done; e2e 164/164 in its worktree; browser 15/15 steps; migration `20260918170000_pilgrim_account_links` |
 | A09 | Render retirement, KVM, backups, monitoring (I08) | ab88b88c8089253bb | 17:14 (429 early); restarted ~17:25 (19 Sep) | `…/eng100/a09` / `eng100/a09` | **completed ~18:20 (19 Sep)** (197 tool uses, 588k tokens) | f51932f cf8f12e e7c88a5 927dbb1 07775e0 0a405c0 cd3dd41 e5ed184 cbee343 0b798eb 86323a0 a05c4db 76e5b9a → merged | Render state 1 done; KVM blueprint validated (compose ×2 modes, caddy, actionlint, shellcheck, systemd-analyze); backup dir + OFFSITE_REMOTE + restore rehearsal (76 tables / 865 rows identical); I08 engineering done; XW-2; O04 timer |
 | A08 | Security: database RLS (R05), authorization regression | a71062c2a098505ac | 17:45 (19 Sep) | `…/eng100/a08` / `eng100/a08` (from candidate 7ca4d4d) | **completed ~18:10 (19 Sep)** (213 tool uses, 512k tokens) | f673ba6 303f654 55e5c9c 6a711a6 5a0e59e aafa0fe ecd0fe7 b117f8b 0cfab1c → merged | R05 RLS with FORCE + non-owner runtime role; rls e2e 132; security-regression sweeps; full e2e 395 as runtime role; acceptance QA 211/211 |
+| FX1 | Follow-up fixer: money (F1), moderation (F2), marketplace (F4 F6 F13 F14 F18) | a507e45c6cef2ce9b | 21:57 (19 Sep) | `…/eng100/fx1` / `eng100/fx1` | running | — | — |
+| FX2 | Follow-up fixer: RLS in production (F19), security hygiene and tests (F3 F5 F7 F8 F9 F11 F15 F16 F17) | a6aac7db3bd0e79f4 | 21:57 (19 Sep) | `…/eng100/fx2` / `eng100/fx2` | running | — | — |
+| A10 | Independent functional browser QA across all roles (actual Chrome, candidate :3300/:4300) | a5524129f197c0da1 | 21:57 (19 Sep) | none (read-only against the candidate; writes only evidence) | running | — | — |
+| A11 | Accessibility (W31) and responsive (W30) acceptance | a3b67c09c1ccc3b4b | 21:57 (19 Sep) | `…/eng100/a11` / `eng100/a11` | running | — | — |
 
-Not yet launched: A10 browser QA, A11 accessibility + responsive, A12 independent
-acceptance reviewer (they run against the integrated candidate once A03b, A06 and A09 merge).
+Not yet launched: A12 independent acceptance reviewer (after the fixers and QA report).
 P08 envelope: connections done by A05; marketplace-requests assigned to A06.
 
 ## Interruptions
