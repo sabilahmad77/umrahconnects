@@ -76,7 +76,14 @@ export function useLeaveGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (groupId: string) => (await apiClient.post(`/groups/${groupId}/leave`, {})).data.data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+    onSuccess: (_data, groupId) => {
+      // After leaving a private group its detail and discussion are no longer
+      // readable: mark them stale (refetched on the next visit) instead of
+      // refetching the page being left into a 404.
+      qc.invalidateQueries({ queryKey: ['groups', groupId], refetchType: 'none' });
+      qc.invalidateQueries({ queryKey: ['groups', 'mine'] });
+      qc.invalidateQueries({ queryKey: ['groups', 'public'] });
+    },
   });
 }
 
