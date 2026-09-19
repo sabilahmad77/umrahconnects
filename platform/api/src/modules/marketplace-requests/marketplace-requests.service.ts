@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { OfferStatus, Prisma, RequestServiceType, RequestStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SystemScoped } from '../../prisma/db-context';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RbacService } from '../rbac/rbac.service';
 import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
@@ -299,6 +300,10 @@ export class MarketplaceRequestsService {
    * - TRANSPORT → TransportAssignment (requires a vehicle of the provider)
    * - VISA → VisaApplication in the provider's organization
    */
+  // R05: the traveler's request creates rows in the PROVIDER organization (transport assignment,
+  // visa application), so this is system-scoped; the checks below (request owner, accepted offer,
+  // provider-owned references) are what keep it safe.
+  @SystemScoped('marketplace.offer-conversion')
   async convertOfferToBooking(requestId: string, offerId: string, actorUserId: string, dto: ConvertOfferDto = {}) {
     const req = await this.prisma.marketplaceRequest.findUnique({ where: { id: requestId }, include: { offers: true } });
     if (!req || req.travelerId !== actorUserId) throw new NotFoundException('Request not found');

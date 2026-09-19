@@ -37,24 +37,25 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 /**
  * Whether an operation on `model` with `args` can read or write a protected table:
  * the model itself is protected, or the arguments name a relation to one anywhere
- * (include/select/where/data/orderBy all name the relation field), or they ask for
- * `_count: true` (every relation, unnamed). Over-approximates: a false positive
- * only costs one wrapped transaction.
+ * (include/select/where/data/orderBy all name the relation field), or an
+ * include/select asks for `_count: true` (every relation, unnamed). Over-approximates:
+ * a false positive only costs one wrapped transaction.
  */
 export function reachesProtectedTable(model: string | undefined, args: unknown): boolean {
   if (!model) return true; // raw query: tables unknown
   if (RLS_MODELS.has(model)) return true;
-  return argsNameProtectedRelation(args, 0);
+  return argsNameProtectedRelation(args, undefined, 0);
 }
 
-function argsNameProtectedRelation(value: unknown, depth: number): boolean {
+function argsNameProtectedRelation(value: unknown, parentKey: string | undefined, depth: number): boolean {
   if (depth > 32) return true;
-  if (Array.isArray(value)) return value.some((v) => argsNameProtectedRelation(v, depth + 1));
+  if (Array.isArray(value)) return value.some((v) => argsNameProtectedRelation(v, parentKey, depth + 1));
   if (!isPlainObject(value)) return false;
   for (const [key, v] of Object.entries(value)) {
     if (RLS_RELATION_FIELDS.has(key)) return true;
-    if (key === '_count' && v === true) return true;
-    if (v !== null && typeof v === 'object' && argsNameProtectedRelation(v, depth + 1)) return true;
+    // `include: { _count: true }` counts every relation; `groupBy/aggregate({ _count: true })` counts rows.
+    if (key === '_count' && v === true && (parentKey === 'include' || parentKey === 'select')) return true;
+    if (v !== null && typeof v === 'object' && argsNameProtectedRelation(v, key, depth + 1)) return true;
   }
   return false;
 }

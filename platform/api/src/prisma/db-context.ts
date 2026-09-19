@@ -12,9 +12,9 @@ import { Logger } from '@nestjs/common';
  *  - `tenant`   an ordinary signed-in principal: its own organization's rows.
  *  - `platform` the Super Admin platform organization: read-only oversight of every
  *               organization, plus the few tables platform administration writes.
- *  - `system`   code that legitimately crosses organizations (login before a
- *               principal exists, provider webhooks, traveler checkout, traveler
- *               links …). Entered ONLY through `withSystemScope(reason, fn)`, with a
+ *  - `system`   code that legitimately crosses organizations (provider webhooks,
+ *               traveler checkout, traveler links, operator scripts …). Entered ONLY
+ *               through `withSystemScope(reason, fn)` / `@SystemScoped(reason)`, with a
  *               reason from the closed list below — never a default.
  *
  * No context (public routes, bootstrap, anything outside a request) sends nothing
@@ -28,8 +28,6 @@ export type DbScope = 'tenant' | 'platform' | 'system';
  * name the flow, and keep the service-layer checks that make it safe.
  */
 export const SYSTEM_SCOPE_REASONS = [
-  /** Login, refresh, logout, password reset, email verification, Google sign-in: no principal exists yet. */
-  'auth.session',
   /** A signed payment-provider webhook drives the change, not a principal. */
   'payments.webhook',
   /** A traveler pays a provider organization (listing booking checkout, status, sandbox completion). */
@@ -38,12 +36,16 @@ export const SYSTEM_SCOPE_REASONS = [
   'travelers.linked-records',
   /** Honour ANOTHER user's notification preferences when notifying them. */
   'notifications.recipient-preferences',
-  /** A founder moves from the traveler community into the organization they are creating. */
-  'onboarding.create-organization',
-  /** A verified, unexpired signed URL names one private document; serve exactly that document. */
-  'documents.signed-download',
+  /** A traveler turns an accepted offer into a booking record held by the PROVIDER organization. */
+  'marketplace.offer-conversion',
   /** Operator CLI scripts and seeds (maintenance, QA fixtures). */
   'scripts.maintenance',
+  /**
+   * Scheduled maintenance that sweeps every organization (e.g. orphaned-upload cleanup).
+   * A job that deletes things because NO row references them MUST run in this scope —
+   * in any other scope RLS hides the references and everything looks orphaned.
+   */
+  'jobs.maintenance',
   /** Test harness only: arranging fixtures through application services. */
   'test.fixture',
 ] as const;
