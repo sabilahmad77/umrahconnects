@@ -44,8 +44,10 @@ Every request gets a database context (AsyncLocalStorage, `src/prisma/db-context
 | `jobs.maintenance` | reserved for scheduled sweeps (e.g. A06's orphaned-upload cleanup) | a sweep sees every organization | **a job that deletes things because no row references them MUST run in this scope — in any other scope RLS hides the references and everything looks orphaned** |
 | `test.fixture` | e2e tests only | arranging/inspecting state through the API's own client | — |
 
-A transaction's scope is fixed when it starts: `withSystemScope` refuses to switch scope
-inside an open interactive transaction (enter it before `$transaction`).
+A transaction's scope is fixed when it starts: enter system scope BEFORE `$transaction`.
+Inside an open transaction the `tx` handle keeps its original, narrower scope (it is never
+widened); new operations on `PrismaService` inside `withSystemScope` run system-scoped in
+their own transaction (tested end to end).
 
 ## 2. How queries are scoped (`src/prisma/rls-extension.ts`)
 
@@ -236,7 +238,10 @@ so the password is not what protects the local cluster — the role attributes a
     the caller's writable rows and a DELETE aimed at foreign rows reaches none (rolled back),
     and moving an own row into another organization is refused;
   * platform: reads oversight tables across organizations, cannot write them, cannot read
-    tables outside oversight (pilgrim documents), may write KYC; system scope is bounded;
+    tables outside oversight (pilgrim documents), may write KYC; system scope is bounded, and
+    never widens an already open tenant transaction;
+  * a real service-layer gap RLS now contains: the hotel list's `_count.allotments` on a
+    shared hotel counted other operators' allotments (D-A08-2) — it now counts only the caller's;
   * per-user rows (preferences) even via raw SQL; the shared community; shared hotels;
   * the cross-organization flows keep working in system scope (traveler TRANSPORT/VISA
     offer conversion lands in the provider organization; a foreign vehicle is refused).
@@ -247,12 +252,24 @@ so the password is not what protects the local cluster — the role attributes a
 
 ## 7. Performance
 
-Measured on the local PostgreSQL 15 (dev data, 400 interleaved samples per query,
-owner/no-RLS vs runtime role + RLS through the scoped client): see the table in the A08
-report. The cost is the extra `BEGIN` / `set_config` / `COMMIT` round trips of the batch
-transaction (sub-millisecond on a local socket); policy evaluation itself is an indexed
-equality on `tenant_id` (the helpers are STABLE and inlined). Operations that cannot
-reach a protected table are not wrapped at all.
+Local PostgreSQL 15 (Apple M-series, loopback), dev data, 400 interleaved A/B samples
+per query; A = owner connection without RLS or wrapping, B = runtime role through the
+scoped client in tenant scope (results verified identical first).
+Raw numbers: `docs/control-tower/evidence/eng100/a08/perf-rls-overhead.txt`.
+
+| Query | A p50 | B p50 | Δ p50 |
+|---|---|---|---|
+| `pilgrim.findMany` (20 rows, tenant filter) | 0.533 ms | 0.838 ms | +0.31 ms |
+| `pilgrim.findFirst` by id | 0.517 ms | 0.907 ms | +0.39 ms |
+| `booking.findMany` + package + pilgrims | 0.683 ms | 0.986 ms | +0.30 ms |
+| `user.findUnique` (unprotected table) | 0.343 ms | 0.351 ms | +0.01 ms |
+
+The cost is the batch transaction's extra round trips (`BEGIN`, one `set_config`
+statement, `COMMIT`) — roughly +0.3–0.4 ms per protected query on a local socket, a few
+milliseconds for a request that makes ~10 such queries. Policy evaluation is an indexed
+equality on `tenant_id` (the STABLE helpers are inlined). Operations that cannot reach a
+protected table are not wrapped. If it ever matters, the next step is one scoped
+interactive transaction per request (fewer round trips, longer-held connections).
 
 ## 8. Known limits (recorded, not hidden)
 
@@ -272,6 +289,12 @@ reach a protected table are not wrapped at all.
   `RETURNING`), marketplace two-party records.
 * Connecting the API as a superuser (the pre-R05 default) silently bypasses everything —
   deployments must use the runtime login (A09 request in the A08 report).
+* The extension recognises operations that already run inside a batch transaction through
+  Prisma 5's `__internalParams.transaction` (internal API, Prisma pinned at 5.22). The probe
+  routes for interactive and batch transactions in `test/rls.e2e-spec.ts` fail if a Prisma
+  upgrade changes that.
+* Services called directly outside a request (tests, scripts) have no scope: wrap them in
+  `withSystemScope('test.fixture' | 'scripts.maintenance', …)` or a request context.
 
 ## 9. Adding a table
 

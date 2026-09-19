@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3408",
-  "at": "2026-09-19T13:10:20.253Z",
+  "at": "2026-09-19T13:20:53.208Z",
   "apiRole": "uc_eng100_app (NOSUPERUSER, NOBYPASSRLS)",
   "results": [
     {
@@ -67,7 +67,7 @@
       "tableRows": 0,
       "errorShown": false,
       "denied": [],
-      "excerpt": "Hotels & Inventory 5 hotels in your network Add Hotel 5 Total Hotels 0 Total Rooms 0 Booked Rooms 0% Occupancy Rate All Cities Makkah Madinah Jeddah Riyadh 🏨 Persisted 88ffa1 Makkah · SA Occupancy 0% 0 booked 0 availabl",
+      "excerpt": "Hotels & Inventory 6 hotels in your network Add Hotel 6 Total Hotels 0 Total Rooms 0 Booked Rooms 0% Occupancy Rate All Cities Makkah Madinah Jeddah Riyadh 🏨 Persisted 98d71f Makkah · SA Occupancy 0% 0 booked 0 availabl",
       "screenshot": "screens/hotel_manager-hotels.png"
     },
     {
@@ -98,7 +98,7 @@
       "tableRows": 0,
       "errorShown": false,
       "denied": [],
-      "excerpt": "Vehicles & Fleet Manage your fleet — add, assign, and track every vehicle Add Vehicle ISO75F8A Available Plate: ISO75F8A Type: BUS_LARGE Seats: 45 / 45 A/C: Yes ISO2FDBC Available Plate: ISO2FDBC Type: BUS_LARGE Seats: 4",
+      "excerpt": "Vehicles & Fleet Manage your fleet — add, assign, and track every vehicle Add Vehicle ISO74A3C Available Plate: ISO74A3C Type: BUS_LARGE Seats: 45 / 45 A/C: Yes ISO75F8A Available Plate: ISO75F8A Type: BUS_LARGE Seats: 4",
       "screenshot": "screens/transport_manager-transport.png"
     },
     {
@@ -126,10 +126,10 @@
       "identity": "finance_manager",
       "page": "/finance-payments",
       "url": "/finance-payments",
-      "tableRows": 16,
+      "tableRows": 18,
       "errorShown": false,
       "denied": [],
-      "excerpt": "Payments 16 payments · SAR 21,000.00 kept on this page, net of refunds Export page Search this page Invoice / booking Counterparty Method Reference Amount Paid at Status Actions INV-2026-00003 Umar Farooq Sandbox(Card) s",
+      "excerpt": "Payments 18 payments · SAR 21,000.00 kept on this page, net of refunds Export page Search this page Invoice / booking Counterparty Method Reference Amount Paid at Status Actions INV-2026-00003 Umar Farooq Sandbox(Card) s",
       "screenshot": "screens/finance_manager-finance-payments.png"
     },
     {
