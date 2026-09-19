@@ -90,8 +90,11 @@ audit/screenshots/
 audit/*.pdf
 audit/*.png
 
-# Locally stored uploads — user content, never committed
-uploads/
+# Locally stored uploads — user content, never committed. Anchored so source
+# folders such as platform/api/src/modules/uploads/ are still tracked.
+/uploads/
+platform/api/uploads/
+apps/web/uploads/
 
 # KVM production secrets and local backups — never committed
 infrastructure/kvm/.env.production
