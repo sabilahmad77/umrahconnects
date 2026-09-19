@@ -291,6 +291,26 @@ describe('role architecture, platform separation and privilege escalation', () =
     });
   });
 
+  describe('platform settings report what is really configured', () => {
+    it('Google sign-in counts as enabled only when all three GOOGLE_* variables are set', async () => {
+      const keys = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'];
+      const saved = keys.map((k) => process.env[k]);
+      const googleSignIn = async () => (await get(w.superAdmin, '/admin/settings')).body.data.enforced.googleSignIn;
+      try {
+        keys.forEach((k) => delete process.env[k]);
+        expect(await googleSignIn()).toBe(false);
+        process.env.GOOGLE_CLIENT_ID = 'client-id-only.apps.googleusercontent.com';
+        expect(await googleSignIn()).toBe(false);
+        process.env.GOOGLE_CLIENT_SECRET = 'test-secret';
+        expect(await googleSignIn()).toBe(false);
+        process.env.GOOGLE_REDIRECT_URI = 'https://example.test/api/v1/auth/google/callback';
+        expect(await googleSignIn()).toBe(true);
+      } finally {
+        keys.forEach((k, i) => (saved[i] === undefined ? delete process.env[k] : (process.env[k] = saved[i])));
+      }
+    });
+  });
+
   describe('the platform console never returns credentials', () => {
     // Column names (camelCase and database spelling) and relations that hold secrets.
     const SECRET_KEYS = new Set([

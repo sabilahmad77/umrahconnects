@@ -329,8 +329,12 @@ async function phaseOnboarding(browser) {
   const s = S.page;
   try {
     // Register a traveler through the real signup page.
-    await p.goto(`${WEB}/signup`, { waitUntil: 'domcontentloaded' });
-    await p.click('text=Hotel / Accommodation');
+    await p.goto(`${WEB}/signup`, { waitUntil: 'networkidle' });
+    // Clicks before hydration do nothing; repeat until step 2 of the form appears.
+    await waitFor(async () => {
+      await p.click('text=Hotel / Accommodation', { timeout: 5000 }).catch(() => {});
+      return !!(await p.waitForSelector('input[placeholder="First name"]', { timeout: 2000 }).catch(() => null));
+    }, 60_000, 500);
     await p.fill('input[placeholder="First name"]', 'Qa');
     await p.fill('input[placeholder="Last name"]', 'Founder');
     await p.fill('input[placeholder="Email address"]', email);
@@ -439,11 +443,13 @@ async function phaseOnboarding(browser) {
     check('onboarding', 'the corrected documents are resubmitted', await waitFor(async () => (await text(p)).includes('Awaiting review'), 30_000));
 
     // Super Admin approves.
+    // The organization now has two submissions: the rejected one and the new one.
+    const pendingCard = `${card}:has(button:has-text("Approve"))`;
     await s.click('button:has-text("Awaiting review")');
-    await waitFor(async () => !!(await s.$(card)), 20_000);
-    await s.click(`${card} button:has-text("Approve")`);
+    await waitFor(async () => !!(await s.$(pendingCard)), 30_000);
+    await s.click(`${pendingCard} button:has-text("Approve")`);
     await s.click('div[role="dialog"] button:has-text("Approve")');
-    check('onboarding', 'the approval is recorded', await waitFor(async () => !(await s.$(card)), 20_000));
+    check('onboarding', 'the approval is recorded', await waitFor(async () => !(await s.$(pendingCard)), 20_000));
 
     // The provider's workspace opens.
     await switchTabs(p);

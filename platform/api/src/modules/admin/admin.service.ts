@@ -33,6 +33,9 @@ interface SuspensionRecord {
   reason?: string;
 }
 
+/** Environment variables Google sign-in needs (see auth/google.service.ts). */
+const GOOGLE_SIGN_IN_SETTINGS = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'] as const;
+
 type RoleRef = { id: string; name: string; tenantId: string | null };
 
 /**
@@ -844,7 +847,8 @@ export class AdminService {
         paymentProvider: process.env.PAYMENT_PROVIDER ?? (process.env.NODE_ENV === 'production' ? 'none' : 'sandbox'),
         storageDriver: process.env.STORAGE_DRIVER ?? 'local',
         mailDriver: process.env.MAIL_DRIVER ?? (process.env.NODE_ENV === 'production' ? 'none' : 'log'),
-        googleSignIn: !!process.env.GOOGLE_CLIENT_ID,
+        // Same rule as GoogleService.configured: sign-in works only with all three set.
+        googleSignIn: GOOGLE_SIGN_IN_SETTINGS.every((key) => !!process.env[key]),
       },
       marketplaceCategories: marketplaceCategories.map((c) => ({ category: c.type, count: c._count as any })),
       regulatorySystems: regulatorySystems.map((c) => ({ system: c.regulatorySystem, count: c._count as any })),

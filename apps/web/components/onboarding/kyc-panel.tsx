@@ -50,12 +50,14 @@ const date = (value?: string | null) => (value ? new Date(value).toLocaleString(
 export function useKycHistory(enabled: boolean, poll: boolean) {
   const { user } = useAuthContext();
   return useQuery({
-    queryKey: ['organization', 'kyc', user?.tenantId],
+    // The organization's status is part of the key: when a reviewer's decision
+    // changes it, the history is read again rather than served from cache.
+    queryKey: ['organization', 'kyc', user?.tenantId, user?.tenantStatus],
     enabled,
     queryFn: async () => (await apiClient.get('/tenants/me/kyc')).data.data as KycRecord[],
-    // The decision is made elsewhere, by a platform reviewer: look again when
-    // the person comes back to the tab, and now and then while waiting.
-    refetchOnWindowFocus: true,
+    // The decision is made elsewhere, by a platform reviewer: look again every
+    // time the person comes back to the tab, and now and then while waiting.
+    refetchOnWindowFocus: 'always',
     refetchInterval: poll ? 30_000 : false,
   });
 }
