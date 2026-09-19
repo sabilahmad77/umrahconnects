@@ -42,6 +42,10 @@ async function user(ctx: TestContext, rbac: RbacService, tenantId: string, email
     create: { tenantId, email, passwordHash: hash, firstName: email.split('@')[0], lastName: 'Fixture', status: 'ACTIVE', emailVerifiedAt: new Date() },
     update: { passwordHash: hash, status: 'ACTIVE', lockedUntil: null, failedLoginCount: 0, sessionsRevokedAt: null },
   });
+  // Each file starts from the fixture's own state: extra roles granted and preferences saved
+  // by an earlier file (e.g. rbac grants OPERATOR_STAFF to finance@op-a) must not leak into the next.
+  await ctx.prisma.userRole.deleteMany({ where: { userId: u.id } });
+  await ctx.prisma.userPreference.deleteMany({ where: { userId: u.id } });
   await rbac.grantSystemRole(u.id, role);
   const res = await ctx.http().post(api('/auth/login')).send({ email, password: PASSWORD });
   if (res.status !== 200) throw new Error(`fixture login failed for ${email}: ${res.status} ${JSON.stringify(res.body)}`);

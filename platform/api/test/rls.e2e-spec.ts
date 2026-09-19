@@ -372,10 +372,15 @@ describe('R05: database-level Row-Level Security', () => {
         const col = table.policy === 'owner-user' ? 'user_id' : table.policy === 'child' ? table.parent!.column : 'tenant_id';
         for (const actor of [w.opA, w.hotelB, w.travelerA]) {
           const traveler = actor === w.travelerA;
+          // Writable = own rows only: shared hotels (and room types of shared hotels) are read-only.
           const writable = await ownerCount(
-            table.policy === 'shared-hotel'
-              ? `${table.table} WHERE ${traveler ? 'false' : `tenant_id = '${actor.tenantId}'`}`
-              : visibleFilter(table, traveler ? 'traveler' : 'tenant', actor.tenantId, actor.id),
+            table.policy === 'owner-user'
+              ? `${table.table} WHERE user_id = '${actor.id}'`
+              : traveler
+                ? `${table.table} WHERE false`
+                : table.policy === 'child'
+                  ? `${table.table} JOIN ${table.parent!.table} p ON p.id = ${alias}.${table.parent!.column} WHERE p.tenant_id = '${actor.tenantId}'`
+                  : `${table.table} WHERE tenant_id = '${actor.tenantId}'`,
           );
           // Rows this actor must never reach, described WITHOUT relying on RLS.
           const foreign =
