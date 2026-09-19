@@ -79,7 +79,11 @@ export function currentDbContext(): DbContext | undefined {
   return storage.getStore();
 }
 
-/** Opens a fresh, mutable context for one request; the auth guard fills it in. */
+/**
+ * Opens a fresh, mutable context for one request; the auth guard fills it in.
+ * Prisma queries are lazy: start (await) them INSIDE `fn` — a promise returned
+ * unawaited from `fn` runs after the context has ended, i.e. unscoped (fail closed).
+ */
 export function runWithDbContext<T>(context: DbContext, fn: () => T): T {
   return storage.run(context, fn);
 }

@@ -1,0 +1,223 @@
+{
+  "base": "http://localhost:3408",
+  "at": "2026-09-19T13:10:20.253Z",
+  "apiRole": "uc_eng100_app (NOSUPERUSER, NOBYPASSRLS)",
+  "results": [
+    {
+      "identity": "operator_admin",
+      "step": "login",
+      "ok": true,
+      "landed": "/dashboard"
+    },
+    {
+      "identity": "operator_admin",
+      "page": "/pilgrims",
+      "url": "/pilgrims",
+      "tableRows": 5,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Pilgrims & CRM 5 pilgrims total Export Add Pilgrim 5 👥 Total Pilgrims 0 🕋 In Kingdom 0 📋 Visa Pending 0 📄 Docs Pending All Pilgrims Docs Pending Visa Pending Visa Approved Traveling In Kingdom Returned Pilgrim Status",
+      "screenshot": "screens/operator_admin-pilgrims.png"
+    },
+    {
+      "identity": "operator_admin",
+      "page": "/bookings",
+      "url": "/bookings",
+      "tableRows": 1,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Bookings 1 total bookings Export New booking 1 Confirmed 0 Partially paid 0 Draft 0 Cancelled All Bookings Draft Confirmed Partially paid Fully paid Visa processing Traveling Completed Cancelled Refunded Booking Status P",
+      "screenshot": "screens/operator_admin-bookings.png"
+    },
+    {
+      "identity": "operator_admin",
+      "page": "/finance",
+      "url": "/finance",
+      "tableRows": 5,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Finance Invoices, payments and revenue tracking New invoice Collected SAR 21,000.00 2 invoices paid in full Net of refunds Outstanding SAR 12,575.00 2 open invoices Drafts SAR 8,500.00 1 not yet issued Search invoices Al",
+      "screenshot": "screens/operator_admin-finance.png"
+    },
+    {
+      "identity": "operator_admin",
+      "page": "/compliance",
+      "url": "/compliance",
+      "tableRows": 5,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Visa & Compliance 5 applications · Approval rate: 0.7% New Application 2 Approved 0 Under Review 1 Submitted 1 Rejected Nusuk / Masar PLANNED SISKOPATUH PLANNED MOH Saudi PLANNED eVisa Portal PLANNED All Not Started Coll",
+      "screenshot": "screens/operator_admin-compliance.png"
+    },
+    {
+      "identity": "operator_admin",
+      "step": "server-errors",
+      "apiErrors": []
+    },
+    {
+      "identity": "hotel_manager",
+      "step": "login",
+      "ok": true,
+      "landed": "/hotel-dashboard"
+    },
+    {
+      "identity": "hotel_manager",
+      "page": "/hotels",
+      "url": "/hotels",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Hotels & Inventory 5 hotels in your network Add Hotel 5 Total Hotels 0 Total Rooms 0 Booked Rooms 0% Occupancy Rate All Cities Makkah Madinah Jeddah Riyadh 🏨 Persisted 88ffa1 Makkah · SA Occupancy 0% 0 booked 0 availabl",
+      "screenshot": "screens/hotel_manager-hotels.png"
+    },
+    {
+      "identity": "hotel_manager",
+      "page": "/hotel-bookings",
+      "url": "/hotel-bookings",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Hotel bookings 0 bookings — platform guests & external clients Export New booking ALL PENDING CONFIRMED CHECKED IN CHECKED OUT COMPLETED CANCELLED No bookings yet — use “New booking” to record your first reservation",
+      "screenshot": "screens/hotel_manager-hotel-bookings.png"
+    },
+    {
+      "identity": "hotel_manager",
+      "step": "server-errors",
+      "apiErrors": []
+    },
+    {
+      "identity": "transport_manager",
+      "step": "login",
+      "ok": true,
+      "landed": "/transport-dashboard"
+    },
+    {
+      "identity": "transport_manager",
+      "page": "/transport",
+      "url": "/transport/vehicles",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Vehicles & Fleet Manage your fleet — add, assign, and track every vehicle Add Vehicle ISO75F8A Available Plate: ISO75F8A Type: BUS_LARGE Seats: 45 / 45 A/C: Yes ISO2FDBC Available Plate: ISO2FDBC Type: BUS_LARGE Seats: 4",
+      "screenshot": "screens/transport_manager-transport.png"
+    },
+    {
+      "identity": "transport_manager",
+      "step": "server-errors",
+      "apiErrors": []
+    },
+    {
+      "identity": "finance_manager",
+      "step": "login",
+      "ok": true,
+      "landed": "/finance-dashboard"
+    },
+    {
+      "identity": "finance_manager",
+      "page": "/finance",
+      "url": "/finance",
+      "tableRows": 5,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Finance Invoices, payments and revenue tracking New invoice Collected SAR 21,000.00 2 invoices paid in full Net of refunds Outstanding SAR 12,575.00 2 open invoices Drafts SAR 8,500.00 1 not yet issued Search invoices Al",
+      "screenshot": "screens/finance_manager-finance.png"
+    },
+    {
+      "identity": "finance_manager",
+      "page": "/finance-payments",
+      "url": "/finance-payments",
+      "tableRows": 16,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Payments 16 payments · SAR 21,000.00 kept on this page, net of refunds Export page Search this page Invoice / booking Counterparty Method Reference Amount Paid at Status Actions INV-2026-00003 Umar Farooq Sandbox(Card) s",
+      "screenshot": "screens/finance_manager-finance-payments.png"
+    },
+    {
+      "identity": "finance_manager",
+      "step": "server-errors",
+      "apiErrors": []
+    },
+    {
+      "identity": "traveler",
+      "step": "login",
+      "ok": true,
+      "landed": "/travel-plan"
+    },
+    {
+      "identity": "traveler",
+      "page": "/travel-plan",
+      "url": "/travel-plan",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "My travel plan Trips your travel organizers share with you, plus your marketplace bookings and service requests. Trips from your travel organizers No trips are linked to your account yet If a travel organizer manages you",
+      "screenshot": "screens/traveler-travel-plan.png"
+    },
+    {
+      "identity": "traveler",
+      "page": "/my-bookings",
+      "url": "/my-bookings",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "My bookings Bookings you’ve placed on marketplace listings. Umrah Visa Processing — Nusuk 3 people SAR 900.00 PENDING Unpaid Pay booking Details Umrah Visa Processing — Nusuk 3 people SAR 900.00 PENDING Unpaid Pay bookin",
+      "screenshot": "screens/traveler-my-bookings.png"
+    },
+    {
+      "identity": "traveler",
+      "page": "/settings",
+      "url": "/settings",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Account settings Your sign-in methods, security and preferences. Profile Manage your name, photo, contact details and profile privacy using your saved profile. Edit profile Sign-in and security traveler@umrahconnect.dev ",
+      "screenshot": "screens/traveler-settings.png"
+    },
+    {
+      "identity": "traveler",
+      "step": "server-errors",
+      "apiErrors": []
+    },
+    {
+      "identity": "super_admin",
+      "step": "login",
+      "ok": true,
+      "landed": "/admin-dashboard"
+    },
+    {
+      "identity": "super_admin",
+      "page": "/admin-dashboard",
+      "url": "/admin-dashboard",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "Platform overview Cross-tenant view of every role, listing, booking and transaction Platform governance Review organization verification, platform users and listing moderation across tenants. Open work queue 11 Tenants a",
+      "screenshot": "screens/super_admin-admin-dashboard.png"
+    },
+    {
+      "identity": "super_admin",
+      "page": "/admin-kyc",
+      "url": "/admin-kyc",
+      "tableRows": 0,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "KYC verification 0 submissions Awaiting review Sent back Approved All No submissions in this view.",
+      "screenshot": "screens/super_admin-admin-kyc.png"
+    },
+    {
+      "identity": "super_admin",
+      "page": "/admin-tenants",
+      "url": "/admin-tenants",
+      "tableRows": 11,
+      "errorShown": false,
+      "denied": [],
+      "excerpt": "All tenants 11 tenants across the platform Export CSV 11 Total tenants 11 Active 0 Suspended 0 Pending KYC All Pending KYC KYC Submitted KYC Approved KYC Rejected Active Suspended Archived Tenant Type Country Users Creat",
+      "screenshot": "screens/super_admin-admin-tenants.png"
+    },
+    {
+      "identity": "super_admin",
+      "step": "server-errors",
+      "apiErrors": []
+    }
+  ]
+}
