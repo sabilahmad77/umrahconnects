@@ -1,5 +1,9 @@
 # COMPLETION REPORT — Umrah Connect Autonomous Implementation Loop
 
+> **Render references here are RETIRED (2026-09-19).** Render (`umrah-connect-api.onrender.com`, `render.yaml`) is retired
+> from the target architecture (API → Hostinger KVM 8). This historical record is kept unchanged as evidence; current
+> state and the remaining owner steps: `docs/control-tower/RENDER_RETIREMENT.md`.
+
 **Date:** 9 Jul 2026 · **Basis:** QA Audit Report + Cloud Code Implementation Plan (7 Jul 2026)
 **Scope:** FIX-01 … FIX-10 + per-role sweep. Verified against the LOCAL dev stack (web :3000, API :4000, Postgres) — never against production.
 

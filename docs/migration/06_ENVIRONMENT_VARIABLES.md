@@ -1,5 +1,10 @@
 # 06 — Environment Variables
 
+> **Status 2026-09-19 — historical snapshot, partly superseded.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 **No secret values appear in this document.** Names, purposes and sources only.
 
 Three templates are committed:
@@ -84,11 +89,10 @@ host or tunnel with no rebuild. Replacing it with an absolute URL breaks that.
 
 ## Production
 
-Production values are held in the **Vercel** (frontend) and **Render**
-(backend) dashboards and are not present in this repository or on the old Mac.
-`render.yaml` generates `JWT_SECRET` and `JWT_REFRESH_SECRET` on the platform
-(`generateValue: true`) and marks `DATABASE_URL` as `sync: false`, meaning it is
-pasted in by hand.
+Production values are held in the **Vercel** dashboard (web) and, for the API, in
+`infrastructure/kvm/.env.production` on the KVM server (mode 600, never committed; every name is listed in
+`infrastructure/kvm/.env.production.example`). They are not present in this repository. The former Render
+dashboard values (and `render.yaml`, now removed) are retired — do not copy Render values into the KVM file.
 
 ## About the root `.env.example`
 

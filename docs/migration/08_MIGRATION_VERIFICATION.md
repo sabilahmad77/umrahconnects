@@ -1,5 +1,10 @@
 # 08 — Migration Verification
 
+> **Status 2026-09-19 — historical snapshot, partly superseded.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 Recorded on the old Mac, 2026-09-12.
 
 ## Source

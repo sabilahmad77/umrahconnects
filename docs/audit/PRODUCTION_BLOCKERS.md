@@ -1,5 +1,9 @@
 # Production Blockers & Findings Register
 
+> **Render references here are RETIRED (2026-09-19).** Render (`umrah-connect-api.onrender.com`, `render.yaml`) is retired
+> from the target architecture (API → Hostinger KVM 8). This historical record is kept unchanged as evidence; current
+> state and the remaining owner steps: `docs/control-tower/RENDER_RETIREMENT.md`.
+
 Audit date: 2026-09-17 · Commit audited: `f71a6de` (main) · Evidence: local runtime (API `:4100`, web `:3000`), live production probes, source inspection.
 
 Every finding below was reproduced. Findings are deduplicated to root cause; the Functional Matrix and Remediation Backlog reference these IDs.

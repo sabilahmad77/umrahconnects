@@ -1,5 +1,10 @@
 # 07 — Old Mac → New Mac Checklist
 
+> **Status 2026-09-19 — historical snapshot, partly superseded.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 For the human operator. Short version: **almost nothing needs to move by hand.**
 
 ## The one-line summary
@@ -77,9 +82,9 @@ on the new Mac and let it execute the whole sequence.
 
 ## Separately, needing a human — not migration blockers
 
-1. **Render API is down.** `umrah-connect-api.onrender.com` has returned nothing
-   since 2026-08-22. Proven not to be a code fault (see doc 03). Check the Render
-   dashboard for `srv-d94peplckfvc73adlr9g`.
+1. **Render API — retired.** `umrah-connect-api.onrender.com` has returned nothing
+   since 2026-08-22 and is no longer the target; the API moves to Hostinger KVM 8.
+   Owner steps and their order: `docs/control-tower/RENDER_RETIREMENT.md`.
 2. **`www.umrahconnect.io` has no DNS record.** The apex works. Add a CNAME if
    the `www` form is wanted.
 3. **Cloud storage keys** (Cloudinary or S3) — needed only for durable uploads.

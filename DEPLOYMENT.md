@@ -1,12 +1,19 @@
 # Deployment
 
-The API deployment guide lives in **[infrastructure/kvm/README.md](infrastructure/kvm/README.md)** (Hostinger KVM 8:
-Docker Compose, Caddy HTTPS, PostgreSQL 16, backups, rollback). The hosting inventory and the Vercel ↔ API contract are in
-**[docs/control-tower/INFRASTRUCTURE.md](docs/control-tower/INFRASTRUCTURE.md)**.
+Target architecture: **Vercel** (web, auto-deploys from `main`) → **Hostinger KVM 8** (API + PostgreSQL 16 behind
+Caddy, Docker Compose) → Cloudflare R2 (objects) and Stripe (payments).
 
-The previous Render + Neon guide is retired. `render.yaml` is kept, marked deprecated, until the KVM cutover.
+- API runbook: **[infrastructure/kvm/README.md](infrastructure/kvm/README.md)** — server setup, first deployment,
+  routine deployment, backups and restore, monitoring, rollback.
+- Hosting inventory and the Vercel ↔ API contract: **[docs/control-tower/INFRASTRUCTURE.md](docs/control-tower/INFRASTRUCTURE.md)**.
+- Render retirement (what is done, what the owner still has to do, and in which order):
+  **[docs/control-tower/RENDER_RETIREMENT.md](docs/control-tower/RENDER_RETIREMENT.md)**.
+
+Render is **retired from the target architecture**. `render.yaml` was removed from the repository; the legacy Render
+service itself keeps running until the owner decommissions it after the KVM cutover (see RENDER_RETIREMENT.md).
 
 Rules:
-- Deploy only reviewed commits that pass `.github/workflows/api-ci.yml`.
-- Migrations are an explicit step (`docker compose run --rm api migrate`). The container never changes the schema on start.
-- Production configuration is validated at boot. Unsafe values stop the API from starting.
+- Deploy only reviewed commits of `main` that pass `.github/workflows/api-ci.yml` (`scripts/deploy.sh` refuses others).
+- Migrations are an explicit deploy step, taken after a backup (`scripts/deploy.sh`). The container never changes the schema on start.
+- Production configuration is checked before deploying (`scripts/preflight.sh`, `api-entrypoint check-config`) and again
+  when the API boots. Unsafe values stop the API from starting.

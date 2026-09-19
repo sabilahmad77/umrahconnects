@@ -8,11 +8,11 @@
 
 ## /proxy-api — CONFIRMED: a Next.js rewrite in THIS repo
 `apps/web/next.config.mjs` rewrites `/proxy-api/:path*` → `${API_ORIGIN}/api/v1/:path*`.
-Local dev → `http://localhost:4000`; production (Vercel) → `https://umrah-connect-api.onrender.com`.
+Local dev → `http://localhost:4000`; production (Vercel) → the origin in `API_PROXY_ORIGIN` (target `https://api.umrahconnect.io` on Hostinger KVM 8). A production build without `API_PROXY_ORIGIN` fails; there is no Render fallback any more (Render is retired — `docs/control-tower/RENDER_RETIREMENT.md`).
 So every `/proxy-api/*` endpoint in the PDFs maps to a NestJS controller in `platform/api/src/modules/*`.
 
 ## Database / ORM
-Prisma 5.22 + PostgreSQL (13 schemas, multiSchema). **No migration files — schema sync via `prisma db push`**; seed via `pnpm db:seed` (`platform/api/prisma/seed.ts`). Local DB `umrah_connects`; production DB on Render (verify writes ONLY against local).
+Prisma 5.22 + PostgreSQL (13 schemas, multiSchema). Committed migrations in `platform/api/prisma/migrations` applied with `prisma migrate deploy` (the July note "no migration files — `db push`" is obsolete); seed via `pnpm db:seed` (`platform/api/prisma/seed.ts`). Local DB `umrah_connects`; production target PostgreSQL 16 on the KVM (`infrastructure/kvm`). The legacy Render database is only a one-time data source for the cutover. Verify writes ONLY against local.
 
 ## Auth/session (FIX-01/02 context)
 - JWT access token 15 min + refresh token 7 d, stored in `localStorage` (`accessToken`, `refreshToken`); axios `apiClient` (`apps/web/lib/api.ts`) attaches Bearer.
@@ -36,4 +36,4 @@ Prisma 5.22 + PostgreSQL (13 schemas, multiSchema). **No migration files — sch
 5. Pilgrim DTO enum ≠ DB enum — deeper than the plan assumed (server itself is self-inconsistent).
 
 ## Deploy loop
-Push to `main` → GitHub → Vercel (web, umrahconnect.io) + Render (API) auto-deploy. Production seed/DB ops via DATABASE_URL from Render dashboard (do not run against prod for verification).
+Push to `main` → GitHub → Vercel (web, umrahconnect.io) auto-deploys. The API is deployed to Hostinger KVM 8 from reviewed commits with `infrastructure/kvm/scripts/deploy.sh` (never on push). The legacy Render service may still auto-build pushes until the owner decommissions it (RENDER_RETIREMENT.md, state 3); it is not part of the target. Never run verification against production data.
