@@ -72,7 +72,18 @@ fi
 warn "health check failed for $TAG"
 if docker image inspect umrah-connect-api:previous >/dev/null 2>&1; then
   # :current was never moved, so it still names the previous release as well.
-  API_IMAGE=umrah-connect-api:previous compose up -d --no-deps uc-api
-  warn "rolled the API container back to the previous release"
+  if API_IMAGE=umrah-connect-api:previous compose up -d --no-deps --wait --wait-timeout 180 uc-api; then
+    warn "rolled the API container back to the previous release; it is healthy"
+  else
+    warn "rolled back to the previous release, but it is NOT healthy either — investigate now"
+  fi
+  # Timers and later commands run scripts from this checkout: put it back on the running release.
+  PREV_SHA="$(docker image inspect umrah-connect-api:previous --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>/dev/null || true)"
+  if git -C "$REPO" rev-parse --verify --quiet "${PREV_SHA:-none}^{commit}" > /dev/null; then
+    git -C "$REPO" checkout --quiet --detach "$PREV_SHA"
+    warn "checkout reset to the running release $PREV_SHA"
+  else
+    warn "the previous image has no known revision; the checkout stays at $SHA"
+  fi
 fi
 die "deploy of $SHA failed. Migrations are not reversed automatically — see README: Rollback"
