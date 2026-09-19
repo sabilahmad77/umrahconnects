@@ -1,238 +1,106 @@
 'use client';
-import { apiErrorMessage } from '@/lib/api-error';
-import { FieldInput as LabeledInput } from '@/components/ui/system';
-import { Select, Textarea, Input , Button , QueryFailure } from '@/components/ui/system';
-
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, AlertCircle, UserCircle2, Save, Edit3, Trash2, ListChecks } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import { useDriver, useUpdateDriver, useDeleteDriver } from '@/hooks/use-transport';
-
-const DRIVER_STATUSES = ['AVAILABLE', 'ASSIGNED', 'ON_TRIP', 'OFF_DUTY', 'INACTIVE'];
+import { apiErrorMessage } from '@/lib/api-error';
+import { Button, LoadingState, QueryFailure } from '@/components/ui/system';
+import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { useDeleteDriver, useDriver } from '@/hooks/use-transport';
+import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
+import { dateTime } from '@/components/dashboard/workflow-ui';
+import { DriverFormModal } from './fleet-forms';
+import { DRIVER_TONE, StatusPill, licenceNote } from './transport-tabs';
+import { TripStatusBadge } from './trip-shared';
 
 export function DriverDetail({ id }: { id: string }) {
   const router = useRouter();
   const { data: d, isLoading, error, refetch } = useDriver(id);
-  const [tab, setTab] = useState<'overview' | 'edit'>('overview');
+  const { ready, can } = useCapabilities();
+  const canManage = can('transport:vehicle:manage');
+  const remove = useDeleteDriver();
+  const [editing, setEditing] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
 
-  if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20 text-gray-600 text-sm">
-        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading driver…
-      </div>
-    );
-  }
-  if (error || !d) {
-    return (
-      <div className="py-20 text-center bg-white rounded-xl border border-gray-200">
-        <AlertCircle className="h-10 w-10 mx-auto mb-3 text-red-700 opacity-60" />
-        <p className="text-sm text-red-700">Driver not found</p>
-        <Link href="/transport" className="text-xs text-brand-500 hover:underline mt-3 inline-block">← Back to transport</Link>
-      </div>
-    );
-  }
-
-  const fullName = `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim();
-
+  if (error) return <QueryFailure error={error} onRetry={() => refetch()} />;
+  if (isLoading || !d) return <LoadingState label="Loading driver…" />;
+  const name = `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim();
+  const archived = d.isActive === false || d.status === 'INACTIVE';
+  const lic = licenceNote(d.licenseExpiry);
 
   return (
     <div className="space-y-5 pb-10">
       <div className="flex items-center gap-3 flex-wrap">
-        <Button variant="quiet" type="button" aria-label="Go back" onClick={() => router.push('/transport')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50">
-          <ArrowLeft className="h-4 w-4 text-gray-600" />
-        </Button>
-        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700 font-bold">
-          {(fullName.split(' ').map((n) => n[0]).join('').slice(0, 2)).toUpperCase()}
-        </div>
+        <Button variant="quiet" type="button" aria-label="Back to drivers" onClick={() => router.push('/transport/drivers')} className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50"><ArrowLeft className="h-4 w-4 text-gray-600" /></Button>
+        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-700 font-bold">{name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}</div>
         <div className="flex-1 min-w-0 basis-[calc(100%_-_140px)] sm:basis-auto">
-          <h1 className="text-2xl font-bold text-gray-900 ">{fullName}</h1>
-          <p className="text-sm text-gray-600">{d.phone ?? '—'} {d.email && `· ${d.email}`}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{name}</h1>
+          <p className="text-sm text-gray-600">{d.phone}{d.email ? ` · ${d.email}` : ''}</p>
         </div>
-        <StatusBadge status={d.status} />
-      </div>
-
-      <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
-        {(['overview', 'edit'] as const).map((t) => (
-          <Button variant="quiet" type="button"
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'capitalize px-3 py-2 rounded-xl text-sm font-medium transition-colors',
-              tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50',
-            )}
-          >
-            {t}
-          </Button>
-        ))}
-      </div>
-
-      {tab === 'overview' && <Overview d={d} />}
-      {tab === 'edit' && <EditTab d={d} refetch={refetch} />}
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const color = status === 'AVAILABLE' ? 'bg-green-50 text-green-700' :
-    status === 'ASSIGNED' ? 'bg-blue-50 text-blue-700' :
-    status === 'ON_TRIP' ? 'bg-orange-50 text-orange-700' :
-    status === 'OFF_DUTY' ? 'bg-gray-100 text-gray-600' :
-    'bg-red-50 text-red-700';
-  return <span className={cn('text-xs font-medium px-2 py-1 rounded-full', color)}>{status?.replace(/_/g, ' ')}</span>;
-}
-
-function Overview({ d }: { d: any }) {
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Driver details</h3>
-        <dl className="grid grid-cols-2 gap-3 text-sm">
-          <Field label="Phone" value={d.phone} />
-          <Field label="Email" value={d.email ?? '—'} />
-          <Field label="Nationality" value={d.nationality ?? '—'} />
-          <Field label="ID / Passport #" value={d.idNumber ?? '—'} />
-          <Field label="License #" value={d.licenseNumber ?? '—'} />
-          <Field label="License expiry" value={d.licenseExpiry ? new Date(d.licenseExpiry).toLocaleDateString() : '—'} />
-          <Field label="Languages" value={(d.languages ?? []).join(', ') || '—'} />
-          <Field label="Rating" value={d.rating ?? '—'} />
-        </dl>
-        {d.notes && (
-          <div className="pt-3 border-t border-gray-50">
-            <p className="text-xs font-semibold text-gray-600 mb-1">Notes</p>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{d.notes}</p>
+        <StatusPill status={archived ? 'INACTIVE' : d.status} tone={DRIVER_TONE} />
+        {canManage && !archived && (
+          <div className="flex gap-2">
+            <Button variant="secondary" type="button" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Edit</Button>
+            <Button variant="quiet" type="button" className="text-red-700 hover:bg-red-50" busy={remove.isPending} onClick={() => setConfirm({
+              title: `Archive ${name}?`, body: 'The driver leaves the active roster; trip history stays. A driver with open trips cannot be archived.', cta: 'Archive driver', tone: 'danger',
+              onConfirm: async () => {
+                try { await remove.mutateAsync(d.id); toast.success('Driver archived'); router.push('/transport/drivers'); }
+                catch (e) { toast.error(apiErrorMessage(e, 'The driver could not be archived.')); }
+              },
+            })}><Trash2 className="h-4 w-4" /> Archive</Button>
           </div>
         )}
       </div>
+      {ready && !canManage && <ReadOnlyNotice>You can view this driver. Changes need the fleet management permission.</ReadOnlyNotice>}
 
-      <div className="space-y-3">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-xs font-semibold text-gray-600 mb-2">Assigned vehicles</p>
-          {(d.vehicles ?? []).length === 0 ? (
-            <p className="text-xs text-gray-600">No vehicles assigned</p>
-          ) : (
-            <ul className="space-y-1.5 text-sm">
-              {d.vehicles.map((vd: any) => (
-                <li key={vd.vehicleId}>
-                  <Link href={`/transport/vehicles/${vd.vehicleId}`} className="font-medium text-gray-800 hover:underline">
-                    {vd.vehicle?.plateNumber ?? vd.vehicleId.slice(0, 8)}
-                  </Link>
-                  {vd.isPrimary && <span className="ml-1 text-xs text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">PRIMARY</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
+          <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Driver details</h2>
+          <dl className="grid grid-cols-2 gap-3 text-sm">
+            <Detail label="Nationality" value={d.nationality || '—'} />
+            <Detail label="ID / Iqama #" value={d.idNumber || '—'} />
+            <Detail label="Licence #" value={d.licenseNumber || '—'} />
+            <Detail label="Licence" value={lic ? <span className={lic.tone}>{lic.text}</span> : 'No expiry recorded'} />
+            <Detail label="Languages" value={(d.languages ?? []).join(', ') || '—'} />
+          </dl>
+          {d.notes && <p className="text-sm text-gray-700 whitespace-pre-wrap pt-2 border-t border-gray-100">{d.notes}</p>}
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <p className="text-xs font-semibold text-gray-600 mb-2">Recent assignments</p>
-          {(d.assignments ?? []).length === 0 ? (
-            <p className="text-xs text-gray-600">No assignments for this driver yet — create one from Transport → Assignments</p>
-          ) : (
-            <ul className="space-y-1.5 text-xs">
-              {d.assignments.slice(0, 5).map((a: any) => (
-                <li key={a.id}>
-                  <p className="font-medium text-gray-800">{a.route?.name ?? a.customerName ?? '—'}</p>
-                  <p className="text-xs text-gray-600">{new Date(a.scheduledAt).toLocaleString()}</p>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="space-y-3">
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-xs font-semibold text-gray-600 mb-2">Vehicles</p>
+            {(d.vehicles ?? []).length === 0 ? <p className="text-xs text-gray-600">Not assigned to a vehicle.</p> : (
+              <ul className="space-y-1.5 text-sm">
+                {d.vehicles.map((vd: any) => (
+                  <li key={vd.vehicleId}><Link href={`/transport/vehicles/${vd.vehicleId}`} className="font-medium text-brand-700 hover:underline">{vd.vehicle?.plateNumber ?? 'Vehicle'}</Link>{vd.isPrimary && <span className="ml-1 text-xs text-brand-700 bg-brand-50 px-1.5 py-0.5 rounded">Primary</span>}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <p className="text-xs font-semibold text-gray-600 mb-2">Latest trips</p>
+            {(d.assignments ?? []).length === 0 ? <p className="text-xs text-gray-600">No trips yet.</p> : (
+              <ul className="space-y-2 text-xs">
+                {d.assignments.slice(0, 6).map((a: any) => (
+                  <li key={a.id} className="flex items-center justify-between gap-2">
+                    <span><span className="font-medium text-gray-800">{a.route?.name ?? a.customerName ?? 'Private transfer'}</span><span className="block text-gray-600">{dateTime(a.scheduledAt)}</span></span>
+                    <TripStatusBadge status={a.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
+
+      {editing && <DriverFormModal driver={d} onClose={() => setEditing(false)} />}
+      {confirm && <ConfirmDialog spec={confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
 }
 
-function Field({ label, value }: { label: string; value: any }) {
-  return (
-    <div>
-      <dt className="text-xs font-semibold text-gray-600">{label}</dt>
-      <dd className="text-sm text-gray-900 font-medium">{value ?? '—'}</dd>
-    </div>
-  );
-}
-
-function EditTab({ d, refetch }: { d: any; refetch: () => void }) {
-  const router = useRouter();
-  const update = useUpdateDriver();
-  const remove = useDeleteDriver();
-  const [form, setForm] = useState({
-    firstName: d.firstName ?? '',
-    lastName: d.lastName ?? '',
-    phone: d.phone ?? '',
-    email: d.email ?? '',
-    nationality: d.nationality ?? '',
-    idNumber: d.idNumber ?? '',
-    licenseNumber: d.licenseNumber ?? '',
-    licenseExpiry: d.licenseExpiry?.slice(0, 10) ?? '',
-    languages: (d.languages ?? []).join(', '),
-    status: d.status ?? 'AVAILABLE',
-    notes: d.notes ?? '',
-  });
-
-  const save = async () => {
-    try {
-      await update.mutateAsync({
-        id: d.id,
-        ...form,
-        languages: form.languages.split(',').map((s: string) => s.trim()).filter(Boolean),
-        licenseExpiry: form.licenseExpiry || null,
-      });
-      toast.success('Driver saved');
-      refetch();
-    } catch (e: any) {
-      toast.error(apiErrorMessage(e, 'Failed'));
-    }
-  };
-
-  const archive = async () => {
-    if (!confirm('Archive this driver?')) return;
-    await remove.mutateAsync(d.id);
-    toast.success('Driver archived');
-    router.push('/transport');
-  };
-
-  return (
-    <div className="space-y-4 max-w-2xl">
-      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit driver</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <LabeledInput label="First name" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} />
-          <LabeledInput label="Last name" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} />
-          <LabeledInput label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
-          <LabeledInput label="Email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
-          <LabeledInput label="Nationality (ISO-2)" value={form.nationality} onChange={(v) => setForm({ ...form, nationality: v.toUpperCase().slice(0, 2) })} />
-          <LabeledInput label="ID / passport #" value={form.idNumber} onChange={(v) => setForm({ ...form, idNumber: v })} />
-          <LabeledInput label="License #" value={form.licenseNumber} onChange={(v) => setForm({ ...form, licenseNumber: v })} />
-          <LabeledInput label="License expiry" type="date" value={form.licenseExpiry} onChange={(v) => setForm({ ...form, licenseExpiry: v })} />
-          <LabeledInput label="Languages (comma)" value={form.languages} onChange={(v) => setForm({ ...form, languages: v })} full />
-          <label className="block">
-            <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-            <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
-              {DRIVER_STATUSES.map((s) => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-            </Select>
-          </label>
-          <label className="block col-span-2">
-            <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-            <Textarea  value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
-          </label>
-        </div>
-        <div className="flex justify-end pt-2">
-          <Button variant="quiet" type="button" onClick={save} disabled={update.isPending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 text-white rounded-lg disabled:opacity-50">
-            {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save driver
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-red-100 p-5">
-        <h3 className="text-sm font-bold text-red-700 inline-flex items-center gap-2"><Trash2 className="h-4 w-4" /> Archive driver</h3>
-        <p className="text-xs text-gray-600 my-2">Hides the driver from active roster.</p>
-        <Button variant="quiet" type="button" onClick={archive} className="px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg">Archive</Button>
-      </div>
-    </div>
-  );
+function Detail({ label, value }: { label: string; value: React.ReactNode }) {
+  return <div><dt className="text-xs font-semibold text-gray-600">{label}</dt><dd className="text-sm text-gray-900 font-medium">{value}</dd></div>;
 }

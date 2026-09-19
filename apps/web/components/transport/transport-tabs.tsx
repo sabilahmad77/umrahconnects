@@ -1,540 +1,204 @@
 'use client';
-import { apiErrorMessage } from '@/lib/api-error';
-import { ModalSurface, Input, Select , Button , QueryFailure } from '@/components/ui/system';
-
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  Bus, User, Map, BarChart3, Plus, RefreshCw, Search,
-  CheckCircle2, XCircle, Clock, AlertCircle, X, Loader2,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import {
-  useTransportVehicles, useTransportDrivers,
-  useTransportRoutes, useTransportStats,
-  useCreateVehicle, useCreateDriver, useCreateRoute,
-} from '@/hooks/use-api';
+import { Bus, User, Map, Plus, RefreshCw, Search } from 'lucide-react';
+import { Button, Input, LoadingState, QueryFailure } from '@/components/ui/system';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { useDriverList, useRouteList, useVehicleList } from '@/hooks/use-transport';
+import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
+import { dateTime, humanize, sar, shortDate } from '@/components/dashboard/workflow-ui';
 import { cn } from '@/lib/utils';
+import { DriverFormModal, RouteFormModal, VehicleFormModal } from './fleet-forms';
 
-const VEHICLE_STATUS: Record<string, { label: string; color: string; dot: string }> = {
-  AVAILABLE:         { label: 'Available',     color: 'bg-green-100 text-green-700',  dot: 'bg-green-500' },
-  BOOKED:            { label: 'Booked',        color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
-  IN_SERVICE:        { label: 'In Service',    color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
-  UNDER_MAINTENANCE: { label: 'Maintenance',   color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  INACTIVE:          { label: 'Inactive',      color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
+type SectionKey = 'vehicles' | 'drivers' | 'routes';
+
+const SECTION_META: Record<SectionKey, { title: string; subtitle: string; add: string; icon: any }> = {
+  vehicles: { title: 'Vehicles & Fleet', subtitle: 'Your fleet: capacity, status and the trips each vehicle carries', add: 'Add vehicle', icon: Bus },
+  drivers: { title: 'Drivers', subtitle: 'Drivers, licences and availability', add: 'Add driver', icon: User },
+  routes: { title: 'Routes', subtitle: 'Scheduled routes: seats for sale, pricing and departures', add: 'Add route', icon: Map },
 };
 
-const DRIVER_STATUS: Record<string, { label: string; color: string }> = {
-  AVAILABLE:   { label: 'Available',  color: 'bg-green-100 text-green-700' },
-  ASSIGNED:    { label: 'Assigned',   color: 'bg-blue-100 text-blue-700' },
-  ON_TRIP:     { label: 'On Trip',    color: 'bg-orange-100 text-orange-700' },
-  OFF_DUTY:    { label: 'Off Duty',   color: 'bg-gray-100 text-gray-600' },
-  INACTIVE:    { label: 'Inactive',   color: 'bg-red-100 text-red-600' },
+export const VEHICLE_TONE: Record<string, string> = {
+  AVAILABLE: 'bg-green-100 text-green-800', BOOKED: 'bg-blue-100 text-blue-700', IN_SERVICE: 'bg-orange-100 text-orange-800',
+  UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-800', INACTIVE: 'bg-gray-100 text-gray-600',
 };
-
-const TABS = [
-  { id: 'vehicles', label: 'Vehicles', icon: Bus },
-  { id: 'drivers',  label: 'Drivers',  icon: User },
-  { id: 'routes',   label: 'Routes',   icon: Map },
-  { id: 'stats',    label: 'Stats',    icon: BarChart3 },
-];
-
-const SECTION_META: Record<string, { title: string; subtitle: string }> = {
-  vehicles: { title: 'Vehicles & Fleet', subtitle: 'Manage your fleet — add, assign, and track every vehicle' },
-  drivers:  { title: 'Drivers', subtitle: 'Manage drivers, licenses, assignments and availability' },
-  routes:   { title: 'Routes', subtitle: 'Define transport routes, pricing, schedules and seats' },
-  stats:    { title: 'Fleet Stats', subtitle: 'Fleet and driver status overview' },
+export const DRIVER_TONE: Record<string, string> = {
+  AVAILABLE: 'bg-green-100 text-green-800', ASSIGNED: 'bg-blue-100 text-blue-700', ON_TRIP: 'bg-orange-100 text-orange-800',
+  OFF_DUTY: 'bg-gray-100 text-gray-700', INACTIVE: 'bg-red-100 text-red-700',
 };
+export const ROUTE_TONE: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-700', ACTIVE: 'bg-green-100 text-green-800', FULLY_BOOKED: 'bg-blue-100 text-blue-700',
+  COMPLETED: 'bg-gray-100 text-gray-700', CANCELLED: 'bg-red-100 text-red-700', INACTIVE: 'bg-gray-100 text-gray-600',
+};
+export function StatusPill({ status, tone }: { status: string; tone: Record<string, string> }) {
+  return <span className={cn('inline-flex text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap', tone[status] ?? 'bg-gray-100 text-gray-700')}>{humanize(status)}</span>;
+}
 
-type SectionKey = 'vehicles' | 'drivers' | 'routes' | 'stats';
+/** Licence status for a driver, from the expiry date. */
+export function licenceNote(expiry?: string | null): { text: string; tone: string } | null {
+  if (!expiry) return null;
+  const days = Math.floor((new Date(expiry).getTime() - Date.now()) / 86_400_000);
+  if (days < 0) return { text: `Licence expired ${shortDate(expiry)}`, tone: 'text-red-700' };
+  if (days <= 30) return { text: `Licence expires ${shortDate(expiry)}`, tone: 'text-orange-800' };
+  return { text: `Licence valid to ${shortDate(expiry)}`, tone: 'text-gray-600' };
+}
 
-export function TransportTabs({ fixedSection }: { fixedSection?: SectionKey }) {
-  const [tab, setTab] = useState<SectionKey>(fixedSection ?? 'vehicles');
-  const [showCreate, setShowCreate] = useState(false);
+export function TransportTabs({ fixedSection = 'vehicles' }: { fixedSection?: SectionKey }) {
+  const { ready, can } = useCapabilities();
+  const canManage = can('transport:vehicle:manage');
+  const [search, setSearch] = useState('');
+  const [adding, setAdding] = useState(false);
+  const meta = SECTION_META[fixedSection];
 
-  const { data: vehicles, isLoading: vl, refetch: rv , error: transportVehiclesError} = useTransportVehicles();
-  const { data: drivers, isLoading: dl, refetch: rd , error: transportDriversError} = useTransportDrivers();
-  const { data: routes, isLoading: rl, refetch: rr , error: transportRoutesError} = useTransportRoutes();
-  const { data: stats, isLoading: sl , error: transportStatsError, refetch: retryTransportStats} = useTransportStats();
-  const createVehicle = useCreateVehicle();
-  const createDriver  = useCreateDriver();
-  const createRoute   = useCreateRoute();
-
-  // Add button label changes per tab
-  const addLabel =
-    tab === 'drivers' ? 'Add Driver' :
-    tab === 'routes'  ? 'Add Route'  : 'Add Vehicle';
-  const showAdd = tab !== 'stats';
-
-  const vehicleItems = vehicles?.items ?? [];
-  const driverItems = drivers?.items ?? [];
-
-  const meta = fixedSection
-    ? SECTION_META[fixedSection]
-    : { title: 'Transport Management', subtitle: 'Fleet, drivers, routes & assignments' };
-
-  const refreshActive = () => {
-    if (tab === 'vehicles') rv();
-    else if (tab === 'drivers') rd();
-    else if (tab === 'routes') rr();
-  };
-
-  if (transportVehiclesError || transportDriversError || transportRoutesError || transportStatsError) return <QueryFailure error={transportVehiclesError || transportDriversError || transportRoutesError || transportStatsError} onRetry={() => { rv(); rd(); rr(); retryTransportStats(); }} />;
   return (
     <div className="space-y-5 pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{meta.title}</h1>
           <p className="text-sm text-gray-600 mt-0.5">{meta.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={refreshActive} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          {showAdd && (
-            <Button variant="quiet" type="button"
-              onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
-            >
-              <Plus className="h-4 w-4" />
-              {addLabel}
-            </Button>
-          )}
-        </div>
+        {canManage && <Button type="button" onClick={() => setAdding(true)}><Plus className="h-4 w-4" /> {meta.add}</Button>}
+      </div>
+      {ready && !canManage && <ReadOnlyNotice>You can view the fleet. Adding or changing vehicles, drivers and routes needs the fleet management permission.</ReadOnlyNotice>}
+
+      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80">
+        <Search className="h-4 w-4 text-gray-600" />
+        <Input aria-label={`Search ${meta.title.toLowerCase()}`} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
       </div>
 
-      {/* Tabs — hidden when rendered as a fixed single section */}
-      {!fixedSection && (
-        <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-          {TABS.map((t) => (
-            <Button variant="quiet" type="button"
-              key={t.id}
-              onClick={() => setTab(t.id as SectionKey)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all',
-                tab === t.id
-                  ? 'bg-brand-500 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-700 hover:bg-gray-50',
-              )}
-            >
-              <t.icon className="h-4 w-4" />
-              {t.label}
-            </Button>
-          ))}
-        </div>
-      )}
+      {fixedSection === 'vehicles' && <VehiclesSection search={search.trim()} />}
+      {fixedSection === 'drivers' && <DriversSection search={search.trim()} />}
+      {fixedSection === 'routes' && <RoutesSection search={search.trim()} />}
 
-      {/* ── Vehicles ── */}
-      {tab === 'vehicles' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {vl ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse space-y-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-xl" />
-                <div className="h-4 w-32 bg-gray-100 rounded" />
-                <div className="h-3 w-24 bg-gray-100 rounded" />
-              </div>
-            ))
-          ) : vehicleItems.length === 0 ? (
-            <div className="col-span-3 py-16 text-center bg-white rounded-xl border border-gray-200">
-              <Bus className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-600">No vehicles found</p>
-            </div>
-          ) : vehicleItems.map((v: any) => {
-            const cfg = VEHICLE_STATUS[v.status] ?? { label: v.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-            const primaryDriver = v.drivers?.[0]?.driver;
-            return (
-              <Link
-                key={v.id}
-                href={`/transport/vehicles/${v.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
-                      <Bus className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">
-                        {v.name ?? v.plateNumber ?? '—'}
-                      </p>
-                      <p className="text-xs text-gray-600 truncate">
-                        {v.brand ?? ''} {v.model ?? ''} {v.year ? `· ${v.year}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <span className={cn('inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium mb-3', cfg.color)}>
-                  <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
-                  {cfg.label}
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                  <div><span className="text-gray-600">Plate:</span> <span className="font-medium text-gray-700">{v.plateNumber ?? '—'}</span></div>
-                  <div><span className="text-gray-600">Type:</span> <span className="font-medium text-gray-700">{v.type ?? '—'}</span></div>
-                  <div><span className="text-gray-600">Seats:</span> <span className="font-medium text-gray-700">{(v.capacity - (v.bookedSeats ?? 0))} / {v.capacity ?? '—'}</span></div>
-                  <div><span className="text-gray-600">A/C:</span> <span className="font-medium text-gray-700">{v.hasAc ? 'Yes' : 'No'}</span></div>
-                </div>
-                {primaryDriver && (
-                  <div className="text-xs text-gray-600 mt-3 pt-3 border-t border-gray-50">
-                    <span className="text-gray-600">Driver:</span> <span className="font-medium text-gray-700">{primaryDriver.firstName} {primaryDriver.lastName}</span>
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Drivers ── */}
-      {tab === 'drivers' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          {dl ? (
-            <div className="divide-y divide-gray-50">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
-                  <div className="w-10 h-10 rounded-xl bg-gray-100" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-36 bg-gray-100 rounded" />
-                    <div className="h-3 w-24 bg-gray-100 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : driverItems.length === 0 ? (
-            <div className="py-16 text-center">
-              <User className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-600">No drivers found</p>
-            </div>
-          ) : (
-            <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Driver</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden md:table-cell">License</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden lg:table-cell">Vehicle</th>
-                  <th className="text-right text-xs font-semibold text-gray-600 px-5 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {driverItems.map((d: any) => {
-                  const stt = DRIVER_STATUS[d.status] ?? { label: d.status ?? 'AVAILABLE', color: 'bg-gray-100 text-gray-600' };
-                  const name = [d.firstName, d.lastName].filter(Boolean).join(' ') || '—';
-                  const primaryVehicle = d.vehicles?.[0]?.vehicle;
-                  return (
-                    <tr key={d.id} className="hover:bg-gray-50/60 transition-colors cursor-pointer" onClick={() => { window.location.href = `/transport/drivers/${d.id}`; }}>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 text-xs font-bold shrink-0">
-                            {name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">{name}</p>
-                            <p className="text-xs text-gray-600">{d.phone ?? '—'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={cn('text-xs px-2.5 py-1 rounded-full font-medium', stt.color)}>{stt.label}</span>
-                      </td>
-                      <td className="px-5 py-3.5 hidden md:table-cell">
-                        <p className="text-sm font-mono text-gray-700">{d.licenseNumber ?? '—'}</p>
-                      </td>
-                      <td className="px-5 py-3.5 hidden lg:table-cell">
-                        <p className="text-sm text-gray-600">{primaryVehicle?.plateNumber ?? 'Unassigned'}</p>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <Link href={`/transport/drivers/${d.id}`} onClick={(e) => e.stopPropagation()} className="text-xs text-brand-500 font-medium hover:underline">View</Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table></div>
-          )}
-        </div>
-      )}
-
-      {/* ── Routes ── */}
-      {tab === 'routes' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {rl ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse h-28" />
-            ))
-          ) : !routes || (routes as any[]).length === 0 ? (
-            <div className="col-span-2 py-16 text-center bg-white rounded-xl border border-gray-200">
-              <Map className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-600">No routes defined</p>
-            </div>
-          ) : (((routes as any).items ?? routes) as any[]).map((r: any) => {
-            const seats = (r.totalSeats ?? 0) - (r.bookedSeats ?? 0);
-            return (
-              <Link
-                key={r.id}
-                href={`/transport/routes/${r.id}`}
-                className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-gray-900">{r.name ?? `Route ${r.id?.slice(0, 6)}`}</p>
-                  <span className="text-xs bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-medium">
-                    {r.movementType ?? r.type ?? 'Transfer'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <span className="font-medium text-gray-700">{r.originCity ?? r.origin ?? '—'}</span>
-                  <span>→</span>
-                  <span className="font-medium text-gray-700">{r.destCity ?? r.destination ?? '—'}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50 text-xs">
-                  {r.pricePerSeatCents != null && (
-                    <span><span className="text-gray-600">From:</span> <span className="font-medium text-gray-700">{r.currency ?? 'SAR'} {(Number(r.pricePerSeatCents) / 100).toLocaleString()}</span></span>
-                  )}
-                  {r.totalSeats != null && (
-                    <span><span className="text-gray-600">Seats:</span> <span className="font-medium text-gray-700">{seats} / {r.totalSeats}</span></span>
-                  )}
-                </div>
-                {r.distanceKm && (
-                  <p className="text-xs text-gray-600 mt-1.5">{r.distanceKm} km · ~{r.durationMins ?? '?'} mins</p>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Stats ── */}
-      {tab === 'stats' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sl ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 animate-pulse h-40" />
-            ))
-          ) : !stats ? (
-            <div className="col-span-2 py-16 text-center bg-white rounded-xl border border-gray-200">
-              <BarChart3 className="h-12 w-12 mx-auto mb-3 text-gray-200" />
-              <p className="text-sm text-gray-600">No stats available</p>
-            </div>
-          ) : (
-            <>
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-900 mb-4">🚌 Vehicle Fleet Status</h3>
-                <div className="space-y-2.5">
-                  {Object.entries((stats as any).vehicles?.byStatus ?? {}).map(([status, count]) => {
-                    const cfg = VEHICLE_STATUS[status] ?? { label: status, dot: 'bg-gray-400' };
-                    return (
-                      <div key={status} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className={cn('w-2 h-2 rounded-full', cfg.dot)} />
-                          <span className="text-xs text-gray-600">{cfg.label}</span>
-                        </div>
-                        <span className="text-sm font-bold text-gray-800">{count as number}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-900 mb-4">👨‍✈️ Driver Status</h3>
-                <div className="space-y-2.5">
-                  {Object.entries((stats as any).drivers?.byStatus ?? {}).map(([status, count]) => {
-                    const cfg = DRIVER_STATUS[status] ?? { label: status, color: 'bg-gray-100 text-gray-600' };
-                    return (
-                      <div key={status} className="flex items-center justify-between">
-                        <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', cfg.color)}>{cfg.label}</span>
-                        <span className="text-sm font-bold text-gray-800">{count as number}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {showCreate && tab === 'vehicles' && (
-        <AddVehicleModal
-          onClose={() => setShowCreate(false)}
-          onCreate={async (dto) => {
-            try { await createVehicle.mutateAsync(dto); toast.success('Vehicle added'); setShowCreate(false); rv(); }
-            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
-          }}
-          pending={createVehicle.isPending}
-        />
-      )}
-      {showCreate && tab === 'drivers' && (
-        <AddDriverModal
-          onClose={() => setShowCreate(false)}
-          onCreate={async (dto) => {
-            try { await createDriver.mutateAsync(dto); toast.success('Driver added'); setShowCreate(false); rd(); }
-            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
-          }}
-          pending={createDriver.isPending}
-        />
-      )}
-      {showCreate && tab === 'routes' && (
-        <AddRouteModal
-          onClose={() => setShowCreate(false)}
-          onCreate={async (dto) => {
-            try { await createRoute.mutateAsync(dto); toast.success('Route added'); setShowCreate(false); rr(); }
-            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
-          }}
-          pending={createRoute.isPending}
-        />
-      )}
+      {adding && fixedSection === 'vehicles' && <VehicleFormModal onClose={() => setAdding(false)} />}
+      {adding && fixedSection === 'drivers' && <DriverFormModal onClose={() => setAdding(false)} />}
+      {adding && fixedSection === 'routes' && <RouteFormModal onClose={() => setAdding(false)} />}
     </div>
   );
 }
 
-// ─── Add-modals ────────────────────────────────────────────────────────────
-// The canonical TransportType enum. SEDAN/SUV/COACH were accepted only as
-// aliases the service rewrote (SEDAN/SUV -> PRIVATE_CAR, COACH -> BUS_LARGE),
-// so a stored PRIVATE_CAR or BUS_SMALL matched no option and the field rendered
-// blank on the way back.
-const VEHICLE_TYPES = ['BUS_SMALL', 'BUS_MEDIUM', 'BUS_LARGE', 'VAN', 'PRIVATE_CAR'];
-const MOVEMENT_TYPES = ['AIRPORT_PICKUP', 'AIRPORT_DROPOFF', 'MAKKAH_MADINAH', 'MADINAH_MAKKAH', 'ZIYARAT', 'LOCAL', 'MASHAER_MINA', 'MASHAER_ARAFAT', 'MASHAER_MUZDALIFAH'];
-const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none bg-white';
-
-function ModalShell({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
+function RefreshBar({ total, noun, onRefresh, loading }: { total: number; noun: string; onRefresh: () => void; loading: boolean }) {
   return (
-    <ModalSurface title={title} onClose={onClose}   >
-      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-600" /></Button>
+    <div className="flex items-center justify-between">
+      <p className="text-xs text-gray-600">{total} {noun}{total === 1 ? '' : 's'}</p>
+      <Button variant="quiet" type="button" aria-label={`Refresh ${noun}s`} onClick={onRefresh} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
+        <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+      </Button>
+    </div>
+  );
+}
+
+function VehiclesSection({ search }: { search: string }) {
+  const { data, isLoading, error, refetch, isFetching } = useVehicleList({ limit: 100, search: search || undefined });
+  const items = data?.items ?? [];
+  if (error) return <QueryFailure error={error} onRetry={() => refetch()} />;
+  if (isLoading) return <LoadingState label="Loading vehicles…" />;
+  return (
+    <section className="space-y-3" aria-label="Vehicles">
+      <RefreshBar total={data?.total ?? 0} noun="vehicle" onRefresh={() => refetch()} loading={isFetching} />
+      {items.length === 0 ? (
+        <div className="py-16 text-center bg-white rounded-xl border border-gray-200"><Bus className="h-12 w-12 mx-auto mb-3 text-gray-300" /><p className="text-sm text-gray-600">No vehicles found</p></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {items.map((v: any) => {
+            const primary = v.drivers?.find((d: any) => d.isPrimary)?.driver ?? v.drivers?.[0]?.driver;
+            return (
+              <Link key={v.id} href={`/transport/vehicles/${v.id}`} className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{v.plateNumber}{v.name ? ` · ${v.name}` : ''}</p>
+                    <p className="text-xs text-gray-600 truncate">{humanize(v.type)}{v.brand || v.model ? ` · ${[v.brand, v.model].filter(Boolean).join(' ')}` : ''}{v.year ? ` · ${v.year}` : ''}</p>
+                  </div>
+                  <StatusPill status={v.isActive === false ? 'INACTIVE' : v.status} tone={VEHICLE_TONE} />
+                </div>
+                <dl className="grid grid-cols-2 gap-2 text-xs text-gray-700">
+                  <div><dt className="text-gray-600">Seats</dt><dd className="font-semibold">{v.capacity}</dd></div>
+                  <div><dt className="text-gray-600">Open trips</dt><dd className="font-semibold">{v._count?.assignments ?? 0} ({v.bookedSeats} pax)</dd></div>
+                </dl>
+                <p className="text-xs text-gray-600 mt-3 pt-3 border-t border-gray-100">Driver: {primary ? `${primary.firstName} ${primary.lastName}` : 'none assigned'}</p>
+              </Link>
+            );
+          })}
         </div>
-        <div className="space-y-3">{children}</div>
-        <div className="flex justify-end gap-2 mt-5">{footer}</div>
-      </div>
-    </ModalSurface>
+      )}
+    </section>
   );
 }
 
-function AddVehicleModal({ onClose, onCreate, pending }: { onClose: () => void; onCreate: (dto: any) => Promise<void>; pending: boolean }) {
-  const [type, setType] = useState('BUS_LARGE');
-  const [plateNumber, setPlateNumber] = useState('');
-  const [capacity, setCapacity] = useState('45');
-  const [make, setMake] = useState('');
-  const [model, setModel] = useState('');
-  const [year, setYear] = useState('');
-  const submit = () => onCreate({ type, plateNumber: plateNumber.trim(), capacity: Number(capacity), make: make || undefined, model: model || undefined, year: year ? Number(year) : undefined });
+function DriversSection({ search }: { search: string }) {
+  const { data, isLoading, error, refetch, isFetching } = useDriverList({ limit: 100, search: search || undefined });
+  const items = data?.items ?? [];
+  if (error) return <QueryFailure error={error} onRetry={() => refetch()} />;
+  if (isLoading) return <LoadingState label="Loading drivers…" />;
   return (
-    <ModalShell
-      title="Add vehicle"
-      onClose={onClose}
-      footer={<>
-        <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
-        <Button variant="quiet" type="button" onClick={submit} disabled={pending || !plateNumber.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
-          {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Add vehicle
-        </Button>
-      </>}
-    >
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block col-span-2">
-          <span className="block text-xs font-semibold text-gray-600 mb-1">Plate number *</span>
-          <Input  autoFocus value={plateNumber} onChange={(e) => setPlateNumber(e.target.value)} placeholder="MKA-3421" className={inputCls} />
-        </label>
-        <label className="block">
-          <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-          <Select  value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
-            {VEHICLE_TYPES.map((v) => <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>)}
-          </Select>
-        </label>
-        <label className="block">
-          <span className="block text-xs font-semibold text-gray-600 mb-1">Capacity</span>
-          <Input  type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} className={inputCls} />
-        </label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Make</span><Input  value={make} onChange={(e) => setMake(e.target.value)} placeholder="Mercedes" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Model</span><Input  value={model} onChange={(e) => setModel(e.target.value)} placeholder="Tourismo" className={inputCls} /></label>
-        <label className="block col-span-2"><span className="block text-xs font-semibold text-gray-600 mb-1">Year</span><Input  type="number" min="1990" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2024" className={inputCls} /></label>
-      </div>
-    </ModalShell>
+    <section className="space-y-3" aria-label="Drivers">
+      <RefreshBar total={data?.total ?? 0} noun="driver" onRefresh={() => refetch()} loading={isFetching} />
+      {items.length === 0 ? (
+        <div className="py-16 text-center bg-white rounded-xl border border-gray-200"><User className="h-12 w-12 mx-auto mb-3 text-gray-300" /><p className="text-sm text-gray-600">No drivers found</p></div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200">
+          <div role="region" aria-label="Drivers" tabIndex={0} className="max-w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
+                <tr><th className="text-left px-4 py-3">Driver</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Licence</th><th className="text-left px-4 py-3">Vehicle</th><th className="text-left px-4 py-3">Open trips</th></tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {items.map((d: any) => {
+                  const lic = licenceNote(d.licenseExpiry);
+                  const vehicle = d.vehicles?.find((x: any) => x.isPrimary)?.vehicle ?? d.vehicles?.[0]?.vehicle;
+                  return (
+                    <tr key={d.id}>
+                      <td className="px-4 py-3">
+                        <Link href={`/transport/drivers/${d.id}`} className="font-semibold text-brand-700 hover:underline">{d.firstName} {d.lastName}</Link>
+                        <p className="text-xs text-gray-600">{d.phone}</p>
+                      </td>
+                      <td className="px-4 py-3"><StatusPill status={d.isActive === false ? 'INACTIVE' : d.status} tone={DRIVER_TONE} /></td>
+                      <td className="px-4 py-3 text-xs"><p className="font-mono text-gray-800">{d.licenseNumber ?? '—'}</p>{lic && <p className={lic.tone}>{lic.text}</p>}</td>
+                      <td className="px-4 py-3 text-xs text-gray-700">{vehicle?.plateNumber ?? 'Unassigned'}</td>
+                      <td className="px-4 py-3">{d._count?.assignments ?? 0}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
-function AddDriverModal({ onClose, onCreate, pending }: { onClose: () => void; onCreate: (dto: any) => Promise<void>; pending: boolean }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [licenseExpiry, setLicenseExpiry] = useState('');
-  const submit = () => onCreate({
-    firstName: firstName.trim(),
-    lastName: lastName.trim(),
-    phone: phone.trim(),
-    email: email || undefined,
-    licenseNumber: licenseNumber || undefined,
-    licenseExpiry: licenseExpiry ? new Date(licenseExpiry).toISOString() : undefined,
-  });
+function RoutesSection({ search }: { search: string }) {
+  const { data, isLoading, error, refetch, isFetching } = useRouteList({ limit: 100, search: search || undefined });
+  const items = data?.items ?? [];
+  if (error) return <QueryFailure error={error} onRetry={() => refetch()} />;
+  if (isLoading) return <LoadingState label="Loading routes…" />;
   return (
-    <ModalShell
-      title="Add driver"
-      onClose={onClose}
-      footer={<>
-        <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
-        <Button variant="quiet" type="button" onClick={submit} disabled={pending || !firstName.trim() || !lastName.trim() || !phone.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
-          {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Add driver
-        </Button>
-      </>}
-    >
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">First name *</span><Input  autoFocus value={firstName} onChange={(e) => setFirstName(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Last name *</span><Input  value={lastName} onChange={(e) => setLastName(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Phone *</span><Input  value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+966 5..." className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Email</span><Input  type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">License #</span><Input  value={licenseNumber} onChange={(e) => setLicenseNumber(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">License expiry</span><Input  type="date" value={licenseExpiry} onChange={(e) => setLicenseExpiry(e.target.value)} className={inputCls} /></label>
-      </div>
-    </ModalShell>
-  );
-}
-
-function AddRouteModal({ onClose, onCreate, pending }: { onClose: () => void; onCreate: (dto: any) => Promise<void>; pending: boolean }) {
-  const [name, setName] = useState('');
-  const [type, setType] = useState('AIRPORT_PICKUP');
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [pricePerPax, setPricePerPax] = useState('');
-  const [distanceKm, setDistanceKm] = useState('');
-  const [estimatedDuration, setEstimatedDuration] = useState('');
-  const submit = () => onCreate({
-    name: name.trim(),
-    type,
-    origin: origin.trim(),
-    destination: destination.trim(),
-    pricePerPax: pricePerPax ? Number(pricePerPax) : undefined,
-    distanceKm: distanceKm ? Number(distanceKm) : undefined,
-    estimatedDuration: estimatedDuration ? Number(estimatedDuration) : undefined,
-    currency: 'SAR',
-  });
-  return (
-    <ModalShell
-      title="Add route"
-      onClose={onClose}
-      footer={<>
-        <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
-        <Button variant="quiet" type="button" onClick={submit} disabled={pending || !name.trim() || !origin.trim() || !destination.trim()} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
-          {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Add route
-        </Button>
-      </>}
-    >
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block col-span-2"><span className="block text-xs font-semibold text-gray-600 mb-1">Route name *</span><Input  autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="JED Airport → Makkah" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-          <Select  value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
-            {MOVEMENT_TYPES.map((m) => <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>)}
-          </Select>
-        </label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Price per pax (SAR)</span><Input  type="number" min="0" value={pricePerPax} onChange={(e) => setPricePerPax(e.target.value)} placeholder="150" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Origin *</span><Input  value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder="Jeddah" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Destination *</span><Input  value={destination} onChange={(e) => setDestination(e.target.value)} placeholder="Makkah" className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Distance (km)</span><Input  type="number" min="0" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} className={inputCls} /></label>
-        <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Duration (min)</span><Input  type="number" min="0" value={estimatedDuration} onChange={(e) => setEstimatedDuration(e.target.value)} className={inputCls} /></label>
-      </div>
-    </ModalShell>
+    <section className="space-y-3" aria-label="Routes">
+      <RefreshBar total={data?.total ?? 0} noun="route" onRefresh={() => refetch()} loading={isFetching} />
+      {items.length === 0 ? (
+        <div className="py-16 text-center bg-white rounded-xl border border-gray-200"><Map className="h-12 w-12 mx-auto mb-3 text-gray-300" /><p className="text-sm text-gray-600">No routes found</p></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {items.map((r: any) => (
+            <Link key={r.id} href={`/transport/routes/${r.id}`} className="block bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand-200 transition-all">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
+                  <p className="text-xs text-gray-600">{r.originCity} → {r.destCity} · {humanize(r.movementType)}</p>
+                </div>
+                <StatusPill status={r.status} tone={ROUTE_TONE} />
+              </div>
+              <dl className="grid grid-cols-3 gap-2 text-xs text-gray-700 pt-2 border-t border-gray-100">
+                <div><dt className="text-gray-600">Seats sold</dt><dd className="font-semibold">{r.bookedSeats}{r.totalSeats != null ? ` / ${r.totalSeats}` : ''}</dd></div>
+                <div><dt className="text-gray-600">Per seat</dt><dd className="font-semibold">{r.pricePerSeatCents != null ? sar(r.pricePerSeatCents, r.currency) : '—'}</dd></div>
+                <div><dt className="text-gray-600">Departure</dt><dd className="font-semibold">{r.departureAt ? dateTime(r.departureAt) : 'On request'}</dd></div>
+              </dl>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
