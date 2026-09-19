@@ -12,10 +12,21 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useBudgetPlans, useCreateBudgetPlan, useUpdateBudgetPlan, useDeleteBudgetPlan } from '@/hooks/use-finance';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { formatAmount, parseMajorToCents } from './money';
 
 const PLAN_STATUSES = ['DRAFT', 'PROPOSED', 'ACCEPTED', 'COMPLETED', 'CANCELLED'];
+/** Mirrors PLAN_TRANSITIONS in the finance service: COMPLETED and CANCELLED are final. */
+const PLAN_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['PROPOSED', 'ACCEPTED', 'CANCELLED'],
+  PROPOSED: ['DRAFT', 'ACCEPTED', 'CANCELLED'],
+  ACCEPTED: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: [],
+};
+const PLAN_INITIAL_STATUSES = ['DRAFT', 'PROPOSED', 'ACCEPTED'];
 
-const fmt = (cents: number, cur = 'SAR') => `${cur} ${((cents ?? 0) / 100).toLocaleString()}`;
+const fmt = (cents: number, cur = 'SAR') => formatAmount(cents ?? 0, cur);
 
 export function BudgetPlansView() {
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -25,6 +36,9 @@ export function BudgetPlansView() {
   const { data, isLoading, error, refetch } = useBudgetPlans(statusFilter !== 'ALL' ? { status: statusFilter } : undefined);
   const update = useUpdateBudgetPlan();
   const del = useDeleteBudgetPlan();
+  const { can } = useCapabilities();
+  // Creating and changing plans needs invoice rights; reading them needs finance reports.
+  const canManage = can('finance:invoice:create');
 
   const items = (data?.items ?? []).filter((p: any) =>
     !search || (p.clientName ?? '').toLowerCase().includes(search.toLowerCase()) || (p.destination ?? '').toLowerCase().includes(search.toLowerCase()),
@@ -42,9 +56,11 @@ export function BudgetPlansView() {
           <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
-          <Button variant="quiet" type="button" onClick={() => setShowCreate(true)} className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
-            <Plus className="h-4 w-4" /> New budget plan
-          </Button>
+          {canManage && (
+            <Button variant="quiet" type="button" onClick={() => setShowCreate(true)} className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
+              <Plus className="h-4 w-4" /> New budget plan
+            </Button>
+          )}
         </div>
       </div>
 
@@ -96,7 +112,7 @@ export function BudgetPlansView() {
                     </div>
                   </Button>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Select disabled={update.isPending} aria-label={`Status for ${p.id ?? 'record'}`}
+                    <Select disabled={update.isPending || !canManage || (PLAN_TRANSITIONS[p.status] ?? []).length === 0} aria-label={`Status of ${p.planRef ?? 'plan'}`}
                       value={p.status}
                       onChange={async (e) => { try { await update.mutateAsync({ id: p.id, status: e.target.value }); toast.success('Updated'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
                       className={cn('text-xs border rounded-lg px-2 py-1',
@@ -105,17 +121,19 @@ export function BudgetPlansView() {
                         p.status === 'CANCELLED' ? 'border-red-200 bg-red-50 text-red-600' :
                         'border-gray-200 bg-white text-gray-600')}
                     >
-                      {PLAN_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {[p.status, ...(PLAN_TRANSITIONS[p.status] ?? [])].map((s) => <option key={s} value={s}>{s}</option>)}
                     </Select>
-                    <Button variant="quiet" type="button" onClick={() => setExpanded(isOpen ? null : p.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-600">
+                    <Button variant="quiet" type="button" aria-label={isOpen ? 'Hide plan details' : 'Show plan details'} aria-expanded={isOpen} onClick={() => setExpanded(isOpen ? null : p.id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-600">
                       {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
-                    <Button busy={del.isPending} variant="quiet" type="button" aria-label="Delete record"
-                      onClick={async () => { try { if (!confirm('Cancel this budget plan?')) return; await del.mutateAsync(p.id); toast.success('Cancelled'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
-                      className="p-1.5 rounded hover:bg-red-50 text-red-700"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {canManage && (PLAN_TRANSITIONS[p.status] ?? []).includes('CANCELLED') && (
+                      <Button busy={del.isPending} variant="quiet" type="button" aria-label={`Cancel plan ${p.planRef ?? ''}`}
+                        onClick={async () => { try { if (!confirm('Cancel this budget plan? A cancelled plan cannot be reopened.')) return; await del.mutateAsync(p.id); toast.success('Plan cancelled'); refetch(); } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
+                        className="p-1.5 rounded hover:bg-red-50 text-red-700"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 {isOpen && (
@@ -174,11 +192,18 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
   });
   const set = (k: string, v: string) => setF((p) => ({ ...p, [k]: v }));
 
-  const allocated = ['hotelBudget', 'transportBudget', 'visaBudget', 'packageBudget', 'otherBudget']
-    .reduce((s, k) => s + (Number((f as any)[k]) || 0), 0);
+  const MONEY = ['totalBudget', 'hotelBudget', 'transportBudget', 'visaBudget', 'packageBudget', 'otherBudget'] as const;
+  const cents = (k: (typeof MONEY)[number]) => ((f as any)[k].trim() === '' ? 0 : parseMajorToCents((f as any)[k]));
+  const allocatedCents = MONEY.slice(1).reduce((s, k) => s + (cents(k) ?? 0), 0);
 
   const submit = async () => {
+    if (create.isPending) return;
     if (!f.clientName.trim()) { toast.error('Client name is required'); return; }
+    if (!/^\d+$/.test(f.travelers) || Number(f.travelers) < 1 || Number(f.travelers) > 10_000) { toast.error('Enter the number of travelers as a whole number from 1'); return; }
+    if (f.dateFrom && f.dateTo && f.dateTo < f.dateFrom) { toast.error('The travel end date cannot be before the start date'); return; }
+    const bad = MONEY.find((k) => cents(k) === null);
+    if (bad) { toast.error('Budgets must be amounts such as 1500 or 1500.50'); return; }
+    if (f.commissionRate && !(Number(f.commissionRate) >= 0 && Number(f.commissionRate) <= 100)) { toast.error('The commission rate must be between 0 and 100'); return; }
     try {
       await create.mutateAsync({
         clientName: f.clientName.trim(),
@@ -240,7 +265,7 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
             <Select  value={f.status} onChange={(e) => set('status', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
-              {PLAN_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {PLAN_INITIAL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
           </label>
           <label className="block col-span-2">
@@ -249,7 +274,7 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
           </label>
         </div>
         <div className="bg-brand-50 rounded-lg px-3 py-2 text-sm mt-3">
-          <span className="text-gray-600">Allocated across categories:</span> <span className="font-bold text-gray-900">{f.currency} {allocated.toLocaleString()}</span>
+          <span className="text-gray-600">Allocated across categories:</span> <span className="font-bold text-gray-900">{formatAmount(allocatedCents, f.currency)}</span>
         </div>
         <div className="flex justify-end gap-2 mt-4">
           <Button disabled={create.isPending} variant="quiet" type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-200 rounded-lg">Cancel</Button>

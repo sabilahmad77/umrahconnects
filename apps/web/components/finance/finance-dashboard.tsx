@@ -10,11 +10,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFinanceDashboardStats } from '@/hooks/use-finance';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { formatAmount } from './money';
 
-const fmt = (cents: number, cur = 'SAR') => `${cur} ${(cents / 100).toLocaleString()}`;
+const fmt = (cents: number, cur = 'SAR') => formatAmount(cents, cur);
 
 export function FinanceDashboard() {
   const { data: stats, isLoading, error, refetch } = useFinanceDashboardStats();
+  const { can } = useCapabilities();
 
   if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
@@ -28,9 +31,11 @@ export function FinanceDashboard() {
           <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
-          <Link href="/finance" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
-            <FileText className="h-4 w-4" /> New invoice
-          </Link>
+          {can('finance:invoice:create') && (
+            <Link href="/finance" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
+              <FileText className="h-4 w-4" /> Invoices
+            </Link>
+          )}
         </div>
       </div>
 
@@ -42,11 +47,17 @@ export function FinanceDashboard() {
         <>
           {/* Hero KPIs */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KPI label="Revenue collected" value={fmt(stats.paid.amountCents, stats.currency)} sub={`${stats.paid.count} paid invoices`} icon={Wallet} color="bg-green-50 text-green-700" href="/finance" />
+            <KPI label="Collected on invoices" value={fmt(stats.paid.amountCents, stats.currency)} sub={`${stats.paid.count} paid in full · net of refunds`} icon={Wallet} color="bg-green-50 text-green-700" href="/finance" />
             <KPI label="Outstanding" value={fmt(stats.outstanding.amountCents, stats.currency)} sub={`${stats.outstanding.count} unpaid`} icon={PauseCircle} color="bg-orange-50 text-orange-700" href="/finance" />
             <KPI label="Commission earned" value={fmt(stats.commissionEarnedCents, stats.currency)} sub={`${stats.budgetPlans.active} active plans`} icon={Percent} color="bg-purple-50 text-purple-700" href="/budget-plans" />
-            <KPI label="Financed bookings" value={stats.financedBookings} sub="linked to invoices" icon={BookOpen} color="bg-blue-50 text-blue-700" href="/bookings" />
+            <KPI label="Marketplace card payments" value={fmt(stats.marketplace?.amountCents ?? 0, stats.currency)} sub={`${stats.marketplace?.count ?? 0} traveler checkouts · ${stats.financedBookings} invoiced bookings`} icon={BookOpen} color="bg-blue-50 text-blue-700" href="/finance-payments" />
           </div>
+          {stats.otherCurrencies?.length > 0 && (
+            <p className="text-xs text-gray-600">
+              Figures are in {stats.currency}. Other currencies:{' '}
+              {stats.otherCurrencies.map((c: any) => `${fmt(c.collectedCents, c.currency)} collected, ${fmt(c.outstandingCents, c.currency)} outstanding`).join('; ')}.
+            </p>
+          )}
 
           {/* Invoice status tiles */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
@@ -111,7 +122,7 @@ export function FinanceDashboard() {
                         <p className="font-medium text-gray-900 truncate">{t.counterparty ?? t.invoiceRef ?? 'Payment'}</p>
                         <p className="text-xs text-gray-600">{t.gateway} · {t.status}</p>
                       </div>
-                      <span className="text-xs font-semibold text-gray-900 shrink-0">{fmt(t.amountCents, stats.currency)}</span>
+                      <span className="text-xs font-semibold text-gray-900 shrink-0">{fmt(t.amountCents, t.currency ?? stats.currency)}</span>
                     </li>
                   ))}
                 </ul>

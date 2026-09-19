@@ -34,3 +34,28 @@ describe('current backend acceptance contracts',()=>{
  it('keeps captured/refunded states out of provider-controlled transitions',()=>{expect(bookingTransitions('PENDING')).toEqual(['CONFIRMED','CANCELLED']);expect(bookingTransitions('PAID')).toEqual(['COMPLETED']);for(const status of ['COMPLETED','CANCELLED','REFUNDED','unknown'])expect(bookingTransitions(status)).toEqual([]);});
  it('requires server-resolved permissions for operational and platform screens',()=>{expect(canOpenWorkspaceRoute('/pilgrims',['HOTEL_MANAGER'],['hotel:allotment:read'])).toBe(false);expect(canOpenWorkspaceRoute('/pilgrims',['OPERATOR_ADMIN'],['crm:pilgrim:read'])).toBe(true);expect(canOpenWorkspaceRoute('/admin-tenants',['SUPER_ADMIN'],[])).toBe(false);});
 });
+
+import { readFileSync } from 'fs';
+import { join } from 'path';
+describe('booking and budget-plan lifecycles mirror the server', () => {
+  const API = join(__dirname, '..', '..', '..', 'platform', 'api', 'src', 'modules');
+  const grab = (file: string, name: string) => {
+    const src = readFileSync(file, 'utf8');
+    const m = src.match(new RegExp(`${name}: Record<string, string\\[\\]> = \\{([\\s\\S]*?)\\};`));
+    return m ? m[1].replace(/\s/g, '') : null;
+  };
+  it('operator booking status moves', () => {
+    const web = grab(join(__dirname, '..', 'components/bookings/booking-detail.tsx'), 'BOOKING_STATUS_TRANSITIONS');
+    expect(web).not.toBeNull();
+    expect(web).toBe(grab(join(API, 'bookings/booking-money.ts'), 'BOOKING_STATUS_TRANSITIONS'));
+    // Paid statuses are derived from payments, never offered as a manual move.
+    const targets = [...web!.matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]);
+    expect(targets.length).toBeGreaterThan(0);
+    expect(targets.filter((t) => ['PARTIALLY_PAID', 'FULLY_PAID', 'REFUNDED', 'CANCELLED'].includes(t))).toEqual([]);
+  });
+  it('budget plan status moves', () => {
+    const web = grab(join(__dirname, '..', 'components/finance/budget-plans-view.tsx'), 'PLAN_TRANSITIONS');
+    expect(web).not.toBeNull();
+    expect(web).toBe(grab(join(API, 'finance/finance.service.ts'), 'PLAN_TRANSITIONS'));
+  });
+});

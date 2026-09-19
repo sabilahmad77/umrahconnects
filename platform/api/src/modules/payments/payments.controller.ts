@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, Param, Req, Headers, ParseUUIDPipe, HttpCode, HttpStatus,
+  Controller, Get, Post, Body, Param, Req, Headers, ParseUUIDPipe, HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
@@ -31,7 +31,9 @@ export class PaymentsController {
     @Headers('x-signature') xSignature?: string,
     @Headers('stripe-signature') stripeSignature?: string,
   ) {
-    if (!req.rawBody) return { success: false };
+    // Without the exact bytes no signature can be checked: refuse, so the
+    // provider shows a failed delivery and retries instead of believing it landed.
+    if (!req.rawBody) throw new BadRequestException('Webhook body must be sent as application/json');
     const raw: string = req.rawBody.toString('utf8');
     const data = await this.service.handleWebhook(provider, raw, stripeSignature ?? xSignature);
     return { success: true, data };
@@ -65,6 +67,24 @@ export class PaymentsController {
     return { success: true, data: await this.service.confirmIntent(tenantId, id, dto?.scenario, user) };
   }
 
+  @ApiBearerAuth()
+  @Post('intents/:id/resume')
+  @RequirePermissions('finance:payment:process')
+  @ApiOperation({ summary: 'Continue an open card attempt (returns its client secret while it can still be paid)' })
+  async resumeIntent(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
+    return { success: true, data: await this.service.resumeIntent(tenantId, id) };
+  }
+
+  @ApiBearerAuth()
+  @Post('intents/:id/cancel')
+  @RequirePermissions('finance:payment:process')
+  @ApiOperation({ summary: 'Cancel an open payment attempt at the provider and release its reservation' })
+  async cancelIntent(
+    @TenantId() tenantId: string, @CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return { success: true, data: await this.service.cancelIntent(tenantId, id, user) };
+  }
+
   // ── Traveler checkout ───────────────────────────────────────────────────
 
   @ApiBearerAuth()
@@ -73,7 +93,7 @@ export class PaymentsController {
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Pay your own marketplace booking (amount decided by the server)' })
   async checkout(@CurrentUser() user: Principal, @Body() dto: CheckoutDto) {
-    return { success: true, data: await this.service.createCheckout(user, dto.listingBookingId, dto.idempotencyKey) };
+    return { success: true, data: await this.service.createCheckout(user, dto.listingBookingId) };
   }
 
   @ApiBearerAuth()

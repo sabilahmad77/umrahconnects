@@ -1,0 +1,97 @@
+{
+  "ranAt": "2026-09-19T11:57:45.427Z",
+  "passed": 15,
+  "total": 15,
+  "results": [
+    {
+      "id": "P1",
+      "label": "package created with an exact price and it persists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "P2",
+      "label": "trip type shown from the stored field",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "B1",
+      "label": "the form shows the server price (package x travellers)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "B2",
+      "label": "a deposit above the total is refused before submit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "B3",
+      "label": "booking created with the server total and a derived paid status",
+      "ok": true,
+      "detail": "PARTIALLY_PAID 50000/200100"
+    },
+    {
+      "id": "B4",
+      "label": "booking money is read-only (no paid-amount input)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "B5",
+      "label": "the invoice carries the deposit as a payment record",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "B6",
+      "label": "issuing an invoice that carries money derives its paid status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "B7",
+      "label": "paying the invoice moves the booking to fully paid",
+      "ok": true,
+      "detail": "FULLY_PAID 200100"
+    },
+    {
+      "id": "S1",
+      "label": "staff without booking:booking:cancel sees no cancel action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "S2",
+      "label": "staff without booking:package:manage sees no new-package action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "BP1",
+      "label": "plan dates in the wrong order are refused",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "BP2",
+      "label": "plan stored with total and commission computed by the server",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "BP3",
+      "label": "status offers only the moves the server allows",
+      "ok": true,
+      "detail": "DRAFT,PROPOSED,ACCEPTED,CANCELLED"
+    },
+    {
+      "id": "BP4",
+      "label": "the API refuses an invalid plan move",
+      "ok": true,
+      "detail": "HTTP 400"
+    }
+  ]
+}

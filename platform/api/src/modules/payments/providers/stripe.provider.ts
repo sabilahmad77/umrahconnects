@@ -1,6 +1,12 @@
 import Stripe from 'stripe';
 import {
-  PaymentProvider, CreateIntentInput, IntentResult, CaptureResult, RefundResult, WebhookVerification,
+  CancelResult,
+  CaptureResult,
+  CreateIntentInput,
+  IntentResult,
+  PaymentProvider,
+  RefundResult,
+  WebhookVerification,
 } from './payment-provider';
 
 /**
@@ -11,6 +17,10 @@ import {
  *   the API never marks a payment paid because the browser says so. Truth comes
  *   from `payment_intent.succeeded` webhooks (signature-verified) or from a
  *   server-side retrieve of the PaymentIntent.
+ * - A declined attempt leaves the PaymentIntent in `requires_payment_method`
+ *   and Stripe expects the same intent to be retried
+ *   (docs.stripe.com/payments/paymentintents/lifecycle), so a decline is
+ *   reported as PENDING with `lastError`, never as a terminal failure.
  * - Every mutating call carries an idempotency key.
  */
 export class StripeProvider implements PaymentProvider {
@@ -68,6 +78,7 @@ export class StripeProvider implements PaymentProvider {
     }
   }
 
+  /** What is kept of a PaymentIntent: no client secret, no customer or card data. */
   private static summary(pi: Stripe.PaymentIntent): Record<string, unknown> {
     return {
       id: pi.id,
@@ -78,6 +89,42 @@ export class StripeProvider implements PaymentProvider {
       livemode: pi.livemode,
       last_payment_error: pi.last_payment_error?.code ?? null,
     };
+  }
+
+  /** The decline code of the last failed attempt, or its error code. */
+  private static lastError(pi: Stripe.PaymentIntent): string | undefined {
+    const err = pi.last_payment_error;
+    if (!err) return undefined;
+    return err.decline_code ?? err.code ?? err.type ?? 'payment_failed';
+  }
+
+  /** Maps a PaymentIntent onto the provider-neutral state. */
+  static state(pi: Stripe.PaymentIntent): CaptureResult {
+    const base = { providerRef: pi.id, providerStatus: pi.status, raw: StripeProvider.summary(pi) };
+    switch (pi.status) {
+      case 'succeeded':
+        return {
+          ...base,
+          status: 'CAPTURED',
+          amountCents: BigInt(pi.amount_received),
+          currency: pi.currency.toUpperCase(),
+        };
+      case 'canceled':
+        return { ...base, status: 'FAILED', failureReason: pi.cancellation_reason ?? 'canceled' };
+      case 'processing':
+      case 'requires_capture':
+        // requires_capture only happens with manual capture, which is never requested here.
+        return { ...base, status: 'PROCESSING' };
+      default:
+        // requires_payment_method | requires_confirmation | requires_action:
+        // the payer can still complete this intent.
+        return {
+          ...base,
+          status: 'PENDING',
+          lastError: StripeProvider.lastError(pi),
+          clientSecret: pi.client_secret ?? undefined,
+        };
+    }
   }
 
   async createIntent(input: CreateIntentInput): Promise<IntentResult> {
@@ -108,6 +155,11 @@ export class StripeProvider implements PaymentProvider {
     };
   }
 
+  /** Server-side read of the authoritative state. Never changes anything at Stripe. */
+  async retrieve(providerRef: string): Promise<CaptureResult> {
+    return StripeProvider.state(await this.stripe().paymentIntents.retrieve(providerRef));
+  }
+
   /**
    * Server-side reconciliation. Stripe payments are confirmed in the browser;
    * this reads the authoritative state and captures a manual-capture intent.
@@ -115,24 +167,20 @@ export class StripeProvider implements PaymentProvider {
   async confirm(providerRef: string): Promise<CaptureResult> {
     let pi = await this.stripe().paymentIntents.retrieve(providerRef);
     if (pi.status === 'requires_capture') {
-      pi = await this.stripe().paymentIntents.capture(providerRef, {}, { idempotencyKey: `capture:${providerRef}` });
+      pi = await this.stripe().paymentIntents.capture(
+        providerRef,
+        {},
+        { idempotencyKey: `capture:${providerRef}` },
+      );
     }
-    if (pi.status === 'succeeded') {
-      return {
-        providerRef: pi.id,
-        status: 'CAPTURED',
-        amountCents: BigInt(pi.amount_received),
-        currency: pi.currency.toUpperCase(),
-        raw: StripeProvider.summary(pi),
-      };
-    }
-    if (pi.status === 'canceled') {
-      return { providerRef: pi.id, status: 'FAILED', failureReason: pi.cancellation_reason ?? 'canceled', raw: StripeProvider.summary(pi) };
-    }
-    return { providerRef: pi.id, status: 'PENDING', raw: StripeProvider.summary(pi) };
+    return StripeProvider.state(pi);
   }
 
-  async refund(providerRef: string, amountCents: bigint, reference?: string): Promise<RefundResult> {
+  async refund(
+    providerRef: string,
+    amountCents: bigint,
+    reference?: string,
+  ): Promise<RefundResult> {
     const refund = await this.stripe().refunds.create(
       { payment_intent: providerRef, amount: Number(amountCents) },
       { idempotencyKey: `refund:${reference ?? `${providerRef}:${amountCents}`}` },
@@ -143,18 +191,46 @@ export class StripeProvider implements PaymentProvider {
     return {
       providerRef: refund.id,
       refundedCents: BigInt(refund.amount),
-      raw: { id: refund.id, status: refund.status, amount: refund.amount, currency: refund.currency },
+      raw: {
+        id: refund.id,
+        status: refund.status,
+        amount: refund.amount,
+        currency: refund.currency,
+      },
     };
   }
 
-  /** Cancels an unpaid PaymentIntent so it can no longer be confirmed. */
-  async cancel(providerRef: string): Promise<void> {
-    await this.stripe().paymentIntents.cancel(providerRef, {}, { idempotencyKey: `cancel:${providerRef}` });
+  /**
+   * Cancels an unpaid PaymentIntent so it can no longer be confirmed. Stripe
+   * refuses once the intent is processing or has succeeded; the current state
+   * is returned instead so the caller reconciles rather than guesses.
+   */
+  async cancel(providerRef: string): Promise<CancelResult> {
+    try {
+      await this.stripe().paymentIntents.cancel(
+        providerRef,
+        {},
+        { idempotencyKey: `cancel:${providerRef}` },
+      );
+      return { cancelled: true };
+    } catch (err) {
+      const state = await this.retrieve(providerRef).catch(() => undefined);
+      if (!state) throw err;
+      return { cancelled: state.status === 'FAILED', state };
+    }
   }
 
-  async ensureCustomer(input: { email?: string | null; name?: string; reference: string }): Promise<string> {
+  async ensureCustomer(input: {
+    email?: string | null;
+    name?: string;
+    reference: string;
+  }): Promise<string> {
     const customer = await this.stripe().customers.create(
-      { email: input.email ?? undefined, name: input.name, metadata: { reference: input.reference } },
+      {
+        email: input.email ?? undefined,
+        name: input.name,
+        metadata: { reference: input.reference },
+      },
       { idempotencyKey: `customer:${input.reference}` },
     );
     return customer.id;
@@ -162,7 +238,9 @@ export class StripeProvider implements PaymentProvider {
 
   verifyWebhook(rawBody: string, signature: string | undefined): WebhookVerification {
     const empty = { eventId: '', type: '', raw: {} };
-    if (!this.cfg.webhookSecret) return { valid: false, reason: 'stripe webhook secret not configured', ...empty };
+    if (!this.cfg.webhookSecret) {
+      return { valid: false, reason: 'stripe webhook secret not configured', ...empty };
+    }
     if (!signature) return { valid: false, reason: 'missing signature header', ...empty };
     let event: Stripe.Event;
     try {
@@ -173,31 +251,69 @@ export class StripeProvider implements PaymentProvider {
     }
 
     const obj: any = event.data.object;
-    let type = `stripe.${event.type}`;
-    let providerRef: string | undefined;
-    let amountCents: bigint | undefined;
-    let currency: string | undefined;
+    const intentId = (v: unknown): string | undefined =>
+      typeof v === 'string' ? v : typeof (v as any)?.id === 'string' ? (v as any).id : undefined;
+    const out: Omit<WebhookVerification, 'valid' | 'eventId' | 'raw'> = {
+      type: `stripe.${event.type}`,
+    };
     switch (event.type) {
       case 'payment_intent.succeeded':
-        type = 'payment.captured';
-        providerRef = obj.id;
-        amountCents = BigInt(obj.amount_received ?? 0);
-        currency = obj.currency;
+        Object.assign(out, {
+          type: 'payment.captured',
+          providerRef: obj.id,
+          amountCents: BigInt(obj.amount_received ?? 0),
+          currency: obj.currency,
+          reference: obj.metadata?.reference,
+        });
+        break;
+      case 'payment_intent.processing':
+        Object.assign(out, {
+          type: 'payment.processing',
+          providerRef: obj.id,
+          reference: obj.metadata?.reference,
+        });
         break;
       case 'payment_intent.payment_failed':
+        // A declined attempt: the intent returns to requires_payment_method and
+        // may still succeed with another payment method.
+        Object.assign(out, {
+          type: 'payment.attempt_failed',
+          providerRef: obj.id,
+          failureReason:
+            obj.last_payment_error?.decline_code ??
+            obj.last_payment_error?.code ??
+            'payment_failed',
+          reference: obj.metadata?.reference,
+        });
+        break;
       case 'payment_intent.canceled':
-        type = 'payment.failed';
-        providerRef = obj.id;
+        Object.assign(out, {
+          type: 'payment.failed',
+          providerRef: obj.id,
+          failureReason: obj.cancellation_reason ?? 'canceled',
+          reference: obj.metadata?.reference,
+        });
         break;
       case 'charge.refunded':
-        type = 'payment.refunded';
-        providerRef = typeof obj.payment_intent === 'string' ? obj.payment_intent : obj.payment_intent?.id;
-        amountCents = BigInt(obj.amount_refunded ?? 0);
-        currency = obj.currency;
+        // amount_refunded is cumulative for the charge, so a replay or a
+        // reordering can never double count.
+        Object.assign(out, {
+          type: 'payment.refunded',
+          providerRef: intentId(obj.payment_intent),
+          amountCents: BigInt(obj.amount_refunded ?? 0),
+          capturedCents: obj.captured ? BigInt(obj.amount_captured ?? 0) : undefined,
+          currency: obj.currency,
+        });
         break;
       case 'charge.dispute.created':
-        type = 'payment.disputed';
-        providerRef = typeof obj.payment_intent === 'string' ? obj.payment_intent : undefined;
+        Object.assign(out, { type: 'payment.disputed', providerRef: intentId(obj.payment_intent) });
+        break;
+      case 'charge.dispute.closed':
+        Object.assign(out, {
+          type: 'payment.dispute_closed',
+          providerRef: intentId(obj.payment_intent),
+          disputeStatus: obj.status,
+        });
         break;
       default:
         break;
@@ -205,13 +321,18 @@ export class StripeProvider implements PaymentProvider {
     return {
       valid: true,
       eventId: event.id,
-      type,
-      providerRef,
-      amountCents,
-      currency: currency?.toUpperCase(),
+      ...out,
+      providerRef: out.providerRef,
+      currency: typeof out.currency === 'string' ? out.currency.toUpperCase() : undefined,
+      reference: typeof out.reference === 'string' ? out.reference : undefined,
       livemode: event.livemode,
-      failureReason: obj?.last_payment_error?.code ?? obj?.cancellation_reason ?? undefined,
-      raw: { id: event.id, type: event.type, livemode: event.livemode, created: event.created, object: { id: obj?.id, status: obj?.status } },
+      raw: {
+        id: event.id,
+        type: event.type,
+        livemode: event.livemode,
+        created: event.created,
+        object: { id: obj?.id, status: obj?.status },
+      },
     };
   }
 }

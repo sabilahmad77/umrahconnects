@@ -3,23 +3,25 @@ import { apiErrorMessage } from '@/lib/api-error';
 import { ModalSurface, Input, Select , Button , QueryFailure } from '@/components/ui/system';
 
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Package, Plus, X, Loader2, RefreshCw, Clock, MapPin } from 'lucide-react';
+import { Package, Plus, X, Loader2, RefreshCw, Clock, Users } from 'lucide-react';
 import { usePackages, useCreatePackage } from '@/hooks/use-api';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { centsToMajor, formatAmount, parseMajorToCents } from '@/components/finance/money';
 
 const TYPES = ['UMRAH', 'HAJJ', 'ZIYARAH', 'CUSTOM'];
 const TYPE_TINT: Record<string, string> = {
   UMRAH: 'bg-brand-50 text-brand-700', HAJJ: 'bg-gold-50 text-gold-700',
   ZIYARAH: 'bg-blue-50 text-blue-700', CUSTOM: 'bg-gray-100 text-gray-600',
 };
-const fmt = (cents?: number) => cents != null ? `SAR ${(cents / 100).toLocaleString()}` : '—';
-// packages return priceAdultCents (or basePriceCents); support both
-const priceOf = (p: any) => p.priceAdultCents ?? p.basePriceCents ?? (p.priceAdult != null ? p.priceAdult * 100 : undefined);
+const fmt = (cents?: number, currency = 'SAR') => (cents != null ? formatAmount(cents, currency) : '—');
 
 export function PackagesView() {
   const { data, isLoading, refetch , error: packagesError} = usePackages();
   const create = useCreatePackage();
+  const { can } = useCapabilities();
+  const canManage = can('booking:package:manage');
   const [open, setOpen] = useState(false);
   const list: any[] = Array.isArray(data) ? data : (data as any)?.items ?? [];
 
@@ -33,9 +35,11 @@ export function PackagesView() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600"><RefreshCw className="h-4 w-4" /></Button>
-          <Button variant="quiet" type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
-            <Plus className="h-4 w-4" /> New package
-          </Button>
+          {canManage && (
+            <Button variant="quiet" type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
+              <Plus className="h-4 w-4" /> New package
+            </Button>
+          )}
         </div>
       </div>
 
@@ -44,8 +48,8 @@ export function PackagesView() {
       ) : list.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <Package className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">No packages yet. Create your first package so it can be selected on bookings.</p>
-          <Button variant="quiet" type="button" onClick={() => setOpen(true)} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-600"><Plus className="h-4 w-4" /> New package</Button>
+          <p className="text-sm text-gray-600">No packages yet.{canManage ? ' Create your first package so it can be selected on bookings.' : ''}</p>
+          {canManage && <Button variant="quiet" type="button" onClick={() => setOpen(true)} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-600"><Plus className="h-4 w-4" /> New package</Button>}
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -53,21 +57,21 @@ export function PackagesView() {
             <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between">
                 <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center"><Package className="h-5 w-5 text-brand-600" /></div>
-                <span className={`text-[10.5px] font-bold px-2 py-1 rounded-full ${TYPE_TINT[p.type] ?? TYPE_TINT.CUSTOM}`}>{p.type ?? 'CUSTOM'}</span>
+                <span className={`text-[10.5px] font-bold px-2 py-1 rounded-full ${TYPE_TINT[p.tripType] ?? TYPE_TINT.CUSTOM}`}>{p.tripType ?? 'CUSTOM'}</span>
               </div>
               <p className="font-heading font-bold text-gray-900 mt-3">{p.name}</p>
               <div className="flex items-center gap-3 text-[12px] text-gray-600 mt-1.5">
-                {p.durationDays && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {p.durationDays}d</span>}
-                {p.departureCity && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {p.departureCity}</span>}
+                {p.durationDays && <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {p.durationDays} days</span>}
+                {p.maxCapacity && <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> up to {p.maxCapacity}</span>}
               </div>
-              <p className="font-heading font-bold text-brand-600 mt-3">{fmt(priceOf(p))}<span className="text-xs text-gray-600 font-normal"> / adult</span></p>
-              {p.status && <span className="inline-block mt-2 text-xs font-semibold text-gray-600">{p.status}</span>}
+              <p className="font-heading font-bold text-brand-600 mt-3">{fmt(p.basePriceCents, p.currency)}<span className="text-xs text-gray-600 font-normal"> / adult</span></p>
+              <span className="inline-block mt-2 text-xs font-semibold text-gray-600">{p.isPublished ? 'Published' : 'Not published'}</span>
             </div>
           ))}
         </div>
       )}
 
-      {open && <PackageModal onClose={() => setOpen(false)} onCreate={async (dto) => {
+      {open && canManage && <PackageModal onClose={() => setOpen(false)} onCreate={async (dto) => {
         try { await create.mutateAsync(dto); toast.success('Package created'); setOpen(false); }
         catch (e: any) { toast.error(apiErrorMessage(e, 'Could not create package')); }
       }} pending={create.isPending} />}
@@ -80,19 +84,28 @@ function PackageModal({ onClose, onCreate, pending }: { onClose: () => void; onC
   const [type, setType] = useState('UMRAH');
   const [priceAdult, setPriceAdult] = useState('');
   const [durationDays, setDurationDays] = useState('');
-  const [departureCity, setDepartureCity] = useState('');
+  const [maxCapacity, setMaxCapacity] = useState('');
+  const inFlight = useRef(false);
   const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400';
 
-  const submit = () => {
-    if (!name.trim()) { toast.error('Package name is required'); return; }
-    const price = Number(priceAdult);
-    if (!price || price <= 0) { toast.error('Enter a valid adult price'); return; }
-    onCreate({
-      name: name.trim(), type,
-      priceAdult: price,
-      durationDays: durationDays ? Number(durationDays) : undefined,
-      departureCity: departureCity.trim() || undefined,
-    });
+  const submit = async () => {
+    if (inFlight.current || pending) return;
+    if (name.trim().length < 2) { toast.error('Enter a package name (at least 2 characters)'); return; }
+    const priceCents = parseMajorToCents(priceAdult);
+    if (priceCents === null || priceCents <= 0) { toast.error('Enter the adult price as an amount such as 12000 or 12000.50'); return; }
+    if (durationDays && !/^\d+$/.test(durationDays)) { toast.error('Enter the duration as whole days'); return; }
+    if (maxCapacity && !/^\d+$/.test(maxCapacity)) { toast.error('Enter the capacity as a whole number'); return; }
+    inFlight.current = true;
+    try {
+      await onCreate({
+        name: name.trim(), type,
+        priceAdult: centsToMajor(priceCents),
+        durationDays: durationDays ? Number(durationDays) : undefined,
+        maxCapacity: maxCapacity ? Number(maxCapacity) : undefined,
+      });
+    } finally {
+      inFlight.current = false;
+    }
   };
 
   return (
@@ -109,13 +122,13 @@ function PackageModal({ onClose, onCreate, pending }: { onClose: () => void; onC
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
               <Select aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} className={inputCls + ' bg-white'}>{TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</Select></div>
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Adult price (SAR) *</label>
-              <Input aria-label="Price Adult" type="number" min={0} value={priceAdult} onChange={(e) => setPriceAdult(e.target.value)} placeholder="12000" className={inputCls} /></div>
+              <Input aria-label="Price Adult" inputMode="decimal" value={priceAdult} onChange={(e) => setPriceAdult(e.target.value)} placeholder="12000" className={inputCls} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-semibold text-gray-600 mb-1">Duration (days)</label>
-              <Input aria-label="Duration Days" type="number" min={1} value={durationDays} onChange={(e) => setDurationDays(e.target.value)} placeholder="14" className={inputCls} /></div>
-            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Departure city</label>
-              <Input aria-label="Departure City" value={departureCity} onChange={(e) => setDepartureCity(e.target.value)} placeholder="Jeddah" className={inputCls} /></div>
+              <Input aria-label="Duration Days" inputMode="numeric" value={durationDays} onChange={(e) => setDurationDays(e.target.value)} placeholder="14" className={inputCls} /></div>
+            <div><label className="block text-xs font-semibold text-gray-600 mb-1">Maximum travellers</label>
+              <Input aria-label="Maximum travellers" inputMode="numeric" value={maxCapacity} onChange={(e) => setMaxCapacity(e.target.value)} placeholder="40" className={inputCls} /></div>
           </div>
           <Button variant="quiet" type="button" onClick={submit} disabled={pending} className="w-full inline-flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 mt-1">
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Create package

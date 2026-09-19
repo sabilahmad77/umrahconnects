@@ -58,17 +58,6 @@ export function useAssignPackage() {
   });
 }
 
-export function useSetBookingPayment() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, ...body }: { id: string; paidAmount?: number; status?: string }) => {
-      const { data } = await apiClient.put(`/bookings/${id}/payment`, body);
-      return data.data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookings'] }),
-  });
-}
-
 export function useCancelBooking() {
   const qc = useQueryClient();
   return useMutation({
@@ -80,6 +69,7 @@ export function useCancelBooking() {
   });
 }
 
+/** Draft invoice from a booking (booking:booking:update + finance:invoice:create); money already paid moves onto it. */
 export function useGenerateInvoice() {
   const qc = useQueryClient();
   return useMutation({
@@ -87,7 +77,10 @@ export function useGenerateInvoice() {
       const { data } = await apiClient.post(`/bookings/${bookingId}/generate-invoice`);
       return data.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['finance'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['finance'] });
+      qc.invalidateQueries({ queryKey: ['bookings'] });
+    },
   });
 }
 

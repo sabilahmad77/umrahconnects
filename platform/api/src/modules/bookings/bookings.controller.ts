@@ -117,14 +117,15 @@ export class BookingsController {
   }
 
   @Post('bookings/:id/cancel')
-  @RequirePermissions('booking:booking:update')
+  @RequirePermissions('booking:booking:cancel')
   @ApiOperation({ summary: 'Cancel a booking with optional reason' })
   async cancel(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: CancelBookingDto) {
     return { success: true, data: await this.bookingsService.cancel(tenantId, id, body.reason) };
   }
 
   @Post('bookings/:id/generate-invoice')
-  @RequirePermissions('booking:booking:update')
+  // Creating an invoice is a finance action: booking staff without invoice rights cannot bill.
+  @RequirePermissions('booking:booking:update', 'finance:invoice:create')
   @ApiOperation({ summary: 'Generate a draft invoice from a booking' })
   async generateInvoice(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.bookingsService.generateInvoice(tenantId, id) };

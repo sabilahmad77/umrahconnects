@@ -1,0 +1,28 @@
+A04 evidence — W16 / XT-R09 Stripe Payment Element checkout, money integrity, booking/finance workflows
+Branch eng100/a04. All runs local; no live keys, no real cards, nothing sent to Stripe.
+
+Browser (playwright-core 1.49 + installed Google Chrome, headless, real /login form, one context per identity)
+  browser-check.js                  26/26  traveler books -> sandbox checkout -> server status -> paid only from server,
+                                           refresh persists; double click, reload mid-flow and second tab resume ONE attempt;
+                                           decline -> "no money was taken" -> retry; finance manager draft -> issue -> sandbox
+                                           card payment -> manual payment (double click = once) -> partial gateway refund;
+                                           staff: no refund action, card panel view-only, API 403 for refund and manual payment;
+                                           marketplace payment refunded from /finance-payments -> traveler booking REFUNDED
+  browser-check-unavailable.js       6/6   API with PAYMENT_PROVIDER=stripe and no keys: honest "not available" in checkout and
+                                           staff panel, manual recording still offered, API 503, nothing created
+  browser-check-bookings.js         15/15  packages (exact price, gated), booking with deposit -> derived PARTIALLY_PAID, money
+                                           read-only, invoice from booking carries the deposit, paying the invoice -> FULLY_PAID,
+                                           staff cannot cancel/create packages, budget plan validation and server-mirrored moves
+  *-results.json, a04-*.png         results and screenshots of the runs above
+  Payment path in these runs: the development SANDBOX gateway — not Stripe.
+
+Stripe code path
+  stripe-mock-e2e.txt               test/payments-stripe-mock.e2e-spec.ts, 5/5, against stripe/stripe-mock on 127.0.0.1:12404
+                                    (stripe-mock — NOT Stripe): intent with server amount + idempotency key, resume (client
+                                    secret), cancel, checkout with customer + resume, refund with idempotency key, rejected
+                                    credential -> 503 with the key redacted from logs.
+  Real Stripe test-mode verification (T04): UNVERIFIED — no Stripe test keys on this machine.
+
+Docs used: docs.stripe.com/payments/payment-element, docs.stripe.com/js/payment_intents/confirm_payment,
+  docs.stripe.com/sdks/stripejs-react, docs.stripe.com/payments/paymentintents/lifecycle,
+  docs.stripe.com/payments/payment-intents/verifying-status, docs.stripe.com/webhooks

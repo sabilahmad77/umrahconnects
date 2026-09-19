@@ -3,7 +3,8 @@ import { apiErrorMessage } from '@/lib/api-error';
 import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
 
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Search, Plus, Download, RefreshCw, BookOpen,
   AlertCircle, MoreHorizontal, Eye, X, Loader2,
@@ -15,6 +16,8 @@ import {
   usePackages, usePilgrims,
 } from '@/hooks/use-api';
 import { cn } from '@/lib/utils';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { centsToMajor, formatAmount, parseMajorToCents } from '@/components/finance/money';
 
 // The real BookingStatus enum (prisma/schema.prisma). There is no PENDING state —
 // filtering on it returned 400 and the "Pending" tile always read 0.
@@ -45,6 +48,8 @@ function StatCard({ label, value, color, Icon }: { label: string; value: number;
 }
 
 export function BookingList() {
+  const router = useRouter();
+  const { can } = useCapabilities();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
@@ -81,7 +86,7 @@ export function BookingList() {
             onClick={() => {
               const rows = items;
               if (!rows.length) { toast('Nothing to export'); return; }
-              const header = ['bookingRef', 'status', 'paxAdult', 'totalAmountCents', 'paidAmountCents', 'currency', 'createdAt'];
+              const header = ['bookingRef', 'status', 'totalAmountCents', 'paidAmountCents', 'currency', 'createdAt'];
               const csv = [
                 header.join(','),
                 ...rows.map((r: any) => header.map((k) => {
@@ -104,13 +109,15 @@ export function BookingList() {
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button variant="quiet" type="button"
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            New Booking
-          </Button>
+          {can('booking:booking:create') && (
+            <Button variant="quiet" type="button"
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              New booking
+            </Button>
+          )}
         </div>
       </div>
 
@@ -192,14 +199,10 @@ export function BookingList() {
                   </tr>
                 ) : items.map((b: any) => {
                   const cfg = STATUS[b.status] ?? { label: b.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-                  const amt = b.totalAmountCents != null
-                    ? `SAR ${(b.totalAmountCents / 100).toLocaleString('en-SA', { maximumFractionDigits: 0 })}`
-                    : '—';
-                  const pilgrimName = b.pilgrim
-                    ? [b.pilgrim.firstNameEn, b.pilgrim.lastNameEn].filter(Boolean).join(' ') || b.pilgrim.firstNameAr || '—'
-                    : '—';
+                  const amt = b.totalAmountCents != null ? formatAmount(b.totalAmountCents, b.currency) : '—';
+                  const pilgrimName = `${b.pilgrims?.length ?? 0} pilgrim${(b.pilgrims?.length ?? 0) === 1 ? '' : 's'}`;
                   return (
-                    <tr key={b.id} onClick={() => { window.location.href = `/bookings/${b.id}`; }} className="hover:bg-gray-50/60 transition-colors cursor-pointer">
+                    <tr key={b.id} onClick={() => router.push(`/bookings/${b.id}`)} className="hover:bg-gray-50/60 transition-colors cursor-pointer">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600 text-xs font-bold shrink-0">
@@ -219,7 +222,7 @@ export function BookingList() {
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell">
                         <p className="text-sm text-gray-700">{b.package?.name ?? '—'}</p>
-                        <p className="text-xs text-gray-600">{b.package?.type ?? ''}</p>
+                        <p className="text-xs text-gray-600">{b.package?.tripType ?? ''}</p>
                       </td>
                       <td className="px-5 py-3.5 hidden lg:table-cell">
                         <p className="text-sm font-semibold text-gray-800">{amt}</p>
@@ -278,9 +281,7 @@ export function BookingList() {
 }
 
 function BookingDetailModal({ booking, onClose }: { booking: any; onClose: () => void }) {
-  const fmt = (cents: any) => cents != null
-    ? `${booking.currency ?? 'SAR'} ${(Number(cents) / 100).toLocaleString()}`
-    : '—';
+  const fmt = (cents: any) => (cents != null ? formatAmount(cents, booking.currency ?? 'SAR') : '—');
   return (
     <ModalSurface title={booking.bookingRef ?? booking.id?.slice(0, 8)} onClose={onClose}   >
       <div className="bg-white rounded-xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -333,38 +334,49 @@ function NewBookingModal({
 
   const [packageId, setPackageId] = useState(pkgList[0]?.id ?? '');
   const [leadPilgrimId, setLeadPilgrimId] = useState(pilgrimList[0]?.id ?? '');
-  const [paxAdult, setPaxAdult] = useState('2');
-  const [paxChild, setPaxChild] = useState('0');
-  const [totalAmount, setTotalAmount] = useState('');
+  const [travellers, setTravellers] = useState('1');
+  const [customTotal, setCustomTotal] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [status, setStatus] = useState('DRAFT');
   const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const inFlight = useRef(false);
 
   // Auto-fill packageId / leadPilgrimId once data loads
   if (!packageId && pkgList[0]?.id) setPackageId(pkgList[0].id);
   if (!leadPilgrimId && pilgrimList[0]?.id) setLeadPilgrimId(pilgrimList[0].id);
 
-  // When package picked, auto-suggest total from package basePrice
-  const suggestedTotal = packageId
-    ? pkgList.find((p) => p.id === packageId)?.basePriceCents
-    : undefined;
-  const suggestedSar = suggestedTotal ? Math.round(Number(suggestedTotal) / 100) : '';
+  // The server prices a booking at the package's adult price per traveller unless a negotiated total is given.
+  const pkg = pkgList.find((p) => p.id === packageId);
+  const count = /^\d+$/.test(travellers) ? Math.max(1, Number(travellers)) : 1;
+  const estimateCents = pkg ? Number(pkg.basePriceCents ?? 0) * count : 0;
+  const currency = pkg?.currency ?? 'SAR';
+  const totalCents = customTotal.trim() ? parseMajorToCents(customTotal) : estimateCents;
 
   const submit = async () => {
-    if (!packageId || !leadPilgrimId) return;
-    const amount = Number(totalAmount || suggestedSar || 0);
-    if (!amount) return;
-    await onCreate({
-      packageId,
-      leadPilgrimId,
-      paxAdult: Number(paxAdult || 1),
-      paxChild: Number(paxChild || 0),
-      totalAmount: amount,
-      depositAmount: depositAmount ? Number(depositAmount) : undefined,
-      currency: 'SAR',
-      status,
-      notes: notes || undefined,
-    });
+    if (inFlight.current || pending) return;
+    if (!packageId || !leadPilgrimId) return setError('Choose a package and a lead pilgrim.');
+    if (!/^\d+$/.test(travellers) || Number(travellers) < 1 || Number(travellers) > 500) return setError('Enter the number of travellers (1–500).');
+    if (totalCents === null || totalCents <= 0) return setError('The total must be an amount greater than zero, such as 25000 or 25000.50.');
+    const depositCents = depositAmount.trim() ? parseMajorToCents(depositAmount) : 0;
+    if (depositCents === null) return setError('Enter the deposit as an amount such as 5000 or 5000.50.');
+    if (depositCents > totalCents) return setError('The deposit cannot be more than the total.');
+    setError(null);
+    inFlight.current = true;
+    try {
+      await onCreate({
+        packageId,
+        leadPilgrimId,
+        paxAdult: Number(travellers),
+        ...(customTotal.trim() ? { totalAmount: centsToMajor(totalCents) } : {}),
+        depositAmount: depositCents ? centsToMajor(depositCents) : undefined,
+        currency,
+        status,
+        notes: notes.trim() || undefined,
+      });
+    } finally {
+      inFlight.current = false;
+    }
   };
 
   return (
@@ -413,43 +425,39 @@ function NewBookingModal({
                 ))}
               </Select>
             </label>
+            <label className="block">
+              <span className="block text-xs font-semibold text-gray-600 mb-1">Travellers priced at the package rate *</span>
+              <Input inputMode="numeric" value={travellers} onChange={(e) => setTravellers(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+            </label>
+            <p className="text-xs text-gray-600">
+              Package price: {pkg ? formatAmount(pkg.basePriceCents, currency) : '—'} × {count} ={' '}
+              <span className="font-semibold text-gray-900">{formatAmount(estimateCents, currency)}</span> (calculated by the server)
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="block text-xs font-semibold text-gray-600 mb-1">Adults *</span>
-                <Input  type="number" min="1" value={paxAdult} onChange={(e) => setPaxAdult(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
-              </label>
-              <label className="block">
-                <span className="block text-xs font-semibold text-gray-600 mb-1">Children</span>
-                <Input  type="number" min="0" value={paxChild} onChange={(e) => setPaxChild(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="block text-xs font-semibold text-gray-600 mb-1">Total (SAR) *</span>
+                <span className="block text-xs font-semibold text-gray-600 mb-1">Negotiated total ({currency}, optional)</span>
                 <Input
-                  type="number"
-                  min="0"
-                  value={totalAmount}
-                  onChange={(e) => setTotalAmount(e.target.value)}
-                  placeholder={suggestedSar ? `${suggestedSar}` : 'e.g. 25000'}
+                  inputMode="decimal"
+                  value={customTotal}
+                  onChange={(e) => setCustomTotal(e.target.value)}
+                  placeholder={(estimateCents / 100).toFixed(2)}
                   className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none"
                 />
               </label>
               <label className="block">
-                <span className="block text-xs font-semibold text-gray-600 mb-1">Deposit (SAR)</span>
-                <Input  type="number" min="0" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+                <span className="block text-xs font-semibold text-gray-600 mb-1">Deposit received ({currency})</span>
+                <Input inputMode="decimal" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0.00" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
               </label>
             </div>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
               <Select  value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
-                <option value="DRAFT">Draft / Enquiry</option>
+                <option value="DRAFT">Draft / enquiry</option>
                 <option value="CONFIRMED">Confirmed</option>
-                <option value="PARTIALLY_PAID">Partially paid</option>
-                <option value="FULLY_PAID">Fully paid</option>
                 <option value="VISA_PROCESSING">Visa processing</option>
               </Select>
             </label>
+            <p className="text-xs text-gray-600">A deposit moves the booking to partially or fully paid automatically; later payments are taken on the booking&apos;s invoice.</p>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
               <Textarea
@@ -463,11 +471,16 @@ function NewBookingModal({
           </div>
         )}
 
+        {error && (
+          <p role="alert" className="mt-3 text-sm text-red-700">
+            {error}
+          </p>
+        )}
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
           <Button variant="quiet" type="button"
             onClick={submit}
-            disabled={pending || !packageId || !leadPilgrimId || !(totalAmount || suggestedSar)}
+            disabled={pending || !packageId || !leadPilgrimId}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm"
           >
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
