@@ -23,6 +23,19 @@ Stripe: webhooks → https://api.umrahconnect.io/api/v1/payments/webhook/stripe
 Google OAuth: redirect → https://umrahconnect.io/proxy-api/auth/google/callback
 ```
 
+Database roles (R05, Row-Level Security — `docs/control-tower/RLS.md`): PostgreSQL policies only bind a role that is
+not a superuser, has no BYPASSRLS and does not own the tables.
+
+| Role | Used by | Credentials |
+|---|---|---|
+| `POSTGRES_USER` (owner, superuser of this cluster) | `uc-migrate` (migrations), backups, restores, `runtime-role.sql`, operators' `exec uc-postgres psql` | `POSTGRES_PASSWORD` — reaches `uc-postgres` and the one-off `uc-migrate` only; blanked in `uc-api` |
+| `uc_app_runtime` (NOLOGIN group, created by the RLS migration) | holds the table grants | — |
+| `APP_DB_USER` (e.g. `uc_app`, LOGIN, member of `uc_app_runtime`) | `uc-api`: the running API and every one-off `run uc-api …` command (`bootstrap-admin`, `sync-rbac`, `cleanup-orphans`, which run in explicit system scope) | `APP_DB_PASSWORD` — the API's `DATABASE_URL` |
+
+`scripts/deploy.sh` creates/updates the login after every migration (`scripts/runtime-role.sh` does the same by hand),
+and `/api/v1/health/ready` answers 503 in production if the API's login is ever a superuser, BYPASSRLS, an owner of
+application tables or a member of such a role — a deployment like that fails its health check and is rolled back.
+
 Deliberately absent: Kafka, Redis, Kubernetes, a queue. Rate limits are per-process in memory, which is correct for a
 single API container; move the throttler storage to Redis before ever running several.
 
@@ -32,14 +45,15 @@ single API container; move the throttler storage to Redis before ever running se
 |---|---|
 | `../../Dockerfile` | Two-stage image; runs as uid 10001 with root-owned (read-only) code; `tini`; health check; `UC_RELEASE` build arg. Never changes the schema on start. |
 | `api-entrypoint.sh` | `serve` (default) · `migrate` · `status` · `check-config` · `bootstrap-admin` · `sync-rbac` · `cleanup-orphans` |
-| `docker-compose.yml` | `uc-postgres` + `uc-api`; no host port at all |
+| `docker-compose.yml` | `uc-postgres` + `uc-api` (runtime login) + one-off `uc-migrate` (owner, profile `tools`); no host port at all |
 | `docker-compose.bundled-proxy.yml` | `uc-caddy` (non-root, publishes 80/443) + a one-shot volume-ownership step |
 | `docker-compose.shared-proxy.yml` | joins `uc-api` to an existing reverse proxy's network; publishes nothing |
 | `Caddyfile` | TLS, HSTS, 20 MB body limit, hides `/api/docs`, JSON access logs, upstream health checks |
 | `.env.production.example` | every production variable by name, including the proxy mode, `OFFSITE_REMOTE` and alerting |
 | `scripts/host-setup.sh` | root, idempotent: backup and state directories for the deploy user, env-file mode, systemd units |
 | `scripts/preflight.sh` | read-only gate before every deployment |
-| `scripts/deploy.sh` | preflight → build → config check → backup → migrate → start → health → tag, or roll back |
+| `scripts/deploy.sh` | preflight → build → config check → backup → migrate (owner) → runtime login → start → health → tag, or roll back |
+| `scripts/runtime-role.sh` | create/update the API's database login and re-apply its grants (`platform/api/prisma/rls/runtime-role.sql`) — after a manual restore |
 | `scripts/pg-backup.sh` · `check-offsite.sh` · `pg-restore.sh` | backups with integrity check and off-site copy · off-site reachability · restore drill / replace |
 | `scripts/healthcheck.sh` · `alert.sh` | host health check with alert transitions · notification hook |
 | `scripts/orphan-cleanup.sh` | O04 orphaned stored-object cleanup (report or apply) |
@@ -75,7 +89,8 @@ single API container; move the throttler storage to Redis before ever running se
 4. Firewall: `sudo infrastructure/kvm/scripts/firewall.sh` (read the report), then `sudo FIREWALL_APPLY=1 SSH_PORT=22 infrastructure/kvm/scripts/firewall.sh`.
 5. `git clone https://github.com/sabilahmad77/umrahconnects.git /opt/umrah-connect` as `deploy` (read-only deploy key).
 6. `cd /opt/umrah-connect/infrastructure/kvm && cp .env.production.example .env.production` and fill it in:
-   - proxy mode (above); `POSTGRES_PASSWORD`, `JWT_SECRET`, `PROXY_SHARED_SECRET`: `openssl rand -hex 32`;
+   - proxy mode (above); `POSTGRES_PASSWORD`, `APP_DB_PASSWORD` (a different value), `JWT_SECRET`,
+     `PROXY_SHARED_SECRET`: `openssl rand -hex 32`; keep `APP_DB_USER=uc_app` unless the name is taken;
    - R2, Stripe, SMTP, Google values from their consoles (§10); `OFFSITE_REMOTE` (§5); `ALERT_WEBHOOK_URL` (§6).
 7. `sudo scripts/host-setup.sh` — creates `/var/backups/umrah-connect{,/daily,/weekly}` (deploy, 0700) and
    `/var/lib/umrah-connect` (deploy, 0750), sets `.env.production` to deploy/0600, installs the systemd units.
@@ -91,7 +106,7 @@ cd /opt/umrah-connect/infrastructure/kvm
 ./scripts/preflight.sh
 docker compose --env-file .env.production up -d uc-postgres
 # Legacy data (§3) must be restored here, BEFORE the first migration.
-./scripts/deploy.sh <reviewed-commit-sha>        # build, check-config, backup, migrate, start, health, tag :current
+./scripts/deploy.sh <reviewed-commit-sha>        # build, check-config, backup, migrate, runtime login, start, health, tag :current
 docker compose --env-file .env.production run --rm -e PLATFORM_ADMIN_EMAIL=… -e PLATFORM_ADMIN_PASSWORD=… uc-api bootstrap-admin
 docker compose --env-file .env.production run --rm uc-api sync-rbac
 sudo systemctl enable --now umrah-backup.timer umrah-healthcheck.timer umrah-orphan-cleanup.timer
@@ -118,13 +133,15 @@ The legacy database was created with `prisma db push` and has no migration histo
    $C exec -T uc-postgres psql -U umrah -d postgres -c 'CREATE DATABASE baseline_check'
    $C exec -T uc-postgres psql -U umrah -d baseline_check -v ON_ERROR_STOP=1 \
      < ../../platform/api/prisma/migrations/20260917000000_baseline/migration.sql
-   $C run --rm uc-api ./node_modules/.bin/prisma migrate diff \
+   $C run --rm uc-migrate ./node_modules/.bin/prisma migrate diff \
      --from-url "postgresql://umrah:$POSTGRES_PASSWORD@uc-postgres:5432/baseline_check" \
      --to-url   "postgresql://umrah:$POSTGRES_PASSWORD@uc-postgres:5432/umrah_connects" --exit-code   # must exit 0
    $C exec -T uc-postgres psql -U umrah -d postgres -c 'DROP DATABASE baseline_check'
-   $C run --rm uc-api ./node_modules/.bin/prisma migrate resolve --applied 20260917000000_baseline
+   $C run --rm uc-migrate ./node_modules/.bin/prisma migrate resolve --applied 20260917000000_baseline
    ```
-   Then continue with `scripts/deploy.sh` (it applies the later migrations) and `sync-rbac` (§2).
+   Then continue with `scripts/deploy.sh` (it applies the later migrations, including the Row-Level Security one, and
+   creates the API's runtime login) and `sync-rbac` (§2). Migration commands always run in `uc-migrate` (the owner);
+   `uc-api` connects as the runtime login, which cannot change the schema.
 5. Files uploaded to Render's disk are not recoverable (ephemeral, AUD-011). Visa document rows keep their
    metadata; affected documents must be re-uploaded.
 
@@ -137,8 +154,11 @@ cd /opt/umrah-connect/infrastructure/kvm && ./scripts/deploy.sh <reviewed-commit
 Refuses commits that are not on `origin/main` and checkouts with local edits, then continues with the deployed
 commit's own copy of the script. Runs `preflight.sh`, builds `umrah-connect-api:<sha12>` with `UC_RELEASE=<sha>`, runs
 `check-config` in the new image, starts the database and backs it up (an empty first database needs no backup; a
-failed off-site copy is a warning, a failed local backup stops the deploy), migrates (`prisma migrate deploy`),
-starts the stack with `--wait`, checks readiness, then tags the image `:current` (the old one becomes `:previous`;
+failed off-site copy is a warning, a failed local backup stops the deploy), migrates (`prisma migrate deploy` in the
+one-off `uc-migrate` container, as the owner), creates/updates the API's runtime login and re-applies its grants
+(`runtime-role.sql`; the password travels only in the environment of that one `psql`, and the step fails unless the
+login is not superuser, not BYPASSRLS and owns nothing), starts the stack with `--wait`, checks readiness (which in
+production also fails when the API's login could bypass Row-Level Security), then tags the image `:current` (the old one becomes `:previous`;
 five release images are kept). On a failed health check it starts `:previous` again, waits until it is healthy,
 and returns the checkout to that release's commit. Rehearsed end to end: `docs/control-tower/evidence/eng100/a09/deploy-rehearsal.md`.
 
@@ -173,8 +193,14 @@ dump **and** its `.sha256` from `OFFSITE_REMOTE/daily/` (`rclone copy`), `script
 `scripts/pg-restore.sh <dump> replace`, then `scripts/deploy.sh <sha>`.
 
 **Replace the live database** (data damage): `scripts/pg-restore.sh <dump> replace` asks for the database name, takes
-a local safety backup, stops `uc-api`, restores with `--exit-on-error`, restarts `uc-api`. Everything written after
-the dump is lost — decide consciously. A failed restore leaves `uc-api` stopped.
+a local safety backup, stops `uc-api`, creates the runtime roles if missing, restores with `--exit-on-error`,
+re-applies the API's runtime login and grants (`runtime-role.sql`), restarts `uc-api`. Everything written after the
+dump is lost — decide consciously. A failed restore leaves `uc-api` stopped.
+
+**After any other restore** (a `pg_restore` by hand, the legacy import in §3, a restore on another server): run
+`scripts/runtime-role.sh`, then `docker compose --env-file .env.production restart uc-api`. It re-creates the login
+from `APP_DB_USER`/`APP_DB_PASSWORD` and re-applies the grants the API needs; without it the API cannot read the
+restored tables. Never "fix" that by pointing the API at the owner: `/health/ready` refuses to report ready.
 
 ## 6. Monitoring (I08)
 
@@ -209,7 +235,11 @@ so it complements the provider monitor rather than replacing it.
 - Logs: `docker compose --env-file .env.production logs -f uc-api` (json-file rotation 5 × 20 MB per service);
   host jobs: `journalctl -u umrah-backup -u umrah-healthcheck -u umrah-orphan-cleanup`. Every response carries
   `X-Request-Id`; the same id appears in error logs.
-- Health: `/api/v1/health` (liveness, database state, `release`), `/api/v1/health/ready` (503 when the database is unreachable).
+- Health: `/api/v1/health` (liveness, database state, `release`), `/api/v1/health/ready` (503 when the database is
+  unreachable, or — in production — when the API's database login is a superuser, BYPASSRLS, an owner of application
+  tables or a member of such a role: code `DATABASE_ROLE_UNSAFE`, the reason is in the API log).
+- Rotate the API's database password: set a new `APP_DB_PASSWORD` in `.env.production`, then deploy (or
+  `scripts/runtime-role.sh` and `docker compose --env-file .env.production up -d uc-api`).
 - Validate the blueprint after editing anything here: `scripts/validate-blueprint.sh`.
 
 ## 9. Rollback
