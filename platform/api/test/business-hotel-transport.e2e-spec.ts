@@ -1,6 +1,7 @@
+import * as bcrypt from 'bcryptjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { api, createTestApp, TestContext } from './app';
-import { Actor, bearer, buildWorld, World } from './fixtures';
+import { Actor, bearer, buildWorld, PASSWORD, World } from './fixtures';
 
 /**
  * Business workflows of hotel companies, transport companies and operators:
@@ -290,6 +291,41 @@ describe('business workflows: hotels, operators and transport', () => {
       const row = await ctx.prisma.transportAssignment.findUniqueOrThrow({ where: { id: t3.id } });
       expect(row.status).toBe('SCHEDULED');
       expect((await ctx.prisma.vehicle.findUniqueOrThrow({ where: { id: van.id } })).bookedSeats).toBe(1);
+    });
+
+    it('F16: transport:vehicle:read alone views trips (as the catalogue says) but cannot book, change or cancel them', async () => {
+      // A custom organization role holding only the read capability ("View vehicles, drivers, routes and trips").
+      const read = await ctx.prisma.permission.findFirstOrThrow({ where: { namespace: 'transport', resource: 'vehicle', action: 'read' } });
+      const role = await ctx.prisma.role.create({
+        data: { tenantId: w.tenants.transportA, name: `Dispatch viewer ${uniq()}`, permissions: { create: { permissionId: read.id } } },
+      });
+      const email = `viewer.${uniq()}@transport-a.test`;
+      const u = await ctx.prisma.user.create({
+        data: { tenantId: w.tenants.transportA, email, passwordHash: await bcrypt.hash(PASSWORD, 4), firstName: 'Viewer', lastName: 'Fixture', status: 'ACTIVE', emailVerifiedAt: new Date() },
+      });
+      await ctx.prisma.userRole.create({ data: { userId: u.id, roleId: role.id } });
+      const login = await ctx.http().post(api('/auth/login')).send({ email, password: PASSWORD });
+      expect(login.status).toBe(200);
+      const viewer: Actor = { id: u.id, email, tenantId: w.tenants.transportA, token: login.body.data.accessToken, refreshToken: login.body.data.refreshToken };
+
+      const list = await expectStatus(viewer, 'get', '/transport/assignments?limit=100', undefined, 200);
+      expect(JSON.stringify(list)).toContain(t3.id);
+      expect((await expectStatus(viewer, 'get', `/transport/assignments/${t3.id}`, undefined, 200)).id).toBe(t3.id);
+      expect(JSON.stringify(await expectStatus(viewer, 'get', '/transport/bookings?limit=100', undefined, 200))).toContain(t3.id);
+
+      await expectStatus(viewer, 'post', '/transport/assignments', { vehicleId: van.id, scheduledAt: plus(600) }, 403);
+      await expectStatus(viewer, 'post', '/transport/bookings', { vehicleId: van.id, scheduledAt: plus(600) }, 403);
+      await expectStatus(viewer, 'put', `/transport/assignments/${t3.id}`, { status: 'CONFIRMED' }, 403);
+      await expectStatus(viewer, 'post', `/transport/assignments/${t3.id}/cancel`, undefined, 403);
+      expect((await ctx.prisma.transportAssignment.findUniqueOrThrow({ where: { id: t3.id } })).status).toBe('SCHEDULED');
+
+      // Reading stays inside the organization, and a role without the capability still reads nothing.
+      const foreignVan = await ok(w.transportB, 'post', '/transport/vehicles', { type: 'VAN', plateNumber: `VB-${uniq()}`, capacity: 4 });
+      const foreignTrip = await ok(w.transportB, 'post', '/transport/assignments', { vehicleId: foreignVan.id, scheduledAt: plus(900) });
+      await expectStatus(viewer, 'get', `/transport/assignments/${foreignTrip.id}`, undefined, 404);
+      expect(JSON.stringify(await expectStatus(viewer, 'get', '/transport/assignments?limit=100', undefined, 200))).not.toContain(foreignTrip.id);
+      await expectStatus(w.hotelA, 'get', '/transport/assignments', undefined, 403);
+      await expectStatus(w.hotelA, 'get', `/transport/assignments/${t3.id}`, undefined, 403);
     });
   });
 });

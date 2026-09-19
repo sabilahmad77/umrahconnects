@@ -76,7 +76,11 @@ describe('route rules', () => {
   });
 
   it('pick the longest prefix and ignore query strings and fragments', () => {
-    expect(ruleFor('/transport/assignments')?.all).toEqual(['transport:assignment:manage']);
+    expect(ruleFor('/social/groups/abc')).toEqual({ authenticated: true });
+    expect(ruleFor('/social/feed')?.all).toEqual(['social:post:read']);
+    // F16: viewing trips is transport:vehicle:read (the catalogue's wording); managing them stays server-side.
+    expect(ruleFor('/transport/assignments')?.all).toEqual(['transport:vehicle:read']);
+    expect(ruleFor('/transport/bookings')?.all).toEqual(['transport:vehicle:read']);
     expect(ruleFor('/transport/vehicles/abc')?.all).toEqual(['transport:vehicle:read']);
     expect(ruleFor('/finance/invoices/123?tab=payments')?.all).toEqual(['finance:invoice:read']);
     expect(ruleFor('/finance-payments')?.all).toEqual(['finance:invoice:read', 'finance:payment:read']);
@@ -132,6 +136,13 @@ describe('navigation per identity (only what the capabilities open)', () => {
       '/marketplace', '/social', '/connections', '/requests', '/reports', '/notifications',
     ]);
     expect(canOpenRoute(transport, '/hotels')).toBe(false);
+  });
+
+  it('F16: a custom role with only transport:vehicle:read can open the trip views (read-only)', () => {
+    const viewer = { ...transport, permissions: ['transport:vehicle:read'] };
+    expect(canOpenRoute(viewer, '/transport/assignments')).toBe(true);
+    expect(canOpenRoute(viewer, '/transport/bookings')).toBe(true);
+    expect(canOpenRoute({ ...transport, permissions: ['transport:assignment:manage'] }, '/transport/assignments')).toBe(false);
   });
 
   it('visa officer: visa CRM and applicants, no finance reports', () => {
