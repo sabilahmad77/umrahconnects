@@ -42,3 +42,17 @@ session resumes from here — nothing below is inferred.
 - Pending coordinator items: D-022 into DECISIONS.md; XT-003/BLK-08 closed; P08 envelope
   (connections, marketplace-requests) during integration; A02 request: `referrer: no-referrer`
   on /login (returnTo may carry an invitation token).
+
+## Checkpoint 3 — 2026-09-19 17:50 +0500
+
+- Candidate `engineering/100-loop` @ `81c8279`: merged A07, A02, A04, A05, A03, A06 plus coordinator
+  integration fixes (`88ab60f` preferences enforcement XW-1, `41fbacb` cross-worker fixes, `f5203e7`).
+  Migrations applied to `umrah_connects_integration`: user_preferences, social_comment_threads,
+  media_registry_listing_city, pilgrim_account_links. Web tsc/eslint clean, web vitest 203/203, API tsc clean.
+- Running: A03b (role workflows + F12 reports capability), A08 (RLS R05 + security regression, from
+  candidate 7ca4d4d), A09 (Render/KVM/backups/I08 + XW-2 + O04 scheduling).
+- Usage: 5-hour window 72 % at 17:49 (resets 21:50 +0500); weekly 33 %.
+- Next, in order: (1) launch the follow-up fixer for F1–F11 (ENGINEERING_100_DEFECTS.md) on a worktree
+  from the candidate; (2) merge A03b, A09, A08 as they finish; (3) seed QA identities on the candidate
+  (`seed-qa-identities.ts`), build + start the candidate stack, launch A10 browser QA and A11
+  accessibility/responsive; (4) A12 independent review; (5) full regression + register + final report.
