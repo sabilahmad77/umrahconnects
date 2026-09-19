@@ -1,0 +1,64 @@
+# F9 — legacy seeds converge (dev DB umrah_eng100_fx2, a copy of the integration data), 2026-09-19
+# Seeds run as the owner: set -a; . ./.env; set +a; DATABASE_URL="$MIGRATE_DATABASE_URL" npx ts-node prisma/<seed>.ts
+
+## Queries
+-- posts
+SELECT a.display_name, p.like_count, p.share_count, p.comment_count, p.save_count, (SELECT count(*) FROM social.reactions r WHERE r.post_id=p.id AND r.type='LIKE') likes_rows, (SELECT count(*) FROM social.comments c WHERE c.post_id=p.id AND c.deleted_at IS NULL) comment_rows FROM social.posts p JOIN social.social_accounts a ON a.id=p.author_id WHERE a.display_name IN ('Al-Haramain Ground Services','PT Baitussalam Tours','Kaaba Travel & Tours') ORDER BY 1,2
+-- vendors
+SELECT t.slug, v.name, v.status, (SELECT count(*) FROM marketplace.listings l WHERE l.vendor_id=v.id) FROM marketplace.vendors v JOIN core.tenants t ON t.id=v.tenant_id WHERE v.name IN ('Makkah Grand Hotels','Madinah Comfort Stays','Haramain Transport Co','Nusuk Visa Partners','Al-Haramain Ground Services') ORDER BY 2,1
+-- accounts
+SELECT display_name, post_count, follower_count, following_count, (SELECT count(*) FROM social.posts p WHERE p.author_id=a.id AND p.deleted_at IS NULL) posts_rows FROM social.social_accounts a WHERE display_name IN ('Al-Haramain Ground Services','PT Baitussalam Tours','Kaaba Travel & Tours') ORDER BY 1
+
+## Before
+-- posts: author | like_count | share_count | comment_count | save_count | LIKE rows | comment rows
+Al-Haramain Ground Services|24|12|7|0|0|0
+Al-Haramain Ground Services|42|31|18|0|0|0
+Kaaba Travel & Tours|8|2|15|0|0|0
+PT Baitussalam Tours|156|89|43|0|0|0
+PT Baitussalam Tours|203|45|67|0|0|0
+-- sellers: organization | seller | status | listings
+al-haramain-ksa|Al-Haramain Ground Services|VERIFIED|3
+al-haramain-ksa|Haramain Transport Co|VERIFIED|2
+al-haramain-ksa|Madinah Comfort Stays|VERIFIED|1
+al-haramain-ksa|Makkah Grand Hotels|VERIFIED|2
+al-haramain-ksa|Nusuk Visa Partners|VERIFIED|1
+-- accounts: name | post_count | follower_count | following_count | live post rows
+Al-Haramain Ground Services|0|0|0|2
+Kaaba Travel & Tours|0|0|0|1
+PT Baitussalam Tours|0|0|0|2
+
+## Runs
+$ npx ts-node prisma/seed.ts                 # ✓ Social feed posts seeded (engagement counters match their rows)
+$ npx ts-node prisma/seed-marketplace.ts     # run 1
+   → moved seller Makkah Grand Hotels to makkah-grand-hotels
+   → moved seller Madinah Comfort Stays to madinah-comfort-hotels-b
+   → moved seller Haramain Transport Co to haramain-transport
+   − delisted the old Nusuk Visa Partners under al-haramain-ksa (it has marketplace history)
+   + seller Nusuk Visa Partners (nusuk-visa-partners-b)
+   ✓ 4 sellers (1 created, 3 moved, 1 delisted), 1 new listings.
+$ npx ts-node prisma/seed-marketplace.ts     # run 2: nothing left to change
+   ✓ 4 sellers (0 created, 0 moved, 0 delisted), 0 new listings.
+$ npx ts-node prisma/seed.ts                 # run 2: same counters
+
+## After (both runs)
+-- posts
+Al-Haramain Ground Services|0|0|0|0|0|0
+Al-Haramain Ground Services|0|0|0|0|0|0
+Kaaba Travel & Tours|0|0|0|0|0|0
+PT Baitussalam Tours|0|0|0|0|0|0
+PT Baitussalam Tours|0|0|0|0|0|0
+-- vendors
+al-haramain-ksa|Al-Haramain Ground Services|VERIFIED|3
+haramain-transport|Haramain Transport Co|VERIFIED|2
+madinah-comfort-hotels-b|Madinah Comfort Stays|VERIFIED|1
+makkah-grand-hotels|Makkah Grand Hotels|VERIFIED|2
+al-haramain-ksa|Nusuk Visa Partners|DELISTED|1
+nusuk-visa-partners-b|Nusuk Visa Partners|VERIFIED|1
+-- accounts
+Al-Haramain Ground Services|2|0|0|2
+Kaaba Travel & Tours|1|0|0|1
+PT Baitussalam Tours|2|0|0|2
+
+Nusuk Visa Partners under al-haramain-ksa had 4 probe bookings whose pending payments are recorded for al-haramain-ksa;
+it is DELISTED (not public) instead of moved, so those records stay consistent. Al-Haramain Ground Services is the
+operator's own (MU_ASSASA) seller from seed-modules.ts and stays.

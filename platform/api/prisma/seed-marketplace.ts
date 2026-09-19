@@ -1,24 +1,39 @@
 /**
- * FIX-05 — demo marketplace supply seed (idempotent).
- * Seeds a small, clearly-labelled DEMO set of vendors + listings for the
- * Al-Haramain demo tenant so the marketplace and public preview render supply.
+ * FIX-05 / F9 — demo marketplace supply seed (idempotent, converging).
+ * Seeds a small, clearly-labelled DEMO set of sellers + listings. Each seller belongs to a PROVIDER
+ * organization of its own type (hotel company, transport company, visa agency) — not to the operator
+ * `al-haramain-ksa`, which older versions of this seed used for every seller.
  *
- * Run:  DATABASE_URL=... npx ts-node prisma/seed-marketplace.ts
- * Safe to re-run — skips vendors/listings that already exist by name.
+ * Run as the database owner (seeds use a bare PrismaClient; docs/control-tower/RLS.md):
+ *   DATABASE_URL="$MIGRATE_DATABASE_URL" npx ts-node prisma/seed-marketplace.ts
+ * Safe to re-run: provider organizations are upserted by slug (same values as prisma/scripts/seed-demo-roles.ts
+ * and seed-isolation-pairs.ts), sellers and listings are matched by name, and a second run changes nothing.
+ * A seller left under al-haramain-ksa by an older run is moved to its provider organization; if it already has
+ * marketplace history (bookings, inquiries, quotes, offers, ratings — whose payments name the organization that
+ * took them), it stays where it is, is DELISTED (no longer public) and the provider organization gets its own.
  *
- * NOTE: DEMO data, not real provider content. Real/production marketplace
- * onboarding is a business decision (see COMPLETION_REPORT).
+ * NOTE: DEMO data, not real provider content. Real/production marketplace onboarding is a business decision
+ * (see COMPLETION_REPORT).
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, TenantType } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
-const TENANT_SLUG = 'al-haramain-ksa';
+const LEGACY_OWNER_SLUG = 'al-haramain-ksa';
 
-const VENDORS = [
-  { name: 'Makkah Grand Hotels', type: 'VENDOR_HOTEL', city: 'Makkah', email: 'sales@makkahgrand.demo' },
-  { name: 'Madinah Comfort Stays', type: 'VENDOR_HOTEL', city: 'Madinah', email: 'book@madinahcomfort.demo' },
-  { name: 'Haramain Transport Co', type: 'VENDOR_TRANSPORT', city: 'Jeddah', email: 'ops@haramaintransport.demo' },
-  { name: 'Nusuk Visa Partners', type: 'VENDOR_VISA', city: 'Riyadh', email: 'visa@nusukpartners.demo' },
+/** Provider organizations the demo sellers belong to (created if missing, exactly as the demo scripts do). */
+const PROVIDERS: Record<string, { name: string; type: TenantType }> = {
+  'makkah-grand-hotels': { name: 'Makkah Grand Hotels (demo)', type: 'VENDOR_HOTEL' },
+  'madinah-comfort-hotels-b': { name: 'Madinah Comfort Hotels B (demo)', type: 'VENDOR_HOTEL' },
+  'haramain-transport': { name: 'Haramain Transport Co. (demo)', type: 'VENDOR_TRANSPORT' },
+  'nusuk-visa-partners-b': { name: 'Nusuk Visa Partners B (demo)', type: 'VENDOR_VISA' },
+};
+
+const VENDORS: { name: string; provider: keyof typeof PROVIDERS; city: string; email: string }[] = [
+  { name: 'Makkah Grand Hotels', provider: 'makkah-grand-hotels', city: 'Makkah', email: 'sales@makkahgrand.demo' },
+  { name: 'Madinah Comfort Stays', provider: 'madinah-comfort-hotels-b', city: 'Madinah', email: 'book@madinahcomfort.demo' },
+  { name: 'Haramain Transport Co', provider: 'haramain-transport', city: 'Jeddah', email: 'ops@haramaintransport.demo' },
+  { name: 'Nusuk Visa Partners', provider: 'nusuk-visa-partners-b', city: 'Riyadh', email: 'visa@nusukpartners.demo' },
 ];
 
 const LISTINGS = [
@@ -30,48 +45,103 @@ const LISTINGS = [
   { vendor: 'Nusuk Visa Partners', name: 'Umrah Visa Processing — Nusuk', type: 'visa_service', priceCents: 30000, model: 'PER_PERSON', city: 'Riyadh', description: 'Fast Nusuk/Masar visa processing with document support.' },
 ];
 
+/** True when a seller already took part in marketplace business that names its current organization. */
+async function hasHistory(vendorId: string): Promise<boolean> {
+  const listing = { listing: { vendorId } };
+  const counts = await Promise.all([
+    prisma.listingBooking.count({ where: listing }),
+    prisma.listingInquiry.count({ where: listing }),
+    prisma.quote.count({ where: { vendorId } }),
+    prisma.requestOffer.count({ where: { vendorId } }),
+    prisma.vendorRating.count({ where: { vendorId } }),
+  ]);
+  return counts.some((n) => n > 0);
+}
+
 async function main() {
-  const tenant = await prisma.tenant.findUnique({ where: { slug: TENANT_SLUG } });
-  if (!tenant) { console.error(`Tenant ${TENANT_SLUG} not found — run the main seed first.`); return; }
-  console.log(`🛒 Seeding demo marketplace for ${tenant.name}…`);
+  console.log('🛒 Seeding demo marketplace sellers under their provider organizations…');
+  const legacyOwner = await prisma.tenant.findUnique({ where: { slug: LEGACY_OWNER_SLUG }, select: { id: true } });
+
+  const providerIds: Record<string, string> = {};
+  for (const [slug, p] of Object.entries(PROVIDERS)) {
+    const tenant = await prisma.tenant.upsert({
+      where: { slug },
+      create: { slug, name: p.name, type: p.type, status: 'ACTIVE', email: `hello@${slug}.dev`, country: 'SA' },
+      update: {},
+    });
+    providerIds[slug] = tenant.id;
+  }
 
   const vendorByName: Record<string, string> = {};
+  let moved = 0;
+  let delisted = 0;
+  let createdVendors = 0;
   for (const v of VENDORS) {
-    let vendor = await prisma.vendor.findFirst({ where: { tenantId: tenant.id, name: v.name } });
+    const provider = PROVIDERS[v.provider];
+    const tenantId = providerIds[v.provider];
+    let vendor = await prisma.vendor.findFirst({ where: { tenantId, name: v.name } });
+    const legacy = legacyOwner ? await prisma.vendor.findFirst({ where: { tenantId: legacyOwner.id, name: v.name } }) : null;
+
+    if (!vendor && legacy && !(await hasHistory(legacy.id))) {
+      vendor = await prisma.vendor.update({ where: { id: legacy.id }, data: { tenantId, type: provider.type } });
+      moved++;
+      console.log(`   → moved seller ${v.name} to ${v.provider}`);
+    } else if (legacy && legacy.status !== 'DELISTED') {
+      await prisma.vendor.update({ where: { id: legacy.id }, data: { status: 'DELISTED' } });
+      delisted++;
+      console.log(`   − delisted the old ${v.name} under ${LEGACY_OWNER_SLUG} (it has marketplace history)`);
+    }
     if (!vendor) {
       vendor = await prisma.vendor.create({
         data: {
-          tenantId: tenant.id, name: v.name, type: v.type as any, email: v.email,
-          city: v.city, country: 'SA', status: 'VERIFIED' as any, kycDocuments: [], images: [],
+          tenantId,
+          name: v.name,
+          type: provider.type,
+          email: v.email,
+          city: v.city,
+          country: 'SA',
+          status: 'VERIFIED',
+          kycDocuments: [],
+          images: [],
           verifiedAt: new Date(),
         },
       });
-      console.log(`   + vendor ${v.name}`);
+      createdVendors++;
+      console.log(`   + seller ${v.name} (${v.provider})`);
     }
     vendorByName[v.name] = vendor.id;
   }
 
-  let created = 0;
+  let createdListings = 0;
   for (const l of LISTINGS) {
-    const exists = await prisma.listing.findFirst({ where: { name: l.name, vendorId: vendorByName[l.vendor] } }).catch(() => null);
+    const exists = await prisma.listing.findFirst({ where: { name: l.name, vendorId: vendorByName[l.vendor] } });
     if (exists) continue;
     await prisma.listing.create({
       data: {
         vendorId: vendorByName[l.vendor],
-        type: l.type as any,
+        type: l.type,
         name: l.name,
         description: l.description,
         priceCents: BigInt(l.priceCents),
         currency: 'SAR',
-        pricingModel: l.model as any,
+        pricingModel: l.model,
+        city: l.city,
         attributes: { city: l.city, country: 'SA', demo: true },
         imageUrls: [],
-        status: 'PUBLISHED' as any,
+        status: 'PUBLISHED',
         isActive: true,
-      } as any,
-    }).then(() => created++).catch((e) => console.warn(`   ! ${l.name}: ${String(e.message).slice(0, 90)}`));
+      },
+    });
+    createdListings++;
   }
-  console.log(`   ✓ ${Object.keys(vendorByName).length} vendors, ${created} new listings seeded.`);
+  console.log(
+    `   ✓ ${VENDORS.length} sellers (${createdVendors} created, ${moved} moved, ${delisted} delisted), ${createdListings} new listings.`,
+  );
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch((e) => {
+    console.error('❌ Marketplace seed failed:', e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());
