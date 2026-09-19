@@ -1,6 +1,8 @@
+import * as bcrypt from 'bcryptjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { RbacService } from '../src/modules/rbac/rbac.service';
 import { api, createTestApp, TestContext } from './app';
-import { Actor, bearer, buildWorld, World } from './fixtures';
+import { Actor, bearer, buildWorld, PASSWORD, World } from './fixtures';
 
 /**
  * Trip groups from both sides: the managing organization (CRM capabilities) and
@@ -17,6 +19,8 @@ describe('groups: invitations, member discussion, polls, join/leave and manageme
   let ctx: TestContext;
   let w: World;
   let group: any;
+  /** Operator A's finance manager, owned by this suite (other suites grant the shared fixture more roles). */
+  let financeOnly: Actor;
 
   const call = (a: Actor, method: Method, path: string, body?: Record<string, unknown>) => {
     const req = ctx.http()[method](api(path)).set(bearer(a));
@@ -41,6 +45,16 @@ describe('groups: invitations, member discussion, polls, join/leave and manageme
     ctx = await createTestApp();
     w = await buildWorld(ctx);
     group = await newGroup();
+    const email = 'groups-finance@op-a.test';
+    const passwordHash = await bcrypt.hash(PASSWORD, 4);
+    const u = await ctx.prisma.user.upsert({
+      where: { tenantId_email: { tenantId: w.tenants.opA, email } },
+      create: { tenantId: w.tenants.opA, email, passwordHash, firstName: 'Finance', lastName: 'Only', status: 'ACTIVE', emailVerifiedAt: new Date() },
+      update: { passwordHash, status: 'ACTIVE', lockedUntil: null, failedLoginCount: 0, sessionsRevokedAt: null },
+    });
+    await ctx.app.get(RbacService).grantSystemRole(u.id, 'FINANCE_MANAGER');
+    const login = await ctx.http().post(api('/auth/login')).send({ email, password: PASSWORD });
+    financeOnly = { id: u.id, email, tenantId: w.tenants.opA, token: login.body.data.accessToken, refreshToken: login.body.data.refreshToken };
   });
   afterAll(async () => ctx?.close());
 
@@ -100,7 +114,8 @@ describe('groups: invitations, member discussion, polls, join/leave and manageme
     expect(comments.map((c: any) => [c.body, c.isMine, c.canDelete])).toEqual([['Thanks', true, true], ['Be on time', false, false]]);
 
     // Outsiders: another traveler, another organization, and same-organization staff without CRM capabilities.
-    for (const outsider of [w.travelerB, w.opB, w.financeA]) {
+    expect((await ok(financeOnly, 'get', '/auth/me')).permissions).not.toContain('crm:pilgrim:read');
+    for (const outsider of [w.travelerB, w.opB, financeOnly]) {
       await refused(outsider, [
         ['get', `/groups/${group.id}/posts`],
         ['post', `/groups/${group.id}/posts`, { body: 'spam' }],
