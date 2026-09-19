@@ -107,7 +107,20 @@ export function useArchiveListing() {
   });
 }
 
+/** @deprecated Kept for existing callers; the soft delete is an archive. */
+export const useDeactivateListing = useArchiveListing;
+
 // ── Seller profiles (vendors) ──────────────────────────────────────────────
+/** The organization's primary seller profile, or null when it has not created one. */
+export function useMyVendor(enabled = true) {
+  return useQuery({
+    queryKey: ['marketplace', 'my-vendor'],
+    queryFn: async () => (await apiClient.get('/marketplace/vendors/mine')).data.data as any | null,
+    enabled,
+    retry: false,
+  });
+}
+
 export function useMarketplaceVendors() {
   return useQuery({
     queryKey: ['marketplace', 'vendors'],
@@ -177,6 +190,15 @@ export function useListingInquiries(listingId?: string, enabled = true) {
     queryKey: ['marketplace', 'inquiries', listingId],
     queryFn: async () => (await apiClient.get(`/marketplace/listings/${listingId}/inquiries`)).data.data as any[],
     enabled: !!listingId && enabled,
+  });
+}
+
+/** Inquiries on every listing of my organization. */
+export function useMyInquiries(enabled = true) {
+  return useQuery({
+    queryKey: ['marketplace', 'my-inquiries'],
+    queryFn: async () => (await apiClient.get('/marketplace/inquiries')).data.data as any[],
+    enabled,
   });
 }
 
