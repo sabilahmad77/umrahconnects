@@ -40,7 +40,6 @@ import { RefundDialog, isGatewayPayment, refundableCents } from './refund-dialog
 import {
   amountProblem,
   centsToInput,
-  centsToMajor,
   formatAmount,
   parseMajorToCents,
 } from './money';
@@ -564,7 +563,7 @@ function RecordPaymentForm({
     try {
       const saved = await record.mutateAsync({
         id: inv.id,
-        amount: centsToMajor(parseMajorToCents(value)!),
+        amountCents: parseMajorToCents(value)!,
         method,
         referenceNumber: reference.trim() || undefined,
         paidAt: new Date(`${paidOn}T12:00:00`).toISOString(),
@@ -717,8 +716,8 @@ function EditTab({ inv, refetch }: { inv: any; refetch: () => void }) {
       if (subtotal === null || subtotal <= 0)
         return setError('The subtotal must be greater than zero.');
       if (tax === null) return setError('Enter the tax as an amount such as 15 or 15.50.');
-      body.subtotal = centsToMajor(subtotal);
-      body.tax = centsToMajor(tax);
+      body.subtotalCents = subtotal;
+      body.taxCents = tax;
     }
     setError(null);
     try {

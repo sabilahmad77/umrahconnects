@@ -260,7 +260,8 @@ export function checkoutApi(listingBookingId: () => string | undefined): FlowApi
  */
 export function invoicePaymentApi(input: {
   invoiceId: string;
-  amount?: number;
+  /** Integer cents: money travels in minor units. */
+  amountCents?: number;
   idempotencyKey?: string;
   resumeId?: string;
 }): FlowApi {
@@ -270,7 +271,7 @@ export function invoicePaymentApi(input: {
         ? await apiClient.post(`/payments/intents/${input.resumeId}/resume`, {})
         : await apiClient.post('/payments/intents', {
             invoiceId: input.invoiceId,
-            amount: input.amount,
+            amountCents: input.amountCents,
             idempotencyKey: input.idempotencyKey,
           });
       return staffPaymentView(data.data);

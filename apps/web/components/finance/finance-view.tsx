@@ -12,7 +12,7 @@ import { useFinanceInvoices, useFinanceStats } from '@/hooks/use-api';
 import { useCreateInvoice } from '@/hooks/use-finance';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import { Button, Input, ModalSurface, QueryFailure, Select, Textarea } from '@/components/ui/system';
-import { centsToMajor, formatAmount, parseMajorToCents } from './money';
+import { formatAmount, parseMajorToCents } from './money';
 
 // FIX-04: every backend invoice state is reachable in the filter bar.
 const FILTERS = ['ALL', ...INVOICE_STATUSES];
@@ -328,11 +328,11 @@ function CreateInvoiceModal({ onClose, onCreated }: { onClose: () => void; onCre
         issuedToName: form.name.trim(),
         counterpartyEmail: form.email.trim() || undefined,
         currency: form.currency,
-        subtotal: centsToMajor(subtotalCents),
-        tax: centsToMajor(taxCents),
+        subtotalCents,
+        taxCents,
         dueDate: form.dueDate || undefined,
         notes: form.notes.trim() || undefined,
-        lineItems: [{ description: form.notes.trim().slice(0, 120) || 'Services', qty: 1, unitPrice: centsToMajor(subtotalCents) }],
+        lineItems: [{ description: form.notes.trim().slice(0, 120) || 'Services', qty: 1, unitPriceCents: subtotalCents }],
       });
       toast.success('Draft invoice created');
       onCreated();

@@ -90,7 +90,6 @@ export function MyBookingsView() {
           if (!open) closeCheckout();
         }}
         title={checkout?.title ?? 'Booking payment'}
-        description="The amount is calculated by the server from your booking."
       >
         {checkout && (
           <BookingCheckout

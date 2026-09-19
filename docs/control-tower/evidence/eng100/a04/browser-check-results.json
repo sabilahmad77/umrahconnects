@@ -1,0 +1,165 @@
+{
+  "ranAt": "2026-09-18T16:42:16.585Z",
+  "web": "http://localhost:3404",
+  "provider": "sandbox (development only — not Stripe)",
+  "passed": 26,
+  "total": 26,
+  "results": [
+    {
+      "id": "T0",
+      "label": "server reports the sandbox as the active provider (development)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T1",
+      "label": "traveler booked the listing through the UI",
+      "ok": true,
+      "detail": "SAR 90"
+    },
+    {
+      "id": "T2a",
+      "label": "checkout opens with the server amount and the labelled sandbox path",
+      "ok": true,
+      "detail": "d311ec10-3a01-4d5c-abbf-838f0e4aa5c9"
+    },
+    {
+      "id": "T2b",
+      "label": "the address bar carries only the attempt id",
+      "ok": true,
+      "detail": "/my-bookings?checkout=d311ec10-3a01-4d5c-abbf-838f0e4aa5c9"
+    },
+    {
+      "id": "T2c",
+      "label": "nothing is paid before completion (server)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T2d",
+      "label": "booking shows paid only after the server says so",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T2e",
+      "label": "double click created one payment attempt and one capture",
+      "ok": true,
+      "detail": "1 payment row(s)"
+    },
+    {
+      "id": "T2f",
+      "label": "booking card shows Paid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T2g",
+      "label": "paid state persists after a refresh (server)",
+      "ok": true,
+      "detail": "Paid"
+    },
+    {
+      "id": "T3a",
+      "label": "a reload mid-checkout reopens the same attempt from the server",
+      "ok": true,
+      "detail": "c97c8968-19f9-47b6-be78-7bcf1a45574b"
+    },
+    {
+      "id": "T3b",
+      "label": "a second tab resumes the same attempt (no second payment)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T3c",
+      "label": "two tabs, one payment: the stale tab shows the server result",
+      "ok": true,
+      "detail": "1 payment row(s)"
+    },
+    {
+      "id": "T4a",
+      "label": "a decline says no money was taken",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T4b",
+      "label": "server: attempt failed, booking still unpaid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T4c",
+      "label": "retry opens a fresh attempt",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "T4d",
+      "label": "after the retry: one failed and one completed attempt",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F1a",
+      "label": "finance manager created a draft invoice (total 575.00 computed by the server)",
+      "ok": true,
+      "detail": "d813603d-8b08-4a48-b99a-f2c34d2293de"
+    },
+    {
+      "id": "F1b",
+      "label": "invoice issued",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F1c",
+      "label": "card payment recorded by the server; invoice partially paid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F1d",
+      "label": "manual payment (double click) recorded once; invoice paid",
+      "ok": true,
+      "detail": "1 manual row(s)"
+    },
+    {
+      "id": "F1e",
+      "label": "partial refund through the gateway; invoice back to partially paid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F2a",
+      "label": "staff without finance:payment:refund sees no refund action",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F2b",
+      "label": "staff without finance:payment:process sees the card panel as view only",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "F2c",
+      "label": "the API refuses the refund for staff (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "id": "F2d",
+      "label": "the API refuses manual payment recording for staff (403)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "id": "F3a",
+      "label": "a full refund of a marketplace payment marks the traveler booking refunded",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

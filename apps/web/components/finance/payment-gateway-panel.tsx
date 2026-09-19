@@ -24,7 +24,6 @@ import {
 import {
   amountProblem,
   centsToInput,
-  centsToMajor,
   formatAmount,
   parseMajorToCents,
 } from './money';
@@ -262,7 +261,7 @@ function InvoicePaymentFlow({
   const flow = usePaymentFlow(
     invoicePaymentApi({
       invoiceId,
-      amount: active.mode === 'new' ? centsToMajor(active.amountCents) : undefined,
+      amountCents: active.mode === 'new' ? active.amountCents : undefined,
       idempotencyKey: active.mode === 'new' ? active.idempotencyKey : undefined,
       resumeId: active.mode === 'resume' ? active.paymentId : undefined,
     }),

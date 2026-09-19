@@ -64,7 +64,8 @@ export function useRecordPayment() {
       ...body
     }: {
       id: string;
-      amount: number;
+      /** Integer cents: money travels in minor units. */
+      amountCents: number;
       method: string;
       referenceNumber?: string;
       paidAt?: string;

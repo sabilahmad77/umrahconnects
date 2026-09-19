@@ -1,0 +1,44 @@
+{
+  "ranAt": "2026-09-18T16:43:21.061Z",
+  "provider": "stripe selected, keys absent",
+  "passed": 6,
+  "total": 6,
+  "results": [
+    {
+      "id": "U0",
+      "label": "server reports Stripe active but not configured",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "U1",
+      "label": "traveler checkout says card payments are not available and starts nothing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "U2",
+      "label": "staff card panel is honest and points to manual recording",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "U3",
+      "label": "manual payment recording stays available",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "U4",
+      "label": "the API answers 503 instead of pretending (checkout)",
+      "ok": true,
+      "detail": "HTTP 503"
+    },
+    {
+      "id": "U5",
+      "label": "no booking or payment was created by trying",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
