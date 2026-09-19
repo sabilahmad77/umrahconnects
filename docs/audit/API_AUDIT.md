@@ -1,5 +1,9 @@
 # API Audit
 
+> **Render references here are RETIRED (2026-09-19).** Render (`umrah-connect-api.onrender.com`, `render.yaml`) is retired
+> from the target architecture (API → Hostinger KVM 8). This historical record is kept unchanged as evidence; current
+> state and the remaining owner steps: `docs/control-tower/RENDER_RETIREMENT.md`.
+
 Audited 2026-09-17 against the running API (`http://localhost:4100/api/v1`, NestJS 10, global prefix `/api/v1`).
 The inventory below was parsed from every `*.controller.ts` and cross-checked against the routes the running
 process actually mapped at boot: **304 parsed = 304 mapped, zero mismatches.**

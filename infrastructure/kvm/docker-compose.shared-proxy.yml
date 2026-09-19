@@ -1,0 +1,16 @@
+# Proxy mode "shared": the host already runs one reverse proxy (Caddy, nginx, Traefik …) on :80/:443 for
+# several projects. This stack then publishes nothing; the shared proxy terminates TLS for API_DOMAIN and
+# forwards to umrah-connect-api:4000 on its Docker network. Selected in .env.production:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.shared-proxy.yml
+#   SHARED_PROXY_NETWORK=<name of the shared proxy's external Docker network>
+# The site block the shared proxy needs is in README.md ("Shared reverse proxy").
+services:
+  uc-api:
+    networks:
+      shared-proxy:
+        aliases: [umrah-connect-api]
+
+networks:
+  shared-proxy:
+    external: true
+    name: ${SHARED_PROXY_NETWORK:?SHARED_PROXY_NETWORK is required in shared-proxy mode}

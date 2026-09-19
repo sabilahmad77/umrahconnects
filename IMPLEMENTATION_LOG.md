@@ -1,5 +1,9 @@
 # IMPLEMENTATION_LOG — Umrah Connect autonomous loop
 
+> **Render references here are RETIRED (2026-09-19).** Render (`umrah-connect-api.onrender.com`, `render.yaml`) is retired
+> from the target architecture (API → Hostinger KVM 8). This historical record is kept unchanged as evidence; current
+> state and the remaining owner steps: `docs/control-tower/RENDER_RETIREMENT.md`.
+
 Format: `ISSUE · files · verified · RESULT`
 
 - STEP-0 · STACK_NOTES.md · Verified: /proxy-api = Next rewrite→NestJS in-repo; auth = JWT localStorage + client gate; canonical enums from prisma; discrepancies logged (payments endpoint EXISTS, packages API EXISTS, real `#` links = login footer ×3 + social icons ×5; pilgrim DTO enum ≠ DB enum) · PASS

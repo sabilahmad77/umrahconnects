@@ -1,0 +1,111 @@
+# Cleanup of every disposable resource created by the A09 rehearsals (2026-09-19)
+# Other projects' containers (supabase_*, flowdesk-*, imagetool-*, backend-*) and images were never touched;
+# umrah-connect-api:core-check predates this work and was kept. Colima was started for this work (it was stopped at
+# the start) and is left running, the machine's normal state.
+
+$ env COMPOSE_PROJECT_NAME=uc-a09-kvm docker compose --env-file .env.production down -v --remove-orphans
+[exit 0]
+$ docker rm -f uc-a09-minio uc-a09-pg-restore
+uc-a09-minio
+uc-a09-pg-restore
+[exit 0]
+$ docker network rm uc-a09-offsite
+uc-a09-offsite
+[exit 0]
+$ docker rmi uc-a09-api:test rhysd/actionlint:1.7.7 koalaman/shellcheck:stable rclone/rclone:1.68 ubuntu:24.04
+[exit 0]
+$ kill 26621
+[exit 0]
+$ rm -f .env.production
+[exit 0]
+$ rm -rf /Users/macbook/.uc-a09-rehearsal
+[exit 0]
+== verification: nothing named uc-a09 remains
+containers:
+0
+volumes:
+0
+networks:
+0
+images:
+0
+listening on 18409/18443/19409-19411:
+       0
+$ docker rmi 6097768f66ea   (untagged build-stage image left by my uc-a09-api:test build; identified from the build log)
+[exit 0]
+
+# deploy.sh rehearsal cleanup
+$ env COMPOSE_PROJECT_NAME=uc-a09-deploy docker compose --env-file .env.production down -v --remove-orphans
+[exit 0]
+# release tags created by the rehearsal (umrah-connect-api:core-check is not mine and is kept)
+$ docker rmi umrah-connect-api:cf37ca32d226
+[exit 0]
+$ docker rmi umrah-connect-api:2c529e7d5259
+[exit 0]
+$ docker rmi umrah-connect-api:current
+[exit 0]
+$ docker rmi umrah-connect-api:previous
+[exit 0]
+$ docker rmi umrah-connect-api:e7d6e514ad04
+[exit 0]
+$ docker rmi umrah-connect-api:36445209b763
+[exit 0]
+$ docker rmi umrah-connect-api:cbee343f515b
+[exit 0]
+$ docker rmi umrah-connect-api:cd3dd419c78f
+[exit 0]
+$ docker rmi koalaman/shellcheck:stable
+[exit 0]
+$ rm -rf /Users/macbook/.uc-a09-rehearsal
+[exit 0]
+# dangling images created today by my builds
+$ docker rmi 4d38dffd7a53
+[exit 0]
+$ docker rmi 8c4ef65273f1
+[exit 0]
+$ docker rmi 80020c55f2cb
+[exit 0]
+$ docker rmi 230ce49ad6aa
+[exit 0]
+$ docker rmi 11001fcc821c
+[exit 0]
+$ docker rmi 5552bc6cd78f
+[exit 0]
+== verification
+containers named uc-a09*: 0
+volumes named uc-a09*: 0
+networks named uc-a09*: 0
+umrah-connect-api tags left: core-check 
+dangling images from today: 5
+rehearsal dir: removed
+removed dangling bd51098b3f99 (round 1)
+removed dangling 960c6a4d5ab5 (round 1)
+removed dangling 5f62f95389f3 (round 1)
+removed dangling 60dff6632f43 (round 1)
+removed dangling 46907a6cc16e (round 1)
+removed dangling 1fbcd02040c8 (round 2)
+removed dangling cab0a463ac45 (round 2)
+removed dangling e51639197fbb (round 2)
+removed dangling 44139c43d06f (round 2)
+removed dangling dc15f31ab2d5 (round 2)
+removed dangling 43670edce3eb (round 3)
+removed dangling fa6f78ec7078 (round 3)
+removed dangling 1fd0e0c11630 (round 3)
+removed dangling 9d27e6f67659 (round 3)
+removed dangling 942fa8f87b67 (round 3)
+removed dangling cd4e3f6762dc (round 4)
+removed dangling 39364c9a7ac0 (round 4)
+removed dangling e58d9c19fda6 (round 4)
+removed dangling d2681966b432 (round 4)
+removed dangling db90e78e261b (round 4)
+removed dangling ceb6d8c7177b (round 5)
+removed dangling 1f8b9605604f (round 5)
+removed dangling b2f198d00193 (round 5)
+removed dangling daa169419722 (round 5)
+removed dangling e0424cf31b2e (round 5)
+removed dangling 287df7418b59 (round 6)
+removed dangling f59266fce3db (round 6)
+removed dangling 02995240cd97 (round 6)
+removed dangling 34605496aba9 (round 6)
+removed dangling 76677e195ed4 (round 6)
+dangling images from today now: 0

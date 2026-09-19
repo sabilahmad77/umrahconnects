@@ -1,5 +1,10 @@
 # 03 — Deployment and Services
 
+> **Status 2026-09-19 — historical snapshot, partly superseded.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 Live checks in this document were run on **2026-09-12** from the old Mac.
 Anything that could not be proven from repository evidence or a live request is
 marked **NOT CONFIRMED** rather than guessed.
@@ -16,6 +21,10 @@ marked **NOT CONFIRMED** rather than guessed.
 | Evidence | `README.md`, `docs/HANDOFF.md`, live request |
 
 ## Backend
+
+**Legacy — RETIRED from the target (2026-09).** The table records the Render service as found on 2026-09-12.
+Target: Hostinger KVM 8 (`infrastructure/kvm/README.md`); owner steps to decommission Render:
+`docs/control-tower/RENDER_RETIREMENT.md`.
 
 | | |
 |---|---|
@@ -106,7 +115,8 @@ migration: no workflow files existed (so nothing was hidden), the current `gh`
 token *does* carry the `workflow` scope, and leaving the rule in place risked
 silently dropping CI configuration on a future machine move.
 
-Deployment today is simply: **push to `main` → Vercel and Render auto-deploy.**
+Deployment on 2026-09-12 was: push to `main` → Vercel and Render auto-deploy. **Superseded:** CI now exists
+(`.github/workflows/`), and the API is deployed to the KVM from reviewed commits with `infrastructure/kvm/scripts/deploy.sh`.
 
 ## Accounts
 

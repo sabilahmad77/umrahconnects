@@ -1,5 +1,10 @@
 # 01 — Current Architecture
 
+> **Status 2026-09-19 — historical snapshot, partly superseded.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 Captured from the old Mac on 2026-09-12 at commit `1b16839`.
 Everything here was read out of the repository, not assumed.
 
@@ -29,8 +34,8 @@ umrah-connects/
 ├─ audit/           Python + Playwright verification suites and evidence
 ├─ docs/            HANDOFF.md, adr/, migration/ (this directory)
 ├─ infrastructure/  infra manifests
-├─ Dockerfile       production API container (used by Render)
-├─ render.yaml      Render blueprint for the API
+├─ Dockerfile       production API container (Hostinger KVM 8 stack, infrastructure/kvm)
+│                   (render.yaml was removed in 2026-09: Render is retired)
 ├─ docker-compose.yml
 └─ turbo.json, pnpm-workspace.yaml, tsconfig.base.json
 ```

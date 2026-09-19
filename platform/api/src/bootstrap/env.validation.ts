@@ -36,7 +36,40 @@ export function productionConfigProblems(env: Record<string, string | undefined>
   if (env.GOOGLE_REDIRECT_URI && !env.GOOGLE_REDIRECT_URI.startsWith('https://')) problems.push('GOOGLE_REDIRECT_URI must be https');
 
   if (env.KAFKA_ENABLED === 'true' && !env.KAFKA_BROKERS) problems.push('KAFKA_BROKERS is required when KAFKA_ENABLED=true');
+
+  // Test-only Google OIDC stub. The Google service already ignores it in production; refusing to boot
+  // makes a leaked test setting visible instead of silently inert.
+  if (env.GOOGLE_OIDC_STUB_URL?.trim()) problems.push('GOOGLE_OIDC_STUB_URL is a test-only setting and must not be set in production');
+
+  // Render is retired (docs/control-tower/RENDER_RETIREMENT.md). A value copied from the old Render
+  // dashboard would send links, CORS trust or the database connection to a dead or legacy host.
+  RENDER_URL_SETTINGS.forEach((k) => {
+    if (env[k] && /onrender/i.test(env[k] as string)) problems.push(`${k} points at a Render host (onrender.com); Render is retired`);
+  });
+  if (env.DATABASE_URL && isRenderDatabaseHost(env.DATABASE_URL)) {
+    problems.push('DATABASE_URL points at a Render-hosted database (render.com); restore the data into the KVM database instead');
+  }
   return problems;
+}
+
+/** URL-valued settings that must never name a Render host in production. */
+const RENDER_URL_SETTINGS = [
+  'WEB_URL',
+  'APP_URL',
+  'PUBLIC_API_BASE_URL',
+  'CORS_ORIGINS',
+  'CORS_ORIGIN_REGEX',
+  'GOOGLE_REDIRECT_URI',
+  'S3_PUBLIC_BASE_URL',
+] as const;
+
+/** True when the connection string's host is a Render database host (e.g. dpg-…-a.oregon-postgres.render.com). */
+function isRenderDatabaseHost(url: string): boolean {
+  // Parsed by hand: a password may contain characters that make `new URL` throw. The host follows the
+  // last "@" of the part before the query string (credentials end there even if they contain "/").
+  const beforeQuery = url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split(/[?#]/, 1)[0] ?? '';
+  const host = beforeQuery.slice(beforeQuery.lastIndexOf('@') + 1).split(/[/:]/, 1)[0] ?? '';
+  return /(^|\.)render\.com$/i.test(host);
 }
 
 export function assertProductionConfig(env: Record<string, string | undefined>) {

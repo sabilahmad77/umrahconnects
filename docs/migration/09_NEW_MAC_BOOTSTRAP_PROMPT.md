@@ -1,5 +1,14 @@
 # 09 — New Mac Bootstrap Prompt
 
+> **SUPERSEDED — do not paste this prompt as-is (2026-09-19).** It predates committed migrations and the
+> KVM target. Use `README.md` → Quick start (`prisma migrate deploy`, never `db push`) and
+> `infrastructure/kvm/README.md`. Render is retired (`docs/control-tower/RENDER_RETIREMENT.md`).
+
+> **Status 2026-09-19 — hosting facts.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 Paste everything inside the fence below into Claude Code on the new Mac.
 It is self-contained and does not depend on any earlier conversation.
 
@@ -30,7 +39,9 @@ Migration checkpoint commit: 941bfa0fac9c7f3f749f3092d554adf28b364b94
                   both are fine — just make sure you are on main)
 Local path:      ~/Projects/umrah-connects
 Live web:        https://umrahconnect.io          (Vercel, auto-deploys from main)
-Live API:        https://umrah-connect-api.onrender.com/api/v1  (Render, auto-deploys from main)
+API target:      https://api.umrahconnect.io/api/v1  (Hostinger KVM 8, deployed with
+                 infrastructure/kvm/scripts/deploy.sh; live only after the owner's cutover).
+                 The legacy Render API is RETIRED — never use it.
 
 Monorepo: pnpm workspaces + Turborepo.
   apps/web        @umrah-connects/web     Next.js 14 App Router   port 3000
@@ -211,13 +222,14 @@ If anything fails, diagnose and fix the environment before reporting done.
 ────────────────────────────────────────────────────────
 KNOWN STATE — do not treat these as your bugs
 ────────────────────────────────────────────────────────
- - The live Render API (umrah-connect-api.onrender.com) has been DOWN since
+ - The legacy Render API (umrah-connect-api.onrender.com, RETIRED) has been DOWN since
    2026-08-22, returning nothing. Proven not to be a code fault: the exact
    production start path was replayed locally and came up healthy in 2s. It
-   needs a human to check the Render dashboard (srv-d94peplckfvc73adlr9g).
+   is retired; the owner decommissions it after the KVM cutover
+   (docs/control-tower/RENDER_RETIREMENT.md).
    Local development does not depend on it.
  - www.umrahconnect.io has no DNS record; the apex umrahconnect.io works.
- - There is no CI. No .github/ directory exists.
+ - CI exists: .github/workflows/ (api-ci, infra-ci, uptime — uptime stays inactive until enabled).
  - Uploads default to local disk (STORAGE_DRIVER=local), which is ephemeral.
    Cloudinary/S3 keys are a pending human item.
  - Payments default to a complete sandbox gateway that moves no real money.
@@ -240,7 +252,7 @@ CONVENTIONS TO RESPECT
  - Guard required ids: findFirst({where:{id: undefined}}) matches the FIRST row.
  - Demo login stays local-only; production uses real auth.
  - Never commit secrets — the repository is PUBLIC.
- - Deploy = push main (auto-deploys Vercel + Render), but ONLY after both
+ - Web deploy = push main (auto-deploys Vercel); the API deploys via deploy.sh on the KVM. ONLY after both
    `next build` and `nest build` pass locally.
 
 ────────────────────────────────────────────────────────

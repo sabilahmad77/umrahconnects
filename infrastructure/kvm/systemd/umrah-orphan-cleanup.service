@@ -1,0 +1,14 @@
+[Unit]
+Description=Umrah Connect orphaned stored-object cleanup (O04; ORPHAN_CLEANUP_MODE in .env.production)
+Wants=docker.service
+After=docker.service umrah-backup.service
+OnFailure=umrah-alert@%n.service
+
+[Service]
+Type=oneshot
+User=deploy
+WorkingDirectory=/opt/umrah-connect/infrastructure/kvm
+ExecStart=/opt/umrah-connect/infrastructure/kvm/scripts/orphan-cleanup.sh
+TimeoutStartSec=1h
+NoNewPrivileges=yes
+PrivateTmp=yes

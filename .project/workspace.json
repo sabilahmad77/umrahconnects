@@ -39,7 +39,7 @@
   },
   "production": {
     "web": "Vercel (auto-deploys from main)",
-    "api": "Render (auto-deploys from main)"
+    "api": "Hostinger KVM 8 via infrastructure/kvm/scripts/deploy.sh (target; Render retired — docs/control-tower/RENDER_RETIREMENT.md)"
   },
   "controlTower": "docs/control-tower",
   "verifyCommand": "scripts/verify-workspace.sh"

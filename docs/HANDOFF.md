@@ -44,13 +44,13 @@ Connects” — only the repo slug keeps the s).
 |---|---|
 | GitHub | `https://github.com/sabilahmad77/umrahconnects` (public) — `main` = production |
 | Web | Vercel → **https://umrahconnect.io** (note: `www.` has **no DNS record** yet — needs a CNAME, human/DNS access) |
-| API | Render → **https://umrah-connect-api.onrender.com/api/v1** (service `srv-d94peplckfvc73adlr9g`) |
-| DB (prod) | Render Postgres `dpg-d94o1dtckfvc73abpon0-a` |
-| Deploy | push `main` → both auto-deploy. Gate every push on `next build` + `nest build` passing locally. |
-| Cold start | Render free tier sleeps; first request after idle ≈ 50 s. The web client retries transient 5xx (query-provider) so it self-heals. |
+| API | Target: Hostinger KVM 8 → **https://api.umrahconnect.io/api/v1** (`infrastructure/kvm/README.md`; not live until the owner's cutover). The legacy Render service `umrah-connect-api` (`srv-d94peplckfvc73adlr9g`) is **RETIRED** from the target and unresponsive — see `docs/control-tower/RENDER_RETIREMENT.md`. |
+| DB (prod) | Target: PostgreSQL 16 on the KVM. Legacy Render Postgres `dpg-d94o1dtckfvc73abpon0-a` is only the one-time cutover data source (runbook §3). |
+| Deploy | push `main` → Vercel auto-deploys the web. The API is deployed to the KVM from reviewed commits with `infrastructure/kvm/scripts/deploy.sh`. |
+| Cold start | (Historical: the Render free tier slept ≈ 50 s after idle.) The KVM API does not sleep; the web client still retries transient 5xx. |
 
-**Production secrets are NOT in this repo.** They live in the Vercel and Render
-dashboards (owner: the user). Local dev needs only the committed
+**Production secrets are NOT in this repo.** They live in the Vercel dashboard and in
+`infrastructure/kvm/.env.production` on the KVM server (owner: the user). Local dev needs only the committed
 `.env.example` templates.
 
 **Tenant IDs (demo tenant “Al Haramain”):** local `ac08f9b4-aaec-4474-b61b-4832c5a5ec4c`,
@@ -140,8 +140,8 @@ keys; keep demo login for local testing only; “optional” per audit docs =
 do it properly anyway; deploy = push `main` (pre-authorized).
 
 **Known human-blocked items:** Cloudinary/S3 keys, payment sandbox keys,
-regulator API credentials, real social/store URLs, `www` CNAME, paid Render
-plan (or keep-warm) for cold starts.
+regulator API credentials, real social/store URLs, `www` CNAME, the KVM
+cutover and Render decommission (`docs/control-tower/RENDER_RETIREMENT.md`).
 
 ## 7. Conventions, gotchas, and the working loop
 

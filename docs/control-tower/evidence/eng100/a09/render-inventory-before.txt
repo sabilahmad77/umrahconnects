@@ -1,0 +1,125 @@
+# Render reference inventory — BEFORE (branch eng100/a09 at 9a4da31, 2026-09-18T12:31Z)
+# Command (tracked files only, lockfile excluded; PCRE word boundary so React 'render' verbs are not counted):
+#   git grep -P -n -I "onrender|render\.yaml|RENDER_[A-Z]|Render" -- . ':!pnpm-lock.yaml'
+# Files present: render.yaml=yes
+
+.project/workspace.json:42:    "api": "Render (auto-deploys from main)"
+COMPLETION_REPORT.md:14:| **FIX-03** | Transient 5xx / RSC-prefetch mitigation | `web/components/providers/query-provider.tsx` (retry 5xx ×3 backoff, no-retry 4xx) | Nav-storm across detail routes **0/19 5xx** locally. Root cause = Render free-tier cold start; client retry self-heals. |
+COMPLETION_REPORT.md:40:| **Deploy** | Approval to push `main` (auto-deploys to Vercel + Render). Currently committed LOCALLY only — not pushed, to avoid disrupting your live QA mid-change. |
+COMPLETION_REPORT.md:46:**Production-ready: CONDITIONAL.** Remaining before real customers/pilgrims: real payment gateway (FIX-06), object storage for uploads (FIX-10), production marketplace content, and the operational items already flagged (SMTP for emails, Render free-tier cold-start → keep-wa
+COMPLETION_REPORT.md:50:**Verified build ready; deploy pending human approval.** All changes committed locally (branch `main`). Not pushed — pushing auto-deploys to production (umrahconnect.io / onrender.com) which you're actively QA-ing. On your go, I will: push `main` → Vercel + Render auto-bu
+DEPLOYMENT.md:7:The previous Render + Neon guide is retired. `render.yaml` is kept, marked deprecated, until the KVM cutover.
+IMPLEMENTATION_LOG.md:8:- FIX-03 · components/providers/query-provider.tsx (retry transient 5xx up to 3× with exponential backoff, no retry on 4xx) · Verified: detail routes load clean; nav storm across list+detail 0/19 5xx locally. Root cause of prod 503 = Render free-tier cold start (~50s); cli
+IMPLEMENTATION_LOG.md:18:- DEPLOY · Pushed main+develop → Vercel (web) + Render (API) auto-deployed LIVE. Seeded production marketplace (4 vendors, 6 listings). Verified LIVE on umrahconnect.io + onrender.com: FIX-01 403✓, demo login✓, FIX-04 statuses✓, FIX-07 inKingdomCount✓, FIX-05 6 li
+IMPLEMENTATION_LOG.md:25:- PHASE-6 / DEPLOY-2 · Gates: web `next build` ✓ (all routes), API `nest build` ✓. Pushed main (8de1a8a, 85 files) → Vercel + Render auto-deployed. Live markers verified: umrahconnect.io/resources/best-times-to-visit-rawdah 200 (new article route), POST /social/accoun
+IMPLEMENTATION_LOG.md:39:- DEPLOY-3 (partial) · Pushed `726eeb6` to main after both build gates. Vercel is live: umrahconnect.io 200 and the new `/visa-requests` route serves 200. **Render API is NOT responding** — https://umrah-connect-api.onrender.com returns no bytes at all on three attempts (
+README.md:8:- **API hosting:** legacy Render service (unresponsive since 2026-08-22); target is Hostinger KVM 8 —
+STACK_NOTES.md:11:Local dev → `http://localhost:4000`; production (Vercel) → `https://umrah-connect-api.onrender.com`.
+STACK_NOTES.md:15:Prisma 5.22 + PostgreSQL (13 schemas, multiSchema). **No migration files — schema sync via `prisma db push`**; seed via `pnpm db:seed` (`platform/api/prisma/seed.ts`). Local DB `umrah_connects`; production DB on Render (verify writes ONLY against local).
+STACK_NOTES.md:39:Push to `main` → GitHub → Vercel (web, umrahconnect.io) + Render (API) auto-deploy. Production seed/DB ops via DATABASE_URL from Render dashboard (do not run against prod for verification).
+STATUS.md:40:| Final build/deploy verified | ◑ Vercel LIVE (umrahconnect.io 200, /visa-requests 200); **Render API not responding** — see DEPLOY-3, needs dashboard access |
+apps/web/components/providers/query-provider.tsx:15:            // FIX-03: transient 5xx (e.g. Render free-tier cold start ~50s, upstream
+apps/web/next.config.mjs:4:// hard-coded Render host that has been dead since the platform moved; with the
+audit/make_report_v2.py:146: "Render Admin listing-moderation actions; add Reports tab navigation; make Settings functional.",
+docs/HANDOFF.md:47:| API | Render → **https://umrah-connect-api.onrender.com/api/v1** (service `srv-d94peplckfvc73adlr9g`) |
+docs/HANDOFF.md:48:| DB (prod) | Render Postgres `dpg-d94o1dtckfvc73abpon0-a` |
+docs/HANDOFF.md:50:| Cold start | Render free tier sleeps; first request after idle ≈ 50 s. The web client retries transient 5xx (query-provider) so it self-heals. |
+docs/HANDOFF.md:52:**Production secrets are NOT in this repo.** They live in the Vercel and Render
+docs/HANDOFF.md:143:regulator API credentials, real social/store URLs, `www` CNAME, paid Render
+docs/audit/API_AUDIT.md:37:| Hardcoded production URLs | web: `next.config` falls back to `https://umrah-connect-api.onrender.com` when `VERCEL`/production; mobile: dead `trycloudflare.com` fallback (AUD-021) |
+docs/audit/CURRENT_STATE_AUDIT.md:8:| Production | `https://umrahconnect.io` (Vercel) · `https://umrah-connect-api.onrender.com/api/v1` (Render) |
+docs/audit/CURRENT_STATE_AUDIT.md:23:   has not responded since 2026-08-22, so login silently fails. This is an infrastructure problem (Render), not a code fault.
+docs/audit/CURRENT_STATE_AUDIT.md:95:| Hosting | Vercel (web), Render Docker free tier (API), managed Postgres |
+docs/audit/CURRENT_STATE_AUDIT.md:241:| Render (API hosting) | Dockerfile + blueprint | dashboard | ❌ not responding | **Yes** (AUD-001) |
+docs/audit/CURRENT_STATE_AUDIT.md:267:- **Backend:** Render service not responding since 2026-08-22 (AUD-001). Artifact from the same commit boots locally.
+docs/audit/FUNCTIONAL_MATRIX.md:100:| FM-071 | Infra | n/a | Backend deployment (Render) | n/a | Y | n/a | Render | PASS (artifact) | FAIL | BLOCKED | P0 | no response since 2026-08-22 | AUD-001 |
+docs/audit/LOCAL_VS_PRODUCTION.md:8:| API | `http://localhost:4100/api/v1` (see note) | `https://umrah-connect-api.onrender.com/api/v1` (Render) |
+docs/audit/LOCAL_VS_PRODUCTION.md:9:| Web → API | `/proxy-api` rewrite → `API_PROXY_ORIGIN` | `/proxy-api` rewrite → Render (`next.config` fallback when `VERCEL`/production) |
+docs/audit/LOCAL_VS_PRODUCTION.md:38:| CORS | explicit origin list | `render.yaml` declares `CORS_ORIGINS="*"` | **likely NO** — dashboard value not confirmed | AUD-035 |
+docs/audit/LOCAL_VS_PRODUCTION.md:39:| `WEB_URL` | `http://localhost:3000` | `render.yaml` declares `http://localhost:3000` | same value, wrong for prod | AUD-036 |
+docs/audit/LOCAL_VS_PRODUCTION.md:48:2. **Configuration declared in `render.yaml`** (`CORS_ORIGINS="*"`, `WEB_URL=http://localhost:3000`) is test-grade. Whether the
+docs/audit/LOCAL_VS_PRODUCTION.md:57:Required input: Render dashboard access (service `srv-d94peplckfvc73adlr9g`) and Vercel dashboard access.
+docs/audit/PRODUCTION_BLOCKERS.md:25:- **Subsystem:** Infrastructure (Render)
+docs/audit/PRODUCTION_BLOCKERS.md:26:- **Symptom:** `https://umrah-connect-api.onrender.com/api/v1/health` returns no bytes (HTTP 000 after 40–120 s). `https://umrahconnect.io/proxy-api/health` and `/proxy-api/auth/login` hang 60 s. A real browser login on production stays on `/login`; the request
+docs/audit/PRODUCTION_BLOCKERS.md:28:- **Best-supported diagnosis:** Render service state (failed deploy, suspended free instance, or exhausted free hours). **Needs Render dashboard access — human-only.**
+docs/audit/PRODUCTION_BLOCKERS.md:31:- **Remediation:** restore the Render service; add an external uptime monitor; move off free tier or add keep-warm; show a visible error when the API is unreachable.
+docs/audit/PRODUCTION_BLOCKERS.md:82:- **Evidence:** `STORAGE_DRIVER` defaults to `local`; the Render container filesystem is wiped on each deploy. S3/Cloudinary drivers report missing keys and are not implemented (`storage.service.ts`). **Blocked on keys — human.**
+docs/audit/PRODUCTION_BLOCKERS.md:119:| AUD-035 | CORS allows any `*.vercel.app` / `*.trycloudflare.com` origin with credentials, and `render.yaml` sets `CORS_ORIGINS="*"` | `main.ts`; impact limited — API reads bearer headers, not cookies. Production value **not confirmed** (dashboard) |
+docs/audit/PRODUCTION_BLOCKERS.md:120:| AUD-036 | `render.yaml` sets `WEB_URL=http://localhost:3000` | production reset links would point at localhost (value in dashboard **not confirmed**) |
+docs/audit/REMEDIATION_BACKLOG.md:11:- **Problem:** AUD-001. Render API returns nothing; production login impossible.
+docs/audit/REMEDIATION_BACKLOG.md:14:- **Area:** Render service `srv-d94peplckfvc73adlr9g` (dashboard), `render.yaml`, `Dockerfile`.
+docs/control-tower/AGENT_WORKSPACE_BOOTSTRAP.md:48:`main` auto-deploys to production (Vercel web, Render API). No agent pushes to `main` or deploys unless a loop explicitly authorizes it.
+docs/control-tower/BLOCKERS.md:8:| BLK-09 | **Credential exposure — act first** | Repository owner | Revoke the GitHub personal access token and the Render API key that are present in pushed git history in `.claude/settings.local.json` (commit `5074b81`, reachable from `origin/main` and `origin/de
+docs/control-tower/BLOCKERS.md:25:| Production fallback to a dead `onrender.com` origin | Resolved. Missing `API_PROXY_ORIGIN` now fails the production build. |
+docs/control-tower/BLUEPRINT_CHECKLIST.md:23:| 19 | Obsolete hosting | ✅ inventory; Render deprecated (kept until cutover) |
+docs/control-tower/CROSS_TRACK_REQUESTS.md:38:| XT-R05 | P1 | **Proxy headers and origin.** In `next.config.mjs`, require `API_PROXY_ORIGIN` in production (remove the `onrender.com` fallback). Add middleware for `/proxy-api/*` that sets `X-UC-Proxy-Secret` (server env `PROXY_SHARED_SECRET`) and forw
+docs/control-tower/DECISIONS.md:25:| D-019 | **Render is deprecated but kept** until the KVM cutover. Its blueprint was updated to production-safe values. | Removing it now would remove the only documented deployment path before a replacement is live. | See INFRASTRUCTURE.md for the inventory. |
+docs/control-tower/EXECUTION_MATRIX.md:97:| I04 | Infrastructure | Hosting inventory and Render deprecation | **PASS** | INFRASTRUCTURE.md |
+docs/control-tower/FINAL_REPORT.md:168:    - Runbook covering the data move from Render.
+docs/control-tower/FINAL_REPORT.md:175:  - Render is marked deprecated and kept until cutover (its values were made production-safe).
+docs/control-tower/FINDINGS_CHECKLIST.md:140:| AUD-001 | P0 | **BLOCKED (external)** | Render service unresponsive; replacement host prepared (KVM runbook, rehearsal). Needs server access + DNS. |
+docs/control-tower/FINDINGS_CHECKLIST.md:175:| AUD-036 | P3 | VERIFIED CLOSED | production requires https `WEB_URL`; render.yaml corrected |
+docs/control-tower/FINDINGS_CHECKLIST.md:211:| INT-002 | **P0** | Two credential-shaped tokens (a GitHub PAT and a Render API key) are in `.claude/settings.local.json`, which was tracked and is present on `origin/main` and `origin/develop`. | OPEN — external | File untracked and added to `.gitigno
+docs/control-tower/FINDINGS_CHECKLIST.md:221:| INT-012 | **P1** | The production web build fell back to a dead `onrender.com` origin when `API_PROXY_ORIGIN` was unset, so a misconfigured deploy hangs with no user-visible error. | CLOSED | Missing origin now fails the build; verified. |
+docs/control-tower/INFRASTRUCTURE.md:10:| Render web service `umrah-connect-api` (`srv-d94peplckfvc73adlr9g`) | `render.yaml`, README, HANDOFF, DEPLOYMENT | ACTIVE-BUT-DOWN (AUD-001) → OBSOLETE after cutover | Blueprint marked deprecated, values made production-safe. Remove after the KVM cutover. 
+docs/control-tower/INFRASTRUCTURE.md:11:| Render Postgres `dpg-d94o1dtckfvc73abpon0-a` | HANDOFF | ACTIVE (data source) → OBSOLETE after migration | Dump and restore into KVM (runbook §3), then retire. |
+docs/control-tower/INFRASTRUCTURE.md:14:| `onrender.com` fallback in `apps/web/next.config.mjs` | web | OBSOLETE after cutover | Cross-track XT-R05 (Codex-owned file). |
+docs/control-tower/INTEGRATION_EXECUTION_MATRIX.md:91:| W40 | Revoke both exposed tokens at GitHub and Render | +1 |
+docs/control-tower/INTEGRATION_FINAL_REPORT.md:201:Render API key are present in pushed git history in `.claude/settings.local.json`
+docs/control-tower/INTEGRATION_FINAL_REPORT.md:204:tokens at GitHub and Render closes the exposure, and that is the account owner's
+docs/control-tower/INTEGRATION_FINAL_REPORT.md:256:1. The exposed GitHub and Render tokens must be revoked before any further release work.
+docs/control-tower/LOCAL_WORKSPACE_POLICY.md:18:8. **Production deploys come from reviewed commits.** `main` auto-deploys to Vercel (web) and Render (API), so pushing to `main` counts as a deployment.
+docs/control-tower/LOOPS_BACKLOG.md:7:| 1 | KVM cutover | Provision (runbook §1), migrate the Render database (§3), point Vercel at the new API, uptime monitoring, retire Render |
+docs/control-tower/PARALLEL_WORK.md:5:| Claude core | `/Users/macbook/Projects/umrah-connects-core-finalization` | `claude/core-finalization` | `platform/api/**`, `prisma`, `infrastructure/**`, `Dockerfile`, `.dockerignore`, `.github/workflows/api-ci.yml`, env templates (except web), `docs/control-t
+docs/control-tower/SECURITY_GATES.md:23:but only revocation at GitHub and Render closes the exposure. See BLOCKERS.md
+docs/control-tower/WORKSPACE_PROVENANCE.md:28:Project identity markers checked: root `package.json` name; `pnpm-workspace.yaml` (`apps/*`, `platform/*`, `plugins/*`); `turbo.json`; `apps/web` (`@umrah-connects/web`); `platform/api` (`@umrah-connects/api`); `apps/mobile` (`@umrah-connects/mobile`); 1
+docs/migration/01_CURRENT_ARCHITECTURE.md:32:├─ Dockerfile       production API container (used by Render)
+docs/migration/01_CURRENT_ARCHITECTURE.md:33:├─ render.yaml      Render blueprint for the API
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:22:| Provider | **Render** |
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:23:| Live URL | **https://umrah-connect-api.onrender.com/api/v1** |
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:25:| Blueprint | `render.yaml` — `name: umrah-connect-api`, `runtime: docker`, `plan: free`, `region: oregon`, `branch: main`, `healthCheckPath: /api/v1/health`, `autoDeploy: true` |
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:31:The Render API has been unreachable since 2026-08-22. DNS, TLS and HTTP/2 all
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:44:**Action required by a human:** open the Render dashboard for
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:55:| `umrah-connect-api.onrender.com` | API host; currently not responding (above) |
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:66:| Production instance | Render Postgres `dpg-d94o1dtckfvc73abpon0-a` (from `docs/HANDOFF.md`). `render.yaml` sets `DATABASE_URL` with `sync: false`, i.e. pasted into the dashboard by hand. |
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:67:| Note | `render.yaml`'s comment says the database is on Neon while `HANDOFF.md` names a Render Postgres id. **NOT CONFIRMED** which is current — read the actual `DATABASE_URL` in the Render dashboard. Local development is unaffected. |
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:109:Deployment today is simply: **push to `main` → Vercel and Render auto-deploy.**
+docs/migration/03_DEPLOYMENT_AND_SERVICES.md:117:| Render | **NOT CONFIRMED** from the repository — sign in to the dashboard |
+docs/migration/05_DATABASE_AND_MIGRATIONS.md:94:| Host | `127.0.0.1` (5432, or 5433 if 5432 is taken) | Managed Postgres, URL set in the Render dashboard |
+docs/migration/06_ENVIRONMENT_VARIABLES.md:87:Production values are held in the **Vercel** (frontend) and **Render**
+docs/migration/06_ENVIRONMENT_VARIABLES.md:89:`render.yaml` generates `JWT_SECRET` and `JWT_REFRESH_SECRET` on the platform
+docs/migration/07_OLD_MAC_TO_NEW_MAC_CHECKLIST.md:57:| Production secrets | Never on this Mac. They live in Vercel and Render. |
+docs/migration/07_OLD_MAC_TO_NEW_MAC_CHECKLIST.md:80:1. **Render API is down.** `umrah-connect-api.onrender.com` has returned nothing
+docs/migration/07_OLD_MAC_TO_NEW_MAC_CHECKLIST.md:81:   since 2026-08-22. Proven not to be a code fault (see doc 03). Check the Render
+docs/migration/08_MIGRATION_VERIFICATION.md:48:| Deployment config | `Dockerfile`, `render.yaml`, `docker-compose.yml` |
+docs/migration/08_MIGRATION_VERIFICATION.md:91:| Render API — https://umrah-connect-api.onrender.com | **HTTP 000, down** (see doc 03) |
+docs/migration/08_MIGRATION_VERIFICATION.md:107:  Production secrets live in the Vercel and Render dashboards.
+docs/migration/08_MIGRATION_VERIFICATION.md:137:| Render API down | Medium | Needs the Render dashboard. Not a code fault; local dev unaffected. |
+docs/migration/09_NEW_MAC_BOOTSTRAP_PROMPT.md:33:Live API:        https://umrah-connect-api.onrender.com/api/v1  (Render, auto-deploys from main)
+docs/migration/09_NEW_MAC_BOOTSTRAP_PROMPT.md:214: - The live Render API (umrah-connect-api.onrender.com) has been DOWN since
+docs/migration/09_NEW_MAC_BOOTSTRAP_PROMPT.md:217:   needs a human to check the Render dashboard (srv-d94peplckfvc73adlr9g).
+docs/migration/09_NEW_MAC_BOOTSTRAP_PROMPT.md:243: - Deploy = push main (auto-deploys Vercel + Render), but ONLY after both
+docs/ui-ux/image-prompts/DIRECTION_A.md:7:Render a straight-on flat UI concept, not a perspective device mockup. Desktop viewport 1440×1000px, aspect 1.44:1, one screen per image; landing represents its first screen with a clear lower-section continuation. No laptop/phone frame, floating browser ca
+docs/ui-ux/image-prompts/DIRECTION_B.md:7:Render a polished flat product UI screenshot with readable prescribed text, aligned to a practical layout. Use the actual Umrah Connect logo only if a real reference asset is supplied; otherwise use the plain text wordmark “Umrah Connect”, never invent a
+docs/ui-ux/image-prompts/DIRECTION_B.md:17:> Create a 1440 × 1800 pixel desktop website concept screenshot, 4:5 aspect, for Umrah Connect in Direction B: Modern Platform / Operations. Use the shared rendering contract above. A 1200px centered content container, 12-column grid, 24px gutters, 64px he
+docs/ui-ux/image-prompts/DIRECTION_B.md:33:> The intended future behavior is that Discover opens supported discovery; My Bookings opens service details; Travel Plan opens planning. On mobile, sidebar becomes a role-labeled drawer, Current journey/Next action/My Bookings stack in this order, and tabl
+docs/ui-ux/image-prompts/DIRECTION_B.md:51:> Main region is 8 columns wide with governance first. Module title “Governance queue”. Toolbar contains “Search tenants”, “Status”, “Clear”. Table headers exactly “Tenant”, “Review type”, “Status”, “Action”. Empty body exact
+docs/ui-ux/image-prompts/DIRECTION_C.md:15:Render Direction C at 1440×1000, contemporary premium hybrid. Apply shared contract. Public 72px header, original logo left; nav “Solutions”, “Marketplace”, “Resources”, “Pricing”, “About Us”; “Log in” quiet bordered and “Get Star
+docs/ui-ux/mockups/generation-manifest.json:48:      "prompt": "Use case: ui-mockup. Generate ONE high-fidelity UI image, not a comparison sheet. This is the authorized visual-generation phase following the discovery brief. Use the exact plain-text wordmark Umrah Connect with a reserved logo slot; n
+docs/ui-ux/mockups/generation-manifest.json:58:      "prompt": "Use case: ui-mockup. Generate ONE high-fidelity UI image, not a comparison sheet. This is the authorized visual-generation phase following the discovery brief. Use the exact plain-text wordmark Umrah Connect with a reserved logo slot; n
+docs/ui-ux/mockups/generation-manifest.json:78:      "prompt": "Use case: ui-mockup. Generate ONE high-fidelity UI image, not a comparison sheet. This is the authorized visual-generation phase following the discovery brief. Use the exact plain-text wordmark Umrah Connect with a reserved logo slot; n
+infrastructure/kvm/README.md:73:## 3. Moving data off Render Postgres
+infrastructure/kvm/README.md:77:1. Freeze writes (maintenance page on the web, or stop the Render service).
+infrastructure/kvm/README.md:95:5. Uploaded files on Render's disk are not recoverable (ephemeral, AUD-011). Visa document rows keep their metadata; affected documents must be re-uploaded.
+platform/api/prisma/schema.prisma:12:  // native = local dev; debian target = Render/Docker (node:20 bookworm, openssl 3)
+platform/api/src/modules/health/health.controller.ts:7: * Health & readiness probes for cloud hosting (Render/Koyeb/etc.).
+render.yaml:1:# DEPRECATED — Render is the legacy API host (unresponsive since 2026-08-22, AUD-001).
+render.yaml:6:# Render Blueprint for the Umrah Connect API (backend only).
+render.yaml:7:# In Render: New → Blueprint → connect the GitHub repo → it reads this file.
+render.yaml:9:# DATABASE_URL below (sync: false means Render will prompt you for the value).
+render.yaml:29:        generateValue: true  # Render generates a strong secret
+
+# Total hits: 115
+# Files with hits: 48
+# onrender.com hits: 19
+# Render-specific env names read by code (RENDER_*, IS_PULL_REQUEST): 0

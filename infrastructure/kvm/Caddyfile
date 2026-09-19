@@ -1,4 +1,6 @@
-# Automatic HTTPS (Let's Encrypt) for the API host, e.g. api.umrahconnect.io.
+# Bundled proxy (docker-compose.bundled-proxy.yml): automatic HTTPS (Let's Encrypt) for the API host,
+# e.g. api.umrahconnect.io. In shared-proxy mode, copy the site block below into the shared proxy's
+# configuration unchanged — the upstream alias umrah-connect-api exists on both networks.
 {
 	email {$ACME_EMAIL}
 	servers {
@@ -26,10 +28,18 @@
 	@docs path /api/docs*
 	respond @docs 404
 
-	reverse_proxy api:4000 {
+	reverse_proxy umrah-connect-api:4000 {
 		header_up X-Request-Id {http.request.uuid}
+		# Active health check: the API leaves rotation within seconds when it stops being ready and
+		# rejoins within seconds after a deploy recreated it.
 		health_uri /api/v1/health/ready
-		health_interval 15s
+		health_interval 5s
+		health_timeout 3s
+		# While the single API container restarts (deploys), hold requests up to 20 s until it answers
+		# instead of returning 502/503. Caddy retries only requests that never reached the API, so
+		# nothing is submitted twice.
+		lb_try_duration 20s
+		lb_try_interval 250ms
 		transport http {
 			read_timeout 60s
 			write_timeout 60s

@@ -1,5 +1,10 @@
 # 05 — Database and Migrations
 
+> **Status 2026-09-19 — historical snapshot, partly superseded.** Render is **RETIRED** from the target
+> architecture: the API target is Hostinger KVM 8 (`infrastructure/kvm/README.md`), and Render facts below are
+> history, not instructions (`docs/control-tower/RENDER_RETIREMENT.md`). Schemas are managed with committed
+> migrations (`prisma migrate deploy`); any `prisma db push` instruction below is obsolete.
+
 No passwords appear in this document. The local development database has none.
 
 ## Engine and ORM
@@ -91,8 +96,8 @@ reason.
 
 | | Local | Production |
 |---|---|---|
-| Host | `127.0.0.1` (5432, or 5433 if 5432 is taken) | Managed Postgres, URL set in the Render dashboard |
-| Schema applied by | you, via `prisma db push` | container start command |
+| Host | `127.0.0.1` (5432, or 5433 if 5432 is taken) | Target: PostgreSQL 16 container on the KVM (`infrastructure/kvm`). The legacy Render database is only the one-time cutover data source. |
+| Schema applied by | you, via `prisma migrate deploy` | `prisma migrate deploy` as an explicit deploy step after a backup (`deploy.sh`) — never on container start |
 | Seeded | yes, all three scripts | demo supply seeded once, by hand |
 | Safe to reset | yes | **no** |
 

@@ -1,0 +1,97 @@
+# Render reference inventory — AFTER (branch eng100/a09, 2026-09-19T13:02Z)
+# Same command as the before-inventory (render-inventory-before.txt):
+#   git grep -P -n -I "onrender|render\.yaml|RENDER_[A-Z]|\bRender\b" -- . ':!pnpm-lock.yaml'
+# render.yaml present: no (deleted; history: git show 9a4da31:render.yaml)
+# Raw totals are not comparable with the before-inventory: the RETIRED banners, RENDER_RETIREMENT.md and the
+# committed inventories themselves mention Render. Every file is classified instead; UNCLASSIFIED must be empty.
+
+## COORDINATOR-OWNED (change request in the A09 report) — 17 file(s)
+     1  README.md
+     1  docs/control-tower/AGENT_WORKSPACE_BOOTSTRAP.md
+     2  docs/control-tower/BLOCKERS.md
+     1  docs/control-tower/BLUEPRINT_CHECKLIST.md
+     1  docs/control-tower/CROSS_TRACK_REQUESTS.md
+     1  docs/control-tower/DECISIONS.md
+     1  docs/control-tower/EXECUTION_MATRIX.md
+     2  docs/control-tower/FINAL_REPORT.md
+     4  docs/control-tower/FINDINGS_CHECKLIST.md
+     1  docs/control-tower/INTEGRATION_EXECUTION_MATRIX.md
+     3  docs/control-tower/INTEGRATION_FINAL_REPORT.md
+     1  docs/control-tower/LOCAL_WORKSPACE_POLICY.md
+     1  docs/control-tower/LOOPS_BACKLOG.md
+     1  docs/control-tower/PARALLEL_WORK.md
+     1  docs/control-tower/SECURITY_GATES.md
+     1  docs/control-tower/WORKSPACE_PROVENANCE.md
+     1  platform/api/prisma/schema.prisma
+
+## EVIDENCE (inventories/logs quoting the hits) — 1 file(s)
+   112  docs/control-tower/evidence/eng100/a09/render-inventory-before.txt
+
+## FALSE POSITIVE (the verb 'render') — 5 file(s)
+     1  audit/make_report_v2.py
+     1  docs/ui-ux/image-prompts/DIRECTION_A.md
+     4  docs/ui-ux/image-prompts/DIRECTION_B.md
+     1  docs/ui-ux/image-prompts/DIRECTION_C.md
+     3  docs/ui-ux/mockups/generation-manifest.json
+
+## GUARD (refuses or detects Render) — 5 file(s)
+     1  .github/workflows/uptime.yml   (runs the Render-detecting probe; the hit is its comment pointing to RENDER_RETIREMENT.md)
+     2  infrastructure/kvm/scripts/preflight.sh
+    14  platform/api/src/bootstrap/env.validation.spec.ts
+     7  platform/api/src/bootstrap/env.validation.ts
+     4  scripts/uptime-check.sh
+
+## HISTORICAL EVIDENCE (kept, RETIRED banner) — 9 file(s)
+     6  COMPLETION_REPORT.md
+     6  IMPLEMENTATION_LOG.md
+     3  STATUS.md
+     3  docs/audit/API_AUDIT.md
+     7  docs/audit/CURRENT_STATE_AUDIT.md
+     3  docs/audit/FUNCTIONAL_MATRIX.md
+     8  docs/audit/LOCAL_VS_PRODUCTION.md
+     9  docs/audit/PRODUCTION_BLOCKERS.md
+     4  docs/audit/REMEDIATION_BACKLOG.md
+
+## OPERATIONAL DOC (Render named only as retired/legacy; KVM is the target) — 14 file(s)
+     1  .project/workspace.json
+     4  DEPLOYMENT.md
+     3  STACK_NOTES.md
+     4  docs/HANDOFF.md
+     8  docs/control-tower/INFRASTRUCTURE.md
+    33  docs/control-tower/RENDER_RETIREMENT.md
+     4  docs/migration/01_CURRENT_ARCHITECTURE.md
+    16  docs/migration/03_DEPLOYMENT_AND_SERVICES.md
+     4  docs/migration/05_DATABASE_AND_MIGRATIONS.md
+     5  docs/migration/06_ENVIRONMENT_VARIABLES.md
+     6  docs/migration/07_OLD_MAC_TO_NEW_MAC_CHECKLIST.md
+     7  docs/migration/08_MIGRATION_VERIFICATION.md
+     7  docs/migration/09_NEW_MAC_BOOTSTRAP_PROMPT.md
+     8  infrastructure/kvm/README.md
+
+## RATIONALE COMMENT (kept; no dependency) — 2 file(s)
+     1  apps/web/components/providers/query-provider.tsx
+     1  apps/web/next.config.mjs
+
+## UNCLASSIFIED — 0 file(s)
+
+## Runtime / deploy surfaces — count of onrender|render.com (must be 0; the guard files above excluded)
+    0  Dockerfile
+    0  .dockerignore
+    0  docker-compose.yml
+    0  start-all.sh
+    0  .github
+    0  infrastructure/kvm/docker-compose.yml
+    0  infrastructure/kvm/docker-compose.bundled-proxy.yml
+    0  infrastructure/kvm/docker-compose.shared-proxy.yml
+    0  infrastructure/kvm/Caddyfile
+    0  infrastructure/kvm/api-entrypoint.sh
+    0  infrastructure/kvm/systemd
+    0  platform/api/src
+    0  apps/web/next.config.mjs
+    0  apps/web/middleware.ts
+    0  apps/web/lib
+    0  .env.example
+    0  platform/api/.env.example
+    0  apps/web/.env.local.example
+    0  infrastructure/kvm/.env.production.example
+# Code reading Render-specific variables (process.env.RENDER*, IS_PULL_REQUEST): 0
