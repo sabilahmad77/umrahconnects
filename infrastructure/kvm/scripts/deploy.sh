@@ -12,11 +12,18 @@ cd "$(dirname "$0")/.."
 SHA_ARG="${1:?usage: deploy.sh <git-sha>}"
 REPO="$(git rev-parse --show-toplevel)"
 
-git -C "$REPO" fetch --quiet origin
-SHA="$(git -C "$REPO" rev-parse --verify --quiet "${SHA_ARG}^{commit}")" || die "unknown commit $SHA_ARG"
-git -C "$REPO" merge-base --is-ancestor "$SHA" origin/main || die "$SHA is not on origin/main; only reviewed commits of main are deployed"
-[ -z "$(git -C "$REPO" status --porcelain --untracked-files=no)" ] || die "tracked files in $REPO have local edits; refusing to deploy over them"
-git -C "$REPO" checkout --quiet --detach "$SHA"
+if [ "${UC_DEPLOY_CHECKED_OUT:-}" = "" ]; then
+  git -C "$REPO" fetch --quiet origin
+  SHA="$(git -C "$REPO" rev-parse --verify --quiet "${SHA_ARG}^{commit}")" || die "unknown commit $SHA_ARG"
+  git -C "$REPO" merge-base --is-ancestor "$SHA" origin/main || die "$SHA is not on origin/main; only reviewed commits of main are deployed"
+  [ -z "$(git -C "$REPO" status --porcelain --untracked-files=no)" ] || die "tracked files in $REPO have local edits; refusing to deploy over them"
+  git -C "$REPO" checkout --quiet --detach "$SHA"
+  # Continue with the deploy logic of the commit being deployed. Bash keeps executing the file it already
+  # opened, so without this a fix to this script would only apply to the deploy after the one shipping it.
+  UC_DEPLOY_CHECKED_OUT="$SHA" exec ./scripts/deploy.sh "$SHA"
+fi
+SHA="$UC_DEPLOY_CHECKED_OUT"
+[ "$(git -C "$REPO" rev-parse HEAD)" = "$SHA" ] || die "checkout is not at $SHA"
 
 ./scripts/preflight.sh
 
