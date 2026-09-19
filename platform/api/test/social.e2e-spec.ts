@@ -404,6 +404,13 @@ describe('social: posts, comments, replies, reactions, saves, follows, connectio
         expect(await ctx.prisma.message.count({ where: { conversationId: conv.id } })).toBe(1);
         const people = await ok(a, 'get', '/social/discover/people?search=manager');
         expect(people.find((p: any) => p.userId === h.id)?.connection).toEqual({ status: 'UNAVAILABLE' });
+        // F3: the status endpoint gives both parties the same neutral answer — nothing says who blocked.
+        expect(await ok(a, 'get', `/connections/status/${h.id}`)).toEqual({ status: 'UNAVAILABLE' });
+        expect(await ok(h, 'get', `/connections/status/${a.id}`)).toEqual({ status: 'UNAVAILABLE' });
+        const blockedRequest = await call(a, 'post', '/connections/request', { recipientId: h.id });
+        const blockerRequest = await call(h, 'post', '/connections/request', { recipientId: a.id });
+        expect([blockedRequest.status, blockerRequest.status]).toEqual([409, 409]);
+        expect(blockedRequest.body.error.message).toBe(blockerRequest.body.error.message);
       } finally {
         await ctx.prisma.connection.delete({ where: { id: block.id } });
       }
