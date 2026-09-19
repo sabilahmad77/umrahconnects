@@ -62,8 +62,15 @@ case "$MODE" in
       warn "SKIP_SAFETY_BACKUP=1: no safety copy of the current state"
     else
       log "safety backup of the current state"
-      ALLOW_LOCAL_ONLY_BACKUP=1 ./scripts/pg-backup.sh ||
-        die "the safety backup failed; nothing was changed (set SKIP_SAFETY_BACKUP=1 only if the current database is unrecoverable)"
+      rc=0
+      ALLOW_LOCAL_ONLY_BACKUP=1 ./scripts/pg-backup.sh || rc=$?
+      case "$rc" in
+        0) ;;
+        # Exit 3: the local safety copy is complete, only its off-site copy failed. That copy exists to undo
+        # this restore on this server, so an off-site outage (often part of the incident) must not block it.
+        3) warn "the safety backup is complete locally but its off-site copy failed; continuing" ;;
+        *) die "the safety backup failed; nothing was changed (set SKIP_SAFETY_BACKUP=1 only if the current database is unrecoverable)" ;;
+      esac
     fi
     compose stop uc-api
     psql_db postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DB' AND pid <> pg_backend_pid()" >/dev/null
