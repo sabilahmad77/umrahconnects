@@ -1,6 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { TenantType } from '@prisma/client';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaClient, TenantType } from '@prisma/client';
 import { RbacService } from '../src/modules/rbac/rbac.service';
 import { RoleCode, COMMUNITY_TENANT_SLUG, PLATFORM_TENANT_SLUG } from '../src/modules/rbac/catalog';
 import { TestContext, api } from './app';
@@ -28,7 +27,7 @@ export interface World {
 
 let hash: string | undefined;
 
-async function tenant(prisma: PrismaService, slug: string, type: TenantType, status: 'ACTIVE' | 'PENDING_KYC' = 'ACTIVE') {
+async function tenant(prisma: PrismaClient, slug: string, type: TenantType, status: 'ACTIVE' | 'PENDING_KYC' = 'ACTIVE') {
   return prisma.tenant.upsert({
     where: { slug },
     create: { slug, name: slug, type, status, email: `${slug}@example.test`, country: 'SA' },
@@ -43,6 +42,10 @@ async function user(ctx: TestContext, rbac: RbacService, tenantId: string, email
     create: { tenantId, email, passwordHash: hash, firstName: email.split('@')[0], lastName: 'Fixture', status: 'ACTIVE', emailVerifiedAt: new Date() },
     update: { passwordHash: hash, status: 'ACTIVE', lockedUntil: null, failedLoginCount: 0, sessionsRevokedAt: null },
   });
+  // Each file starts from the fixture's own state: extra roles granted and preferences saved
+  // by an earlier file (e.g. rbac grants OPERATOR_STAFF to finance@op-a) must not leak into the next.
+  await ctx.prisma.userRole.deleteMany({ where: { userId: u.id } });
+  await ctx.prisma.userPreference.deleteMany({ where: { userId: u.id } });
   await rbac.grantSystemRole(u.id, role);
   const res = await ctx.http().post(api('/auth/login')).send({ email, password: PASSWORD });
   if (res.status !== 200) throw new Error(`fixture login failed for ${email}: ${res.status} ${JSON.stringify(res.body)}`);

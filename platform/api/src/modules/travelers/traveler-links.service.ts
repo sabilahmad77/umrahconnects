@@ -1,6 +1,7 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SystemScoped } from '../../prisma/db-context';
 import { AuditService } from '../audit/audit.service';
 import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
 import type { Principal } from '../auth/principal';
@@ -51,6 +52,9 @@ export interface TravelerLinkView {
  * link's organization and pilgrim always come from the invitation row, never
  * from the request, so a token can never be pointed at other data.
  */
+// R05: a traveler (community organization) reads and answers link rows held by the
+// OPERATOR organization, so the public methods are system-scoped; every query stays
+// pinned to the token hash / the caller's user id exactly as before.
 @Injectable()
 export class TravelerLinksService {
   private communityId?: string;
@@ -143,6 +147,7 @@ export class TravelerLinksService {
     });
   }
 
+  @SystemScoped('travelers.linked-records')
   async preview(principal: Principal, token: unknown): Promise<InvitationPreview> {
     const { link, organization } = await this.resolveInvitation(principal, token, new Date());
     return {
@@ -152,6 +157,7 @@ export class TravelerLinksService {
     };
   }
 
+  @SystemScoped('travelers.linked-records')
   async accept(principal: Principal, token: unknown, ctx: RequestContext = {}): Promise<TravelerLinkView> {
     const now = new Date();
     const { link, tokenHash, organization } = await this.resolveInvitation(principal, token, now);
@@ -181,6 +187,7 @@ export class TravelerLinksService {
     };
   }
 
+  @SystemScoped('travelers.linked-records')
   async decline(principal: Principal, token: unknown, ctx: RequestContext = {}) {
     const now = new Date();
     const { link, tokenHash } = await this.resolveInvitation(principal, token, now);
@@ -194,6 +201,7 @@ export class TravelerLinksService {
   }
 
   /** The caller's active links whose record and organization are still visible. */
+  @SystemScoped('travelers.linked-records')
   async activeLinks(principal: Principal) {
     const links = await this.prisma.pilgrimAccountLink.findMany({
       where: { userId: principal.sub, status: 'ACTIVE', pilgrim: { deletedAt: null } },
@@ -215,6 +223,7 @@ export class TravelerLinksService {
       .map((l) => ({ link: l, organizationName: names.get(l.tenantId)! }));
   }
 
+  @SystemScoped('travelers.linked-records')
   async listMine(principal: Principal): Promise<TravelerLinkView[]> {
     return (await this.activeLinks(principal)).map(({ link, organizationName }) => ({
       id: link.id,
@@ -224,6 +233,7 @@ export class TravelerLinksService {
     }));
   }
 
+  @SystemScoped('travelers.linked-records')
   async unlink(principal: Principal, linkId: string, ctx: RequestContext = {}) {
     const link = await this.prisma.pilgrimAccountLink.findFirst({
       where: { id: linkId, userId: principal.sub, status: 'ACTIVE' },

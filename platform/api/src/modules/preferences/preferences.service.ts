@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SystemScoped } from '../../prisma/db-context';
 import { EMAIL_LOCALES, emailLocale, isTimeZone } from '../auth/auth-emails';
 import { NOTIFICATION_CATEGORY_KEYS, NotificationCategory, categoryOf } from './preferences.catalog';
 import type { UpdatePreferencesDto } from './dto/update-preferences.dto';
@@ -41,7 +42,11 @@ export class PreferencesService {
     this.inAppEnforced = true;
   }
 
-  /** False when the recipient switched this notification's category off. SYSTEM and unknown types always pass. */
+  /**
+   * False when the recipient switched this notification's category off. SYSTEM and unknown types always pass.
+   * Reads ANOTHER user's settings (the recipient's, while the sender's request runs), so it is system-scoped (R05).
+   */
+  @SystemScoped('notifications.recipient-preferences')
   async allowsInApp(userId: string, type: string): Promise<boolean> {
     const category = categoryOf(type);
     if (!category) return true;

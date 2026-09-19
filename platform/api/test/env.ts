@@ -1,8 +1,10 @@
 // Loaded before every e2e file, before the app module is imported.
-import { resolveTestDatabaseUrl } from './db-url';
+import { resolveAppDatabaseUrl, resolveTestDatabaseUrl } from './db-url';
 
 process.env.NODE_ENV = 'test';
-process.env.DATABASE_URL = resolveTestDatabaseUrl();
+// The API connects as the runtime role (RLS applies); fixtures use the owner URL.
+process.env.DATABASE_URL = resolveAppDatabaseUrl();
+process.env.TEST_OWNER_DATABASE_URL = resolveTestDatabaseUrl();
 process.env.JWT_SECRET = 'test-secret-that-is-long-enough-for-hs256-signing';
 process.env.JWT_EXPIRES_IN = '15m';
 process.env.WEB_URL = 'http://web.test';

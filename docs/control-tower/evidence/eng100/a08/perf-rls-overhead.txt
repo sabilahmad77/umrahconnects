@@ -1,0 +1,7 @@
+pilgrims: identical results (5 rows)
+pilgrim by id: identical results (row)
+bookings+rel: identical results (1 rows)
+findMany pilgrims (20 rows)              owner/no-RLS p50 0.533 mean 0.568 | runtime+RLS p50 0.838 mean 0.881 | Δp50 0.305 ms
+findFirst pilgrim by id                  owner/no-RLS p50 0.517 mean 0.551 | runtime+RLS p50 0.907 mean 0.959 | Δp50 0.390 ms
+bookings + package + pilgrims            owner/no-RLS p50 0.683 mean 0.711 | runtime+RLS p50 0.986 mean 1.040 | Δp50 0.303 ms
+user.findUnique (unprotected table)      owner/no-RLS p50 0.343 mean 0.362 | runtime+RLS p50 0.351 mean 0.367 | Δp50 0.008 ms

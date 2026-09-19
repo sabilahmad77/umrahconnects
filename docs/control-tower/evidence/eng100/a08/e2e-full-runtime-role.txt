@@ -1,0 +1,23 @@
+ Test Files  20 passed | 1 skipped (21)
+      Tests  395 passed | 5 skipped (400)
+ ✓ test/isolation.e2e-spec.ts (32 tests) 2911ms
+ ✓ test/rls.e2e-spec.ts (132 tests) 1178ms
+ ✓ test/social.e2e-spec.ts (14 tests) 1680ms
+ ✓ test/payments-hardening.e2e-spec.ts (20 tests) 1796ms
+ ✓ test/rbac.e2e-spec.ts (49 tests) 2207ms
+ ✓ test/traveler-link.e2e-spec.ts (13 tests) 1045ms
+ ✓ test/auth.e2e-spec.ts (24 tests) 15739ms
+ ✓ test/payments.e2e-spec.ts (12 tests) 1006ms
+ ✓ test/groups.e2e-spec.ts (6 tests) 1059ms
+ ✓ test/onboarding.e2e-spec.ts (13 tests) 1300ms
+ ✓ test/marketplace.e2e-spec.ts (11 tests) 831ms
+ ✓ test/security-regression.e2e-spec.ts (12 tests) 24491ms
+ ✓ test/google.e2e-spec.ts (8 tests) 2013ms
+ ✓ test/seed-qa-identities.e2e-spec.ts (5 tests) 18120ms
+ ✓ test/followups.e2e-spec.ts (9 tests) 723ms
+ ✓ test/auth-google-oidc.e2e-spec.ts (12 tests) 765ms
+ ✓ test/auth-account.e2e-spec.ts (5 tests) 5555ms
+ ↓ test/payments-stripe-mock.e2e-spec.ts (5 tests | 5 skipped)
+ ✓ test/preferences.e2e-spec.ts (12 tests) 605ms
+ ✓ test/rate-limit.e2e-spec.ts (4 tests) 2224ms
+ ✓ test/access-policy.e2e-spec.ts (2 tests) 222ms

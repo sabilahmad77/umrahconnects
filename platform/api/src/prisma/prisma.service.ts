@@ -1,9 +1,12 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { createRlsScopedClient } from './rls-extension';
 
 // Tenant isolation is enforced in the service layer (every tenant-owned query is
-// scoped by the caller's tenant). Row-Level Security is not enabled — see
-// docs/adr/001-multi-tenancy-rls.md (amended) and docs/control-tower/DECISIONS.md.
+// scoped by the caller's tenant) AND, as defence in depth, by PostgreSQL Row-Level
+// Security on the tenant-private tables: every query that can reach one runs with
+// the request's database scope (rls-extension.ts, db-context.ts). See
+// docs/control-tower/RLS.md and docs/adr/001-multi-tenancy-rls.md.
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -17,13 +20,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         { emit: 'stdout', level: 'warn' },
       ],
     });
-  }
 
-  async onModuleInit() {
-    await this.$connect();
-    this.logger.log('Prisma connected');
-
-    // Log slow queries in development
+    // Log slow queries in development ($on exists only on the base client).
     if (process.env.NODE_ENV === 'development') {
       (this as any).$on('query', (e: any) => {
         if (e.duration > 500) {
@@ -31,6 +29,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         }
       });
     }
+
+    // Every consumer receives the RLS-scoped client; the class type is unchanged.
+    return createRlsScopedClient(this);
+  }
+
+  async onModuleInit() {
+    await this.$connect();
+    this.logger.log('Prisma connected');
   }
 
   async onModuleDestroy() {
