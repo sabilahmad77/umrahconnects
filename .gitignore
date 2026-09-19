@@ -110,3 +110,6 @@ infrastructure/kvm/backups/
 
 # TypeScript incremental build state — rewritten on every tsc run.
 *.tsbuildinfo
+
+# Per-worktree e2e database pointer written by the loop setup script.
+platform/api/.env.test-db
