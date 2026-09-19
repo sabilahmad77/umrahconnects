@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { SystemScoped } from '../../../prisma/db-context';
 import { AuditService } from '../../audit/audit.service';
 import { StorageService, type StoredObjectInfo } from '../storage.service';
 import { planOrphanCleanup, type KeepReason } from './cleanup-plan';
@@ -89,6 +90,12 @@ export class OrphanCleanupService {
     private readonly config: ConfigService,
   ) {}
 
+  /**
+   * Always in system scope: under row-level security any other scope hides the
+   * rows that reference stored files, so everything would look orphaned and be
+   * deleted. The scope is part of the method, not of any one caller.
+   */
+  @SystemScoped('jobs.maintenance')
   async run(opts: OrphanCleanupOptions = {}): Promise<OrphanCleanupReport> {
     assertMayRun({ NODE_ENV: this.config.get<string>('NODE_ENV') ?? process.env.NODE_ENV }, opts);
     const graceHours = opts.graceHours ?? DEFAULT_GRACE_HOURS;

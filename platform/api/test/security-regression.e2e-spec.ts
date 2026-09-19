@@ -120,12 +120,9 @@ describe('A08 security regressions (sweeps over the route inventory)', () => {
       expect((await call(token, 'get', '/auth/me')).status).toBe(401);
     });
 
-    // KNOWN DEFECT (A08 report, D-A08-1): AdminService.revocationInstant() rounds DOWN to the
-    // second, while JWT `iat` also rounds down — a token minted earlier in the same second as an
-    // admin force-logout is not "older than" the cut-off and stays valid for its 15-minute life.
-    // AuthService.revocationInstant() (logout-all, password change/reset) already rounds UP.
-    // Fix (A03, modules/admin/admin.service.ts): round up, as AuthService does. Then turn the
-    // `it.fails` below into `it` — it starts failing as a reminder the moment the fix lands.
+    // D-A08-1 (fixed): AdminService.revocationInstant() used to round DOWN to the second, so a
+    // token minted earlier in the same second as an admin force-logout stayed valid for its
+    // 15-minute life. It now rounds UP, as AuthService.revocationInstant() does.
     let afterForceLogout = 0;
     it('admin force-logout: the same-second scenario runs (setup for the pinned defect below)', async () => {
       const email = `samesec.force.${uniq()}@people.test`;
@@ -138,7 +135,7 @@ describe('A08 security regressions (sweeps over the route inventory)', () => {
       afterForceLogout = (await call(token, 'get', '/auth/me')).status;
       expect([200, 401]).toContain(afterForceLogout);
     });
-    it.fails('admin force-logout: a token minted in the same second is refused at once (KNOWN DEFECT D-A08-1)', () => {
+    it('admin force-logout: a token minted in the same second is refused at once (D-A08-1)', () => {
       expect(afterForceLogout).toBe(401);
     });
   });

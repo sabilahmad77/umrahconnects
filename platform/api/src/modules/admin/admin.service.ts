@@ -501,9 +501,13 @@ export class AdminService {
     throw refusal.status === 400 ? new BadRequestException(refusal.message) : new ForbiddenException(refusal.message);
   }
 
-  /** Revocation timestamps are truncated to whole seconds to match JWT `iat`. */
+  /**
+   * Rounded UP to the next whole second, exactly like AuthService.revocationInstant():
+   * JWT `iat` has one-second resolution, so a cut-off rounded down let a token
+   * minted earlier in the same second survive an admin force-logout (D-A08-1).
+   */
   static revocationInstant() {
-    return new Date(Math.floor(Date.now() / 1000) * 1000);
+    return new Date(Math.ceil(Date.now() / 1000) * 1000);
   }
 
   async removeUserRole(userId: string, roleId: string, actor?: AdminActor) {

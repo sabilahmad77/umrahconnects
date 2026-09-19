@@ -103,6 +103,7 @@ export const RLS_UNPROTECTED_TABLES: Readonly<Record<string, string>> = {
   // token validation on every request) and across organizations by platform admin.
   'core.tenants': 'Identity substrate: resolved before a principal exists (login, slug lookup, token validation) and listed by platform admin; holds no tenant-private business data.',
   'core.users': 'Identity substrate: read on every request by token validation and before a principal exists (login, reset, Google); author/profile names are shown across organizations (social, groups). Secret columns are never serialized (e2e secret scan).',
+  'core.media_objects': 'Upload registry (A06): public-media metadata only (URL, type, size, checksum, original name) — no tenant-private content. Attach and delete check ownership in the service; travelers own uploads without an organization scope; the orphan-cleanup job reads every row in system scope.',
   'core.refresh_tokens': 'Session substrate: looked up by token hash before a principal exists (refresh/logout); never listed.',
   'core.user_identities': 'Session substrate: external identities resolved during Google sign-in before a principal exists.',
   'core.otp_codes': 'Session substrate: one-time codes verified before a principal exists.',
