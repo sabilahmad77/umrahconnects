@@ -6,6 +6,7 @@
 | `render-inventory-after.txt` | Every remaining mention classified; all runtime/deploy surfaces at 0; no code reads a Render variable |
 | `container-build-smoke.md` | Image build and hardening, Render values refused, migrations from empty, stack in bundled-proxy mode, HTTPS smoke and sign-in, restart window removed |
 | `blueprint-validation.md` | Compose (both proxy modes) + port policy, `caddy validate`, shellcheck, actionlint, `host-setup.sh` idempotency and `systemd-analyze verify` on Ubuntu 24.04 |
+| `deploy-rehearsal.md` | `deploy.sh` end to end in a disposable clone: first deploy on an empty database, routine deploy with backup, `:current`/`:previous` rotation and retention, automatic rollback of an unhealthy release (healthy previous release, checkout restored), main-only guard; three deploy-script defects fixed on the way |
 | `backup-restore-rehearsal.md` | Original script defects reproduced; backup-directory and `OFFSITE_REMOTE` contract; off-site copy (S3-compatible stand-in, not R2); restore into a separate container with identical per-table counts and hashes; drill, refusals, replace |
 | `monitoring.md` | Uptime probe pass/fail paths (incl. the Render-header guard), host health check alert transitions, webhook payloads, O04 scheduling wiring |
 | `cleanup.txt` | Every disposable container, volume, network, image and file removed |
