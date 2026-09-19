@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef } f
 import { useRouter, usePathname } from 'next/navigation';
 import { getStoredUser, getToken, clearAuth, isTokenExpired, type StoredUser, type DashboardType } from '@/lib/auth';
 import { loadSessionUser } from '@/lib/session';
+import { landingPathFor } from '@/lib/workspace-access';
 import { toast } from 'sonner';
 import { apiClient, refreshAccessToken } from '@/lib/api';
 
@@ -101,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const boundUser = await loadSessionUser();
         if (cancelled) return;
         setUserState(boundUser); setIsLoaded(true); redirected.current = false;
-        if (shouldBounceLoggedInUser(pathname)) router.push(getDashboardPath(boundUser.dashboardType));
+        if (shouldBounceLoggedInUser(pathname)) router.push(landingPathFor(boundUser));
       } catch { bounceToLogin(); }
     };
 

@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth, useGoogleSignInStatus } from '@/hooks/use-auth';
-import { useAuthContext, getDashboardPath } from '@/components/providers/auth-provider';
+import { useAuthContext } from '@/components/providers/auth-provider';
+import { landingPathFor } from '@/lib/workspace-access';
 import { Brandmark } from '@/components/public/public-chrome';
 import { Alert, Button, Input, Select } from '@/components/ui/system';
 import { GoogleButton, OrDivider, StubGoogleNotice } from '@/components/settings/google-button';
@@ -55,7 +56,7 @@ export default function LoginPage() {
     try {
       const user = await login(email.trim(), password, tenantId || undefined);
       setUser(user);
-      router.push(returnTo ?? getDashboardPath(user.dashboardType));
+      router.push(returnTo ?? landingPathFor(user));
     } catch (e: any) {
       const detail = e?.response?.data?.error;
       const choices = detail?.details?.tenants ?? detail?.tenants;

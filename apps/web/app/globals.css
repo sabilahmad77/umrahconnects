@@ -113,7 +113,10 @@
   .uc-button { @apply inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50; }
   .uc-button-primary { @apply bg-brand-500 text-white hover:bg-brand-600; }
   .uc-button-secondary { @apply border border-gray-300 bg-white text-brand-700 hover:bg-brand-50; }
-  .uc-button-quiet { @apply text-gray-700 hover:bg-gray-100; }
+  /* Hover tints with an overlay instead of setting background-color, so a quiet
+     button that carries its own bg-* colour (chips, badges) keeps it. */
+  .uc-button-quiet { @apply text-gray-700; }
+  .uc-button-quiet:hover { background-image: linear-gradient(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.05)); }
   .uc-button-danger { @apply bg-red-700 text-white hover:bg-red-800; }
   .uc-control { @apply min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 disabled:bg-gray-50 disabled:text-gray-500; }
   .uc-card { @apply rounded-xl border border-gray-200 bg-white p-5; }

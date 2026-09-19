@@ -15,7 +15,8 @@ import { apiClient } from '@/lib/api';
 import { acceptSession } from '@/lib/session';
 import { googleStartUrl } from '@/lib/google-sign-in';
 import { useGoogleSignInStatus } from '@/hooks/use-auth';
-import { useAuthContext, getDashboardPath } from '@/components/providers/auth-provider';
+import { useAuthContext } from '@/components/providers/auth-provider';
+import { landingPathFor } from '@/lib/workspace-access';
 import { GoogleButton, OrDivider, StubGoogleNotice } from '@/components/settings/google-button';
 
 // Role interest is sent to registration; it does not assign permissions or activate a workspace.
@@ -77,7 +78,7 @@ export default function SignupPage() {
       const user = await acceptSession(accessToken ?? '');
       setUser(user);
       toast.success('Account created. We sent you an email to confirm your address.');
-      router.push(getDashboardPath(user.dashboardType));
+      router.push(landingPathFor(user));
     } catch {
       toast.success('Account created. Sign in to continue.');
       router.push('/login');

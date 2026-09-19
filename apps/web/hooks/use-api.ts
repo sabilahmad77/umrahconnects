@@ -351,8 +351,9 @@ export function useFinanceInvoices(params?: { page?: number; limit?: number; sta
   });
 }
 
-export function useFinanceStats() {
+export function useFinanceStats(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ['finance', 'stats'],
     queryFn: async () => {
       const { data } = await apiClient.get('/finance/stats');

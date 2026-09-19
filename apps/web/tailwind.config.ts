@@ -82,6 +82,7 @@ const config: Config = {
         // Emerald + Navy + warm surfaces
         emerald: { DEFAULT: '#2A7A6B', 500: '#2A7A6B', 600: '#216154' },
         navy:    { DEFAULT: '#112234', 500: '#112234' },
+        midnight: { DEFAULT: '#0B1622' },
         sandstone: '#E8DFD1',
         ivory:     '#F8F5EF',
         // Saudi green retained as alias of brand

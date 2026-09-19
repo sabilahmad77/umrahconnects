@@ -21,10 +21,14 @@ describe('stored authentication claims', () => {
   it('decodes Unicode and detects expired real-format claims', () => { const t=token({sub:'user',email:'أحمد@example.com',roles:['PILGRIM'],exp:1}); expect(decodeJwt(t)?.email).toBe('أحمد@example.com'); expect(isTokenExpired(t)).toBe(true); });
 });
 
-import { canOpenWorkspaceRoute } from '../lib/workspace-access';
+import { canOpenRoute, type AccessSubject } from '../lib/workspace-access';
+// Access is decided by the organization and the capabilities /auth/me returns, never by role names.
+const platform = (permissions: string[]): AccessSubject => ({ permissions, tenantType: 'PLATFORM', tenantSlug: 'umrah-connect-platform', tenantStatus: 'ACTIVE', dashboardType: 'admin' });
+const organization = (permissions: string[]): AccessSubject => ({ permissions, tenantType: 'OPERATOR', tenantSlug: 'al-haramain-ksa', tenantStatus: 'ACTIVE', dashboardType: 'operator' });
+const PLATFORM_ROUTE_CAPABILITY: Record<string, string> = { '/admin-dashboard': 'platform:tenant:read', '/admin-tenants': 'platform:tenant:read', '/admin-tenants/record': 'platform:tenant:read', '/admin-roles': 'platform:role:manage', '/admin-support': 'platform:kyc:review' };
 describe('frontend workspace boundary', () => {
-  it.each(['/admin-dashboard','/admin-tenants','/admin-tenants/record','/admin-roles','/admin-support'])('reserves %s for the existing Super Admin navigation role', route => { expect(canOpenWorkspaceRoute(route,['OPERATOR_ADMIN'])).toBe(false); expect(canOpenWorkspaceRoute(route,['SUPER_ADMIN'],['platform:tenant:read'])).toBe(true); });
-  it('retains operator operational routes', () => { expect(canOpenWorkspaceRoute('/bookings',['OPERATOR_ADMIN'],['booking:booking:read'])).toBe(true); });
+  it.each(Object.keys(PLATFORM_ROUTE_CAPABILITY))('reserves %s for platform accounts holding its capability', route => { const cap = PLATFORM_ROUTE_CAPABILITY[route]; expect(canOpenRoute(organization([cap, 'crm:pilgrim:read']), route)).toBe(false); expect(canOpenRoute(platform([cap]), route)).toBe(true); expect(canOpenRoute(platform([]), route)).toBe(false); });
+  it('retains operator operational routes', () => { expect(canOpenRoute(organization(['booking:booking:read']), '/bookings')).toBe(true); });
 });
 
 import { validPassword } from '../lib/password-policy';
@@ -32,7 +36,7 @@ import { bookingTransitions } from '../lib/booking-transitions';
 describe('current backend acceptance contracts',()=>{
  it('rejects passwords the API rejects, including line breaks',()=>{expect(validPassword('Travel2026')).toBe(true);for(const value of ['short1','abcdefgh','12345678','Travel2026\n','a1'.repeat(65)])expect(validPassword(value)).toBe(false);});
  it('keeps captured/refunded states out of provider-controlled transitions',()=>{expect(bookingTransitions('PENDING')).toEqual(['CONFIRMED','CANCELLED']);expect(bookingTransitions('PAID')).toEqual(['COMPLETED']);for(const status of ['COMPLETED','CANCELLED','REFUNDED','unknown'])expect(bookingTransitions(status)).toEqual([]);});
- it('requires server-resolved permissions for operational and platform screens',()=>{expect(canOpenWorkspaceRoute('/pilgrims',['HOTEL_MANAGER'],['hotel:allotment:read'])).toBe(false);expect(canOpenWorkspaceRoute('/pilgrims',['OPERATOR_ADMIN'],['crm:pilgrim:read'])).toBe(true);expect(canOpenWorkspaceRoute('/admin-tenants',['SUPER_ADMIN'],[])).toBe(false);});
+ it('requires server-resolved permissions for operational and platform screens',()=>{expect(canOpenRoute(organization(['hotel:allotment:read']),'/pilgrims')).toBe(false);expect(canOpenRoute(organization(['crm:pilgrim:read']),'/pilgrims')).toBe(true);expect(canOpenRoute(platform([]),'/admin-tenants')).toBe(false);});
 });
 
 import { readFileSync } from 'fs';

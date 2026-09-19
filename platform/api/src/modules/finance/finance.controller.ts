@@ -81,13 +81,13 @@ export class FinanceController {
 
   // ── Payments ───────────────────────────────────────────────────────────
   @Get('payments')
-  @RequirePermissions('finance:invoice:read')
+  @RequirePermissions('finance:payment:read')
   async findPayments(@TenantId() tenantId: string, @Query() query: QueryPaymentsDto) {
     return { success: true, data: await this.service.findPayments(tenantId, query) };
   }
 
   @Get('payments/:id')
-  @RequirePermissions('finance:invoice:read')
+  @RequirePermissions('finance:payment:read')
   async findPayment(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.findOnePayment(tenantId, id) };
   }

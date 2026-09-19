@@ -55,7 +55,7 @@ export function FinanceView() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  const stats = useFinanceStats();
+  const stats = useFinanceStats(can('finance:report:read'));
   const { data, isLoading, error, refetch } = useFinanceInvoices({
     page,
     limit: 20,

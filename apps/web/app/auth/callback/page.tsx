@@ -15,7 +15,8 @@ import {
   type ExchangeFailure,
   type GoogleOutcome,
 } from '@/lib/google-sign-in';
-import { useAuthContext, getDashboardPath } from '@/components/providers/auth-provider';
+import { useAuthContext } from '@/components/providers/auth-provider';
+import { landingPathFor } from '@/lib/workspace-access';
 import { Brandmark } from '@/components/public/public-chrome';
 import { Alert, Button, LoadingState } from '@/components/ui/system';
 
@@ -80,7 +81,7 @@ export default function AuthCallbackPage() {
       session.current = accessToken;
       const user = await acceptSession(accessToken);
       setUser(user);
-      const destination = current.returnTo ?? getDashboardPath(user.dashboardType);
+      const destination = current.returnTo ?? landingPathFor(user);
       if (current.outcome) setState({ kind: 'welcome', outcome: current.outcome, user, destination });
       else router.replace(destination);
     } catch (error) {

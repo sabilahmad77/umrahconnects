@@ -89,7 +89,7 @@ export function TravelPlanView() {
         )}
       </Section>
 
-      <section id="my-groups" className="space-y-3"><h2 className="text-sm font-semibold">My groups</h2>{groups.length ? <ul className="space-y-2">{groups.map((group: any) => <li key={group.id} className="uc-card"><p className="font-semibold">{group.name}</p><p className="mt-1 text-sm text-gray-600">{group.description || group.status || "Group membership"}</p></li>)}</ul> : <Empty>You are not a member of any groups yet.</Empty>}</section>
+      <section id="my-groups" className="space-y-3"><h2 className="text-sm font-semibold">My groups</h2>{groups.length ? <ul className="space-y-2">{groups.map((group: any) => <li key={group.id} className="uc-card"><Link href={`/social/groups/${group.id}`} className="font-semibold text-brand-700 underline-offset-2 hover:underline">{group.name}</Link><p className="mt-1 text-sm text-gray-600">{group.description || group.status || "Group membership"}</p></li>)}</ul> : <Empty>You are not a member of any groups yet.</Empty>}</section>
     </div>
   );
 }
