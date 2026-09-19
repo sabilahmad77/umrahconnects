@@ -105,3 +105,8 @@ export function useReopenVisaRequest() {
   return useTicketMutation(async ({ id, reason }: { id: string; reason: string }) =>
     (await apiClient.put(`/visa-requests/${id}/reopen`, { reason })).data.data);
 }
+
+/** Permanently deletes a ticket (visa:application:manage). */
+export function useDeleteVisaRequest() {
+  return useTicketMutation(async (id: string) => (await apiClient.delete(`/visa-requests/${id}`)).data.data);
+}

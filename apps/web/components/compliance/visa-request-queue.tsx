@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
 import {
   useVisaRequests, useVisaRequestStats, useVisaRequestAssignees, useCreateVisaRequest,
 } from '@/hooks/use-visa-requests';
@@ -27,6 +29,9 @@ const STATUS_FILTERS = ['ALL', ...VISA_REQUEST_STATUSES] as const;
  * application (the regulator filing) and from marketplace demand.
  */
 export function VisaRequestQueue() {
+  const { ready, can } = useCapabilities();
+  const canCreate = can('visa:application:submit');
+  const canAssign = can('visa:application:manage');
   const [status, setStatus] = useState<string>('ALL');
   const [q, setQ] = useState('');
   const [overdueOnly, setOverdueOnly] = useState(false);
@@ -43,6 +48,7 @@ export function VisaRequestQueue() {
   const { data, isLoading, error, refetch } = useVisaRequests(filters);
   const { data: stats , error: visaRequestStatsError, refetch: retryVisaRequestStats} = useVisaRequestStats();
   const assigneesQ = useVisaRequestAssignees();
+  const [createError, setCreateError] = useState('');
   const createTicket = useCreateVisaRequest();
 
   const items = data?.items ?? [];
@@ -74,14 +80,14 @@ export function VisaRequestQueue() {
           >
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
-          <Button variant="quiet" type="button"
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> New request
-          </Button>
+          {canCreate && (
+            <Button type="button" onClick={() => { setCreateError(''); setShowCreate(true); }}>
+              <Plus className="h-4 w-4" /> New request
+            </Button>
+          )}
         </div>
       </div>
+      {ready && !canCreate && <ReadOnlyNotice>You can follow tickets. Raising and working them needs the visa submission permission.</ReadOnlyNotice>}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map((s) => (
@@ -153,9 +159,11 @@ export function VisaRequestQueue() {
               re-scan, an urgent filing, a status chase. Assign it, set a due date, and the timeline
               records every step.
             </p>
-            <Button variant="quiet" type="button" onClick={() => setShowCreate(true)} className="text-xs text-brand-500 hover:underline mt-3 inline-block">
-              Create the first request →
-            </Button>
+            {canCreate && (
+              <Button variant="quiet" type="button" onClick={() => setShowCreate(true)} className="text-xs text-brand-500 hover:underline mt-3 inline-block">
+                Create the first request →
+              </Button>
+            )}
           </div>
         ) : (
           <>
@@ -222,19 +230,21 @@ export function VisaRequestQueue() {
         )}
       </div>
 
-      {showCreate && (
+      {showCreate && canCreate && (
         <NewRequestModal
-          assignees={assigneesQ.data ?? []}
+          assignees={canAssign ? assigneesQ.data ?? [] : null}
           pending={createTicket.isPending}
+          serverError={createError}
           onClose={() => setShowCreate(false)}
           onCreate={async (dto) => {
+            if (createTicket.isPending) return;
+            setCreateError('');
             try {
               await createTicket.mutateAsync(dto);
               toast.success('Service request created');
               setShowCreate(false);
-              refetch();
             } catch (e: any) {
-              toast.error(apiErrorMessage(e, 'Failed to create request'));
+              setCreateError(apiErrorMessage(e, 'The request could not be created.'));
             }
           }}
         />
@@ -244,12 +254,14 @@ export function VisaRequestQueue() {
 }
 
 function NewRequestModal({
-  assignees, onClose, onCreate, pending,
+  assignees, onClose, onCreate, pending, serverError,
 }: {
-  assignees: { id: string; name: string; email: string }[];
+  /** null when this account may not assign (the field is then not offered). */
+  assignees: { id: string; name: string; email: string }[] | null;
   onClose: () => void;
   onCreate: (dto: any) => Promise<void>;
   pending: boolean;
+  serverError: string;
 }) {
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
@@ -262,30 +274,32 @@ function NewRequestModal({
   const [touched, setTouched] = useState(false);
 
   const subjectError = touched && subject.trim().length < 3 ? 'Subject must be at least 3 characters' : '';
+  const emailError = touched && requesterEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail.trim()) ? 'Enter a valid email address' : '';
 
   const submit = () => {
     setTouched(true);
-    if (subject.trim().length < 3) return;
+    if (subject.trim().length < 3 || emailError || (requesterEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail.trim()))) return;
     return onCreate({
       subject: subject.trim(),
       description: description || undefined,
       category,
       priority,
       requesterName: requesterName || undefined,
-      requesterEmail: requesterEmail || undefined,
+      requesterEmail: requesterEmail.trim() || undefined,
       assigneeId: assigneeId || undefined,
       dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
     });
   };
 
   return (
-    <ModalSurface title="New service request" onClose={onClose}    >
+    <ModalSurface busy={pending} title="New service request" onClose={onClose}>
       <div className="bg-white rounded-xl w-full max-w-lg p-5 shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-900">New service request</h2>
           <Button variant="quiet" type="button" onClick={onClose} aria-label="Close dialog" className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-600" /></Button>
         </div>
 
+        {serverError && <p role="alert" className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{serverError}</p>}
         <div className="space-y-3">
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Subject *</span>
@@ -337,18 +351,23 @@ function NewRequestModal({
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Requester email</span>
-              <Input value={requesterEmail} onChange={(e) => setRequesterEmail(e.target.value)}  placeholder="name@example.com" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input type="email" value={requesterEmail} onChange={(e) => setRequesterEmail(e.target.value)} aria-invalid={!!emailError} placeholder="name@example.com" className={cn('w-full text-sm px-3 py-2.5 border rounded-lg outline-none', emailError ? 'border-red-400' : 'border-gray-200')} />
+              {emailError && <span role="alert" className="text-xs text-red-700 mt-1 block">{emailError}</span>}
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="block text-xs font-semibold text-gray-600 mb-1">Assign to</span>
-              <Select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
-                <option value="">Unassigned</option>
-                {assignees.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </Select>
-            </label>
+            {assignees ? (
+              <label className="block">
+                <span className="block text-xs font-semibold text-gray-600 mb-1">Assign to</span>
+                <Select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+                  <option value="">Unassigned</option>
+                  {assignees.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </Select>
+              </label>
+            ) : (
+              <p className="text-xs text-gray-600 self-end">A visa manager assigns new tickets.</p>
+            )}
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Due date</span>
               <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
@@ -358,8 +377,8 @@ function NewRequestModal({
 
         <div className="flex justify-end gap-2 mt-5">
           <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
-          <Button variant="quiet" type="button" onClick={submit} disabled={pending} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
-            {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Create request
+          <Button type="button" onClick={submit} busy={pending}>
+            {!pending && <CheckCircle2 className="h-3.5 w-3.5" />} Create request
           </Button>
         </div>
       </div>

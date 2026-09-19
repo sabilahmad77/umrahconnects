@@ -1,6 +1,7 @@
 import {
-  Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, ParseUUIDPipe,
+  Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, ParseUUIDPipe, Req, ForbiddenException,
 } from '@nestjs/common';
+import { RbacService } from '../rbac/rbac.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { VisaRequestsService } from './visa-requests.service';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
@@ -19,7 +20,10 @@ import {
 @Controller({ path: 'visa-requests', version: '1' })
 @ApiBearerAuth()
 export class VisaRequestsController {
-  constructor(private readonly service: VisaRequestsService) {}
+  constructor(
+    private readonly service: VisaRequestsService,
+    private readonly rbac: RbacService,
+  ) {}
 
   @Get()
   @RequirePermissions('visa:application:read')
@@ -42,7 +46,11 @@ export class VisaRequestsController {
 
   @Post()
   @RequirePermissions('visa:application:submit')
-  async create(@TenantId() tenantId: string, @CurrentUser() user: any, @Body() dto: CreateVisaRequestDto) {
+  async create(@TenantId() tenantId: string, @CurrentUser() user: any, @Req() req: any, @Body() dto: CreateVisaRequestDto) {
+    // Assigning is visa:application:manage on /assign, so it is on creation too.
+    if (dto.assigneeId && !(await this.rbac.permissionsFor(req)).has('visa:application:manage')) {
+      throw new ForbiddenException('Assigning a ticket requires visa:application:manage');
+    }
     return { success: true, data: await this.service.create(tenantId, dto, user) };
   }
 

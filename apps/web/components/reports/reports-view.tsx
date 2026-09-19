@@ -1,284 +1,177 @@
 'use client';
-import { Button , QueryFailure } from '@/components/ui/system';
 
+import { useState } from 'react';
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
+import { Users, BookOpen, DollarSign, FileCheck2, Download, Hotel, Bus } from 'lucide-react';
+import { toast } from 'sonner';
+import { apiErrorMessage } from '@/lib/api-error';
+import { Button, QueryFailure } from '@/components/ui/system';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { useAuthContext } from '@/components/providers/auth-provider';
+import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
+import { humanize, sar } from '@/components/dashboard/workflow-ui';
 import {
-  BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Cell, PieChart, Pie, Legend,
-} from 'recharts';
-import {
-  useReportsOverview, useReportsPilgrims, useReportsBookings,
-  useReportsFinance, useReportsVisa,
-} from '@/hooks/use-api';
-import { Users, BookOpen, DollarSign, FileCheck2, TrendingUp, Download } from 'lucide-react';
+  downloadReportCsv, useBookingReport, useFinanceReport, useHotelReport, useOverviewReport, usePilgrimReport,
+  useTransportReport, useVisaReport,
+} from './report-queries';
 
-const COLORS = ['#d4831a', '#006c35', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4'];
+const COLORS = ['#0F3D37', '#C8A96B', '#2A7A6B', '#112234', '#B08D57', '#B54747', '#3b82f6', '#8b5cf6'];
 
-const fmtSAR = (cents?: number) =>
-  cents != null ? `SAR ${(cents / 100).toLocaleString('en-SA', { maximumFractionDigits: 0 })}` : '—';
-
-function SectionCard({ title, children, loading }: { title: string; children: React.ReactNode; loading?: boolean }) {
+function Section({ title, icon: Icon, query, empty, children }: { title: string; icon?: any; query: { isLoading: boolean; error: unknown; refetch: () => void }; empty?: boolean; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="font-semibold text-gray-900 mb-4">{title}</h3>
-      {loading ? (
-        <div className="h-48 bg-gray-50 rounded-xl animate-pulse flex items-center justify-center text-gray-600 text-sm">
-          Loading…
+    <section className="bg-white rounded-xl border border-gray-200 p-5" aria-label={title}>
+      <h2 className="font-semibold text-gray-900 mb-4 inline-flex items-center gap-2">{Icon && <Icon className="h-4 w-4 text-gray-600" />}{title}</h2>
+      {query.error ? <QueryFailure error={query.error} onRetry={() => query.refetch()} />
+        : query.isLoading ? <div role="status" className="h-40 bg-gray-50 rounded-xl animate-pulse flex items-center justify-center text-gray-600 text-sm">Loading…</div>
+          : empty ? <p className="text-sm text-gray-600 py-8 text-center">No records yet.</p>
+            : children}
+    </section>
+  );
+}
+
+const entries = (o?: Record<string, number>) => Object.entries(o ?? {}).filter(([, v]) => v > 0).map(([name, value]) => ({ name: humanize(name), value }));
+
+function Tiles({ items }: { items: { label: string; value: React.ReactNode; note?: string }[] }) {
+  return (
+    <dl className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {items.map((t) => (
+        <div key={t.label} className="rounded-xl bg-gray-50 p-3">
+          <dt className="text-xs text-gray-600">{t.label}</dt>
+          <dd className="text-xl font-bold text-gray-900 tabular-nums">{t.value}</dd>
+          {t.note && <dd className="text-xs text-gray-600">{t.note}</dd>}
         </div>
-      ) : children}
-    </div>
+      ))}
+    </dl>
   );
 }
 
 export function ReportsView() {
-  const { data: overview, isLoading: ol , error: reportsOverviewError, refetch: retryReportsOverview} = useReportsOverview();
-  const { data: pilgrims, isLoading: pl , error: reportsPilgrimsError, refetch: retryReportsPilgrims} = useReportsPilgrims();
-  const { data: bookings, isLoading: bl , error: reportsBookingsError, refetch: retryReportsBookings} = useReportsBookings();
-  const { data: finance, isLoading: fl , error: reportsFinanceError, refetch: retryReportsFinance} = useReportsFinance();
-  const { data: visa, isLoading: vl , error: reportsVisaError, refetch: retryReportsVisa} = useReportsVisa();
+  const { user } = useAuthContext();
+  const { ready, can } = useCapabilities();
+  const canRead = can('reporting:report:read');
+  const canFinance = can('finance:report:read');
+  const canExport = canRead && can('reporting:report:export');
+  const overview = useOverviewReport(canRead);
+  const pilgrims = usePilgrimReport(canRead);
+  const bookings = useBookingReport(canRead);
+  const hotels = useHotelReport(canRead);
+  const visa = useVisaReport(canRead);
+  const transport = useTransportReport(canRead);
+  const finance = useFinanceReport(canFinance);
+  const [exporting, setExporting] = useState(false);
 
-  // Derived data
-  const pilgrimStatusData = pilgrims?.byStatus
-    ? Object.entries(pilgrims.byStatus).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }))
-    : [];
+  const exportCsv = async () => {
+    setExporting(true);
+    try { await downloadReportCsv(); toast.success('Report exported'); }
+    catch (e) { toast.error(apiErrorMessage(e, 'The report could not be exported.')); }
+    finally { setExporting(false); }
+  };
 
-  const bookingTrend = bookings?.monthlyTrend?.map((t: any) => ({
-    month: t.month ? new Date(t.month + (t.month.length === 7 ? '-01' : '')).toLocaleDateString('en', { month: 'short', year: '2-digit', timeZone: 'UTC' }) : 'Unknown',
-    count: t.count ?? 0,
-  })) ?? [];
+  if (ready && !canRead) {
+    return <ReadOnlyNotice>Reports need the reporting permission. Ask your organization administrator for access.</ReadOnlyNotice>;
+  }
+  const o = overview.data;
+  const trend = (bookings.data?.monthlyTrend ?? []).map((t) => ({
+    month: new Date(`${t.month}-01T00:00:00Z`).toLocaleDateString('en', { month: 'short', year: '2-digit', timeZone: 'UTC' }),
+    count: t.count,
+  }));
+  const pilgrimData = entries(pilgrims.data?.byStatus);
+  const visaData = entries(visa.data?.byStatus);
 
-  const bookingStatusData = bookings?.byStatus
-    ? Object.entries(bookings.byStatus).map(([name, value]) => ({ name, value }))
-    : [];
-
-  const visaStatusData = visa?.byStatus
-    ? Object.entries(visa.byStatus).map(([name, value]) => ({ name: name.replace(/_/g, ' '), value }))
-    : [];
-
-  const financeData = finance
-    ? [
-        { name: 'Paid', value: (finance.paid?.amountCents ?? 0) / 100 },
-        { name: 'Outstanding', value: (finance.outstanding?.amountCents ?? 0) / 100 },
-        { name: 'Draft', value: (finance.draft?.amountCents ?? 0) / 100 },
-      ]
-    : [];
-
-  if (reportsOverviewError || reportsPilgrimsError || reportsBookingsError || reportsFinanceError || reportsVisaError) return <QueryFailure error={reportsOverviewError || reportsPilgrimsError || reportsBookingsError || reportsFinanceError || reportsVisaError} onRetry={() => { retryReportsOverview(); retryReportsPilgrims(); retryReportsBookings(); retryReportsFinance(); retryReportsVisa(); }} />;
   return (
     <div className="space-y-5 pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Platform-wide insights and trends</p>
+          <p className="text-sm text-gray-600 mt-0.5">Figures for {user?.tenantName || 'your organization'}, computed from its own records</p>
         </div>
-        <Button variant="quiet" type="button"
-          onClick={() => {
-            // Build a CSV from every loaded report dataset and download it
-            const rows: string[][] = [['Section', 'Metric', 'Value']];
-            const pushObj = (section: string, obj: any, prefix = '') => {
-              if (!obj || typeof obj !== 'object') return;
-              for (const [k, v] of Object.entries(obj)) {
-                if (v != null && typeof v === 'object' && !Array.isArray(v)) pushObj(section, v, `${prefix}${k}.`);
-                else if (!Array.isArray(v)) rows.push([section, `${prefix}${k}`, String(v ?? '')]);
-              }
-            };
-            pushObj('Overview', overview);
-            pushObj('Pilgrims', pilgrims);
-            pushObj('Bookings', bookings);
-            pushObj('Finance', finance);
-            pushObj('Visa', visa);
-            const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `umrah-connect-report-${new Date().toISOString().slice(0, 10)}.csv`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-          }}
-          className="flex items-center gap-2 text-sm px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          Export CSV
-        </Button>
+        {canExport && <Button variant="secondary" type="button" busy={exporting} onClick={exportCsv}><Download className="h-4 w-4" /> Export CSV</Button>}
       </div>
+      {ready && !canFinance && <ReadOnlyNotice>Money figures are shown to accounts with the finance reporting permission; this report shows operational figures only.</ReadOnlyNotice>}
 
-      {/* KPI summary row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Pilgrims',     value: overview?.totalPilgrims?.toLocaleString() ?? '—', icon: Users,       color: 'bg-blue-50 text-blue-600' },
-          { label: 'Confirmed Bookings', value: overview?.confirmedBookings?.toLocaleString() ?? '—', icon: BookOpen, color: 'bg-green-50 text-green-800' },
-          { label: 'Revenue Paid',       value: fmtSAR(overview?.revenuePaidCents),           icon: DollarSign,  color: 'bg-brand-50 text-brand-600' },
-          { label: 'Visa Approval Rate', value: visa?.successRate != null ? `${visa.successRate.toFixed(1)}%` : '—', icon: FileCheck2, color: 'bg-purple-50 text-purple-600', trend: '' },
-        ].map((k) => (
-          <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${k.color}`}>
-              <k.icon className="h-5 w-5" />
-            </div>
-            <p className="text-2xl font-bold text-gray-900">{k.value}</p>
-            <p className="text-xs text-gray-600 mt-1">{k.label}</p>
-            {k.trend && (
-              <p className="flex items-center gap-1 text-xs text-green-800 font-medium mt-1.5">
-                <TrendingUp className="h-3 w-3" /> {k.trend} vs last period
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Booking Trend — full width */}
-      <SectionCard title="📈 Monthly Booking Trend" loading={bl}>
-        {bookingTrend.length === 0 ? (
-          <p className="text-sm text-gray-600 py-10 text-center">No trend data available</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={bookingTrend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
-              <defs>
-                <linearGradient id="bkGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#d4831a" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#d4831a" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={32} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }}
-                formatter={(v: any) => [v, 'Bookings']}
-              />
-              <Area type="monotone" dataKey="count" stroke="#d4831a" strokeWidth={2.5} fill="url(#bkGrad)" dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
+      <Section title="Overview" query={overview}>
+        {o && (
+          <Tiles items={[
+            { label: 'Travelers', value: o.totalPilgrims.toLocaleString(), note: `${o.activePilgrims} active · ${o.inKingdomCount} in the Kingdom` },
+            { label: 'Live bookings', value: o.confirmedBookings.toLocaleString(), note: 'confirmed to traveling' },
+            { label: 'Open visa cases', value: o.openVisaCases.toLocaleString(), note: 'not yet decided' },
+            o.financeIncluded
+              ? { label: 'Collected', value: sar(o.revenuePaidCents), note: `${sar(o.revenueOutstandingCents)} still owed on invoices` }
+              : { label: 'Hotels · vehicles', value: `${o.hotelCount} · ${o.vehicleCount}`, note: 'in your organization' },
+          ]} />
         )}
-      </SectionCard>
+      </Section>
 
-      {/* Two charts side by side */}
+      <Section title="Bookings per month (last 6 months)" icon={BookOpen} query={bookings} empty={(bookings.data?.total ?? 0) === 0}>
+        <ResponsiveContainer width="100%" height={220}>
+          <AreaChart data={trend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} width={32} />
+            <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v: any) => [v, 'Bookings']} />
+            <Area type="monotone" dataKey="count" stroke="#0F3D37" strokeWidth={2.5} fill="#0F3D37" fillOpacity={0.12} dot={false} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </Section>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Pilgrim status breakdown */}
-        <SectionCard title="👥 Pilgrim Status Breakdown" loading={pl}>
-          {pilgrimStatusData.length === 0 ? (
-            <p className="text-sm text-gray-600 py-10 text-center">No pilgrim data</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={pilgrimStatusData} layout="vertical" margin={{ left: 4, right: 4 }}>
-                <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fontSize: 10, fill: '#6b7280' }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={110}
-                />
-                <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
-                <Bar dataKey="value" radius={[0, 6, 6, 0]}>
-                  {pilgrimStatusData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </SectionCard>
+        <Section title="Travelers by status" icon={Users} query={pilgrims} empty={pilgrimData.length === 0}>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={pilgrimData} layout="vertical" margin={{ left: 4, right: 4 }}>
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#374151' }} axisLine={false} tickLine={false} width={120} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} />
+              <Bar dataKey="value" radius={[0, 6, 6, 0]}>{pilgrimData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          {pilgrims.data && <p className="text-xs text-gray-600 mt-2">{pilgrims.data.byGender.MALE ?? 0} male · {pilgrims.data.byGender.FEMALE ?? 0} female</p>}
+        </Section>
 
-        {/* Visa pipeline pie */}
-        <SectionCard title="📋 Visa Pipeline Distribution" loading={vl}>
-          {visaStatusData.length === 0 ? (
-            <p className="text-sm text-gray-600 py-10 text-center">No visa data</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={visaStatusData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="40%"
-                  cy="50%"
-                  outerRadius={75}
-                  innerRadius={45}
-                >
-                  {visaStatusData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Legend
-                  iconType="circle"
-                  iconSize={8}
-                  wrapperStyle={{ fontSize: 11 }}
-                  formatter={(val) => val}
-                />
-                <Tooltip
-                  contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }}
-                  formatter={(v: any) => [v, 'Applications']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </SectionCard>
+        <Section title="Visa pipeline" icon={FileCheck2} query={visa} empty={(visa.data?.total ?? 0) === 0}>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie data={visaData} dataKey="value" nameKey="name" cx="40%" cy="50%" outerRadius={75} innerRadius={45}>{visaData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v: any) => [v, 'Applications']} />
+            </PieChart>
+          </ResponsiveContainer>
+          {visa.data && <p className="text-xs text-gray-600 mt-2">{visa.data.decided ? `${visa.data.successRate}% of ${visa.data.decided} decided applications approved` : 'No decisions yet'} · {visa.data.total} applications</p>}
+        </Section>
       </div>
 
-      {/* Finance breakdown */}
-      <SectionCard title="💰 Revenue Breakdown (SAR)" loading={fl}>
-        {financeData.length === 0 ? (
-          <p className="text-sm text-gray-600 py-10 text-center">No finance data</p>
-        ) : (
-          <div className="flex flex-col lg:flex-row items-center gap-8">
-            <ResponsiveContainer width={200} height={180}>
-              <PieChart>
-                <Pie data={financeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={50}>
-                  {financeData.map((_, i) => (
-                    <Cell key={i} fill={['#d4831a', '#f59e0b', '#9ca3af'][i]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex-1 space-y-3">
-              {financeData.map((d, i) => {
-                const colors = ['text-brand-600 bg-brand-50', 'text-yellow-800 bg-yellow-50', 'text-gray-600 bg-gray-100'];
-                const total = financeData.reduce((s, x) => s + x.value, 0);
-                const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
-                return (
-                  <div key={d.name}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-md ${colors[i]}`}>{d.name}</span>
-                      <span className="text-sm font-bold text-gray-800">
-                        SAR {d.value.toLocaleString('en-SA', { maximumFractionDigits: 0 })}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${['bg-brand-500', 'bg-yellow-400', 'bg-gray-300'][i]}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600 mt-0.5">{pct}% of total billed</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </SectionCard>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="Hotels" icon={Hotel} query={hotels} empty={!!hotels.data && hotels.data.totalHotels === 0 && hotels.data.allotments.contracts === 0}>
+          {hotels.data && (
+            <Tiles items={[
+              { label: 'Rooms in service', value: hotels.data.rooms.total, note: `${hotels.data.rooms.occupancyRate}% occupied now` },
+              { label: 'Guest bookings', value: hotels.data.bookings.total, note: `${hotels.data.bookings.byStatus.CHECKED_IN ?? 0} checked in` },
+              { label: 'Contracted rooms', value: hotels.data.allotments.totalRooms, note: `${hotels.data.allotments.contracts} allotment(s)` },
+              { label: 'Rooms assigned', value: hotels.data.allotments.bookedRooms, note: `${hotels.data.allotments.availableRooms} still free` },
+            ]} />
+          )}
+        </Section>
+        <Section title="Transport" icon={Bus} query={transport} empty={!!transport.data && transport.data.vehicles.total === 0 && transport.data.trips.total === 0}>
+          {transport.data && (
+            <Tiles items={[
+              { label: 'Vehicles in service', value: transport.data.vehicles.active, note: `${transport.data.vehicles.byStatus.UNDER_MAINTENANCE ?? 0} under maintenance` },
+              { label: 'Trips next 30 days', value: transport.data.trips.next30Days, note: `${transport.data.trips.byStatus.IN_PROGRESS ?? 0} under way now` },
+              { label: 'Passengers carried', value: transport.data.trips.passengersCarried, note: `${transport.data.trips.byStatus.COMPLETED ?? 0} completed trips` },
+              { label: 'Route seats sold', value: `${transport.data.seats.sold} / ${transport.data.seats.offered}`, note: `${transport.data.seats.utilizationRate}% of seats offered` },
+            ]} />
+          )}
+        </Section>
+      </div>
 
-      {/* Gender split */}
-      {pilgrims?.byGender && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">🧕 Pilgrim Gender Distribution</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: 'Male Pilgrims',   value: pilgrims.byGender.MALE,   color: 'from-blue-400 to-blue-500' },
-              { label: 'Female Pilgrims', value: pilgrims.byGender.FEMALE, color: 'from-pink-400 to-pink-500' },
-            ].map((g) => {
-              const total2 = (pilgrims.byGender.MALE ?? 0) + (pilgrims.byGender.FEMALE ?? 0);
-              const pct = total2 > 0 ? Math.round((g.value / total2) * 100) : 0;
-              return (
-                <div key={g.label} className={`bg-gradient-to-br ${g.color} rounded-xl p-4 text-white`}>
-                  <p className="text-3xl font-bold">{g.value?.toLocaleString() ?? 0}</p>
-                  <p className="text-sm opacity-80 mt-1">{g.label}</p>
-                  <p className="text-xs opacity-70 mt-0.5">{pct}% of total</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      {canFinance && (
+        <Section title="Invoices (SAR)" icon={DollarSign} query={finance}>
+          {finance.data && (
+            <Tiles items={[
+              { label: 'Collected', value: sar(finance.data.collectedCents), note: 'payments recorded on invoices' },
+              { label: 'Paid invoices', value: sar(finance.data.paid.amountCents), note: `${finance.data.paid.count} invoice(s)` },
+              { label: 'Still owed', value: sar(finance.data.outstanding.amountCents), note: `${finance.data.outstanding.count} open invoice(s)` },
+              { label: 'Drafts', value: sar(finance.data.draft.amountCents), note: `${finance.data.draft.count} not yet issued` },
+            ]} />
+          )}
+        </Section>
       )}
     </div>
   );

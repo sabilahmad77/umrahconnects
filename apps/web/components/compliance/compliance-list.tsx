@@ -1,323 +1,211 @@
 'use client';
-import { apiErrorMessage } from '@/lib/api-error';
-import { Input, ModalSurface, Select, Textarea , Button , QueryFailure } from '@/components/ui/system';
-
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  FileCheck2, Plus, RefreshCw, Search, CheckCircle2,
-  XCircle, Clock, AlertCircle, X, Loader2, FileText,
-} from 'lucide-react';
+import { FileCheck2, Plus, RefreshCw, Search, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  useCompliance, useComplianceStats, useCreateVisaApplication, usePilgrims,
-} from '@/hooks/use-api';
+import { useRouter } from 'next/navigation';
+import { apiErrorMessage } from '@/lib/api-error';
+import { Alert, Button, Input, LoadingState, ModalSurface, QueryFailure, Select } from '@/components/ui/system';
+import { useCapabilities } from '@/hooks/use-capabilities';
+import { usePilgrims } from '@/hooks/use-api';
+import { VISA_STATUSES, VISA_STATUS_META, useCreateVisa, useVisaList, useVisaStats } from '@/hooks/use-visa';
+import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
+import { ModalFooter, ModalHeader, shortDate } from '@/components/dashboard/workflow-ui';
+import { FormField } from '@/components/hotels/hotel-form';
 import { cn } from '@/lib/utils';
+import { VisaFormFields, emptyVisaForm, visaFormErrors, visaPayload, type VisaForm } from './visa-form';
 
-const VISA_STATUS: Record<string, { label: string; color: string; dot: string }> = {
-  NOT_STARTED:           { label: 'Not Started',     color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
-  DOCUMENTS_COLLECTING:  { label: 'Collecting Docs', color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' },
-  SUBMITTED:             { label: 'Submitted',       color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500' },
-  UNDER_REVIEW:          { label: 'Under Review',    color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
-  APPROVED:              { label: 'Approved',        color: 'bg-green-100 text-green-700',  dot: 'bg-green-500' },
-  REJECTED:              { label: 'Rejected',        color: 'bg-red-100 text-red-600',      dot: 'bg-red-500' },
-  EXPIRED:               { label: 'Expired',         color: 'bg-gray-100 text-gray-600',    dot: 'bg-gray-400' },
-};
+const PAGE_SIZE = 20;
 
-const FILTERS = ['ALL', 'NOT_STARTED', 'DOCUMENTS_COLLECTING', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED'];
+export function VisaStatusBadge({ status }: { status: string }) {
+  const meta = VISA_STATUS_META[status] ?? { label: status, color: 'bg-gray-100 text-gray-700', dot: 'bg-gray-400' };
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap', meta.color)}>
+      <span aria-hidden="true" className={cn('w-1.5 h-1.5 rounded-full', meta.dot)} />{meta.label}
+    </span>
+  );
+}
+
+export const applicantOf = (v: any) =>
+  v.applicantName || (v.pilgrim ? [v.pilgrim.firstNameEn, v.pilgrim.lastNameEn].filter(Boolean).join(' ') || v.pilgrim.firstNameAr : '') || 'Unnamed applicant';
 
 export function ComplianceList() {
+  const { ready, can } = useCapabilities();
+  const canSubmit = can('visa:application:submit');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
-  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
 
-  const { data, isLoading, error, refetch } = useCompliance({
-    page,
-    limit: 20,
-    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+  const { data, isLoading, error, refetch } = useVisaList({
+    page, limit: PAGE_SIZE, status: statusFilter !== 'ALL' ? statusFilter : undefined, search: search.trim() || undefined,
   });
-  const { data: stats , error: complianceStatsError, refetch: retryComplianceStats} = useComplianceStats();
-  const createVisa = useCreateVisaApplication();
-  const pilgrimsQ = usePilgrims({ limit: 100 });
-
+  const stats = useVisaStats();
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / 20);
-
-  const statCards = [
-    { label: 'Approved',     value: stats?.byStatus?.APPROVED ?? 0,     color: 'text-green-800',  Icon: CheckCircle2 },
-    { label: 'Under Review', value: stats?.byStatus?.UNDER_REVIEW ?? 0, color: 'text-orange-800', Icon: Clock },
-    { label: 'Submitted',    value: stats?.byStatus?.SUBMITTED ?? 0,    color: 'text-blue-600',   Icon: FileText },
-    { label: 'Rejected',     value: stats?.byStatus?.REJECTED ?? 0,     color: 'text-red-700',    Icon: XCircle },
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const s = stats.data;
+  const cards = [
+    { label: 'Approved', value: s?.byStatus?.APPROVED, color: 'text-green-800', Icon: CheckCircle2 },
+    { label: 'Under review', value: s?.byStatus?.UNDER_REVIEW, color: 'text-orange-800', Icon: Clock },
+    { label: 'Submitted', value: s?.byStatus?.SUBMITTED, color: 'text-blue-700', Icon: FileText },
+    { label: 'Rejected', value: s?.byStatus?.REJECTED, color: 'text-red-700', Icon: XCircle },
   ];
 
-  if (error || complianceStatsError) return <QueryFailure error={error || complianceStatsError} onRetry={() => { refetch(); retryComplianceStats(); }} />;
+  if (error) return <QueryFailure error={error} onRetry={() => refetch()} />;
   return (
     <div className="space-y-5 pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Visa & Compliance</h1>
           <p className="text-sm text-gray-600 mt-0.5">
-            {total.toLocaleString()} applications · Approval rate:{' '}
-            {stats?.successRate != null ? `${Number(stats.successRate).toFixed(1)}%` : '—'}
+            {total.toLocaleString()} application{total === 1 ? '' : 's'}
+            {s ? ` · ${s.decided ? `${Math.round(s.successRate * 100)}% of ${s.decided} decided applications approved` : 'no decisions yet'}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button variant="quiet" type="button"
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            New Application
-          </Button>
+          <Button variant="quiet" type="button" aria-label="Refresh applications" onClick={() => { refetch(); stats.refetch(); }} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600"><RefreshCw className="h-4 w-4" /></Button>
+          {canSubmit && <Button type="button" onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New application</Button>}
         </div>
       </div>
+      {ready && !canSubmit && <ReadOnlyNotice>You can view visa applications. Creating and submitting them needs the visa submission permission.</ReadOnlyNotice>}
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {statCards.map((s) => (
-          <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-2xl font-bold text-gray-900">{s.value.toLocaleString()}</p>
-            <div className={cn('inline-flex items-center gap-1.5 text-xs font-medium mt-1', s.color)}>
-              <s.Icon className="h-3.5 w-3.5" /> {s.label}
+      {stats.error ? <Alert title="Visa figures are unavailable">{apiErrorMessage(stats.error, 'Try refreshing.')}</Alert> : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {cards.map((c) => (
+            <div key={c.label} className="bg-white rounded-xl border border-gray-200 p-4">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums">{c.value ?? '—'}</p>
+              <p className={cn('inline-flex items-center gap-1.5 text-xs font-medium mt-1', c.color)}><c.Icon className="h-3.5 w-3.5" /> {c.label}</p>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* BP-04: regulator API integrations are on the roadmap, not live — the
-          chips say so honestly. Applications are tracked here and submitted on
-          the official portals until direct integrations ship. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {['Nusuk / Masar', 'SISKOPATUH', 'MOH Saudi', 'eVisa Portal'].map((label) => (
-          <span
-            key={label}
-            title="Direct API integration planned — applications are tracked in-platform and submitted on the official portal today"
-            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border bg-gray-50 text-gray-600 border-gray-200"
-          >
-            <Clock className="h-3 w-3" />
-            {label}
-            <span className="text-[9px] font-bold tracking-wide text-gold-800 bg-gold-50 px-1.5 py-0.5 rounded-full">PLANNED</span>
-          </span>
-        ))}
-      </div>
+      <p className="text-xs text-gray-600">Regulator integrations (Nusuk / Masar, SISKOPATUH …) are planned: applications are tracked here and filed on the official portals, then the outcome is recorded with its visa number.</p>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
+      <div className="flex flex-col lg:flex-row gap-3">
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full lg:w-80">
           <Search className="h-4 w-4 text-gray-600 shrink-0" />
-          <Input aria-label="Search"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Search applications..."
-            className="text-sm bg-transparent flex-1 outline-none placeholder:text-gray-600"
-          />
+          <Input aria-label="Search applications" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Applicant, passport or application #" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
         </div>
         <div className="flex gap-1.5 flex-wrap">
-          {FILTERS.map((f) => (
-            <Button variant="quiet" type="button"
-              key={f}
-              onClick={() => { setStatusFilter(f); setPage(1); }}
-              className={cn(
-                'text-xs px-3 py-1.5 rounded-full border transition-all font-medium',
-                statusFilter === f
-                  ? 'bg-brand-500 text-white border-brand-500'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300',
-              )}
-            >
-              {f === 'ALL' ? 'All' : VISA_STATUS[f]?.label ?? f}
+          {['ALL', ...VISA_STATUSES].map((f) => (
+            <Button variant="quiet" type="button" key={f} aria-pressed={statusFilter === f} onClick={() => { setStatusFilter(f); setPage(1); }}
+              className={cn('text-xs px-3 py-1.5 rounded-full border font-medium', statusFilter === f ? 'bg-brand-500 text-white border-brand-500' : 'border-gray-200 text-gray-600 hover:border-gray-300')}>
+              {f === 'ALL' ? 'All' : VISA_STATUS_META[f]?.label ?? f}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {isLoading ? (
-          <div className="divide-y divide-gray-50">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-4 animate-pulse">
-                <div className="w-10 h-10 rounded-xl bg-gray-100" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-36 bg-gray-100 rounded" />
-                  <div className="h-3 w-24 bg-gray-100 rounded" />
-                </div>
-                <div className="h-6 w-24 bg-gray-100 rounded-full" />
-              </div>
-            ))}
+      <div className="bg-white rounded-xl border border-gray-200">
+        {isLoading ? <LoadingState label="Loading applications…" /> : items.length === 0 ? (
+          <div className="py-16 text-center">
+            <FileCheck2 className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm font-semibold text-gray-700">No visa applications match this view</p>
           </div>
         ) : (
-          <>
-            <div role="region" aria-label="Scrollable records" tabIndex={0} className="max-w-full overflow-x-auto"><table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Pilgrim</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3">Visa Status</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden md:table-cell">Passport</th>
-                  <th className="text-left text-xs font-semibold text-gray-600 px-5 py-3 hidden lg:table-cell">Submitted</th>
-                </tr>
+          <div role="region" aria-label="Visa applications" tabIndex={0} className="max-w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
+                <tr><th className="text-left px-4 py-3">Applicant</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Passport</th><th className="text-left px-4 py-3">Visa</th><th className="text-left px-4 py-3">Submitted</th></tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-20 text-center">
-                      <FileCheck2 className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm text-gray-600">No visa applications found</p>
+              <tbody className="divide-y divide-gray-100">
+                {items.map((v: any) => (
+                  <tr key={v.id}>
+                    <td className="px-4 py-3">
+                      <Link href={`/compliance/${v.id}`} className="font-semibold text-brand-700 hover:underline">{applicantOf(v)}</Link>
+                      <p className="text-xs text-gray-600 font-mono">{v.applicationNumber ?? '—'}</p>
                     </td>
+                    <td className="px-4 py-3"><VisaStatusBadge status={v.status} /></td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-800">{v.applicantPassport || v.pilgrim?.passportNumber || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-gray-700">{v.visaType ?? '—'}{v.externalRef ? <span className="block text-gray-600">No. {v.externalRef}</span> : null}</td>
+                    <td className="px-4 py-3 text-xs text-gray-700">{shortDate(v.submittedAt)}</td>
                   </tr>
-                ) : items.map((v: any) => {
-                  const cfg = VISA_STATUS[v.status] ?? { label: v.status, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' };
-                  const pilgrimName = v.pilgrim
-                    ? [v.pilgrim.firstNameEn, v.pilgrim.lastNameEn].filter(Boolean).join(' ') || v.pilgrim.firstNameAr || '—'
-                    : '—';
-                  return (
-                    <tr key={v.id} className="hover:bg-gray-50/60 transition-colors cursor-pointer">
-                      <td className="px-5 py-3.5">
-                        <Link href={`/compliance/${v.id}`} className="flex items-center gap-3 hover:underline">
-                          <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center text-green-800 text-xs font-bold shrink-0">
-                            {pilgrimName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-800">{pilgrimName}</p>
-                            <p className="text-xs text-gray-600">{v.pilgrim?.nationality ?? '—'}</p>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={cn('inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium', cfg.color)}>
-                          <span className={cn('w-1.5 h-1.5 rounded-full', cfg.dot)} />
-                          {cfg.label}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 hidden md:table-cell">
-                        <p className="text-sm font-mono text-gray-700">{v.pilgrim?.passportNumber ?? '—'}</p>
-                      </td>
-                      <td className="px-5 py-3.5 hidden lg:table-cell">
-                        <p className="text-sm text-gray-600">{v.submittedAt ? new Date(v.submittedAt).toLocaleDateString() : '—'}</p>
-                      </td>
-                    </tr>
-                  );
-                })}
+                ))}
               </tbody>
-            </table></div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600">Page {page} of {totalPages} · {total} results</p>
-                <div className="flex gap-1.5">
-                  <Button variant="quiet" type="button" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Prev</Button>
-                  <Button variant="quiet" type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50">Next</Button>
-                </div>
-              </div>
-            )}
-          </>
+            </table>
+          </div>
+        )}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
+            <p className="text-xs text-gray-600">Page {page} of {totalPages} · {total} results</p>
+            <div className="flex gap-1.5">
+              <Button variant="secondary" type="button" onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>Previous</Button>
+              <Button variant="secondary" type="button" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Next</Button>
+            </div>
+          </div>
         )}
       </div>
 
-      {showCreate && (
-        <NewVisaModal
-          pilgrims={pilgrimsQ.data?.items ?? []}
-          onClose={() => setShowCreate(false)}
-          onCreate={async (dto) => {
-            try { await createVisa.mutateAsync(dto); toast.success('Visa application created'); setShowCreate(false); refetch(); }
-            catch (e: any) { toast.error(apiErrorMessage(e, 'Failed')); }
-          }}
-          pending={createVisa.isPending}
-        />
-      )}
+      {creating && canSubmit && <NewVisaModal canLinkTravelers={can('crm:pilgrim:read')} onClose={() => setCreating(false)} />}
     </div>
   );
 }
 
-function NewVisaModal({
-  pilgrims, onClose, onCreate, pending,
-}: { pilgrims: any[]; onClose: () => void; onCreate: (dto: any) => Promise<void>; pending: boolean }) {
-  const [pilgrimId, setPilgrimId] = useState(pilgrims[0]?.id ?? '');
-  const [type, setType] = useState('UMRAH');
-  const [regulatorySystem, setRegulatorySystem] = useState('NUSUK_MASAR');
-  const [passportNumber, setPassportNumber] = useState('');
-  const [fees, setFees] = useState('');
-  const [notes, setNotes] = useState('');
+function NewVisaModal({ canLinkTravelers, onClose }: { canLinkTravelers: boolean; onClose: () => void }) {
+  const router = useRouter();
+  const create = useCreateVisa();
+  const [pilgrimId, setPilgrimId] = useState('');
+  const [form, setForm] = useState<VisaForm>(emptyVisaForm());
+  const [touched, setTouched] = useState(false);
+  const [serverError, setServerError] = useState('');
+  const errors = visaFormErrors(form, { requireName: !pilgrimId });
 
-  // Auto-pick first pilgrim once they load
-  if (!pilgrimId && pilgrims[0]?.id) setPilgrimId(pilgrims[0].id);
+  const pick = (id: string, p?: any) => {
+    setPilgrimId(id);
+    if (p) {
+      setForm((f) => ({
+        ...f,
+        applicantName: [p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || p.firstNameAr || f.applicantName,
+        applicantPassport: p.passportNumber ?? f.applicantPassport,
+        applicantNationality: p.nationality ?? f.applicantNationality,
+      }));
+    }
+  };
 
-  const submit = () => onCreate({
-    pilgrimId,
-    type,
-    regulatorySystem,
-    passportNumber: passportNumber || undefined,
-    fees: fees ? Number(fees) : undefined,
-    notes: notes || undefined,
-    currency: 'SAR',
-  });
+  const save = async () => {
+    setTouched(true);
+    if (Object.keys(errors).length || create.isPending) return;
+    setServerError('');
+    try {
+      const created = await create.mutateAsync({ ...visaPayload(form, { includeRef: false, forUpdate: false }), pilgrimId: pilgrimId || undefined, currency: 'SAR' });
+      toast.success('Visa application created');
+      onClose();
+      router.push(`/compliance/${created.id}`);
+    } catch (e) {
+      setServerError(apiErrorMessage(e, 'The application could not be created.'));
+    }
+  };
 
   return (
-    <ModalSurface title="New visa application" onClose={onClose}   >
-      <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-gray-900">New visa application</h2>
-          <Button variant="quiet" type="button" aria-label="Close dialog" onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="h-4 w-4 text-gray-600" /></Button>
-        </div>
-        {pilgrims.length === 0 ? (
-          <p className="text-sm text-gray-600 py-4 text-center">No pilgrims yet — add a pilgrim first.</p>
-        ) : (
-          <div className="space-y-3">
-            <label className="block">
-              <span className="block text-xs font-semibold text-gray-600 mb-1">Pilgrim *</span>
-              <Select  value={pilgrimId} onChange={(e) => setPilgrimId(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
-                {pilgrims.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {[p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || p.id.slice(0, 8)} {p.passportNumber ? `· ${p.passportNumber}` : ''}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Visa type *</span>
-                <Select  value={type} onChange={(e) => setType(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
-                  <option value="UMRAH">Umrah</option>
-                  <option value="HAJJ">Hajj</option>
-                  <option value="VISIT">Visit</option>
-                </Select>
-              </label>
-              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">System *</span>
-                <Select  value={regulatorySystem} onChange={(e) => setRegulatorySystem(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
-                  {/* RegulatorySystem enum members only — "OTHER" is not one and
-                      was rejected on submit; "MANUAL" is the catch-all. */}
-                  <option value="NUSUK_MASAR">Nusuk / Masar</option>
-                  <option value="SISKOPATUH">SISKOPATUH</option>
-                  <option value="NAHCON">NAHCON (Nigeria)</option>
-                  <option value="DIYANET">Diyanet (Türkiye)</option>
-                  <option value="TABUNG_HAJI">Tabung Haji (Malaysia)</option>
-                  <option value="MOTAC">MOTAC (Malaysia)</option>
-                  <option value="IBA_DGRP">IBA / DGRP</option>
-                  <option value="MANUAL">Manual / other</option>
-                </Select>
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Passport #</span><Input  value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} placeholder="A1234567" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" /></label>
-              <label className="block"><span className="block text-xs font-semibold text-gray-600 mb-1">Fees (SAR)</span><Input  type="number" min="0" value={fees} onChange={(e) => setFees(e.target.value)} placeholder="500" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" /></label>
-            </div>
-            <label className="block">
-              <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-              <Textarea  value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none resize-none" />
-            </label>
-          </div>
-        )}
-        <div className="flex justify-end gap-2 mt-5">
-          <Button variant="quiet" type="button" onClick={onClose} disabled={pending} className="px-4 py-2 text-sm border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50">Cancel</Button>
-          <Button variant="quiet" type="button" onClick={submit} disabled={pending || !pilgrimId} className="flex items-center gap-2 px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg disabled:opacity-50 shadow-sm">
-            {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Create application
-          </Button>
-        </div>
-      </div>
+    <ModalSurface busy={create.isPending} title="New visa application" onClose={onClose}>
+      <form noValidate onSubmit={(e) => { e.preventDefault(); save(); }} className="bg-white rounded-xl w-full max-w-2xl p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+        <ModalHeader title="New visa application" onClose={onClose} busy={create.isPending} />
+        {serverError && <div className="mb-3"><Alert title={serverError} /></div>}
+        {canLinkTravelers && <TravelerPicker value={pilgrimId} onPick={pick} />}
+        <VisaFormFields form={form} setForm={setForm} errors={touched ? errors : {}} isEdit={false} canManage={false} />
+        <ModalFooter onClose={onClose} pending={create.isPending} cta="Create application" />
+      </form>
     </ModalSurface>
+  );
+}
+
+/** Only rendered for accounts that may read traveler records, so nobody else triggers the request. */
+function TravelerPicker({ value, onPick }: { value: string; onPick: (id: string, pilgrim?: any) => void }) {
+  const pilgrims = usePilgrims({ limit: 100 });
+  const list = pilgrims.data?.items ?? [];
+  return (
+    <div className="mb-3">
+      <FormField label="Traveler record (optional)" hint={pilgrims.error ? 'Traveler records could not be loaded; enter the applicant below.' : 'Fills the applicant details from your CRM'}>{(p) => (
+        <Select {...p} value={value} onChange={(e) => onPick(e.target.value, list.find((x: any) => x.id === e.target.value))} disabled={!!pilgrims.error}>
+          <option value="">{pilgrims.isLoading ? 'Loading travelers…' : 'Not linked — external applicant'}</option>
+          {list.map((x: any) => (
+            <option key={x.id} value={x.id}>{[x.firstNameEn, x.lastNameEn].filter(Boolean).join(' ') || x.firstNameAr || 'Traveler'}{x.passportNumber ? ` · ${x.passportNumber}` : ''}</option>
+          ))}
+        </Select>
+      )}</FormField>
+    </div>
   );
 }

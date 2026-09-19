@@ -172,6 +172,8 @@ describe('business workflows: visa cases, service tickets and reports', () => {
       expect(ids).not.toContain(financeOnly.id);
       expect(await errorOf(w.opA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: financeOnly.id }, 400)).toMatch(/visa/);
       await expectStatus(w.staffA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: w.staffA.id }, 403);
+      await expectStatus(w.staffA, 'post', '/visa-requests', { subject: 'Staff ticket with assignee', assigneeId: w.staffA.id }, 403);
+      expect(await ctx.prisma.visaServiceRequest.count({ where: { subject: 'Staff ticket with assignee' } })).toBe(0);
       await expectStatus(w.staffA, 'put', `/visa-requests/${t.id}/close`, {}, 403);
       const assigned = await expectStatus(w.opA, 'put', `/visa-requests/${t.id}/assign`, { assigneeId: w.staffA.id }, 200);
       expect(assigned.assigneeId).toBe(w.staffA.id);

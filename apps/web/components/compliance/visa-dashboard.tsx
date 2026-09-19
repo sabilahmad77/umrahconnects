@@ -10,9 +10,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useVisaDashboardStats } from '@/hooks/use-visa';
+import { useCapabilities } from '@/hooks/use-capabilities';
 
 export function VisaDashboard() {
   const { data: stats, isLoading, error, refetch } = useVisaDashboardStats();
+  const { can } = useCapabilities();
+  const canSubmit = can('visa:application:submit');
+  const canFinance = can('finance:invoice:read');
+  const canMarketplace = can('marketplace:listing:manage');
 
   if (error) return <QueryFailure error={error} onRetry={() => { refetch(); }} />;
   return (
@@ -26,9 +31,11 @@ export function VisaDashboard() {
           <Button variant="quiet" type="button" aria-label="Refresh dashboard" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
             <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
           </Button>
-          <Link href="/compliance" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
-            <Plus className="h-4 w-4" /> New application
-          </Link>
+          {canSubmit && (
+            <Link href="/compliance" className="flex items-center gap-2 text-sm px-4 py-2 bg-brand-500 text-white rounded-xl hover:bg-brand-600 shadow-sm">
+              <Plus className="h-4 w-4" /> New application
+            </Link>
+          )}
         </div>
       </div>
 
@@ -44,7 +51,7 @@ export function VisaDashboard() {
             <KPI label="Total applications" value={stats.total} sub={`${stats.newRequests} new requests`} icon={FileCheck2} color="bg-brand-50 text-brand-700" href="/compliance" />
             <KPI label="Under review" value={stats.byStatus.UNDER_REVIEW + stats.byStatus.SUBMITTED} sub="submitted + review" icon={FileSearch} color="bg-blue-50 text-blue-700" href="/compliance" />
             <KPI label="Approved" value={stats.byStatus.APPROVED} sub={`${Math.round((stats.successRate ?? 0) * 100)}% of decided applications approved`} icon={CheckCircle2} color="bg-green-50 text-green-700" href="/compliance" />
-            <KPI label="Revenue" value={`${stats.currency} ${(stats.revenueCollected / 100).toLocaleString()}`} sub={`${stats.currency} ${(stats.pendingPayment / 100).toLocaleString()} pending`} icon={Wallet} color="bg-saudi-50 text-saudi-700" href="/finance" />
+            <KPI label="Open service tickets" value={stats.openTickets} sub={`${stats.documentsToReview} document(s) waiting for verification`} icon={Send} color="bg-saudi-50 text-saudi-700" href="/visa-requests" />
           </div>
 
           {/* Pipeline tiles */}
@@ -63,19 +70,22 @@ export function VisaDashboard() {
             {/* Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-brand-600" /> Finance
+                <Wallet className="h-4 w-4 text-brand-600" /> Service fees
               </h3>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.currency} {(stats.revenueCollected / 100).toLocaleString()}</p>
-                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><CheckCircle2 className="h-3 w-3" /> Collected</p>
+                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><CheckCircle2 className="h-3 w-3" /> Applications recorded as paid</p>
               </div>
               <div className="pt-2 border-t border-gray-50">
                 <p className="text-lg font-semibold text-gray-700">{stats.currency} {(stats.pendingPayment / 100).toLocaleString()}</p>
-                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1"><PauseCircle className="h-3 w-3" /> Pending payment</p>
+                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1"><PauseCircle className="h-3 w-3" /> Not yet paid (open applications)</p>
               </div>
-              <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
-                Go to finance <ArrowRight className="h-3 w-3" />
-              </Link>
+              <p className="text-xs text-gray-600">Payment status comes from payments recorded in Finance.</p>
+              {canFinance && (
+                <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
+                  Go to finance <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
 
             {/* Marketplace */}
@@ -89,11 +99,13 @@ export function VisaDashboard() {
               </div>
               <div className="pt-2 border-t border-gray-50">
                 <p className="text-lg font-semibold text-gray-700">{stats.openServiceRequests}</p>
-                <p className="text-xs text-blue-600 mt-1">Open service requests</p>
+                <p className="text-xs text-blue-600 mt-1">Open visa requests from travelers on the marketplace</p>
               </div>
-              <Link href="/visa-requests" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
-                View service requests <ArrowRight className="h-3 w-3" />
-              </Link>
+              {canMarketplace && (
+                <Link href="/visa-requests" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
+                  Answer marketplace requests <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
             </div>
 
             {/* Recent activity */}
@@ -123,12 +135,12 @@ export function VisaDashboard() {
             <h3 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <QuickAction href="/compliance" label="Applications" icon={FileCheck2} bg="bg-brand-50 text-brand-600" />
-              <QuickAction href="/pilgrims" label="Applicants" icon={Users} bg="bg-blue-50 text-blue-600" />
+              {can('crm:pilgrim:read') && <QuickAction href="/pilgrims" label="Applicants" icon={Users} bg="bg-blue-50 text-blue-600" />}
               <QuickAction href="/visa-documents" label="Documents" icon={FolderOpen} bg="bg-yellow-50 text-yellow-800" />
               <QuickAction href="/visa-requests" label="Service Requests" icon={Send} bg="bg-purple-50 text-purple-600" />
-              <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-pink-50 text-pink-600" />
-              <QuickAction href="/finance" label="Finance" icon={Wallet} bg="bg-green-50 text-green-800" />
-              <QuickAction href="/reports" label="Reports" icon={BarChart3} bg="bg-blue-50 text-blue-700" />
+              {can('marketplace:listing:read') && <QuickAction href="/marketplace" label="Marketplace" icon={Store} bg="bg-pink-50 text-pink-600" />}
+              {canFinance && <QuickAction href="/finance" label="Finance" icon={Wallet} bg="bg-green-50 text-green-800" />}
+              {can('reporting:report:read') && <QuickAction href="/reports" label="Reports" icon={BarChart3} bg="bg-blue-50 text-blue-700" />}
               <QuickAction href="/social" label="Social Hub" icon={MessageSquare} bg="bg-saudi-50 text-saudi-700" />
               <QuickAction href="/connections" label="Connections" icon={Users} bg="bg-blue-50 text-blue-700" />
             </div>
