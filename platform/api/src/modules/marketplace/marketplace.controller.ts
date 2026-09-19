@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
-import { Public } from '../../common/decorators/public.decorator';
+import { Public, PublicWithOptionalUser } from '../../common/decorators/public.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { AnyAuthenticated } from '../../common/decorators/access.decorator';
 import type { Principal } from '../auth/principal';
@@ -96,7 +96,7 @@ export class MarketplaceController {
 
   // ── Inquiries ─────────────────────────────────────────────────────────────
   @Post('listings/:id/inquiries')
-  @Public()
+  @PublicWithOptionalUser()
   @Throttle({ default: { limit: 5, ttl: 10 * 60_000 } })
   @ApiOperation({ summary: 'Send an inquiry about a published listing' })
   async createInquiry(
