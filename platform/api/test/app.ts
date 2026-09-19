@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
+import { PrismaClient } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/bootstrap/configure-app';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -9,7 +10,14 @@ import { MailService } from '../src/modules/mail/mail.service';
 
 export interface TestContext {
   app: INestApplication;
-  prisma: PrismaService;
+  /**
+   * Owner connection for arranging fixtures and asserting stored state. It
+   * bypasses Row-Level Security; the API under test does not (it connects as the
+   * runtime role — see test/db-url.ts). Use `appPrisma` to query as the API does.
+   */
+  prisma: PrismaClient;
+  /** The API's own RLS-scoped client (queries outside a request see no protected rows). */
+  appPrisma: PrismaService;
   http: () => ReturnType<typeof request>;
   mails: { to: string; subject: string; text: string }[];
   close: () => Promise<void>;
@@ -35,12 +43,18 @@ export async function createTestApp(): Promise<TestContext> {
     return { delivered: true, driver: 'log' };
   };
 
+  const owner = new PrismaClient({ datasources: { db: { url: process.env.TEST_OWNER_DATABASE_URL } } });
+
   return {
     app,
-    prisma: app.get(PrismaService),
+    prisma: owner,
+    appPrisma: app.get(PrismaService),
     http: () => request(base),
     mails,
-    close: () => app.close(),
+    close: async () => {
+      await app.close();
+      await owner.$disconnect();
+    },
   };
 }
 

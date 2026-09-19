@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SystemScoped } from '../../prisma/db-context';
 import type { Principal } from '../auth/principal';
 import { displayName } from '../pilgrims/account-links/link-rules';
 import { TravelerLinksService } from './traveler-links.service';
@@ -12,6 +13,8 @@ const MAX_ROWS = 20;
  * actively linked to. Every query is pinned to the link's organization AND
  * pilgrim, and selects only the fields the presenter publishes.
  */
+// R05: system-scoped — the records live in the operator organization; every query
+// below is pinned to an ACTIVE link's organization and pilgrim.
 @Injectable()
 export class TravelerTripsService {
   constructor(
@@ -19,6 +22,7 @@ export class TravelerTripsService {
     private readonly links: TravelerLinksService,
   ) {}
 
+  @SystemScoped('travelers.linked-records')
   async tripsFor(principal: Principal): Promise<TravelerTripView[]> {
     const active = await this.links.activeLinks(principal);
     return Promise.all(

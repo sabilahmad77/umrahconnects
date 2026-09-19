@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { Payment, PaymentStatus, Prisma } from '@prisma/client';
 import { randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SystemScoped } from '../../prisma/db-context';
 import { AuditService } from '../audit/audit.service';
 import { adjustBookingPaid } from '../bookings/booking-money';
 import { requireId } from '../../common/tenant-scope';
@@ -975,6 +976,8 @@ export class PaymentsService {
    * balance. A new attempt is opened only when none is open; an attempt for a
    * different balance is cancelled at the provider first.
    */
+  // R05: the traveler pays a PROVIDER organization — payment rows belong to the provider's tenant.
+  @SystemScoped('payments.traveler-checkout')
   async createCheckout(
     payer: PayActor & { sub: string },
     listingBookingId: string,
@@ -1169,6 +1172,8 @@ export class PaymentsService {
   }
 
   /** The traveler's view of their own checkout; reconciles with the provider server-side. */
+  // R05: the payment belongs to the provider's tenant; pinned to payerUserId below.
+  @SystemScoped('payments.traveler-checkout')
   async checkoutStatus(payer: { sub: string }, paymentId: string) {
     const payment = await this.prisma.payment.findFirst({
       where: { id: requireId(paymentId, 'Payment'), payerUserId: payer.sub },
@@ -1185,6 +1190,8 @@ export class PaymentsService {
   }
 
   /** Sandbox only (never in production): completes a traveler checkout the way Stripe.js would. */
+  // R05: settles the provider's records for the traveler's own payment (payerUserId below).
+  @SystemScoped('payments.traveler-checkout')
   async completeSandboxCheckout(payer: { sub: string }, paymentId: string, scenario?: string) {
     if (this.isProduction) throw new NotFoundException('Not found');
     const payment = await this.prisma.payment.findFirst({
@@ -1206,6 +1213,8 @@ export class PaymentsService {
    * error, so the provider's retry is processed instead of being taken for a
    * duplicate; an event left unprocessed by a crash is taken over by a later retry.
    */
+  // R05: a signed provider event, not a principal, drives the change (signature checked first below).
+  @SystemScoped('payments.webhook')
   async handleWebhook(providerName: string, rawBody: string, signature?: string) {
     const provider = this.providers.get(String(providerName).toLowerCase());
     if (!provider || !provider.isConfigured())

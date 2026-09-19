@@ -1,6 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { TenantType } from '@prisma/client';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { PrismaClient, TenantType } from '@prisma/client';
 import { RbacService } from '../src/modules/rbac/rbac.service';
 import { RoleCode, COMMUNITY_TENANT_SLUG, PLATFORM_TENANT_SLUG } from '../src/modules/rbac/catalog';
 import { TestContext, api } from './app';
@@ -28,7 +27,7 @@ export interface World {
 
 let hash: string | undefined;
 
-async function tenant(prisma: PrismaService, slug: string, type: TenantType, status: 'ACTIVE' | 'PENDING_KYC' = 'ACTIVE') {
+async function tenant(prisma: PrismaClient, slug: string, type: TenantType, status: 'ACTIVE' | 'PENDING_KYC' = 'ACTIVE') {
   return prisma.tenant.upsert({
     where: { slug },
     create: { slug, name: slug, type, status, email: `${slug}@example.test`, country: 'SA' },
