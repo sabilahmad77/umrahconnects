@@ -154,25 +154,27 @@ export function ImageUploader({
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-1 p-1.5">
-                <div className="flex gap-1">
-                  <Button variant="quiet" className="px-2 py-1 text-xs" aria-label={`Move image ${i + 1} earlier`} disabled={i === 0} onClick={() => move(i, i - 1)}>
-                    <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                  <Button variant="quiet" className="px-2 py-1 text-xs" aria-label={`Move image ${i + 1} later`} disabled={i === value.length - 1} onClick={() => move(i, i + 1)}>
-                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  </Button>
-                </div>
-                <div className="flex gap-1">
-                  {i > 0 && (
-                    <Button variant="quiet" className="px-2 py-1 text-xs" onClick={() => move(i, 0)}>
-                      Make cover
+              <div className="space-y-1 p-1.5">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex gap-1">
+                    <Button variant="quiet" className="px-2 py-1 text-xs" aria-label={`Move image ${i + 1} earlier`} disabled={i === 0} onClick={() => move(i, i - 1)}>
+                      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
-                  )}
+                    <Button variant="quiet" className="px-2 py-1 text-xs" aria-label={`Move image ${i + 1} later`} disabled={i === value.length - 1} onClick={() => move(i, i + 1)}>
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                  </div>
                   <Button variant="quiet" className="px-2 py-1 text-xs text-red-700" aria-label={`Remove image ${i + 1}`} onClick={() => remove(url)}>
                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                   </Button>
                 </div>
+                {i === 0 ? (
+                  <p className="px-2 py-1.5 text-xs text-gray-600">Shown first on the listing</p>
+                ) : (
+                  <Button variant="quiet" className="w-full px-2 py-1 text-xs" onClick={() => move(i, 0)}>
+                    Make cover
+                  </Button>
+                )}
               </div>
             </li>
           ))}
