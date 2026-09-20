@@ -11,7 +11,8 @@ and a check in the commit step re-verifies it.
 | `axe/` | `SUMMARY.md` — the before/after audit with the WCAG mapping; `axe-before.json`, `axe-after.json` — every violation with rule, criterion, impact, route, state and node; the console logs of both sweeps |
 | `keyboard/` | `CHECKLIST.md` — every keyboard, focus, error-announcement and authentication check with its result; `keyboard-before.json` / `keyboard-after.json`; `nontext-after.json` — measured non-text contrast and target sizes |
 | `orca/` | `ATTEMPT_LOG.md` — what the screen-reader session was, what had to be solved to get Orca speaking, what it said and what it cannot claim; `run-before/` and `run-after/` — the driver log, the step-by-step transcript and Orca's own speech output |
-| `responsive/` | `RESULTS.md` — the six widths for every role, reflow at 320 px, text at 200 %, the landing hero; `responsive.json`; `screenshots/` |
+| `responsive/` | `RESULTS.md` — the six widths for every role after the fixes, reflow at 320 px, text at 200 %, the landing hero; `RESULTS-before.md` — the run against the candidate build that found the defects; both runs' raw JSON and logs; `screenshots/` |
+| `DEFECTS-OBSERVED.md` | Things found while auditing that belong to someone else: the candidate stack serving chunk 400s, and two assistive-technology behaviours worth knowing about |
 | `tools/` | The scripts that produced all of it, so any of it can be re-run: `audit.cjs` (axe sweep), `keyboard.cjs`, `nontext.cjs`, `responsive.cjs`, `contrast-scan.cjs` (static colour-pair scan), `lib.cjs`, and `orca-lab/` (the Docker screen-reader lab) |
 
 ## Re-running

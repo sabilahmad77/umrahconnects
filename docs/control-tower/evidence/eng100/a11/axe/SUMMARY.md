@@ -25,6 +25,24 @@ Coverage: every route under `apps/web/app` for every role that can open it, plus
 |---|---|---|---|---|---|---|
 | `scrollable-region-focusable` | serious | 2.1.1 Keyboard, 2.1.3 Keyboard (no exception) | 1 | 1 | operatorStaffA /reports [page] | the workspace main region takes tabindex=0 while it scrolls and holds nothing focusable (committed after this state was measured; re-checked separately in axe-after-reports.json) |
 
+### The re-check
+
+The tab-stop fix for that one node was committed after the sweep had already
+passed those pages, so the report pages were re-checked on their own
+(`axe-after-reports.json`, log `axe-after-reports.log`):
+
+| Identity | Route | WCAG violations | best-practice |
+|---|---|---|---|
+| operatorStaffA | /reports | 0 | 0 |
+| hotelA | /reports | 0 | 0 |
+| transportA | /reports | 0 | 0 |
+| visaA | /reports | 0 | 0 |
+
+**Final position: zero violations of the five WCAG tag sets across every audited
+state.** This is an evaluation result, not a certification: axe-core tests what
+can be tested automatically (roughly a third of the success criteria), which is
+why the keyboard, screen-reader and responsive records sit beside it.
+
 ## Best-practice rules (not WCAG failures)
 
 | Rule | Impact | before nodes | after nodes | Note |
