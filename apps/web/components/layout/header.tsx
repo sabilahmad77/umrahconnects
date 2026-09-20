@@ -43,7 +43,7 @@ export function Header() {
           <HelpCircle className="h-5 w-5" />
         </Link>
         {notifications && <NotificationBell />}
-        <Dropdown.Root>
+        <Dropdown.Root modal={false}>
           <Dropdown.Trigger asChild>
             <Button variant="quiet" aria-label="Account menu" className="px-2 sm:px-4">
               <Avatar name={name} />

@@ -53,7 +53,7 @@ export function AdminTenantDetail({ id }: { id: string }) {
                 {humanizeStatus(t.type)}
               </span>
               {t.deletedAt && (
-                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-50 text-red-600">Archived</span>
+                <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-50 text-red-700">Archived</span>
               )}
             </div>
             <h1 className="text-xl font-bold text-gray-900 mt-2">{t.name}</h1>

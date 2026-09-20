@@ -140,7 +140,7 @@ export function AdminListingsView() {
                           tone: 'danger',
                           onConfirm: () => run(() => remove.mutateAsync(l.id), `“${l.name}” was removed`),
                         })}
-                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700"
                       >
                         <Trash2 className="h-3 w-3" /> Remove
                       </Button>

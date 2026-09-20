@@ -38,6 +38,7 @@ import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog'
 import { PaymentGatewayPanel } from './payment-gateway-panel';
 import { RefundDialog, isGatewayPayment, refundableCents } from './refund-dialog';
 import { amountProblem, centsToInput, formatAmount, parseMajorToCents } from './money';
+import { tablistKeys } from '@/components/ui/tablist';
 
 // Mirrors INVOICE_TRANSITIONS in the finance service. PAID and PARTIALLY_PAID are
 // derived from recorded payments and are refused as manual moves, so they are
@@ -196,7 +197,7 @@ export function InvoiceDetail({ id }: { id: string }) {
       )}
 
       <div
-        role="tablist"
+        role="tablist" {...tablistKeys()}
         aria-label="Invoice sections"
         className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5"
       >

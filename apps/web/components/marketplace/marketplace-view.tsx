@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { BadgeCheck, Building2, FileText, ShoppingBag, Star, Store } from 'lucide-react';
 import { Button, LoadingState, QueryFailure } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import { useMarketplaceVendors } from '@/hooks/use-marketplace';
 import { cn } from '@/lib/utils';
@@ -102,7 +103,7 @@ export function MarketplaceView() {
         )}
       </div>
 
-      <div role="tablist" aria-label="Marketplace sections" className="flex w-fit flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
+      <div role="tablist" {...tablistKeys()} aria-label="Marketplace sections" className="flex w-fit flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
         {visible.map((t) => (
           <button
             key={t.key}

@@ -13,14 +13,35 @@ import { cn } from '@/lib/utils';
 export const controlClass = 'uc-control';
 export const Button = React.forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; busy?: boolean }>(function Button({ variant = 'primary', busy, className, children, disabled, type = 'button', ...props }, ref) {
   const iconOnly = React.isValidElement(children) && typeof children.type !== 'string';
-  return <button ref={ref} type={type} disabled={disabled || busy} aria-busy={busy || undefined} className={cn('uc-button', `uc-button-${variant}`, iconOnly && 'px-3', className)} {...props}>{busy && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}{children}</button>;
+  // A busy button is disabled so the action cannot be submitted twice. The
+  // browser then moves focus to the document (HTML focus fixup), which leaves
+  // a keyboard or screen-reader user nowhere: WCAG 2.4.3. Remember that this
+  // button had focus and take it back when the action finishes (unless the
+  // page moved focus somewhere else meanwhile).
+  const node = React.useRef<HTMLButtonElement | null>(null);
+  const hadFocus = React.useRef(false);
+  const wasBusy = React.useRef(false);
+  if (busy && !wasBusy.current && typeof document !== 'undefined' && node.current && document.activeElement === node.current) hadFocus.current = true;
+  wasBusy.current = !!busy;
+  React.useEffect(() => {
+    if (busy || !hadFocus.current) return;
+    hadFocus.current = false;
+    const active = typeof document !== 'undefined' ? document.activeElement : null;
+    if (node.current && (!active || active === document.body)) node.current.focus();
+  }, [busy]);
+  const assign = (element: HTMLButtonElement | null) => {
+    node.current = element;
+    if (typeof ref === 'function') ref(element);
+    else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = element;
+  };
+  return <button ref={assign} type={type} disabled={disabled || busy} aria-busy={busy || undefined} className={cn('uc-button', `uc-button-${variant}`, iconOnly && 'px-3', className)} {...props}>{busy && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}{children}</button>;
 });
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input({ className, ...props }, ref) { return <input ref={ref} className={cn(controlClass, className)} {...props} />; });
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(function Textarea({ className, ...props }, ref) { return <textarea ref={ref} className={cn(controlClass, 'min-h-28', className)} {...props} />; });
 export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(function Select({ className, ...props }, ref) { return <select ref={ref} className={cn(controlClass, className)} {...props} />; });
 export function Checkbox(props: React.InputHTMLAttributes<HTMLInputElement>) { return <input {...props} type="checkbox" className={cn('h-5 w-5 accent-brand-500', props.className)} />; }
 export function Radio(props: React.InputHTMLAttributes<HTMLInputElement>) { return <input {...props} type="radio" className={cn('h-5 w-5 accent-brand-500', props.className)} />; }
-export function Switch({ label, ...props }: React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root> & { label: string }) { return <label className="flex items-center justify-between gap-4"><span>{label}</span><SwitchPrimitive.Root {...props} className="relative h-6 w-11 rounded-full bg-gray-300 data-[state=checked]:bg-brand-500 disabled:opacity-50"><SwitchPrimitive.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white transition-transform data-[state=checked]:translate-x-5" /></SwitchPrimitive.Root></label>; }
+export function Switch({ label, ...props }: React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root> & { label: string }) { return <label className="flex items-center justify-between gap-4"><span>{label}</span><SwitchPrimitive.Root {...props} className="relative h-6 w-11 rounded-full bg-gray-500 data-[state=checked]:bg-brand-500 disabled:opacity-50"><SwitchPrimitive.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white transition-transform data-[state=checked]:translate-x-5" /></SwitchPrimitive.Root></label>; }
 export function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'success' | 'warning' | 'danger' }) { return <span className={cn('inline-flex rounded-md border px-2 py-1 text-xs font-medium', { neutral: 'border-gray-200 bg-gray-50 text-gray-700', success: 'border-brand-200 bg-brand-50 text-brand-700', warning: 'border-amber-200 bg-amber-50 text-amber-900', danger: 'border-red-200 bg-red-50 text-red-700' }[tone])}>{children}</span>; }
 export const StatusDisplay = Badge;
 export function Avatar({ name, url }: { name: string; url?: string }) {

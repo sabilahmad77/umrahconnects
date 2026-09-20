@@ -45,6 +45,7 @@ import {
   Textarea,
 } from '@/components/ui/system';
 import { formatAmount } from '@/components/finance/money';
+import { tablistKeys } from '@/components/ui/tablist';
 
 type TabKey = 'overview' | 'pilgrims' | 'assignments' | 'payment' | 'notes';
 
@@ -116,7 +117,7 @@ export function BookingDetail({ id }: { id: string }) {
       </div>
 
       <div
-        role="tablist"
+        role="tablist" {...tablistKeys()}
         aria-label="Booking sections"
         className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5"
       >

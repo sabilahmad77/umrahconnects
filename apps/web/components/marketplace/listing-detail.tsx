@@ -8,6 +8,7 @@ import {
   ArrowLeft, BadgeCheck, CalendarCheck2, Edit3, FileText, ListChecks, MapPin, MessageSquare, Send, Store,
 } from 'lucide-react';
 import { Badge, Button, Input, LoadingState, ModalSurface, QueryFailure, Select, Textarea } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { bookingTransitions } from '@/lib/booking-transitions';
 import { bookingEstimateCents } from '@/lib/booking-estimate';
@@ -515,7 +516,7 @@ function OwnerListingView({ listing, canManage, refetch }: { listing: any; canMa
         </p>
         {canManage && <div className="ml-auto"><ListingStatusActions listing={listing} onDone={refetch} size="md" /></div>}
       </div>
-      <div role="tablist" aria-label="Listing sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5">
+      <div role="tablist" {...tablistKeys()} aria-label="Listing sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5">
         {tabs.filter((t) => t.show).map((t) => (
           <button
             key={t.key}

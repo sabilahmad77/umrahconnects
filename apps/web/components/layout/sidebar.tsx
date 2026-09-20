@@ -82,7 +82,7 @@ export function Sidebar({ mobile = false }: { mobile?: boolean }) {
       <div className={cn('flex items-center gap-3 border-b border-white/10 px-4 py-4', collapsed && 'justify-center px-3')}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-mark-light.png" alt="Umrah Connect" className="h-6 w-6 object-contain" />
+          <img src="/logo-mark-light.png" alt="" className="h-6 w-6 object-contain" />
         </div>
         {!collapsed && (
           <div className="min-w-0">

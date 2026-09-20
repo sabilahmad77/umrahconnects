@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/lib/api-error';
 import { Alert, Button, Checkbox, Input, LoadingState, ModalSurface, QueryFailure, Select, Textarea } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import { usePilgrims } from '@/hooks/use-api';
@@ -62,7 +63,7 @@ export function HotelDetail({ id }: { id: string }) {
         <div className="flex items-center gap-2">
           {h.isShared && <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-gold-50 text-gold-800"><Globe2 className="h-3 w-3" /> Shared marketplace hotel</span>}
           {h.status !== 'ACTIVE' && <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700">{title(h.status)}</span>}
-          <span className="flex items-center gap-0.5" aria-label={h.starRating ? `${h.starRating} stars` : 'Not rated'}>
+          <span role="img" className="flex items-center gap-0.5" aria-label={h.starRating ? `${h.starRating} stars` : 'Not rated'}>
             {Array.from({ length: h.starRating ?? 0 }).map((_, i) => <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />)}
           </span>
         </div>
@@ -74,7 +75,7 @@ export function HotelDetail({ id }: { id: string }) {
         <ReadOnlyNotice>You can view this hotel. Changing rooms, room types or the hotel needs the hotel management permission.</ReadOnlyNotice>
       ) : null}
 
-      <div role="tablist" aria-label="Hotel sections" className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
+      <div role="tablist" {...tablistKeys()} aria-label="Hotel sections" className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {tabs.map((t) => (
           <Button variant="quiet" type="button" role="tab" aria-selected={tab === t} key={t} onClick={() => setTab(t)}
             className={cn('px-3 py-2 rounded-xl text-sm font-medium', tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50')}>

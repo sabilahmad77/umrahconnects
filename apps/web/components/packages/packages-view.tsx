@@ -12,7 +12,7 @@ import { centsToMajor, formatAmount, parseMajorToCents } from '@/components/fina
 
 const TYPES = ['UMRAH', 'HAJJ', 'ZIYARAH', 'CUSTOM'];
 const TYPE_TINT: Record<string, string> = {
-  UMRAH: 'bg-brand-50 text-brand-700', HAJJ: 'bg-gold-50 text-gold-700',
+  UMRAH: 'bg-brand-50 text-brand-700', HAJJ: 'bg-gold-50 text-gold-800',
   ZIYARAH: 'bg-blue-50 text-blue-700', CUSTOM: 'bg-gray-100 text-gray-600',
 };
 const fmt = (cents?: number, currency = 'SAR') => (cents != null ? formatAmount(cents, currency) : '—');

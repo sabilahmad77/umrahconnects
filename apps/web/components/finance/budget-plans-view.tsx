@@ -118,7 +118,7 @@ export function BudgetPlansView() {
                       className={cn('text-xs border rounded-lg px-2 py-1',
                         p.status === 'ACCEPTED' || p.status === 'COMPLETED' ? 'border-green-200 bg-green-50 text-green-700' :
                         p.status === 'PROPOSED' ? 'border-blue-200 bg-blue-50 text-blue-700' :
-                        p.status === 'CANCELLED' ? 'border-red-200 bg-red-50 text-red-600' :
+                        p.status === 'CANCELLED' ? 'border-red-200 bg-red-50 text-red-700' :
                         'border-gray-200 bg-white text-gray-600')}
                     >
                       {[p.status, ...(PLAN_TRANSITIONS[p.status] ?? [])].map((s) => <option key={s} value={s}>{s}</option>)}

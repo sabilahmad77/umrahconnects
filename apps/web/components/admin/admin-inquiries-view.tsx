@@ -18,7 +18,7 @@ const TYPE_META: Record<string, { label: string; Icon: any }> = {
   SUPPORT: { label: 'Support', Icon: LifeBuoy },
 };
 const STATUS_TINT: Record<string, string> = {
-  NEW: 'bg-brand-50 text-brand-700', IN_REVIEW: 'bg-gold-50 text-gold-700',
+  NEW: 'bg-brand-50 text-brand-700', IN_REVIEW: 'bg-gold-50 text-gold-800',
   RESOLVED: 'bg-gray-100 text-gray-600', ARCHIVED: 'bg-gray-100 text-gray-600',
 };
 

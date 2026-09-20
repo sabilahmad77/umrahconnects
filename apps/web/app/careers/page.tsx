@@ -27,7 +27,7 @@ export default function CareersPage() {
       </section>
       <section className="max-w-2xl mx-auto px-6 lg:px-8 pb-16">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-2 text-[12px] font-semibold text-gold-700 bg-gold-50 px-3 py-1.5 rounded-full">
+          <div className="inline-flex items-center gap-2 text-[12px] font-semibold text-gold-800 bg-gold-50 px-3 py-1.5 rounded-full">
             <Sparkles className="h-3.5 w-3.5" /> Open application
           </div>
           <h2 className="font-heading font-bold text-2xl text-gray-900 mt-3">Register your interest</h2>

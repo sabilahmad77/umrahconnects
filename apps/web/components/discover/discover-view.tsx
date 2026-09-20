@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MapPin, MessageSquare, Search, TrendingUp, UserPlus, Users, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input, QueryFailure } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useCapabilities } from '@/hooks/use-capabilities';
@@ -51,7 +52,7 @@ export function DiscoverView() {
             />
           </div>
         )}
-        <div role="tablist" aria-label="Discover" className="flex gap-1.5">
+        <div role="tablist" {...tablistKeys()} aria-label="Discover" className="flex gap-1.5">
           {(['people', 'groups', 'trending'] as TabKey[]).map((t) => (
             <button
               type="button"

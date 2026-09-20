@@ -23,7 +23,7 @@ export default function IntegrationsPage() {
             <div key={t} className="bg-white rounded-2xl border border-sandstone/60 p-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center"><Icon className="h-5 w-5 text-brand-600" /></div>
-                <span className={`text-[10.5px] font-bold px-2 py-1 rounded-full ${status === 'Available' ? 'bg-brand-50 text-brand-700' : 'bg-gold-50 text-gold-700'}`}>{status}</span>
+                <span className={`text-[10.5px] font-bold px-2 py-1 rounded-full ${status === 'Available' ? 'bg-brand-50 text-brand-700' : 'bg-gold-50 text-gold-800'}`}>{status}</span>
               </div>
               <p className="font-heading font-bold text-gray-900">{t}</p>
               <p className="text-[13px] text-gray-600 mt-1.5 leading-relaxed">{d}</p>

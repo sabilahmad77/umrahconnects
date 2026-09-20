@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, CheckCheck, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, EmptyState, LoadingState, QueryFailure } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import {
@@ -61,7 +62,7 @@ export function NotificationsView() {
         )}
       </div>
 
-      <div role="tablist" aria-label="Filter notifications" className="flex gap-1.5">
+      <div role="tablist" {...tablistKeys()} aria-label="Filter notifications" className="flex gap-1.5">
         {[
           { key: false, label: 'All' },
           { key: true, label: 'Unread' },

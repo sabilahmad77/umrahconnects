@@ -15,7 +15,7 @@ export function Brandmark({ light = false }: { light?: boolean }) {
     <Link href="/" className="flex items-center gap-2.5">
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-white/10' : 'bg-brand-500'} shadow-sm`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-mark-light.png" alt="Umrah Connect" className="w-6 h-6 object-contain" />
+        <img src="/logo-mark-light.png" alt="" className="w-6 h-6 object-contain" />
       </div>
       <div className="leading-none">
         <p className={`font-heading font-bold text-[15px] ${light ? 'text-white' : 'text-brand-600'}`}>Umrah Connect</p>

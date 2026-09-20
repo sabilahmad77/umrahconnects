@@ -29,7 +29,7 @@ const STATUS: Record<string, { label: string; color: string; dot: string }> = {
   VISA_PROCESSING: { label: 'Visa processing', color: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-500' },
   TRAVELING:       { label: 'Traveling',       color: 'bg-sky-100 text-sky-700',       dot: 'bg-sky-500' },
   COMPLETED:       { label: 'Completed',       color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
-  CANCELLED:       { label: 'Cancelled',       color: 'bg-red-100 text-red-600',       dot: 'bg-red-500' },
+  CANCELLED:       { label: 'Cancelled',       color: 'bg-red-100 text-red-700',       dot: 'bg-red-500' },
   REFUNDED:        { label: 'Refunded',        color: 'bg-rose-100 text-rose-700',     dot: 'bg-rose-500' },
 };
 

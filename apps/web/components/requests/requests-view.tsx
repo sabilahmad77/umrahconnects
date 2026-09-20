@@ -7,6 +7,7 @@ import {
   BadgeCheck, Building2, Bus, CalendarDays, ChefHat, Check, FileCheck2, Inbox, MapPin, Package, Plus, Send, Sparkles, Users, XCircle,
 } from 'lucide-react';
 import { Button, Input, LoadingState, ModalSurface, QueryFailure, Select, Textarea } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import {
@@ -149,7 +150,7 @@ function MyRequestCard({ request: r }: { request: any }) {
                     </Button>
                   </div>
                 ) : (
-                  <span className={cn('shrink-0 rounded-full px-2 py-1 text-xs font-bold', o.status === 'ACCEPTED' ? 'bg-saudi-50 text-saudi-700' : o.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600')}>
+                  <span className={cn('shrink-0 rounded-full px-2 py-1 text-xs font-bold', o.status === 'ACCEPTED' ? 'bg-saudi-50 text-saudi-700' : o.status === 'REJECTED' ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600')}>
                     {o.status}
                   </span>
                 )}
@@ -259,7 +260,7 @@ function SentOffers() {
             <Link href={`/requests/${o.requestId}`} className="font-semibold text-gray-900 hover:text-brand-600">{o.request?.title ?? o.title}</Link>
             <p className="text-xs text-gray-600">{o.title} · {formatMoney(o.priceCents, o.currency)}</p>
           </div>
-          <span className={cn('rounded-full px-2 py-1 text-xs font-bold', o.status === 'ACCEPTED' ? 'bg-saudi-50 text-saudi-700' : o.status === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-700')}>
+          <span className={cn('rounded-full px-2 py-1 text-xs font-bold', o.status === 'ACCEPTED' ? 'bg-saudi-50 text-saudi-700' : o.status === 'REJECTED' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700')}>
             {o.status}
           </span>
         </li>
@@ -408,7 +409,7 @@ export function RequestsView() {
         </Button>
       </div>
       {isProvider && (
-        <div role="tablist" aria-label="Request sections" className="flex w-fit flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
+        <div role="tablist" {...tablistKeys()} aria-label="Request sections" className="flex w-fit flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
           {tabs.map((t) => (
             <button
               key={t.key}

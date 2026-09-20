@@ -71,7 +71,7 @@ export function PilgrimDetail({ id }: { id: string }) {
         <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
           p.status === 'CONFIRMED' || p.status === 'IN_KSA' ? 'bg-green-50 text-green-700' :
           p.status === 'PROSPECT' || p.status === 'LEAD' ? 'bg-blue-50 text-blue-700' :
-          p.status === 'CANCELLED' ? 'bg-red-50 text-red-600' :
+          p.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
           'bg-gray-100 text-gray-600',
         )}>{p.status?.replace(/_/g, ' ')}</span>
         <Button busy={remove.isPending} variant="quiet" type="button"
@@ -85,7 +85,7 @@ export function PilgrimDetail({ id }: { id: string }) {
               toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
-          className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-xl"
+          className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded-xl"
         >
           Archive
         </Button>

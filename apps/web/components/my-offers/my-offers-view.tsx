@@ -76,7 +76,7 @@ export function MyOffersView() {
                         'text-xs font-medium px-2 py-1 rounded-full',
                         o.status === 'PENDING' ? 'bg-blue-50 text-blue-700' :
                         o.status === 'ACCEPTED' ? 'bg-green-50 text-green-700' :
-                        o.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
+                        o.status === 'REJECTED' ? 'bg-red-50 text-red-700' :
                         'bg-gray-100 text-gray-600',
                       )}>{o.status}</span>
                     </div>
@@ -112,7 +112,7 @@ export function MyOffersView() {
                                   toast.error(apiErrorMessage(e, 'Failed'));
                                 }
                               }}
-                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                              className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-700"
                             >
                               <XCircle className="h-3 w-3" /> Reject
                             </Button>

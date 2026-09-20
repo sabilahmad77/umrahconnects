@@ -7,6 +7,7 @@ import { ArrowLeft, Bus, Pencil, Trash2, UserPlus, ShieldCheck, ListChecks } fro
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/lib/api-error';
 import { Alert, Button, Checkbox, Input, LoadingState, QueryFailure, Select } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import {
@@ -64,7 +65,7 @@ export function VehicleDetail({ id }: { id: string }) {
       </div>
       {ready && !canManage && <ReadOnlyNotice>You can view this vehicle. Changes need the fleet management permission.</ReadOnlyNotice>}
 
-      <div role="tablist" aria-label="Vehicle sections" className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
+      <div role="tablist" {...tablistKeys()} aria-label="Vehicle sections" className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {(Object.keys(TAB_LABEL) as TabKey[]).map((t) => (
           <Button variant="quiet" type="button" role="tab" aria-selected={tab === t} key={t} onClick={() => setTab(t)}
             className={cn('px-3 py-2 rounded-xl text-sm font-medium', tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50')}>{TAB_LABEL[t]}</Button>

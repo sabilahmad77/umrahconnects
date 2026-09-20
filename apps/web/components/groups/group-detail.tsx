@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, Button, Input, QueryFailure, Select, Textarea } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useCapabilities } from '@/hooks/use-capabilities';
@@ -97,7 +98,7 @@ export function GroupDetail({ id }: { id: string }) {
         </div>
       </div>
 
-      <div role="tablist" aria-label="Group sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5">
+      <div role="tablist" {...tablistKeys()} aria-label="Group sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5">
         {tabs.map((t) => (
           <button
             type="button"
