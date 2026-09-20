@@ -1,0 +1,86 @@
+{
+  "at": "2026-09-20T18:48:28.862Z",
+  "web": "http://localhost:3421",
+  "results": [
+    {
+      "name": "admin listing shows TAKEN DOWN with the reason",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "admin offers Restore for a taken-down listing",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "seller list shows the takedown and reason",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "seller list offers no publish action for it",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "seller listing page explains the takedown",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "seller listing page offers no status buttons",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "public listing page does not show a taken-down listing",
+      "pass": true,
+      "detail": "Umrah Connect  CONNECTED JOURNEYS  CONNECTED JOURNEYS  Your journey. Your workspace.  Sign in to continue your bookings,"
+    },
+    {
+      "name": "platform restore lifts the takedown",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "hotel bookings: no payment column or badge",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "hotel bookings: honest note about Finance invoices",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "hotel dashboard: booked value replaces the dead paid figures",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "trips: no payment column or badge",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "trips: honest note about Finance invoices",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "transport dashboard: booked value replaces the dead paid figures",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "visa dashboard: booked fees replace the dead paid figures",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "visa detail: no payment badge",
+      "pass": true,
+      "detail": "Skip to content  Umrah Connect  CONNECTED JOURNEYS  Visa Agency  MY VISA CRM  Da"
+    }
+  ]
+}
