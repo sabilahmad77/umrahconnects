@@ -13,7 +13,7 @@ import { RbacService } from '../rbac/rbac.service';
 import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
 import { findOwned } from '../../common/tenant-scope';
 import type { Principal } from '../auth/principal';
-import { listingCapacity, PUBLIC_LISTING } from '../marketplace/listing-rules';
+import { assertNotPlatformAccount, listingCapacity, PUBLIC_LISTING } from '../marketplace/listing-rules';
 import { MAX_PARTY_SIZE } from '../marketplace/dto/marketplace.dto';
 import { checkTrip, recountSeats, withoutUntrackedPayment } from '../transport/transport-workflow';
 import { ConvertOfferDto, CreateMarketplaceRequestDto, CreateOfferDto } from './dto/marketplace-requests.dto';
@@ -52,7 +52,9 @@ export class MarketplaceRequestsService {
   ) {}
 
   // ─── Traveler-side: create a request ────────────────────────────────────
-  async create(tenantId: string, travelerUserId: string, dto: CreateMarketplaceRequestDto) {
+  async create(tenantId: string, author: Principal, dto: CreateMarketplaceRequestDto) {
+    assertNotPlatformAccount(author);
+    const travelerUserId = author.sub;
     // Accept either `serviceType` (Prisma field) or `category` (legacy/UI form field)
     const serviceType = dto.serviceType ?? dto.category;
     if (!serviceType) {

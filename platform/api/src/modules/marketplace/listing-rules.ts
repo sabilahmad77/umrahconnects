@@ -60,6 +60,19 @@ export function assertOwnerMayChangeStatus(listing: { moderationStatus?: string 
   }
 }
 
+/**
+ * D-005: a PLATFORM account administers the platform and never acts as a customer or a
+ * seller. Its capabilities already exclude every tenant capability, so this is defence in
+ * depth with a message that explains the refusal instead of a bare 403.
+ */
+export function assertNotPlatformAccount(principal: { tenantType?: string } | undefined) {
+  if (principal?.tenantType === 'PLATFORM') {
+    throw new ForbiddenException(
+      'A platform administration account cannot act as a customer or a seller on the marketplace.',
+    );
+  }
+}
+
 /** A listing's capacity (people per booking) from its category details, or null when it sets none. */
 export function listingCapacity(attributes: unknown): number | null {
   if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) return null;

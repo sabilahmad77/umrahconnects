@@ -15,8 +15,8 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { Public, PublicWithOptionalUser } from '../../common/decorators/public.decorator';
+import { assertNotPlatformAccount } from './listing-rules';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
-import { AnyAuthenticated } from '../../common/decorators/access.decorator';
 import type { Principal } from '../auth/principal';
 import { MarketplaceService } from './marketplace.service';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -136,13 +136,14 @@ export class MarketplaceController {
 
   // ── Bookings ──────────────────────────────────────────────────────────────
   @Post('listings/:id/bookings')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   @ApiOperation({ summary: 'Create booking against a listing (the caller is the customer)' })
   async createBooking(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: Principal,
     @Body() body: CreateListingBookingDto,
   ) {
+    assertNotPlatformAccount(user);
     return { success: true, data: await this.marketplaceService.createBooking(id, user.sub, body) };
   }
 
@@ -162,14 +163,14 @@ export class MarketplaceController {
   }
 
   @Get('bookings/mine')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   @ApiOperation({ summary: 'List bookings I placed as a customer/traveler' })
   async listMyTravelerBookings(@CurrentUser() user: Principal) {
     return { success: true, data: await this.marketplaceService.listBookings({ userId: user.sub }) };
   }
 
   @Post('bookings/:id/cancel')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Customer cancels their own pending, unpaid booking' })
   async cancelMyBooking(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
