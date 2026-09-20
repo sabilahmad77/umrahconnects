@@ -148,6 +148,12 @@
      draws the brand outline (inset, so it never overlaps the neighbouring item). */
   .uc-menu-item:focus-visible { outline: 2px solid #357A6E; outline-offset: -2px; }
   .skip-link { @apply fixed left-4 top-3 z-[100] -translate-y-24 rounded-lg bg-brand-600 px-4 py-3 text-white focus:translate-y-0; }
+  /* W30 / 1.4.10: a wide table scrolls inside its own region, but the boxes that
+     are absolutely positioned inside it — every .sr-only label, including the
+     ones inside action buttons — are laid out at the table's full width. Without
+     a positioned scroller their containing block is the page, so they push the
+     whole page sideways instead of being clipped with the table. */
+  .overflow-x-auto:has(table) { position: relative; }
   .workspace-main table { @apply text-sm; }
   .workspace-main th { @apply whitespace-nowrap px-4 py-3 text-xs font-semibold text-gray-600; }
   .workspace-main td { @apply px-4 py-3; }
