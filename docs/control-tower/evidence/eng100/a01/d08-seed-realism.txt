@@ -1,0 +1,16 @@
+== D08 (coordinator re-verification): every seed run into a FRESH database, then consistency checked
+database: uc_a01_seedcheck (created empty, migrations applied, seed.ts + seed-modules.ts + seed-marketplace.ts + sync-rbac.ts + seed-qa-identities.ts, all exit 0)
+
+organizations seeded: 17
+QA fixture organizations marked engineering-100-local-qa: 8
+accounts seeded: 18
+QA fixture accounts (@qa.umrahconnect.test): 15
+travellers / bookings / hotels / rooms / vehicles / listings / invoices / visa cases: 23 / 6 / 6 / 29 / 8 / 17 / 8 / 14
+BOOKED travellers without a booking (must be 0): 0
+bookings with no traveller attached (must be 0): 0
+hotels without rooms (must be 0): 0
+visa decisions contradicting the traveller status (must be 0): 0
+lorem/placeholder text in a customer-facing listing name (must be 0): 0
+
+Note: the long-lived candidate database also holds records created by A10 browser QA and A12 probes,
+so consistency of the SEEDS is verified here on a database seeded from empty.

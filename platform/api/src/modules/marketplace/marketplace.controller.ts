@@ -62,10 +62,12 @@ export class MarketplaceController {
   }
 
   @Get('listings/:id')
-  @Public()
-  @ApiOperation({ summary: 'Published listing detail' })
-  async findOneListing(@Param('id', ParseUUIDPipe) id: string) {
-    return { success: true, data: await this.marketplaceService.findPublicListing(id) };
+  @PublicWithOptionalUser()
+  @ApiOperation({
+    summary: 'Listing detail: the seller view (any status, `isOwner: true`) for the owning organization, the published listing for everyone else',
+  })
+  async findOneListing(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user?: Principal) {
+    return { success: true, data: await this.marketplaceService.listingDetail(id, user?.tenantId) };
   }
 
   @Post('listings')

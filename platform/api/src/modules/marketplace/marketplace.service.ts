@@ -257,6 +257,33 @@ export class MarketplaceService {
     return toPublicListing(listing);
   }
 
+  /**
+   * The listing detail page, for whoever is looking (A12-5, eng100-fx3).
+   *
+   * The seller view used to live behind GET /listings/mine/:id, which answers 404
+   * to everyone else. The page could not know in advance whether it was the owner,
+   * so it asked — and every HOTEL_MANAGER, TRANSPORT_MANAGER or VISA_OFFICER
+   * (they all hold marketplace:listing:manage) got a 404 and a console error on
+   * every listing they do not own. Ownership is the server's to decide, so this
+   * one route answers it: the owning organization gets its own row in any status
+   * with `isOwner: true`, everyone else the published listing with `isOwner: false`,
+   * and nothing 404s as part of a normal page load.
+   */
+  async listingDetail(id: string, tenantId?: string | null) {
+    const listingId = requireId(id, 'Listing');
+    if (tenantId) {
+      const owned = await this.prisma.listing.findFirst({
+        where: { id: listingId, vendor: { tenantId } },
+        include: {
+          vendor: { select: PUBLIC_VENDOR_SELECT },
+          _count: { select: { inquiries: true, bookings: true, quotes: true } },
+        },
+      });
+      if (owned) return { ...toOwnerListing(owned), isOwner: true };
+    }
+    return { ...(await this.findPublicListing(listingId)), isOwner: false };
+  }
+
   // ── Listings: the seller's own ────────────────────────────────────────────────
 
   async myListings(tenantId: string, query: MyListingsQueryDto) {

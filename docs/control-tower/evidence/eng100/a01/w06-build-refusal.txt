@@ -1,0 +1,4 @@
+== W06: production web build must refuse without API_PROXY_ORIGIN
+$ (no API_PROXY_ORIGIN in env or .env files) NODE_ENV=production npx next build
+Error: API_PROXY_ORIGIN is required for a production build. Set it to the API origin (for example https://api.umrahconnect.io) in the deployment environment.
+exit=1 (non-zero = refused, as required)

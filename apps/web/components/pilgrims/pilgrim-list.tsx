@@ -14,6 +14,7 @@ import {
   usePilgrims, usePilgrimStats, useCreatePilgrim, useUpdatePilgrim, useDeletePilgrim,
 } from '@/hooks/use-api';
 import { cn } from '@/lib/utils';
+import { useCapabilities } from '@/hooks/use-capabilities';
 import { PILGRIM_STATUSES } from '@/lib/statuses';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string; icon: any }> = {
@@ -38,6 +39,10 @@ const FLAG: Record<string, string> = {
 const FILTERS = ['ALL', 'DOCUMENTS_PENDING', 'VISA_PENDING', 'VISA_APPROVED', 'TRAVELING', 'IN_KINGDOM', 'RETURNED'];
 
 export function PilgrimList() {
+  // Archiving is a soft delete: the API requires crm:pilgrim:delete, which operator
+  // staff do not hold, so the action is not offered to them (A10 DEF-005).
+  const { can } = useCapabilities();
+  const canArchive = can('crm:pilgrim:delete');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [page, setPage] = useState(1);
@@ -247,7 +252,7 @@ export function PilgrimList() {
                           >
                             <Edit className="h-3.5 w-3.5 text-gray-600" />
                           </Button>
-                          <Button busy={deletePilgrim.isPending} variant="quiet" type="button"
+                          {canArchive && <Button busy={deletePilgrim.isPending} variant="quiet" type="button"
                             onClick={async (e) => {
                               e.stopPropagation();
                               if (!confirm(`Archive ${pilgrim.firstNameEn ?? 'this pilgrim'}? This is a soft delete and can be restored later.`)) return;
@@ -262,7 +267,7 @@ export function PilgrimList() {
                             className="p-1.5 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5 text-gray-600" />
-                          </Button>
+                          </Button>}
                         </div>
                       </td>
                     </tr>

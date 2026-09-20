@@ -1,0 +1,6 @@
+== D03: the application makes no schema change when it starts
+fingerprint = sha256(pg_dump --schema-only of umrah_connects_integration, minus comments and pg_dump's random session tokens)
+before restart: 85aa0efcc3dcfe8bfc2056dcd56cfce7d14429e84902f3c7610b73f95cd2f396
+health after restart: {"status":"ok","service":"umrah-connect-api","release":"unknown","db":"connected","uptime":10,"timestamp":"2026-09-20T20:02:47.852
+after restart:  85aa0efcc3dcfe8bfc2056dcd56cfce7d14429e84902f3c7610b73f95cd2f396
+RESULT: identical — starting the built API changed no schema object

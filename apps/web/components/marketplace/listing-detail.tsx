@@ -22,7 +22,6 @@ import {
   useListingBookings,
   useListingInquiries,
   useMarketplaceListing,
-  useMyListing,
   useRequestQuote,
   useRespondInquiry,
   useUpdateListing,
@@ -585,25 +584,30 @@ function OwnerListingView({ listing, canManage, refetch }: { listing: any; canMa
 /**
  * A listing page. The organization that owns the listing gets the seller view
  * (any status, management tabs); everyone else gets the published listing and
- * the buyer actions. Ownership is decided by the server: GET /listings/mine/:id
- * answers 404 for anyone else.
+ * the buyer actions.
+ *
+ * Ownership is decided by the server, on the ONE request this page makes:
+ * GET /marketplace/listings/:id answers with the seller view and `isOwner: true`
+ * for the owning organization, and the published listing with `isOwner: false`
+ * for everyone else. It used to ask the owner-only /listings/mine/:id whenever
+ * the viewer could manage listings at all — which is four of the eight system
+ * roles — so a hotel manager opening someone else's listing got a 404 and a
+ * console error on a perfectly ordinary page load (A12-5). Nothing 404s here now.
  */
 export function ListingDetail({ id }: { id: string }) {
   const router = useRouter();
-  const { ready, can } = useCapabilities();
-  const canRead = can('marketplace:listing:read');
+  const { isLoaded } = useAuthContext();
+  const { can } = useCapabilities();
   const canManage = can('marketplace:listing:manage');
-  const owned = useMyListing(id, ready && canRead);
-  const checkPublic = ready && (!canRead || owned.isError);
-  const pub = useMarketplaceListing(id, checkPublic);
+  // Wait for the session to settle: an anonymous request would be answered with
+  // the public view, which hides a seller's own draft behind a 404.
+  const detail = useMarketplaceListing(id, isLoaded);
+  const listing = detail.data;
 
-  const listing = owned.data ?? pub.data;
-  const loading = !ready || (canRead && owned.isLoading) || (checkPublic && pub.isLoading);
-
-  if (loading) return <LoadingState label="Loading listing…" />;
+  if (!isLoaded || detail.isLoading) return <LoadingState label="Loading listing…" />;
   if (!listing) {
-    const status = (pub.error as any)?.response?.status;
-    if (pub.error && status !== 404) return <QueryFailure error={pub.error} onRetry={() => pub.refetch()} />;
+    const status = (detail.error as any)?.response?.status;
+    if (detail.error && status !== 404) return <QueryFailure error={detail.error} onRetry={() => detail.refetch()} />;
     return (
       <div className="rounded-xl border border-gray-200 bg-white py-20 text-center">
         <p className="text-sm text-gray-700">This listing is not available. It may have been unpublished or removed.</p>
@@ -612,7 +616,7 @@ export function ListingDetail({ id }: { id: string }) {
     );
   }
 
-  const isOwner = !!owned.data;
+  const isOwner = !!listing.isOwner;
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-wrap items-center gap-3">
@@ -637,7 +641,7 @@ export function ListingDetail({ id }: { id: string }) {
         </div>
       </div>
       {isOwner ? (
-        <OwnerListingView listing={listing} canManage={canManage} refetch={() => owned.refetch()} />
+        <OwnerListingView listing={listing} canManage={canManage} refetch={() => detail.refetch()} />
       ) : (
         <PublicListingView listing={listing} canQuote={canManage} />
       )}

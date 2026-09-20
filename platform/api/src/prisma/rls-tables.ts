@@ -92,6 +92,12 @@ export const RLS_PROTECTED_TABLES: readonly ProtectedTable[] = [
   { table: 'core.tenant_kyc', model: 'TenantKyc', policy: 'tenant', platformRead: true, platformWrite: true },
   // Per-user settings.
   { table: 'core.user_preferences', model: 'UserPreference', policy: 'owner-user' },
+  // eng100-fx3 — the organization's reference-number sequences (A12-3). Counting
+  // another organization's bookings, or reading how many it has, is its business alone.
+  { table: 'core.reference_counters', model: 'ReferenceCounter', policy: 'tenant' },
+  // eng100-fx3 — an Idempotency-Key and the response it replays belong to the one
+  // caller who used it (N-FORM-1); the stored response is that caller's data.
+  { table: 'core.idempotency_keys', model: 'IdempotencyKey', policy: 'owner-user' },
 ];
 
 /**

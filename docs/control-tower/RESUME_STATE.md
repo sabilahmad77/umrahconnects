@@ -72,3 +72,20 @@ session resumes from here — nothing below is inferred.
   `next start -p 3300`; (2) launch the fixer (F1–F11 + F13 hotel/trip/visa payment status honesty,
   F14 offer-conversion checks, ConfirmDialog error surfacing, A08→KVM runtime-role compose/env,
   README/record one-liners) and A10 browser QA + A11 accessibility/responsive in parallel; (3) A12 review.
+
+## Checkpoint 5 — 2026-09-20 23:0x +0500
+
+- Candidate `engineering/100-loop` @ `3f2243f` (code surface unchanged since `2e3857b`; later commits are
+  evidence, the defect log and register tooling).
+- Merged since checkpoint 4: FX2 (production API on the RLS runtime role, security/test hygiene),
+  FX1 (cancelled-booking payment hold, listing moderation, conversion checks, honest payment status,
+  request capability policy, single-flight writes), plus coordinator fixes `1f2431d`, `5875835`, `2e3857b`.
+- A10 finished: 87/87 routes, 3,329 checks, 3,262 pass, no P0/P1 → FUNCTIONAL_BROWSER_MATRIX.md.
+- A12 finished: every gate re-run independently (e2e 494 + 5 skipped; 530/530 with its probes), 31 adversarial
+  API probes and 9 browser probes all refused, no green-washing. Four findings → FX3 (running).
+- Coordinator re-verifications recorded in evidence/eng100/a01/: W06 build refusal (exit 1), D03 schema
+  fingerprint identical across a real restart, D05 restore rehearsal (79 tables / 1,522 rows identical,
+  tampered dump refused), D08 seeds into a fresh database with every consistency check at 0.
+- Still open before the final report: A11 (accessibility/responsive, running), FX3 merge + re-gate,
+  container-image secret scan (build running), register fill + scorecards + final report, and the
+  doc reconciliation (DECISIONS D-009/D-019/D-022, BLOCKERS, SECURITY_GATES, PROGRESS, README).

@@ -1,0 +1,13 @@
+
++ First Load JS shared by all                     87.7 kB
+  ├ chunks/2749-295516e09078f6e3.js               31.9 kB
+  ├ chunks/5b8f0dd8-5d20ab282fcc7040.js           53.7 kB
+  └ other shared chunks (total)                   2.13 kB
+
+
+ƒ Middleware                                      26.4 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses getStaticProps)
+ƒ  (Dynamic)  server-rendered on demand
+

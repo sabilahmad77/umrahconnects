@@ -20,6 +20,7 @@ import {
 } from '@/hooks/use-pilgrims';
 import { PILGRIM_STATUSES } from '@/lib/statuses';
 import { PilgrimAccountAccess } from './pilgrim-account-access';
+import { useCapabilities } from '@/hooks/use-capabilities';
 
 type TabKey = 'overview' | 'documents' | 'bookings' | 'access' | 'edit';
 const TAB_LABELS: Record<TabKey, string> = { overview: 'Overview', documents: 'Documents', bookings: 'Bookings', access: 'Traveler access', edit: 'Edit' };
@@ -29,6 +30,8 @@ const TAB_LABELS: Record<TabKey, string> = { overview: 'Overview', documents: 'D
 const DOC_TYPES = ['PASSPORT', 'VISA', 'VACCINATION', 'MEDICAL', 'PHOTO', 'MAHRAM_CERT', 'NISNOMORCARD', 'OTHER'];
 
 export function PilgrimDetail({ id }: { id: string }) {
+  // Archiving is a soft delete and the API requires crm:pilgrim:delete (A10 DEF-005).
+  const { can } = useCapabilities();
   const router = useRouter();
   const { data: p, isLoading, error, refetch } = usePilgrim(id);
   const [tab, setTab] = useState<TabKey>('overview');
@@ -74,7 +77,7 @@ export function PilgrimDetail({ id }: { id: string }) {
           p.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
           'bg-gray-100 text-gray-600',
         )}>{p.status?.replace(/_/g, ' ')}</span>
-        <Button busy={remove.isPending} variant="quiet" type="button"
+        {can('crm:pilgrim:delete') && <Button busy={remove.isPending} variant="quiet" type="button"
           onClick={async () => {
             if (!confirm(`Archive ${fullName}? This is a soft delete and can be restored.`)) return;
             try {
@@ -88,7 +91,7 @@ export function PilgrimDetail({ id }: { id: string }) {
           className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded-xl"
         >
           Archive
-        </Button>
+        </Button>}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">

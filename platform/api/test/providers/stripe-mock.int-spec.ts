@@ -32,7 +32,16 @@ describe.skipIf(!url)('StripeProvider against stripe-mock (official Stripe API m
     expect(typeof refund.refundedCents).toBe('bigint');
     const customer = await provider.ensureCustomer({ email: 'traveler@example.com', name: 'Traveler', reference: `user_${Date.now()}` });
     expect(customer).toMatch(/^cus_/);
-    await expect(provider.cancel('pi_123')).resolves.toBeUndefined();
+    // `cancel` reports the outcome (CancelResult), it does not resolve undefined:
+    // the caller has to know whether the intent is really dead before it releases
+    // the seat/room it was holding. When the provider refuses (the intent already
+    // progressed) the current state comes back instead, for reconciliation.
+    const cancelled = await provider.cancel('pi_123');
+    expect(typeof cancelled.cancelled).toBe('boolean');
+    if (!cancelled.cancelled) {
+      expect(cancelled.state?.providerRef).toMatch(/^pi_/);
+      expect(['CAPTURED', 'PENDING', 'FAILED']).toContain(cancelled.state?.status);
+    }
   });
 
   it('reports configuration and test mode honestly', () => {

@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ReferenceNumberService } from '../references/reference-number.service';
 import { PayActor, PaymentsService } from '../payments/payments.service';
 import { assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
 import { adjustBookingPaid } from '../bookings/booking-money';
@@ -53,6 +54,7 @@ export class FinanceService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private payments: PaymentsService,
+    private references: ReferenceNumberService, // eng100-fx3
   ) {}
 
   /**
@@ -218,7 +220,10 @@ export class FinanceService {
 
   async createInvoice(tenantId: string, dto: any, createdBy?: string) {
     await this.assertInvoiceParties(tenantId, dto);
-    const invoiceRef = `INV-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+    // A12-3: per-organization sequence instead of five random digits.
+    const invoiceRef = await this.references.next(tenantId, 'INV', async (ref) =>
+      (await this.prisma.invoice.count({ where: { tenantId, invoiceRef: ref } })) > 0,
+    );
     const subtotalCents = BigInt(
       Math.round((dto.subtotal ?? dto.subtotalCents ?? 0) * (dto.subtotal ? 100 : 1)),
     );
@@ -949,7 +954,9 @@ export class FinanceService {
       );
     }
     this.assertPlanDates(dto.dateFrom, dto.dateTo);
-    const planRef = `BP-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+    const planRef = await this.references.next(tenantId, 'BP', async (ref) =>
+      (await this.prisma.budgetPlan.count({ where: { tenantId, planRef: ref } })) > 0,
+    );
     const hotel = toCents(dto.hotelBudget);
     const transport = toCents(dto.transportBudget);
     const visa = toCents(dto.visaBudget);

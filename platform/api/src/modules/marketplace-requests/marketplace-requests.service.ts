@@ -10,6 +10,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SystemScoped } from '../../prisma/db-context';
 import { NotificationsService } from '../notifications/notifications.service';
 import { RbacService } from '../rbac/rbac.service';
+import { ReferenceNumberService } from '../references/reference-number.service';
 import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
 import { findOwned } from '../../common/tenant-scope';
 import type { Principal } from '../auth/principal';
@@ -49,6 +50,7 @@ export class MarketplaceRequestsService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private rbac: RbacService,
+    private references: ReferenceNumberService, // eng100-fx3
   ) {}
 
   // ─── Traveler-side: create a request ────────────────────────────────────
@@ -479,7 +481,15 @@ export class MarketplaceRequestsService {
         created = { ...booking, totalAmountCents: Number(booking.totalAmountCents) };
       } else {
         kind = 'VISA_APPLICATION';
-        const appNo = `VISA-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+        // A12-3: the PROVIDER organization's own sequence (this whole conversion runs
+        // in system scope, so the counter of another organization is writable here).
+        // Allocated on the service, not on `tx`: the number must survive as spent even
+        // if this transaction rolls back, and it must not hold the counter's row lock.
+        const appNo = await this.references.next(providerTenantId, 'VISA', async (ref) =>
+          (await this.prisma.visaApplication.count({
+            where: { tenantId: providerTenantId, applicationNumber: ref },
+          })) > 0,
+        );
         const visa = await tx.visaApplication.create({
           data: {
             tenantId: providerTenantId,

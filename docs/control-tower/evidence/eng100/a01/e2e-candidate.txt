@@ -1,0 +1,271 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/macbook/Projects/umrah-connects-integration/platform/api
+
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/isolation.e2e-spec.ts (32 tests) 4810ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > every table has a recorded decision, and the database matches it > the audit trail is append-only for the runtime role
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: permission denied for table audit_logs`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > an endpoint that omits the tenant filter still cannot cross organizations > rows cannot be written into another organization (WITH CHECK)
+prisma:error Error in batch request 1: Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42501", message: "new row violates row-level security policy for table \"pilgrims\"", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+prisma:error 
+Invalid `this.prisma.pilgrim.create()` invocation in
+/Users/macbook/Projects/umrah-connects-integration/platform/api/test/rls.e2e-spec.ts:88:43
+
+  85 @AnyAuthenticated()
+  86 async createPilgrim(@Body() body: { tenantId: string }) {
+  87   try {
+→ 88     const p = await this.prisma.pilgrim.create(
+Error in batch request 1: Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42501", message: "new row violates row-level security policy for table \"pilgrims\"", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "pilgrims"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "pilgrim_documents"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "family_groups"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "packages"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "bookings"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "booking_pilgrims"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "visa_applications"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "visa_documents"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "visa_service_requests"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "invoices"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "payments"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "incidents"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > each protected table shows exactly the rows its policy allows > moving an own row into another organization is refused (WITH CHECK)
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "tenant_kyc"`
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "reference_counters"`
+
+stdout | test/rls.e2e-spec.ts > R05: database-level Row-Level Security > platform and system scopes > Super Admin reads every organization's oversight tables but cannot change them
+prisma:error Error in batch request 1: Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42501", message: "new row violates row-level security policy for table \"pilgrims\"", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+prisma:error 
+Invalid `this.prisma.pilgrim.create()` invocation in
+/Users/macbook/Projects/umrah-connects-integration/platform/api/test/rls.e2e-spec.ts:88:43
+
+  85 @AnyAuthenticated()
+  86 async createPilgrim(@Body() body: { tenantId: string }) {
+  87   try {
+→ 88     const p = await this.prisma.pilgrim.create(
+Error in batch request 1: Error occurred during query execution:
+ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(PostgresError { code: "42501", message: "new row violates row-level security policy for table \"pilgrims\"", severity: "ERROR", detail: None, column: None, hint: None }), transient: false })
+
+ ✓ test/rls.e2e-spec.ts (138 tests) 1609ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/social.e2e-spec.ts (14 tests) 2207ms
+   ✓ social: posts, comments, replies, reactions, saves, follows, connections and messages > comments > adds, pages, replies (one level), edits and deletes; counts stay right after every step 499ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+[31m[Nest] 61383  - [39m09/21/2026, 1:39:19 AM [31m  ERROR[39m [38;5;3m[PaymentsService] [39m[31mPayment 05e4a251-d6e9-49fe-9f38-eac94fc77351: provider amount/currency does not match the record — not settled[39m
+ ✓ test/payments-hardening.e2e-spec.ts (20 tests) 2362ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/business-hotel-transport.e2e-spec.ts (13 tests) 2039ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/marketplace-listings.e2e-spec.ts (17 tests) 1829ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/rbac.e2e-spec.ts (49 tests) 2896ms
+   ✓ role architecture, platform separation and privilege escalation > Super Admin is a platform role, separate from Operator > every tenant role gets 403 on every platform route 716ms
+   ✓ role architecture, platform separation and privilege escalation > organization onboarding + KYC lifecycle > traveler → verified email → hotel organization (pending) → KYC → approval → active hotel manager 506ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/traveler-link.e2e-spec.ts (13 tests) 1394ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/auth.e2e-spec.ts (24 tests) 16172ms
+   ✓ authentication & sessions > registration > creates a Traveler in the community organization with an httpOnly refresh cookie 336ms
+   ✓ authentication & sessions > registration > rejects duplicate emails case-insensitively 304ms
+   ✓ authentication & sessions > login > signs in by email (case-insensitive) and rejects wrong passwords with a generic message 587ms
+   ✓ authentication & sessions > login > temporarily locks an account after repeated failures, even for the right password 3580ms
+   ✓ authentication & sessions > tokens and sessions > rotates refresh tokens and revokes every session when a rotated token is replayed 1140ms
+   ✓ authentication & sessions > tokens and sessions > logout revokes the refresh token; logout-all also kills issued access tokens 3374ms
+   ✓ authentication & sessions > tokens and sessions > locking a user invalidates their live access token immediately 1421ms
+   ✓ authentication & sessions > password reset and email verification > password reset tokens are single-use, never returned in responses, and revoke sessions 1995ms
+   ✓ authentication & sessions > password reset and email verification > email verification activates the account; tokens are single-use 311ms
+   ✓ authentication & sessions > password reset and email verification > change-password requires the current password and revokes other sessions 2585ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/payments-cancellation.e2e-spec.ts (15 tests) 2055ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+stdout | test/payments.e2e-spec.ts > red team: payments > organization intents > capability and tenant checks
+prisma:error 
+Invalid `tx.payment.create()` invocation in
+/Users/macbook/Projects/umrah-connects-integration/platform/api/src/modules/payments/payments.service.ts:663:40
+
+  660   }),
+  661 );
+  662 const failed = intent.status === 'FAILED';
+→ 663 const payment = await tx.payment.create(
+Unique constraint failed on the (not available)
+
+ ✓ test/payments.e2e-spec.ts (12 tests) 1493ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/groups.e2e-spec.ts (6 tests) 1344ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/business-visa-reports.e2e-spec.ts (11 tests) 1444ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/onboarding.e2e-spec.ts (13 tests) 1387ms
+   ✓ provider onboarding + KYC lifecycle > an unverified traveler is refused; the request is validated like the form 365ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/marketplace.e2e-spec.ts (11 tests) 1047ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/uploads.e2e-spec.ts (10 tests) 3185ms
+   ✓ uploads, media ownership, document links and orphan cleanup > orphan cleanup (O04) with the local driver > dry run reports, apply deletes only old unreferenced platform objects, and every deletion is audited 2434ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/security-regression.e2e-spec.ts (12 tests) 38260ms
+   ✓ A08 security regressions (sweeps over the route inventory) > every route that needs a platform capability refuses every organization identity (403) and anonymous callers (401) 1113ms
+   ✓ A08 security regressions (sweeps over the route inventory) > session revocation takes effect for tokens minted in the same second > change-password: another session opened in the same second is refused at once; the new sign-in works 1010ms
+   ✓ A08 security regressions (sweeps over the route inventory) > session revocation takes effect for tokens minted in the same second > admin lock: a token minted in the same second is refused at once 380ms
+   ✓ A08 security regressions (sweeps over the route inventory) > no GET route returns credentials, for any identity > sweeps every GET route (ids substituted from the probes) as every identity 34790ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/google.e2e-spec.ts (8 tests) 2124ms
+   ✓ Google Sign-In (provider token exchange stubbed) > pre-registered unverified accounts lose their password and sessions when the real owner signs in (anti pre-hijack) 1443ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+[31m[Nest] 61835  - [39m09/21/2026, 1:40:55 AM [31m  ERROR[39m [38;5;3m[PaymentsService] [39m[31mPayment ca365e8e-6265-41a4-80a9-99913915ee58: provider amount/currency does not match the record — not settled[39m
+ ✓ test/followups.e2e-spec.ts (9 tests) 993ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/seed-qa-identities.e2e-spec.ts (5 tests) 19865ms
+   ✓ local QA fixtures seed (D08) > seeds, converges on the same state when run again, and keeps passwords in a 0600 file 9725ms
+   ✓ local QA fixtures seed (D08) > every identity signs in with its password and holds exactly its documented role 4655ms
+   ✓ local QA fixtures seed (D08) > rotates passwords on request, and resets roles and state that testing changed 5215ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/auth-account.e2e-spec.ts (5 tests) 5900ms
+   ✓ account verification and settings actions > email verification links > distinguishes invalid, expired, replaced, confirmed and replayed links 382ms
+   ✓ account verification and settings actions > email verification links > rate-limits resends per account with a machine-readable wait, and reports an already verified email 334ms
+   ✓ account verification and settings actions > change password > reports wrong input with codes, then revokes every session including the current one 3829ms
+   ✓ account verification and settings actions > change password > a Google-only account is told to set a password instead, and cannot be locked out by password guesses 671ms
+   ✓ account verification and settings actions > change password > an expired reset link says so 317ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/auth-google-oidc.e2e-spec.ts (12 tests) 745ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/marketplace-moderation.e2e-spec.ts (7 tests) 896ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/idempotency.e2e-spec.ts (9 tests) 1268ms
+   ✓ N-FORM-1: identical creates happen once > a replay is not written to the audit trail as a second create 437ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/marketplace-conversion.e2e-spec.ts (7 tests) 1141ms
+ ✓ test/seed-legacy.e2e-spec.ts (2 tests) 6899ms
+   ✓ legacy demo seeds converge (F9) > a fresh database gets provider-owned sellers and counters that match their rows 1750ms
+   ✓ legacy demo seeds converge (F9) > a database an older seed populated converges, keeping a seller with history where its payments are 3359ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+[31m[Nest] 62419  - [39m09/21/2026, 1:41:42 AM [31m  ERROR[39m [38;5;3m[PaymentsService] [39m[31mPayment provider call failed (create intent): Please authenticate by specifying an `Authorization` header with any valid looking testmode secret API key. For example, `Authorization: Bearer [redacted-key]`. Authorization was 'Bearer [redacted-key]'.[39m
+ ✓ test/payments-stripe-mock.e2e-spec.ts (5 tests) 1041ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/preferences.e2e-spec.ts (12 tests) 735ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+stdout | test/reference-numbers.e2e-spec.ts > reference numbers are per-organization and collision-free > an organization's counters are its own: Row-Level Security hides and refuses another's
+prisma:error Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "reference_counters"`
+prisma:error 
+Invalid `prisma.$queryRaw()` invocation:
+
+
+Raw query failed. Code: `42501`. Message: `ERROR: new row violates row-level security policy for table "reference_counters"`
+
+ ✓ test/reference-numbers.e2e-spec.ts (7 tests) 2403ms
+   ✓ reference numbers are per-organization and collision-free > hands out 3 000 references for one organization with no failure and no duplicate 1707ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/payment-status-honesty.e2e-spec.ts (4 tests) 815ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+[31m[Nest] 62477  - [39m09/21/2026, 1:41:50 AM [31m  ERROR[39m [38;5;3m[HealthController] [39m[31mDatabase role "macbook" is a superuser, has BYPASSRLS, owns (or can act as the owner of) application tables, is a member of a superuser or BYPASSRLS role: Row-Level Security does NOT apply to the API. Connect as the runtime login (platform/api/prisma/rls/runtime-role.sql, docs/control-tower/RLS.md). Readiness answers 503.[39m
+ ✓ test/health.e2e-spec.ts (4 tests) 661ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/rate-limit.e2e-spec.ts (4 tests) 2823ms
+   ✓ red team: rate limiting (throttling enabled) > registration is throttled after 5 attempts in 10 minutes 1665ms
+   ✓ red team: rate limiting (throttling enabled) > normal authenticated reads are not throttled 646ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/marketplace-requests-access.e2e-spec.ts (3 tests) 706ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/finance-approval.e2e-spec.ts (2 tests) 531ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/marketplace-inquiries.e2e-spec.ts (3 tests) 527ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/e2e-storage.e2e-spec.ts (2 tests) 475ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ✓ test/access-policy.e2e-spec.ts (2 tests) 154ms
+
+ Test Files  37 passed (37)
+      Tests  522 passed (522)
+   Start at  01:39:01
+   Duration  181.69s (transform 1.60s, setup 269ms, collect 34.54s, tests 136.23s, environment 4ms, prepare 1.66s)
+
