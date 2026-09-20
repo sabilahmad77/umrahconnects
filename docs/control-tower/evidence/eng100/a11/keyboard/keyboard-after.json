@@ -1,9 +1,9 @@
 {
  "base": "http://localhost:3411",
- "when": "2026-09-20T19:34:16.316Z",
+ "when": "2026-09-20T21:34:09.082Z",
  "summary": {
-  "total": 113,
-  "passed": 99,
+  "total": 115,
+  "passed": 101,
   "failed": 14
  },
  "checks": [
@@ -141,11 +141,25 @@
    "detail": "BUTTON \"Sign in\""
   },
   {
+   "id": "auth-field-allows-paste",
+   "sc": "3.3.8",
+   "where": "signup input[type=\"password\"] >> nth=0",
+   "pass": true,
+   "detail": "value=pasted autocomplete=new-password"
+  },
+  {
    "id": "signup-new-password-autocomplete",
    "sc": "1.3.5",
    "where": "signup",
    "pass": true,
-   "detail": "[]"
+   "detail": "[\"new-password\"]"
+  },
+  {
+   "id": "signup-empty-submit-identifies-errors",
+   "sc": "3.3.1",
+   "where": "signup",
+   "pass": true,
+   "detail": "{\"alerts\":[],\"invalid\":2,\"focus\":\"BUTTON \"}"
   },
   {
    "id": "tab-cycle-completes",

@@ -6,16 +6,17 @@ Raw results: `keyboard-after.json`; the state before the fixes is in `keyboard-b
 | Run | checks | passed | failed | of which are the development-only React Query devtools button | genuine failures |
 |---|---|---|---|---|---|
 | Before the fixes | 113 | 97 | 16 | 6 | 10 |
-| After the fixes | 113 | 99 | 14 | 13 | 1 |
+| After the fixes | 115 | 101 | 14 | 13 | 1 |
 
 The React Query devtools button is rendered only when `NODE_ENV === "development"` (`components/providers/query-provider.tsx`); it does not exist in the built app.
+The after-run has two checks more than the before-run: it now clicks through to the sign-up credentials step, so the password field there is checked for paste as well.
 The one genuine remaining failure is described at the end.
 
 ## By success criterion
 
 | SC | Check | Where | Result |
 |---|---|---|---|
-| 1.3.5 | signup-new-password-autocomplete | signup | pass — [] |
+| 1.3.5 | signup-new-password-autocomplete | signup | pass — ["new-password"] |
 | 1.3.5/3.3.8 | login-autocomplete-tokens | login | pass — {"email":"username","pw":"current-password"} |
 | 2.1.1 | dialog-opens-with-keyboard | public mobile navigation (390) | pass — Open navigation |
 | 2.1.1 | menu-opens-focus-first-item | traveler header | pass — A[menuitem] "Profile" |
@@ -119,11 +120,13 @@ The one genuine remaining failure is described at the end.
 | 2.4.7 | focus-visible-every-stop | transportA /transport/vehicles (1280) | fail — development-only devtools button |
 | 2.4.7 | focus-visible-every-stop | visaA /compliance (1280) | fail — development-only devtools button |
 | 2.4.7 | focus-visible-every-stop | superAdmin /admin-tenants (1280) | fail — development-only devtools button |
+| 3.3.1 | signup-empty-submit-identifies-errors | signup | pass — {"alerts":[],"invalid":2,"focus":"BUTTON "} |
 | 3.3.1/4.1.3 | login-error-in-alert-region | login | pass — Unable to continueInvalid credentials |
 | 3.3.1/4.1.3 | dialog-form-error-announced | traveler New request | pass — Describe what you need in the title. |
 | 3.3.8 | auth-field-allows-paste | login #signin-email | pass — value=pasted autocomplete=username |
 | 3.3.8 | auth-field-allows-paste | login #signin-password | pass — value=pasted autocomplete=current-password |
 | 3.3.8 | login-no-cognitive-test | login | pass — 0 captcha elements |
+| 3.3.8 | auth-field-allows-paste | signup input[type="password"] >> nth=0 | pass — value=pasted autocomplete=new-password |
 | 4.1.2 | dialog-has-accessible-name | public mobile navigation (390) | pass — Umrah Connect navigation |
 | 4.1.2 | dialog-has-accessible-name | traveler /requests New request | pass — What do you need? |
 | 4.1.2 | dialog-has-accessible-name | workspace mobile navigation (390) | pass — Workspace navigation |
@@ -165,6 +168,7 @@ Measured from the rendered pages with transitions disabled (`tools/nontext.cjs`,
 | financeA /finance | 1 | 0 | 0 | 34 | 1 | 0 |
 | superAdmin /admin-users | 41 | 0 | 0 | 108 | 0 | 0 |
 
+Before these fixes the same measurement reported 49 control boundaries under 3:1 across the same nine screens.
 Targets under 24×24 px are inline links inside sentences and controls whose nearest neighbour is more than 24 px away — both exceptions the criterion allows, so none fails.
 
 ## The remaining failure, and why it is left
@@ -176,5 +180,5 @@ No WCAG success criterion is failed by this: 2.1.1 is satisfied (everything is o
 
 ## Keyboard scrolling where a page has no controls
 
-On `/reports` for the hotel and transport roles the main region scrolls but contains no focusable element, which axe reports as `scrollable-region-focusable`.
-Verified by hand that the content is still keyboard-scrollable: Tab (skip link) → Enter focuses `#workspace-main` (it carries `tabindex="-1"` for exactly this), and PageDown then scrolls it from 0 to 508 px.
+On `/reports` for the staff, hotel and transport roles the main region scrolls but contains no focusable element.
+It was first confirmed by hand that the content is still scrollable — Tab (skip link) → Enter focuses `#workspace-main`, PageDown scrolls it from 0 to 508 px — and then given its own tab stop while it scrolls and holds nothing focusable, which is what the axe re-check now reports as clean.

@@ -1,0 +1,406 @@
+{
+ "tool": "axe-core 4.13.0",
+ "tags": [
+  "wcag2a",
+  "wcag2aa",
+  "wcag21a",
+  "wcag21aa",
+  "wcag22aa",
+  "best-practice (reported separately)"
+ ],
+ "base": "http://localhost:3411",
+ "started": "2026-09-20T21:27:09.004Z",
+ "finished": "2026-09-20T21:29:08.147Z",
+ "runs": 4,
+ "coverage": {
+  "operatorStaffA": {
+   "audited": [
+    "/reports"
+   ],
+   "denied": [],
+   "redirected": {},
+   "dynamicMissing": [
+    "/admin-tenants/[id]",
+    "/bookings/[id]",
+    "/compliance/[id]",
+    "/finance/invoices/[id]",
+    "/groups/[id]",
+    "/hotels/[id]",
+    "/marketplace/[id]",
+    "/pilgrims/[id]",
+    "/requests/[id]",
+    "/social/groups/[id]",
+    "/transport/drivers/[id]",
+    "/transport/routes/[id]",
+    "/transport/vehicles/[id]",
+    "/visa-requests/[id]"
+   ],
+   "landing": "/dashboard"
+  },
+  "hotelA": {
+   "audited": [
+    "/reports"
+   ],
+   "denied": [],
+   "redirected": {},
+   "dynamicMissing": [
+    "/admin-tenants/[id]",
+    "/bookings/[id]",
+    "/compliance/[id]",
+    "/finance/invoices/[id]",
+    "/groups/[id]",
+    "/hotels/[id]",
+    "/marketplace/[id]",
+    "/pilgrims/[id]",
+    "/requests/[id]",
+    "/social/groups/[id]",
+    "/transport/drivers/[id]",
+    "/transport/routes/[id]",
+    "/transport/vehicles/[id]",
+    "/visa-requests/[id]"
+   ],
+   "landing": "/hotel-dashboard"
+  },
+  "transportA": {
+   "audited": [
+    "/reports"
+   ],
+   "denied": [],
+   "redirected": {},
+   "dynamicMissing": [
+    "/admin-tenants/[id]",
+    "/bookings/[id]",
+    "/compliance/[id]",
+    "/finance/invoices/[id]",
+    "/groups/[id]",
+    "/hotels/[id]",
+    "/marketplace/[id]",
+    "/pilgrims/[id]",
+    "/requests/[id]",
+    "/social/groups/[id]",
+    "/transport/drivers/[id]",
+    "/transport/routes/[id]",
+    "/transport/vehicles/[id]",
+    "/visa-requests/[id]"
+   ],
+   "landing": "/transport-dashboard"
+  },
+  "visaA": {
+   "audited": [
+    "/reports"
+   ],
+   "denied": [],
+   "redirected": {},
+   "dynamicMissing": [
+    "/admin-tenants/[id]",
+    "/bookings/[id]",
+    "/compliance/[id]",
+    "/finance/invoices/[id]",
+    "/groups/[id]",
+    "/hotels/[id]",
+    "/marketplace/[id]",
+    "/pilgrims/[id]",
+    "/requests/[id]",
+    "/social/groups/[id]",
+    "/transport/drivers/[id]",
+    "/transport/routes/[id]",
+    "/transport/vehicles/[id]",
+    "/visa-requests/[id]"
+   ],
+   "landing": "/visa-dashboard"
+  }
+ },
+ "summary": [],
+ "results": [
+  {
+   "identity": "operatorStaffA",
+   "route": "/reports",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/reports",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "tspan[x=\"22\"][dy=\"0.71em\"]"
+       ],
+       "html": "<tspan x=\"22\" dy=\"0.71em\">Apr 26</tspan>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "8.3pt (11px)",
+        "fontWeight": "normal",
+        "messageKey": "imgNode",
+        "expectedContrastRatio": "4.5:1"
+       }
+      },
+      {
+       "target": [
+        "tspan[x=\"205.2\"][dy=\"0.71em\"]"
+       ],
+       "html": "<tspan x=\"205.2\" dy=\"0.71em\">May 26</tspan>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "8.3pt (11px)",
+        "fontWeight": "normal",
+        "messageKey": "imgNode",
+        "expectedContrastRatio": "4.5:1"
+       }
+      },
+      {
+       "target": [
+        "tspan[x=\"388.4\"][dy=\"0.71em\"]"
+       ],
+       "html": "<tspan x=\"388.4\" dy=\"0.71em\">Jun 26</tspan>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "8.3pt (11px)",
+        "fontWeight": "normal",
+        "messageKey": "imgNode",
+        "expectedContrastRatio": "4.5:1"
+       }
+      }
+     ],
+     "nodeCount": 15,
+     "wcag": [
+      "1.4.3"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "hotelA",
+   "route": "/reports",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/reports",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:rf:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:rf:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "transportA",
+   "route": "/reports",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/reports",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "visaA",
+   "route": "/reports",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/reports",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        ".legend-item-0 > .recharts-legend-item-text"
+       ],
+       "html": "<span class=\"recharts-legend-item-text\" style=\"color: rgb(15, 61, 55);\">Documents collecting</span>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "8.3pt (11px)",
+        "fontWeight": "normal",
+        "messageKey": "imgNode",
+        "expectedContrastRatio": "4.5:1"
+       }
+      },
+      {
+       "target": [
+        ".legend-item-1 > .recharts-legend-item-text"
+       ],
+       "html": "<span class=\"recharts-legend-item-text\" style=\"color: rgb(200, 169, 107);\">Submitted</span>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "8.3pt (11px)",
+        "fontWeight": "normal",
+        "messageKey": "imgNode",
+        "expectedContrastRatio": "4.5:1"
+       }
+      },
+      {
+       "target": [
+        ".legend-item-2 > .recharts-legend-item-text"
+       ],
+       "html": "<span class=\"recharts-legend-item-text\" style=\"color: rgb(42, 122, 107);\">Approved</span>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "8.3pt (11px)",
+        "fontWeight": "normal",
+        "messageKey": "imgNode",
+        "expectedContrastRatio": "4.5:1"
+       }
+      }
+     ],
+     "nodeCount": 3,
+     "wcag": [
+      "1.4.3"
+     ],
+     "bestPractice": false
+    }
+   ]
+  }
+ ]
+}
