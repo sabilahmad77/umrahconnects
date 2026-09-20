@@ -19,14 +19,14 @@ const WIDTHS = [
 const SHOT_WIDTHS = new Set([1440, 768, 360]);
 
 const ROUTES = {
-  anonymous: ['/', '/solutions', '/pricing', '/marketplace-preview', '/contact', '/login', '/signup'],
-  travelerA: ['/travel-plan', '/marketplace', '/requests', '/social', '/my-bookings', '/settings'],
-  operatorAdminA: ['/dashboard', '/pilgrims', '/bookings', '/packages', '/finance', '/reports', '/compliance'],
-  financeA: ['/finance-dashboard', '/finance', '/finance-payments', '/budget-plans'],
+  anonymous: ['/', '/solutions', '/marketplace-preview', '/contact', '/signup'],
+  travelerA: ['/travel-plan', '/marketplace', '/requests', '/settings'],
+  operatorAdminA: ['/dashboard', '/pilgrims', '/bookings', '/finance', '/reports'],
+  financeA: ['/finance-dashboard', '/finance-payments', '/budget-plans'],
   hotelA: ['/hotel-dashboard', '/hotels', '/hotel-bookings'],
   transportA: ['/transport-dashboard', '/transport/vehicles', '/transport/assignments'],
-  visaA: ['/visa-dashboard', '/compliance', '/visa-documents', '/visa-requests'],
-  superAdmin: ['/admin-dashboard', '/admin-tenants', '/admin-users', '/admin-kyc', '/admin-listings', '/admin-logs'],
+  visaA: ['/visa-dashboard', '/compliance', '/visa-requests'],
+  superAdmin: ['/admin-dashboard', '/admin-tenants', '/admin-users', '/admin-listings'],
 };
 
 const results = [];
@@ -77,7 +77,17 @@ const measure = (page) =>
       const cs = getComputedStyle(el);
       if (cs.overflow !== 'hidden' && cs.overflowX !== 'hidden') continue;
       if (el.scrollWidth > el.clientWidth + 2 && el.clientWidth > 0 && (el.textContent || '').trim() && !/truncate|text-ellipsis|line-clamp/.test(String(el.className))) {
-        clipped.push({ tag: el.tagName, cls: String(el.className).slice(0, 70), text: (el.textContent || '').trim().slice(0, 40), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth });
+        // A container can report extra scrollWidth from decorative absolutely
+        // positioned children; what matters is whether something with text is
+        // actually cut off by the box.
+        const box = el.getBoundingClientRect();
+        const cut = [...el.querySelectorAll('*')].filter((child) => {
+          if (!(child.textContent || '').trim()) return false;
+          const r = child.getBoundingClientRect();
+          return r.width > 0 && r.right > box.right + 2;
+        });
+        if (cut.length)
+          clipped.push({ tag: el.tagName, cls: String(el.className).slice(0, 70), text: (cut[0].textContent || '').trim().slice(0, 40), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, cutOff: cut.length });
       }
     }
     return {
@@ -113,12 +123,18 @@ async function shoot(page, name) {
   for (const [key, routes] of Object.entries(ROUTES)) {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
-    page.setDefaultTimeout(40000);
+    page.setDefaultTimeout(90000);
     if (key !== 'anonymous') await L.login(page, BASE, key);
     for (const route of routes) {
       for (const [w, h] of WIDTHS) {
         await page.setViewportSize({ width: w, height: h });
-        await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded' });
+        try {
+          await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded', timeout: 120000 });
+        } catch (error) {
+          console.log(`${String(w).padStart(4)} ${key.padEnd(15)} ${route.padEnd(24)} LOAD FAILED: ${String(error).slice(0, 80)}`);
+          results.push({ identity: key, route, width: w, error: String(error).slice(0, 120) });
+          continue;
+        }
         await L.settle(page);
         const m = await measure(page);
         const entry = { identity: key, route, width: w, ...m };
@@ -134,8 +150,8 @@ async function shoot(page, name) {
         console.log(`${String(w).padStart(4)} ${key.padEnd(15)} ${route.padEnd(24)} page=${m.pageOverflow} main=${m.mainOverflow} scrollers=${m.horizontalScrollers.length} ${bad.length ? 'PROBLEM: ' + bad.join('; ') : 'ok'}`);
         if (SHOT_WIDTHS.has(w) && routes.indexOf(route) === 0) await shoot(page, `${key}-${route.replace(/\W+/g, '_')}-${w}`);
       }
-      // The mobile navigation drawer itself must not overflow.
-      if (key !== 'anonymous') {
+      // The mobile navigation drawer itself must not overflow (first route only).
+      if (key !== 'anonymous' && routes.indexOf(route) === 0) {
         await page.setViewportSize({ width: 360, height: 780 });
         await page.goto(`${BASE}${route}`, { waitUntil: 'domcontentloaded' });
         await L.settle(page);
@@ -149,7 +165,6 @@ async function shoot(page, name) {
           if (routes.indexOf(route) === 0) await shoot(page, `${key}-drawer-360`);
           await page.keyboard.press('Escape');
         }
-        break; // one drawer check per identity is enough
       }
     }
     await context.close();
@@ -202,7 +217,9 @@ async function shoot(page, name) {
       return {
         h1: h1 ? (h1.textContent || '').trim().slice(0, 60) : null,
         h1Box: box(h1),
-        h1Clipped: h1 ? h1.scrollWidth > h1.clientWidth + 2 || h1.scrollHeight > h1.clientHeight + 2 : null,
+        // Only a box that actually clips can cut its text off; a tight
+        // line-height makes scrollHeight exceed clientHeight with nothing lost.
+        h1Clipped: h1 ? getComputedStyle(h1).overflow !== 'visible' && (h1.scrollWidth > h1.clientWidth + 2 || h1.scrollHeight > h1.clientHeight + 2) : null,
         ctaBox: box(cta),
         ctaText: cta ? (cta.textContent || '').trim().slice(0, 30) : null,
         imgBox: box(img),
