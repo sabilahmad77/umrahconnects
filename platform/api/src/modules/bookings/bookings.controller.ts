@@ -119,8 +119,13 @@ export class BookingsController {
   @Post('bookings/:id/cancel')
   @RequirePermissions('booking:booking:cancel')
   @ApiOperation({ summary: 'Cancel a booking with optional reason' })
-  async cancel(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string, @Body() body: CancelBookingDto) {
-    return { success: true, data: await this.bookingsService.cancel(tenantId, id, body.reason) };
+  async cancel(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: Principal,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CancelBookingDto,
+  ) {
+    return { success: true, data: await this.bookingsService.cancel(tenantId, id, body.reason, user) };
   }
 
   @Post('bookings/:id/generate-invoice')

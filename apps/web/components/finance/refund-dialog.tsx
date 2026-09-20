@@ -19,13 +19,21 @@ const PROVIDER_GATEWAYS = ['sandbox', 'stripe'];
 export const isGatewayPayment = (p: { gateway?: string | null }) =>
   PROVIDER_GATEWAYS.includes(String(p?.gateway ?? '').toLowerCase());
 
+/**
+ * Money captured after its booking or invoice was closed (F1): held, never counted,
+ * and waiting for exactly one thing — its refund.
+ */
+export const isHeldForRefund = (p: { status?: string; gatewayStatus?: string | null }) =>
+  p.status === 'DISPUTED' && p.gatewayStatus === 'CAPTURED_AFTER_CANCEL';
+
 /** Captured money that can still be returned. */
 export const refundableCents = (p: {
   amountCents?: number;
   refundedCents?: number;
   status?: string;
+  gatewayStatus?: string | null;
 }) =>
-  ['COMPLETED', 'PARTIALLY_REFUNDED'].includes(String(p.status))
+  ['COMPLETED', 'PARTIALLY_REFUNDED'].includes(String(p.status)) || isHeldForRefund(p)
     ? Math.max(0, Number(p.amountCents ?? 0) - Number(p.refundedCents ?? 0))
     : 0;
 

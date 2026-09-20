@@ -9,7 +9,7 @@ import {
 } from './dto/hotel.dto';
 import {
   HOTEL_BOOKING_INITIAL_STATUSES, HOTEL_BOOKING_TERMINAL_STATUSES, HOTEL_BOOKING_TRANSITIONS, ROOM_HOLDING_STATUSES,
-  ROOM_MANUAL_STATUSES, assertHotelBookingTransition, rejectClientPaymentStatus,
+  ROOM_MANUAL_STATUSES, assertHotelBookingTransition,
 } from './hotel-workflow';
 
 type Tx = Prisma.TransactionClient;
@@ -45,9 +45,18 @@ const serializeRoom = (r: any) => ({
   pricePerNightCents: Number(r.pricePerNightCents),
   pricePerPersonCents: r.pricePerPersonCents != null ? Number(r.pricePerPersonCents) : null,
 });
+/**
+ * F13: hotel bookings, trips and visa applications have no payment linked to
+ * them (invoices link to operator bookings only), so their stored
+ * `payment_status` column never changes. It is neither accepted nor returned:
+ * showing it would claim a payment state nobody tracks. Money is billed and
+ * recorded as Finance invoices.
+ */
+const withoutUntrackedPayment = ({ paymentStatus: _untracked, ...row }: any) => row;
+
 /** Every booking carries the moves the server will accept next, so the UI never offers a dead end. */
 const serializeBooking = (b: any) => ({
-  ...b,
+  ...withoutUntrackedPayment(b),
   totalAmountCents: Number(b.totalAmountCents),
   allowedTransitions: HOTEL_BOOKING_TRANSITIONS[b.status] ?? [],
 });
@@ -572,7 +581,6 @@ export class HotelsService {
   }
 
   async createHotelBooking(tenantId: string, dto: CreateHotelBookingDto) {
-    rejectClientPaymentStatus(dto.paymentStatus);
     const status = dto.status ?? 'PENDING';
     if (!HOTEL_BOOKING_INITIAL_STATUSES.includes(status)) {
       throw new BadRequestException(`A new booking starts as ${HOTEL_BOOKING_INITIAL_STATUSES.join(' or ')}; check-in and later stages are recorded on the booking`);
@@ -613,8 +621,6 @@ export class HotelsService {
           totalAmountCents: toCents(dto.amount, dto.totalAmountCents) ?? BigInt(0),
           currency: dto.currency ?? 'SAR',
           status,
-          // Payment state belongs to the payments module; a booking always starts unpaid.
-          paymentStatus: 'UNPAID',
           notes: dto.notes,
         },
       });
@@ -624,7 +630,6 @@ export class HotelsService {
 
   async updateHotelBooking(tenantId: string, id: string, dto: UpdateHotelBookingDto) {
     const existing: any = await this.findHotelBooking(tenantId, id);
-    rejectClientPaymentStatus(dto.paymentStatus);
 
     if (HOTEL_BOOKING_TERMINAL_STATUSES.includes(existing.status)) {
       const changed = Object.entries(dto).filter(([k, v]) => v !== undefined && k !== 'notes').map(([k]) => k);
@@ -879,7 +884,7 @@ export class HotelsService {
       this.prisma.room.findMany({ where: { tenantId }, select: { status: true } }),
       this.prisma.hotelBooking.findMany({
         where: { tenantId },
-        select: { status: true, paymentStatus: true, totalAmountCents: true },
+        select: { status: true, totalAmountCents: true, currency: true },
       }),
       this.prisma.hotelBooking.findMany({
         where: { tenantId, checkIn: { gte: today, lte: in7days }, status: { in: ['CONFIRMED', 'PENDING'] } },
@@ -894,13 +899,10 @@ export class HotelsService {
     ]);
 
     const rooms = this.roomFigures(allRooms);
-    // Payment state is written by the payments module; these sums only read it.
-    const recordedPaid = hotelBookings
-      .filter((b) => b.paymentStatus === 'PAID')
-      .reduce((sum, b) => sum + Number(b.totalAmountCents), 0);
-    const outstanding = hotelBookings
-      .filter((b) => ['UNPAID', 'PARTIAL'].includes(b.paymentStatus) && b.status !== 'CANCELLED')
-      .reduce((sum, b) => sum + Number(b.totalAmountCents), 0);
+    // What was booked, not what was paid: no payment is linked to hotel bookings (F13) —
+    // money is recorded as Finance invoices.
+    const booked = hotelBookings.filter((b) => b.status !== 'CANCELLED' && b.currency === 'SAR');
+    const bookedValue = booked.reduce((sum, b) => sum + Number(b.totalAmountCents), 0);
 
     const vendor = await this.prisma.vendor.findFirst({ where: { tenantId } });
     const activeListings = vendor
@@ -921,7 +923,7 @@ export class HotelsService {
         booked: rooms.bookedRooms, maintenance: rooms.maintenanceRooms,
       },
       occupancyRate: rooms.occupancy,
-      revenue: { collectedCents: recordedPaid, outstandingCents: outstanding, currency: 'SAR' },
+      bookedValue: { amountCents: bookedValue, count: booked.length, currency: 'SAR' },
       bookings: {
         total: hotelBookings.length,
         pending: hotelBookings.filter((b) => b.status === 'PENDING').length,

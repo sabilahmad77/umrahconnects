@@ -187,10 +187,12 @@ export function useApproveListing() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
   });
 }
+/** Platform takedown: the reason is shown to the seller, who cannot undo it (only a restore can). */
 export function useAdminRemoveListing() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => (await apiClient.delete(`/admin/listings/${id}`)).data.data,
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) =>
+      (await apiClient.put(`/admin/listings/${id}/take-down`, { reason })).data.data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin'] }),
   });
 }

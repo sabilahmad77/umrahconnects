@@ -7,9 +7,10 @@ import {
   CreateAssignmentDto, UpdateAssignmentDto, CreateTasreehDto, QueryAssignmentsDto, QueryRoutesDto, QueryTransportDto,
 } from './dto/transport.dto';
 import {
-  ASSIGNMENT_INITIAL_STATUSES, ASSIGNMENT_TERMINAL_STATUSES, BOOKABLE_ROUTE_STATUSES, DEFAULT_TRIP_MINUTES,
+  ASSIGNMENT_INITIAL_STATUSES, ASSIGNMENT_TERMINAL_STATUSES, BOOKABLE_ROUTE_STATUSES,
   DRIVER_MANUAL_STATUSES, OPEN_ASSIGNMENT_STATUSES, ROUTE_MANUAL_STATUSES, TRANSPORT_ASSIGNMENT_TRANSITIONS,
-  VEHICLE_MANUAL_STATUSES, assertAssignmentTransition, assertManualStatus, rejectClientPaymentStatus, tripsOverlap,
+  VEHICLE_MANUAL_STATUSES, assertAssignmentTransition, assertManualStatus, checkTrip, recountSeats,
+  seatsSold, type Trip, withoutUntrackedPayment,
 } from './transport-workflow';
 
 type Tx = Prisma.TransactionClient;
@@ -63,22 +64,13 @@ const serializeBigInt = <T extends Record<string, any>>(o: T): T => {
 
 /** Every trip carries the moves the server will accept next, so the UI never offers a dead end. */
 const serializeAssignment = (a: any) => ({
-  ...serializeBigInt(a),
+  ...serializeBigInt(withoutUntrackedPayment(a)),
   allowedTransitions: TRANSPORT_ASSIGNMENT_TRANSITIONS[a.status] ?? [],
 });
 
 const sameText = (a?: string | null, b?: string | null) => (a ?? '').trim().toLowerCase() === (b ?? '').trim().toLowerCase();
-const when = (d: Date) => `${d.toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 const unique = (ids: (string | null | undefined)[]) => [...new Set(ids.filter(Boolean))] as string[];
 const OPEN = { in: OPEN_ASSIGNMENT_STATUSES };
-
-interface Trip {
-  vehicleId: string;
-  driverId: string | null;
-  routeId: string | null;
-  scheduledAt: Date;
-  seats: number;
-}
 
 @Injectable()
 export class TransportService {
@@ -463,7 +455,7 @@ export class TransportService {
       data.driverId = dto.driverId || null;
     }
     if (dto.totalSeats !== undefined) {
-      const sold = await this.seatsSold(this.prisma, tenantId, existing.id);
+      const sold = await seatsSold(this.prisma, tenantId, existing.id);
       if (dto.totalSeats != null && dto.totalSeats < sold) {
         throw new BadRequestException(`totalSeats cannot be lower than the ${sold} seats already sold`);
       }
@@ -490,7 +482,7 @@ export class TransportService {
     // bookedSeats is server-owned (maintained from the trips) and ignored if sent.
     await this.prisma.$transaction(async (tx) => {
       await tx.transportRoute.update({ where: { id: existing.id }, data });
-      await this.recountSeats(tx, tenantId, [], [existing.id]);
+      await recountSeats(tx, tenantId, [], [existing.id]);
     });
     return this.findRouteById(tenantId, existing.id);
   }
@@ -504,37 +496,6 @@ export class TransportService {
   }
 
   // ─── Seat and fleet state (server-owned) ─────────────────────────────
-  private async seatsSold(db: Tx | PrismaService, tenantId: string, routeId: string, excludeId?: string) {
-    const agg = await db.transportAssignment.aggregate({
-      where: { tenantId, routeId, status: { not: 'CANCELLED' }, ...(excludeId ? { id: { not: excludeId } } : {}) },
-      _sum: { passengerCount: true },
-    });
-    return agg._sum.passengerCount ?? 0;
-  }
-
-  /**
-   * Recomputes the counters from the trips themselves instead of adding and
-   * subtracting deltas, so they self-heal from any past drift:
-   *  - vehicle.bookedSeats = passengers on its open trips;
-   *  - route.bookedSeats = seats sold on it (every trip that was not cancelled),
-   *    and ACTIVE ↔ FULLY_BOOKED follows those seats.
-   */
-  private async recountSeats(tx: Tx, tenantId: string, vehicleIds: (string | null | undefined)[], routeIds: (string | null | undefined)[]) {
-    for (const vehicleId of unique(vehicleIds)) {
-      const agg = await tx.transportAssignment.aggregate({ where: { tenantId, vehicleId, status: OPEN }, _sum: { passengerCount: true } });
-      await tx.vehicle.updateMany({ where: { id: vehicleId, tenantId }, data: { bookedSeats: agg._sum.passengerCount ?? 0 } });
-    }
-    for (const routeId of unique(routeIds)) {
-      const sold = await this.seatsSold(tx, tenantId, routeId);
-      const route = await tx.transportRoute.findFirst({ where: { id: routeId, tenantId }, select: { totalSeats: true, status: true } });
-      if (!route) continue;
-      const data: any = { bookedSeats: sold };
-      if (route.totalSeats != null && route.status === 'ACTIVE' && sold >= route.totalSeats) data.status = 'FULLY_BOOKED';
-      if (route.status === 'FULLY_BOOKED' && (route.totalSeats == null || sold < route.totalSeats)) data.status = 'ACTIVE';
-      await tx.transportRoute.updateMany({ where: { id: routeId, tenantId }, data });
-    }
-  }
-
   /** Vehicle IN_SERVICE / driver ON_TRIP exactly while one of their trips is in progress. */
   private async syncFleetStatus(tx: Tx, tenantId: string, vehicleIds: (string | null | undefined)[], driverIds: (string | null | undefined)[]) {
     for (const vehicleId of unique(vehicleIds)) {
@@ -560,99 +521,6 @@ export class TransportService {
       } else if (moving === 0 && d.status === 'ON_TRIP') {
         await tx.driver.updateMany({ where: { id: driverId, tenantId }, data: { status: 'AVAILABLE' } });
       }
-    }
-  }
-
-  /**
-   * Availability checks for a trip, inside the write transaction (vehicle and
-   * route rows are locked, so concurrent bookings cannot oversell):
-   *  - the vehicle carries the passengers and is not archived / under maintenance;
-   *  - the driver is active and licensed on the day;
-   *  - the route is selling and has the seats left;
-   *  - neither the vehicle nor the driver is already on another trip at that time.
-   *    Passengers booked onto the same departure (same route, same time) share it.
-   */
-  private async checkTrip(
-    tx: Tx, tenantId: string, trip: Trip,
-    opts: { excludeId?: string; vehicleChanged: boolean; driverChanged: boolean; routeChanged: boolean; clashes: boolean; starting?: boolean },
-  ) {
-    await tx.$queryRaw`SELECT id FROM plugin_transport.vehicles WHERE id = ${trip.vehicleId}::uuid FOR UPDATE`;
-    const vehicle = await tx.vehicle.findFirst({
-      where: { id: trip.vehicleId, tenantId }, select: { id: true, plateNumber: true, capacity: true, status: true, isActive: true },
-    });
-    if (!vehicle) throw new NotFoundException('Vehicle not found');
-    if (opts.vehicleChanged || opts.starting) {
-      if (!vehicle.isActive || vehicle.status === 'INACTIVE') throw new ConflictException(`Vehicle ${vehicle.plateNumber} is archived`);
-      if (vehicle.status === 'UNDER_MAINTENANCE') throw new ConflictException(`Vehicle ${vehicle.plateNumber} is under maintenance`);
-    }
-    if (trip.seats > vehicle.capacity) {
-      throw new ConflictException(`Passenger count ${trip.seats} exceeds the vehicle capacity of ${vehicle.capacity}`);
-    }
-
-    if (trip.driverId) {
-      const driver = await tx.driver.findFirst({
-        where: { id: trip.driverId, tenantId }, select: { firstName: true, lastName: true, status: true, isActive: true, licenseExpiry: true },
-      });
-      if (!driver) throw new NotFoundException('Driver not found');
-      const name = `${driver.firstName} ${driver.lastName}`.trim();
-      if (opts.driverChanged || opts.starting) {
-        if (!driver.isActive || driver.status === 'INACTIVE') throw new ConflictException(`Driver ${name} is archived`);
-        if (driver.licenseExpiry && driver.licenseExpiry < trip.scheduledAt) {
-          throw new ConflictException(`Driver ${name}'s licence expires before this trip`);
-        }
-      }
-    }
-
-    let tripMinutes = DEFAULT_TRIP_MINUTES;
-    if (trip.routeId) {
-      await tx.$queryRaw`SELECT id FROM plugin_transport.transport_routes WHERE id = ${trip.routeId}::uuid FOR UPDATE`;
-      const route = await tx.transportRoute.findFirst({
-        where: { id: trip.routeId, tenantId }, select: { name: true, status: true, totalSeats: true, durationMins: true },
-      });
-      if (!route) throw new NotFoundException('Route not found');
-      if (opts.routeChanged && !BOOKABLE_ROUTE_STATUSES.includes(route.status)) {
-        throw new ConflictException(`Route ${route.name} is ${route.status} and is not taking passengers`);
-      }
-      tripMinutes = route.durationMins || DEFAULT_TRIP_MINUTES;
-      if (route.totalSeats != null) {
-        const sold = await this.seatsSold(tx, tenantId, trip.routeId, opts.excludeId);
-        if (sold + trip.seats > route.totalSeats) {
-          throw new ConflictException(`Only ${Math.max(0, route.totalSeats - sold)} seat(s) left on route ${route.name}`);
-        }
-      }
-    }
-
-    if (!opts.clashes) return;
-    const dayMs = 86_400_000;
-    const others = await tx.transportAssignment.findMany({
-      where: {
-        tenantId,
-        status: OPEN,
-        ...(opts.excludeId ? { id: { not: opts.excludeId } } : {}),
-        scheduledAt: { gte: new Date(trip.scheduledAt.getTime() - dayMs), lte: new Date(trip.scheduledAt.getTime() + dayMs) },
-        OR: [{ vehicleId: trip.vehicleId }, ...(trip.driverId ? [{ driverId: trip.driverId }] : [])],
-      },
-      select: { vehicleId: true, driverId: true, routeId: true, scheduledAt: true, passengerCount: true, route: { select: { durationMins: true } } },
-    });
-    let sharedPassengers = 0;
-    for (const o of others) {
-      const sameDeparture = !!trip.routeId && o.routeId === trip.routeId && o.scheduledAt.getTime() === trip.scheduledAt.getTime();
-      if (sameDeparture) {
-        if (o.vehicleId === trip.vehicleId) sharedPassengers += o.passengerCount;
-        continue;
-      }
-      if (!tripsOverlap(trip.scheduledAt, tripMinutes, o.scheduledAt, o.route?.durationMins || DEFAULT_TRIP_MINUTES)) continue;
-      if (o.vehicleId === trip.vehicleId) {
-        throw new ConflictException(`Vehicle ${vehicle.plateNumber} already has a trip at ${when(o.scheduledAt)}`);
-      }
-      if (trip.driverId && o.driverId === trip.driverId) {
-        throw new ConflictException(`This driver already has a trip at ${when(o.scheduledAt)}`);
-      }
-    }
-    if (sharedPassengers + trip.seats > vehicle.capacity) {
-      throw new ConflictException(
-        `Vehicle ${vehicle.plateNumber} seats ${vehicle.capacity}; this departure already carries ${sharedPassengers}`,
-      );
     }
   }
 
@@ -710,7 +578,6 @@ export class TransportService {
   }
 
   async createAssignment(tenantId: string, dto: CreateAssignmentDto) {
-    rejectClientPaymentStatus(dto.paymentStatus);
     const status = dto.status ?? 'SCHEDULED';
     if (!ASSIGNMENT_INITIAL_STATUSES.includes(status)) {
       throw new BadRequestException(`A new trip starts as ${ASSIGNMENT_INITIAL_STATUSES.join(', ')}; departure and arrival are recorded on the trip`);
@@ -745,18 +612,16 @@ export class TransportService {
       passengerCount,
       priceCents: toCents(dto.price, dto.priceCents) ?? BigInt(0),
       currency: dto.currency ?? 'SAR',
-      // Payment state belongs to the payments module; a trip always starts unpaid.
-      paymentStatus: 'UNPAID',
       status,
       notes: dto.notes,
     };
 
     const assignment = await this.prisma.$transaction(async (tx) => {
-      await this.checkTrip(tx, tenantId,
+      await checkTrip(tx, tenantId,
         { vehicleId: vehicle.id, driverId: dto.driverId || null, routeId: dto.routeId || null, scheduledAt, seats: passengerCount },
         { vehicleChanged: true, driverChanged: true, routeChanged: true, clashes: true });
       const created = await tx.transportAssignment.create({ data });
-      await this.recountSeats(tx, tenantId, [created.vehicleId], [created.routeId]);
+      await recountSeats(tx, tenantId, [created.vehicleId], [created.routeId]);
       return created;
     });
     return this.findAssignmentById(tenantId, assignment.id);
@@ -764,7 +629,6 @@ export class TransportService {
 
   async updateAssignment(tenantId: string, id: string, dto: UpdateAssignmentDto) {
     const existing: any = await this.findAssignmentById(tenantId, id);
-    rejectClientPaymentStatus(dto.paymentStatus);
     if (ASSIGNMENT_TERMINAL_STATUSES.includes(existing.status)) {
       const changed = Object.entries(dto).filter(([k, v]) => v !== undefined && k !== 'notes').map(([k]) => k);
       if (changed.length) throw new ConflictException(`This trip is ${existing.status}; only its notes can still change`);
@@ -820,13 +684,13 @@ export class TransportService {
 
     await this.prisma.$transaction(async (tx) => {
       if (stillOpen && (vehicleChanged || driverChanged || routeChanged || scheduleChanged || seatsChanged || starting)) {
-        await this.checkTrip(tx, tenantId, trip, {
+        await checkTrip(tx, tenantId, trip, {
           excludeId: existing.id, vehicleChanged, driverChanged, routeChanged, starting,
           clashes: vehicleChanged || driverChanged || routeChanged || scheduleChanged || seatsChanged,
         });
       }
       await tx.transportAssignment.update({ where: { id: existing.id }, data });
-      await this.recountSeats(tx, tenantId, [existing.vehicleId, trip.vehicleId], [existing.routeId, trip.routeId]);
+      await recountSeats(tx, tenantId, [existing.vehicleId, trip.vehicleId], [existing.routeId, trip.routeId]);
       await this.syncFleetStatus(tx, tenantId, [existing.vehicleId, trip.vehicleId], [existing.driverId, trip.driverId]);
     });
     return this.findAssignmentById(tenantId, existing.id);
@@ -838,7 +702,7 @@ export class TransportService {
     assertAssignmentTransition(a.status, 'CANCELLED');
     await this.prisma.$transaction(async (tx) => {
       await tx.transportAssignment.update({ where: { id: a.id }, data: { status: 'CANCELLED' } });
-      await this.recountSeats(tx, tenantId, [a.vehicleId], [a.routeId]);
+      await recountSeats(tx, tenantId, [a.vehicleId], [a.routeId]);
       await this.syncFleetStatus(tx, tenantId, [a.vehicleId], [a.driverId]);
     });
     return this.findAssignmentById(tenantId, a.id);
@@ -915,14 +779,13 @@ export class TransportService {
     const byStatus: Record<string, number> = Object.fromEntries(Object.keys(TRANSPORT_ASSIGNMENT_TRANSITIONS).map((s) => [s, 0]));
     assignmentsByStatus.forEach((r) => { byStatus[r.status] = r._count; });
 
-    // Payment state is written by the payments module; these sums only read it.
-    const [revenue, pendingRevenue] = await Promise.all([
-      this.prisma.transportAssignment.aggregate({ where: { tenantId, paymentStatus: 'PAID' }, _sum: { priceCents: true } }),
-      this.prisma.transportAssignment.aggregate({
-        where: { tenantId, paymentStatus: { in: ['UNPAID', 'PARTIAL'] }, status: { not: 'CANCELLED' } },
-        _sum: { priceCents: true },
-      }),
-    ]);
+    // What was booked, not what was paid: no payment is linked to trips (F13) —
+    // money is recorded as Finance invoices.
+    const booked = await this.prisma.transportAssignment.aggregate({
+      where: { tenantId, currency: 'SAR', status: { not: 'CANCELLED' } },
+      _sum: { priceCents: true },
+      _count: { _all: true },
+    });
 
     // Tenant marketplace listings tied to a vendor with same tenantId
     const vendor = await this.prisma.vendor.findFirst({ where: { tenantId } });
@@ -959,12 +822,12 @@ export class TransportService {
         inProgress: byStatus.IN_PROGRESS,
         completed: byStatus.COMPLETED,
         cancelled: byStatus.CANCELLED,
-        upcoming: upcomingAssignments.map((u: any) => serializeBigInt(u)),
-        recent: recentAssignments.map((u: any) => serializeBigInt(u)),
+        upcoming: upcomingAssignments.map((u: any) => serializeBigInt(withoutUntrackedPayment(u))),
+        recent: recentAssignments.map((u: any) => serializeBigInt(withoutUntrackedPayment(u))),
       },
-      revenue: {
-        collectedCents: Number(revenue._sum.priceCents ?? 0),
-        pendingCents: Number(pendingRevenue._sum.priceCents ?? 0),
+      bookedValue: {
+        amountCents: Number(booked._sum.priceCents ?? 0),
+        count: booked._count._all,
         currency: 'SAR',
       },
       marketplace: { listings: listingsCount, openInquiries },

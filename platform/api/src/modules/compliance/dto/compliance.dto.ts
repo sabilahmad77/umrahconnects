@@ -1,7 +1,6 @@
 import { RawJson } from '../../../common/decorators/raw-json.decorator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  Allow,
   ArrayMaxSize,
   IsArray,
   IsDateString,
@@ -75,8 +74,6 @@ class VisaFieldsDto {
   @ApiPropertyOptional({ description: 'Price in major units (SAR)' })
   @IsOptional() @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(1_000_000_000) price?: number;
   @IsOptional() @IsString() @MaxLength(8) currency?: string;
-  /** Whitelisted only so the server can refuse it explicitly — payment state comes from the payments module. */
-  @ApiPropertyOptional({ deprecated: true }) @Allow() paymentStatus?: unknown;
 
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
 }

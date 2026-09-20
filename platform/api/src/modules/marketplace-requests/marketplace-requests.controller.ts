@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser, TenantId } from '../../common/decorators/tenant.decorator';
-import { AnyAuthenticated } from '../../common/decorators/access.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import type { Principal } from '../auth/principal';
 import { MarketplaceRequestsService } from './marketplace-requests.service';
@@ -13,24 +12,32 @@ import {
 
 @ApiTags('marketplace-requests')
 @ApiBearerAuth()
-/** Every route answers with the standard `{ success: true, data }` envelope (P08). */
+/**
+ * Every route answers with the standard `{ success: true, data }` envelope (P08).
+ *
+ * The traveler side of the request board is not open to every signed-in account:
+ * it needs `marketplace:listing:read`, the marketplace capability travelers,
+ * operators and providers hold (finance-only accounts do not), and a PLATFORM
+ * account holds no tenant capability at all, so platform administrators are
+ * refused here as they are on every other business route (D-005).
+ */
 @Controller('marketplace/requests')
 export class MarketplaceRequestsController {
   constructor(private svc: MarketplaceRequestsService) {}
 
   // ── Traveler (ownership enforced in the service: requester = caller) ────
   @Post()
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async create(
     @TenantId() tenantId: string,
     @CurrentUser() user: Principal,
     @Body() dto: CreateMarketplaceRequestDto,
   ) {
-    return { success: true, data: await this.svc.create(tenantId, user.sub, dto) };
+    return { success: true, data: await this.svc.create(tenantId, user, dto) };
   }
 
   @Get('mine')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async mine(
     @CurrentUser() user: Principal,
     @Query('page') page?: string,
@@ -48,7 +55,7 @@ export class MarketplaceRequestsController {
   }
 
   @Post(':id/close')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async close(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.svc.close(user.sub, id) };
   }
@@ -92,7 +99,7 @@ export class MarketplaceRequestsController {
 
   /** Visibility is decided in the service (requester, requester org staff, eligible providers). */
   @Get(':id')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async findOne(@CurrentUser() user: Principal, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.svc.findOne(id, user) };
   }
@@ -108,7 +115,7 @@ export class MarketplaceRequestsController {
   }
 
   @Post(':id/offers/:offerId/accept')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async acceptOffer(
     @CurrentUser() user: Principal,
     @Param('id', ParseUUIDPipe) id: string,
@@ -118,7 +125,7 @@ export class MarketplaceRequestsController {
   }
 
   @Post(':id/offers/:offerId/reject')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async rejectOffer(
     @CurrentUser() user: Principal,
     @Param('id', ParseUUIDPipe) id: string,
@@ -128,7 +135,7 @@ export class MarketplaceRequestsController {
   }
 
   @Post(':id/offers/:offerId/convert-to-booking')
-  @AnyAuthenticated()
+  @RequirePermissions('marketplace:listing:read')
   async convertOfferToBooking(
     @CurrentUser() user: Principal,
     @Param('id', ParseUUIDPipe) id: string,

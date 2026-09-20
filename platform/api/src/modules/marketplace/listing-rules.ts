@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 
 /**
@@ -21,6 +21,67 @@ export function assertListingTransition(from: string, to: string) {
   if (!(LISTING_TRANSITIONS[current] ?? []).includes(to)) {
     throw new BadRequestException(`A ${current.toLowerCase()} listing cannot be changed to ${to.toLowerCase()}`);
   }
+}
+
+/**
+ * Platform moderation (F2). `moderationStatus` is written only by the platform
+ * (platform:marketplace:moderate): a TAKEN_DOWN listing is archived, never
+ * appears on a public route, and its owner cannot publish, restore or otherwise
+ * move it — only a platform restore clears the decision. The owner still sees
+ * the listing, with the reason, and may correct its content meanwhile.
+ */
+export const MODERATION_CLEAR = 'CLEAR';
+export const MODERATION_TAKEN_DOWN = 'TAKEN_DOWN';
+
+/** Sellers that have been suspended or delisted by the platform are not shown to anyone else. */
+export const VISIBLE_VENDOR: Prisma.VendorWhereInput = { status: { notIn: ['SUSPENDED', 'DELISTED'] } };
+
+/** Listings the platform has not taken down — required everywhere a listing is shown to others. */
+export const NOT_TAKEN_DOWN: Prisma.ListingWhereInput = { moderationStatus: MODERATION_CLEAR };
+
+/**
+ * Only live listings of sellers in good standing, not taken down by the platform,
+ * are public — and only those can be booked, asked about or quoted, directly or
+ * through an accepted marketplace offer.
+ */
+export const PUBLIC_LISTING: Prisma.ListingWhereInput = {
+  isActive: true,
+  status: 'PUBLISHED',
+  ...NOT_TAKEN_DOWN,
+  vendor: VISIBLE_VENDOR,
+};
+
+export function assertOwnerMayChangeStatus(listing: { moderationStatus?: string | null; moderationReason?: string | null }) {
+  if (listing.moderationStatus === MODERATION_TAKEN_DOWN) {
+    const reason = listing.moderationReason?.trim();
+    throw new ForbiddenException(
+      `This listing was taken down by the platform${reason ? `: ${reason}` : ''}. Only the platform can restore it — contact support to have it reviewed.`,
+    );
+  }
+}
+
+/**
+ * D-005: a PLATFORM account administers the platform and never acts as a customer or a
+ * seller. Its capabilities already exclude every tenant capability, so this is defence in
+ * depth with a message that explains the refusal instead of a bare 403.
+ */
+export function assertNotPlatformAccount(principal: { tenantType?: string } | undefined) {
+  if (principal?.tenantType === 'PLATFORM') {
+    throw new ForbiddenException(
+      'A platform administration account cannot act as a customer or a seller on the marketplace.',
+    );
+  }
+}
+
+/** A listing's capacity (people per booking) from its category details, or null when it sets none. */
+export function listingCapacity(attributes: unknown): number | null {
+  if (!attributes || typeof attributes !== 'object' || Array.isArray(attributes)) return null;
+  const a = attributes as Record<string, unknown>;
+  for (const key of ['maxCapacity', 'capacity', 'maxGuests', 'maxOccupancy', 'seats']) {
+    const n = Number(a[key]);
+    if (Number.isInteger(n) && n >= 1) return n;
+  }
+  return null;
 }
 
 /** Categories accepted by the API, and the stored `type` values each one covers (older rows used short names). */

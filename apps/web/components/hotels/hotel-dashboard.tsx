@@ -4,9 +4,9 @@ import { Button , QueryFailure } from '@/components/ui/system';
 
 import Link from 'next/link';
 import {
-  Hotel, BedDouble, DoorOpen, Percent, Wallet, PauseCircle, CalendarCheck2,
+  Hotel, BedDouble, DoorOpen, Percent, Wallet, CalendarCheck2,
   CalendarX2, Store, MessageSquare, RefreshCw, Plus, ArrowRight, Loader2,
-  AlertCircle, CheckCircle2, Wrench,
+  AlertCircle, Wrench,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHotelOwnerStats } from '@/hooks/use-hotels';
@@ -67,17 +67,13 @@ export function HotelDashboard() {
             {/* Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-brand-600" /> Booking payments
+                <Wallet className="h-4 w-4 text-brand-600" /> Booked value
               </h3>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.revenue.currency} {(stats.revenue.collectedCents / 100).toLocaleString()}</p>
-                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><CheckCircle2 className="h-3 w-3" /> Bookings recorded as paid</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.bookedValue.currency} {(stats.bookedValue.amountCents / 100).toLocaleString()}</p>
+                <p className="text-xs text-gray-600 mt-1">{stats.bookedValue.count} booking{stats.bookedValue.count === 1 ? '' : 's'} in {stats.bookedValue.currency}, cancelled ones excluded</p>
               </div>
-              <div className="pt-2 border-t border-gray-50">
-                <p className="text-lg font-semibold text-gray-700">{stats.revenue.currency} {(stats.revenue.outstandingCents / 100).toLocaleString()}</p>
-                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1"><PauseCircle className="h-3 w-3" /> Not yet paid (open bookings)</p>
-              </div>
-              <p className="text-xs text-gray-600">Payment status comes from payments recorded in Finance; it is not edited on bookings.</p>
+              <p className="text-xs text-gray-600">Bookings do not track payments: guests are billed with invoices in Finance, where the money is recorded.</p>
               {canFinance && (
                 <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
                   Go to finance <ArrowRight className="h-3 w-3" />

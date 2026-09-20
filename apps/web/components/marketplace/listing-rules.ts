@@ -17,6 +17,14 @@ export function listingTransitions(status?: string): string[] {
   return LISTING_TRANSITIONS[String(status ?? '').toUpperCase()] ?? [];
 }
 
+/**
+ * A platform takedown (moderationStatus TAKEN_DOWN) is not the seller's to undo:
+ * the server refuses every status change, so no status action is offered.
+ */
+export function isTakenDown(listing?: { moderationStatus?: string | null } | null): boolean {
+  return listing?.moderationStatus === 'TAKEN_DOWN';
+}
+
 /** How each target status is offered to a seller. */
 export const TRANSITION_LABEL: Record<string, string> = {
   PUBLISHED: 'Publish',

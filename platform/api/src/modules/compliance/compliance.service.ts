@@ -7,7 +7,7 @@ import { QueryVisaDto, VISA_DECISION_STATUSES } from './dto/compliance.dto';
 import { VisaDocumentsService } from './visa-documents.service';
 import {
   BLOCKING_DOCUMENT_STATUSES, VISA_EDIT_STATUSES, VISA_TERMINAL_STATUSES, VISA_TRANSITIONS,
-  assertVisaTransition, rejectClientPaymentStatus,
+  assertVisaTransition,
 } from './visa-workflow';
 
 const OPERATOR_TENANT_TYPES = ['OPERATOR', 'MU_ASSASA', 'SUB_AGENT'];
@@ -36,11 +36,16 @@ export class ComplianceService {
     private docs: VisaDocumentsService,
   ) {}
 
-  /** Every application carries the moves the server will accept next, so the UI never offers a dead end. */
+  /**
+   * Every application carries the moves the server will accept next, so the UI never offers a dead end.
+   * F13: no payment is linked to visa applications, so their stored payment status never changes;
+   * it is neither accepted nor returned (the fee is billed as a Finance invoice).
+   */
   private serialize(v: any) {
     if (!v) return v;
+    const { paymentStatus: _untracked, ...row } = v;
     return {
-      ...v,
+      ...row,
       priceCents: v.priceCents != null ? Number(v.priceCents) : 0,
       allowedTransitions: VISA_TRANSITIONS[v.status] ?? [],
     };
@@ -115,7 +120,6 @@ export class ComplianceService {
   }
 
   async createVisa(tenantId: string, dto: any, createdBy?: string) {
-    rejectClientPaymentStatus(dto.paymentStatus);
     await this.assertVisaLinks(tenantId, dto);
     const operatorId = await this.resolveOperatorId(tenantId, dto.operatorId);
     const status = dto.status ?? 'NOT_STARTED';
@@ -155,7 +159,6 @@ export class ComplianceService {
         priceCents: dto.priceCents != null ? BigInt(Math.round(Number(dto.priceCents))) : dto.price != null ? BigInt(Math.round(Number(dto.price) * 100)) : BigInt(0),
         currency: dto.currency ?? 'SAR',
         // Payment state belongs to the payments module; an application always starts unpaid.
-        paymentStatus: 'UNPAID',
         notes: dto.notes,
         documents: dto.documents ?? [],
         timeline: [{ at: new Date().toISOString(), event: 'CREATED', to: status, by: createdBy ?? 'system' }],
@@ -237,7 +240,6 @@ export class ComplianceService {
 
   async updateVisa(tenantId: string, id: string, dto: any, actor: VisaActor = {}) {
     const current: any = await this.findVisaById(tenantId, id);
-    rejectClientPaymentStatus(dto.paymentStatus);
     if (VISA_TERMINAL_STATUSES.includes(current.status)) {
       const changed = Object.entries(dto).filter(([k, v]) => v !== undefined && k !== 'notes').map(([k]) => k);
       if (changed.length) throw new ConflictException(`This application is ${current.status}; only its notes can still change`);
@@ -355,16 +357,13 @@ export class ComplianceService {
     const base = await this.getStats(tenantId);
     const visas = await this.prisma.visaApplication.findMany({
       where: { tenantId },
-      select: { priceCents: true, paymentStatus: true, status: true, applicantName: true, applicationNumber: true, createdAt: true, id: true },
+      select: { priceCents: true, currency: true, status: true, applicantName: true, applicationNumber: true, createdAt: true, id: true },
       orderBy: { createdAt: 'desc' },
     });
-    // Payment state is written by the payments module; these sums only read it.
-    const revenueCollected = visas
-      .filter((v) => v.paymentStatus === 'PAID')
-      .reduce((s, v) => s + Number(v.priceCents), 0);
-    const pendingPayment = visas
-      .filter((v) => ['UNPAID', 'PARTIAL'].includes(v.paymentStatus) && !['CANCELLED', 'REJECTED'].includes(v.status))
-      .reduce((s, v) => s + Number(v.priceCents), 0);
+    // What was booked, not what was paid: no payment is linked to visa applications (F13) —
+    // service fees are billed as Finance invoices.
+    const booked = visas.filter((v) => !['CANCELLED', 'REJECTED'].includes(v.status) && v.currency === 'SAR');
+    const bookedValue = booked.reduce((s, v) => s + Number(v.priceCents), 0);
     const newRequests = visas.filter((v) => v.status === 'NOT_STARTED').length;
     const recentActivity = visas.slice(0, 6).map((v) => ({
       id: v.id,
@@ -393,8 +392,7 @@ export class ComplianceService {
     return {
       ...base,
       newRequests,
-      pendingPayment,
-      revenueCollected,
+      bookedValue: { amountCents: bookedValue, count: booked.length, currency: 'SAR' },
       currency: 'SAR',
       openServiceRequests,
       openTickets,

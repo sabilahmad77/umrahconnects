@@ -54,9 +54,10 @@ describe('business workflows: visa cases, service tickets and reports', () => {
 
     it('an application needs an applicant; payment state is server-owned', async () => {
       await expectStatus(w.visaA, 'post', '/compliance/visas', {}, 400);
-      expect(await errorOf(w.visaA, 'post', '/compliance/visas', { applicantName: 'X', paymentStatus: 'PAID' }, 400)).toMatch(/payments/);
+      // F13: no payment is linked to visa applications, so a payment status is neither accepted nor shown.
+      expect(await errorOf(w.visaA, 'post', '/compliance/visas', { applicantName: 'X', paymentStatus: 'PAID' }, 400)).toMatch(/paymentStatus should not exist/);
       v = await expectStatus(w.visaA, 'post', '/compliance/visas', { applicantName: 'Aisha Rahman', visaType: 'UMRAH', price: 350 }, 201);
-      expect([v.status, v.paymentStatus, v.priceCents]).toEqual(['NOT_STARTED', 'UNPAID', 35000]);
+      expect([v.status, 'paymentStatus' in v, v.priceCents]).toEqual(['NOT_STARTED', false, 35000]);
       expect(v.allowedTransitions).toEqual(['DOCUMENTS_COLLECTING', 'SUBMITTED', 'CANCELLED']);
     });
 

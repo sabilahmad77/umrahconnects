@@ -1,6 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
-  Allow, ArrayMaxSize, IsArray, IsDateString, IsEmail, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID,
+  ArrayMaxSize, IsArray, IsDateString, IsEmail, IsIn, IsInt, IsNumber, IsOptional, IsString, IsUUID,
   IsNotEmpty, IsObject, Matches, Max, MaxLength, Min,
 } from 'class-validator';
 import { HotelContractType } from '@prisma/client';
@@ -153,8 +153,6 @@ class HotelBookingFieldsDto {
   @IsOptional() @IsNumber() @Min(0) @Max(MAX_MONEY_MAJOR) amount?: number;
   @IsOptional() @IsInt() @Min(0) @Max(MAX_MONEY_CENTS) totalAmountCents?: number;
   @IsOptional() @Transform(upper) @IsIn(HOTEL_BOOKING_STATUSES) status?: string;
-  /** Whitelisted only so the server can refuse it explicitly — payment state comes from the payments module. */
-  @Allow() paymentStatus?: unknown;
   @IsOptional() @IsString() @MaxLength(5000) notes?: string;
 }
 

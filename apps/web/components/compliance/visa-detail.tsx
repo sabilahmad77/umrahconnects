@@ -15,7 +15,6 @@ import {
 import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
 import { ModalFooter, ModalHeader, dateTime, humanize, sar, shortDate } from '@/components/dashboard/workflow-ui';
 import { FormField } from '@/components/hotels/hotel-form';
-import { PaymentBadge } from '@/components/hotels/hotel-ui';
 import { cn } from '@/lib/utils';
 import { VisaDocumentPanel } from './visa-document-panel';
 import { VisaStatusBadge, applicantOf } from './compliance-list';
@@ -192,7 +191,6 @@ function Overview({ v, canOpenTraveler }: { v: any; canOpenTraveler: boolean }) 
           <Detail label="Assigned officer" value={v.assignedOfficer || '—'} />
           <Detail label="Expected completion" value={shortDate(v.expectedCompletionAt)} />
           <Detail label="Service fee" value={sar(v.priceCents, v.currency)} />
-          <Detail label="Payment" value={<PaymentBadge status={v.paymentStatus} />} />
         </dl>
         {v.notes && <p className="text-sm text-gray-700 whitespace-pre-wrap pt-2 border-t border-gray-100">{v.notes}</p>}
       </div>
@@ -275,7 +273,7 @@ function EditTab({ v, canManage }: { v: any; canManage: boolean }) {
       <h2 className="text-sm font-bold text-gray-900">Edit application</h2>
       {serverError && <Alert title={serverError} />}
       <VisaFormFields form={form} setForm={setForm} errors={touched ? errors : {}} isEdit canManage={canManage} />
-      <p className="text-xs text-gray-600">Submission and decision dates, the rejection reason and payment status are recorded by their actions and are not edited here.</p>
+      <p className="text-xs text-gray-600">Submission and decision dates and the rejection reason are recorded by their actions and are not edited here. The service fee is billed with an invoice in Finance.</p>
       <div className="flex justify-end"><Button type="submit" busy={update.isPending}><Save className="h-4 w-4" /> Save application</Button></div>
     </form>
   );

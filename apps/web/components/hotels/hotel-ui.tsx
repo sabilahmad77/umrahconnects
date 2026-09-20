@@ -17,9 +17,3 @@ const BOOKING_TONE: Record<string, string> = {
 export function BookingStatusBadge({ status }: { status: string }) {
   return <span className={cn('text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap', BOOKING_TONE[status] ?? 'bg-gray-100 text-gray-700')}>{humanize(status)}</span>;
 }
-
-/** Payment state is read-only here: it follows the payments recorded in Finance. */
-export function PaymentBadge({ status }: { status: string }) {
-  const tone = status === 'PAID' ? 'bg-green-50 text-green-800' : status === 'PARTIAL' ? 'bg-yellow-50 text-yellow-800' : status === 'REFUNDED' ? 'bg-gray-100 text-gray-700' : 'bg-orange-50 text-orange-800';
-  return <span title="Updated from payments recorded in Finance" className={cn('text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap', tone)}>{humanize(status)}</span>;
-}

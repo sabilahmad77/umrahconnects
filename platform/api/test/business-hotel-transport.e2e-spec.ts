@@ -88,11 +88,12 @@ describe('business workflows: hotels, operators and transport', () => {
     it('bookings: a guest is required, payment state is server-owned and a room is never double-booked', async () => {
       const base = { hotelId: hotel.id, checkIn: day(5), checkOut: day(8) };
       await expectStatus(w.hotelA, 'post', '/hotels/bookings', base, 400);
-      expect(await errorOf(w.hotelA, 'post', '/hotels/bookings', { ...base, guestName: 'A', paymentStatus: 'PAID' }, 400)).toMatch(/payments/);
+      // F13: no payment is linked to hotel bookings, so a payment status is neither accepted nor shown.
+      expect(await errorOf(w.hotelA, 'post', '/hotels/bookings', { ...base, guestName: 'A', paymentStatus: 'PAID' }, 400)).toMatch(/paymentStatus should not exist/);
       await expectStatus(w.hotelA, 'post', '/hotels/bookings', { ...base, guestName: 'A', status: 'CHECKED_IN' }, 400);
 
       b1 = await expectStatus(w.hotelA, 'post', '/hotels/bookings', { ...base, guestName: 'Guest One', roomId: room101.id, guests: 2 }, 201);
-      expect([b1.status, b1.paymentStatus, b1.room?.roomNumber]).toEqual(['PENDING', 'UNPAID', '101']);
+      expect([b1.status, 'paymentStatus' in b1, b1.room?.roomNumber]).toEqual(['PENDING', false, '101']);
       expect(b1.allowedTransitions).toEqual(['CONFIRMED', 'CANCELLED']);
       // A pending reservation does not make the room occupied.
       expect((await ctx.prisma.room.findUniqueOrThrow({ where: { id: room101.id } })).status).toBe('AVAILABLE');
@@ -226,12 +227,13 @@ describe('business workflows: hotels, operators and transport', () => {
     });
 
     it('trips: payment state and seats are server-owned; availability and clashes are enforced', async () => {
-      await expectStatus(w.transportA, 'post', '/transport/assignments', { vehicleId: bus.id, scheduledAt: plus(0), paymentStatus: 'PAID' }, 400);
+      // F13: no payment is linked to trips, so a payment status is neither accepted nor shown.
+      expect(await errorOf(w.transportA, 'post', '/transport/assignments', { vehicleId: bus.id, scheduledAt: plus(0), paymentStatus: 'PAID' }, 400)).toMatch(/paymentStatus should not exist/);
       await expectStatus(w.transportA, 'post', '/transport/assignments', { vehicleId: bus.id, scheduledAt: plus(0), status: 'IN_PROGRESS' }, 400);
 
       t1 = await expectStatus(w.transportA, 'post', '/transport/assignments',
         { vehicleId: bus.id, driverId: d1.id, routeId: route.id, scheduledAt: plus(0), passengerCount: 4, customerName: 'Group A' }, 201);
-      expect([t1.status, t1.paymentStatus]).toEqual(['SCHEDULED', 'UNPAID']);
+      expect([t1.status, 'paymentStatus' in t1]).toEqual(['SCHEDULED', false]);
       expect(t1.allowedTransitions).toEqual(['CONFIRMED', 'IN_PROGRESS', 'CANCELLED']);
       expect(await errorOf(w.transportA, 'post', '/transport/assignments',
         { vehicleId: bus.id, routeId: route.id, scheduledAt: plus(0), passengerCount: 3 }, 409)).toMatch(/2 seat/);

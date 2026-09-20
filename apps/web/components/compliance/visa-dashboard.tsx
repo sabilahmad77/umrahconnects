@@ -5,7 +5,7 @@ import { Button , QueryFailure } from '@/components/ui/system';
 import Link from 'next/link';
 import {
   FileCheck2, FilePlus2, Send, FileSearch, CheckCircle2, XCircle, Clock,
-  Wallet, PauseCircle, RefreshCw, Plus, ArrowRight, Loader2, AlertCircle,
+  Wallet, RefreshCw, Plus, ArrowRight, Loader2, AlertCircle,
   Store, MessageSquare, Users, FolderOpen, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,7 @@ export function VisaDashboard() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Visa agency operations</h1>
-          <p className="text-sm text-gray-600 mt-0.5">Applications, documents, processing status and revenue</p>
+          <p className="text-sm text-gray-600 mt-0.5">Applications, documents, processing status and booked fees</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="quiet" type="button" aria-label="Refresh dashboard" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
@@ -70,17 +70,13 @@ export function VisaDashboard() {
             {/* Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-brand-600" /> Service fees
+                <Wallet className="h-4 w-4 text-brand-600" /> Service fees booked
               </h3>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.currency} {(stats.revenueCollected / 100).toLocaleString()}</p>
-                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><CheckCircle2 className="h-3 w-3" /> Applications recorded as paid</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.bookedValue.currency} {(stats.bookedValue.amountCents / 100).toLocaleString()}</p>
+                <p className="text-xs text-gray-600 mt-1">{stats.bookedValue.count} application{stats.bookedValue.count === 1 ? '' : 's'} in {stats.bookedValue.currency}, cancelled and rejected ones excluded</p>
               </div>
-              <div className="pt-2 border-t border-gray-50">
-                <p className="text-lg font-semibold text-gray-700">{stats.currency} {(stats.pendingPayment / 100).toLocaleString()}</p>
-                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1"><PauseCircle className="h-3 w-3" /> Not yet paid (open applications)</p>
-              </div>
-              <p className="text-xs text-gray-600">Payment status comes from payments recorded in Finance.</p>
+              <p className="text-xs text-gray-600">Applications do not track payments: fees are billed with invoices in Finance, where the money is recorded.</p>
               {canFinance && (
                 <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
                   Go to finance <ArrowRight className="h-3 w-3" />
