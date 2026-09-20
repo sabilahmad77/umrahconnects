@@ -1,0 +1,54 @@
+{
+ "web": "http://127.0.0.1:3413",
+ "api": "http://127.0.0.1:4413",
+ "ranAt": "2026-09-20T19:43:00.568Z",
+ "passed": 9,
+ "failed": 0,
+ "results": [
+  {
+   "name": "A12-B1a second tab is signed in before the revocation",
+   "pass": true,
+   "detail": "HTTP 200"
+  },
+  {
+   "name": "A12-B1b log out everywhere accepted in tab 1",
+   "pass": true,
+   "detail": "HTTP 200"
+  },
+  {
+   "name": "A12-B1c the other tab is refused on its next action",
+   "pass": true,
+   "detail": "HTTP 401"
+  },
+  {
+   "name": "A12-B1d the revoked tab lands on the sign-in screen",
+   "pass": true,
+   "detail": "at /login"
+  },
+  {
+   "name": "A12-B2 two tabs submitting the same new record at once create two records (defect A12-1 through the UI)",
+   "pass": true,
+   "detail": "accepted=2 stored(list view)=2"
+  },
+  {
+   "name": "A12-B3a the published listing is readable before the takedown",
+   "pass": true,
+   "detail": "HTTP 200"
+  },
+  {
+   "name": "A12-B3b the platform takes it down",
+   "pass": true,
+   "detail": "HTTP 200"
+  },
+  {
+   "name": "A12-B3c the owner cannot republish it",
+   "pass": true,
+   "detail": "HTTP 403"
+  },
+  {
+   "name": "A12-B3d it is gone from the marketplace page",
+   "pass": true,
+   "detail": "ddd1f945"
+  }
+ ]
+}

@@ -1,0 +1,4 @@
+
+> @umrah-connects/api@0.1.0 lint /Users/macbook/Projects/umrah-connects-eng100/a12/platform/api
+> eslint .
+

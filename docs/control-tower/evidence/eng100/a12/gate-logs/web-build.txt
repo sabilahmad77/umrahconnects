@@ -1,0 +1,120 @@
+  ▲ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/82) ...
+   Generating static pages (20/82) 
+   Generating static pages (40/82) 
+   Generating static pages (61/82) 
+ ✓ Generating static pages (82/82)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                       Size     First Load JS
+┌ ○ /                                             2.02 kB         132 kB
+├ ○ /_not-found                                   147 B          87.8 kB
+├ ○ /about                                        2.01 kB         132 kB
+├ ○ /admin-dashboard                              8.83 kB         181 kB
+├ ○ /admin-inquiries                              5.08 kB         163 kB
+├ ƒ /admin-kyc                                    10.5 kB         178 kB
+├ ○ /admin-listings                               8.48 kB         176 kB
+├ ○ /admin-logs                                   6.65 kB         165 kB
+├ ○ /admin-roles                                  6.73 kB         165 kB
+├ ○ /admin-settings                               5.87 kB         164 kB
+├ ○ /admin-support                                3.65 kB         137 kB
+├ ○ /admin-tenants                                5.45 kB         182 kB
+├ ƒ /admin-tenants/[id]                           5.29 kB         182 kB
+├ ○ /admin-users                                  10.7 kB         183 kB
+├ ○ /api-docs                                     2.02 kB         132 kB
+├ ○ /auth/callback                                3.79 kB         174 kB
+├ ○ /bookings                                     11.1 kB         183 kB
+├ ƒ /bookings/[id]                                9.62 kB         185 kB
+├ ○ /budget-plans                                 7.57 kB         183 kB
+├ ○ /careers                                      158 B           158 kB
+├ ○ /compliance                                   2.68 kB         187 kB
+├ ƒ /compliance/[id]                              12.8 kB         197 kB
+├ ○ /connections                                  6.67 kB         176 kB
+├ ƒ /contact                                      157 B           158 kB
+├ ○ /dashboard                                    8.71 kB         283 kB
+├ ○ /discover                                     3.27 kB         206 kB
+├ ○ /finance                                      8.75 kB         184 kB
+├ ○ /finance-dashboard                            5.93 kB         181 kB
+├ ○ /finance-payments                             6.23 kB         185 kB
+├ ƒ /finance/invoices/[id]                        11.5 kB         194 kB
+├ ○ /groups                                       5.76 kB         184 kB
+├ ƒ /groups/[id]                                  8.9 kB          199 kB
+├ ○ /help                                         2.02 kB         132 kB
+├ ○ /hotel-bookings                               6.49 kB         188 kB
+├ ○ /hotel-dashboard                              5.89 kB         181 kB
+├ ○ /hotels                                       8.31 kB         184 kB
+├ ƒ /hotels/[id]                                  17 kB           192 kB
+├ ○ /integrations                                 2.02 kB         132 kB
+├ ○ /login                                        8.05 kB         187 kB
+├ ○ /marketplace                                  4.81 kB         195 kB
+├ ○ /marketplace-preview                          7.09 kB         176 kB
+├ ƒ /marketplace-preview/[id]                     3.98 kB         204 kB
+├ ƒ /marketplace/[id]                             1.4 kB          198 kB
+├ ○ /messages                                     7.28 kB         180 kB
+├ ○ /my-bookings                                  8.46 kB         183 kB
+├ ○ /my-offers                                    6.18 kB         176 kB
+├ ○ /notifications                                6.89 kB         176 kB
+├ ○ /onboarding                                   12.3 kB         184 kB
+├ ○ /packages                                     7.86 kB         180 kB
+├ ○ /partners                                     158 B           158 kB
+├ ○ /pilgrims                                     9.95 kB         185 kB
+├ ƒ /pilgrims/[id]                                14.9 kB         187 kB
+├ ○ /pricing                                      2.02 kB         132 kB
+├ ○ /privacy                                      2 kB            132 kB
+├ ○ /profile                                      7.4 kB          181 kB
+├ ○ /reports                                      13.9 kB         285 kB
+├ ○ /requests                                     206 B           185 kB
+├ ƒ /requests/[id]                                6.82 kB         191 kB
+├ ○ /reset-password                               4.58 kB         154 kB
+├ ○ /resources                                    2.02 kB         132 kB
+├ ● /resources/[slug]                             2.01 kB         132 kB
+├   ├ /resources/best-times-to-visit-rawdah
+├   ├ /resources/umrah-packing-checklist
+├   ├ /resources/operators-reduce-booking-errors
+├   └ [+5 more paths]
+├ ○ /security                                     2.01 kB         132 kB
+├ ○ /settings                                     9.1 kB          185 kB
+├ ○ /signup                                       9.18 kB         188 kB
+├ ○ /social                                       5.73 kB         208 kB
+├ ○ /social-preview                               2.01 kB         132 kB
+├ ○ /social/groups                                7.81 kB         177 kB
+├ ƒ /social/groups/[id]                           210 B           186 kB
+├ ○ /solutions                                    2.01 kB         132 kB
+├ ○ /terms                                        2 kB            132 kB
+├ ○ /transport                                    147 B          87.8 kB
+├ ○ /transport-dashboard                          9.1 kB          181 kB
+├ ○ /transport/assignments                        8.19 kB         188 kB
+├ ○ /transport/bookings                           3.62 kB         189 kB
+├ ○ /transport/drivers                            2.78 kB         189 kB
+├ ƒ /transport/drivers/[id]                       5.32 kB         196 kB
+├ ○ /transport/routes                             2.78 kB         189 kB
+├ ƒ /transport/routes/[id]                        5.55 kB         196 kB
+├ ○ /transport/vehicles                           2.78 kB         189 kB
+├ ƒ /transport/vehicles/[id]                      7.37 kB         198 kB
+├ ○ /travel-plan                                  11.3 kB         182 kB
+├ ○ /travel-plan/link                             7.04 kB         179 kB
+├ ○ /verify-email                                 6.34 kB         173 kB
+├ ○ /visa-dashboard                               8.84 kB         181 kB
+├ ○ /visa-documents                               9.52 kB         177 kB
+├ ○ /visa-requests                                12.3 kB         186 kB
+├ ƒ /visa-requests/[id]                           13.2 kB         189 kB
+└ ○ /workflow                                     2.01 kB         132 kB
++ First Load JS shared by all                     87.7 kB
+  ├ chunks/2749-295516e09078f6e3.js               31.9 kB
+  ├ chunks/5b8f0dd8-5d20ab282fcc7040.js           53.7 kB
+  └ other shared chunks (total)                   2.13 kB
+
+
+ƒ Middleware                                      26.4 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses getStaticProps)
+ƒ  (Dynamic)  server-rendered on demand
+
