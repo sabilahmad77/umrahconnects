@@ -1,0 +1,10 @@
+== Final gate on the integrated candidate — 2026-09-21 01:38 +0500
+revision: 53cce97
+
+$ platform/api: npx tsc --noEmit
+exit=0
+$ platform/api: pnpm lint
+exit=0
+$ platform/api: npx vitest run  (unit)
+ Test Files  18 passed (18)
+      Tests  201 passed (201)
