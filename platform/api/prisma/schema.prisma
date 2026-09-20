@@ -599,7 +599,7 @@ model Pilgrim {
   deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
   rowVersion Int       @default(1) @map("row_version")
 
-  documents PilgrimDocument[]
+  documents    PilgrimDocument[]
   accountLinks PilgrimAccountLink[] // eng100-a07
 
   @@index([tenantId])
@@ -763,7 +763,7 @@ model Package {
 model Booking {
   id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId   String        @map("tenant_id") @db.Uuid
-  bookingRef String        @unique @map("booking_ref") // UC-2026-00001
+  bookingRef String        @map("booking_ref") // UC-2026-00001 — unique per organization (eng100-fx3)
   packageId  String?       @map("package_id") @db.Uuid
   package    Package?      @relation(fields: [packageId], references: [id])
   status     BookingStatus @default(DRAFT)
@@ -797,6 +797,7 @@ model Booking {
 
   pilgrims BookingPilgrim[]
 
+  @@unique([tenantId, bookingRef]) // eng100-fx3
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([bookingRef])
@@ -1485,7 +1486,7 @@ model TasreehPermit {
 model Invoice {
   id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId   String        @map("tenant_id") @db.Uuid
-  invoiceRef String        @unique @map("invoice_ref") // INV-2026-00001
+  invoiceRef String        @map("invoice_ref") // INV-2026-00001 — unique per organization (eng100-fx3)
   status     InvoiceStatus @default(DRAFT)
   type       String        @default("CUSTOMER") @db.VarChar(30) // CUSTOMER / VENDOR / CREDIT_NOTE
 
@@ -1524,6 +1525,7 @@ model Invoice {
 
   payments Payment[]
 
+  @@unique([tenantId, invoiceRef]) // eng100-fx3
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([invoiceRef])
@@ -1584,7 +1586,7 @@ model Payment {
 model BudgetPlan {
   id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId String @map("tenant_id") @db.Uuid
-  planRef  String @unique @map("plan_ref") // BP-2026-00001
+  planRef  String @map("plan_ref") // BP-2026-00001 — unique per organization (eng100-fx3)
 
   // Client
   clientUserId String? @map("client_user_id") @db.Uuid
@@ -1619,6 +1621,7 @@ model BudgetPlan {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
   createdBy String?  @map("created_by") @db.Uuid
 
+  @@unique([tenantId, planRef]) // eng100-fx3
   @@index([tenantId])
   @@index([tenantId, status])
   @@map("budget_plans")
@@ -2544,4 +2547,32 @@ model PaymentWebhookEvent {
   @@index([paymentId])
   @@map("payment_webhook_events")
   @@schema("plugin_finance")
+}
+
+// ============================================================
+// eng100-fx3 — platform plumbing added by the FX3 fix pass
+// ============================================================
+
+/// A12-3 — one counter per organization, reference prefix and year. Human-facing
+/// references (UC-/INV-/BP-/VISA-) used to be five digits of Math.random() with a
+/// PLATFORM-WIDE unique index: at a few hundred records a year the birthday bound
+/// makes a collision routine, and an ordinary create then fails on the constraint.
+/// The numbers are now handed out in order per organization
+/// (src/modules/references/reference-number.service.ts) and the uniqueness of the
+/// references themselves is scoped per organization, so two operators may both
+/// hold UC-2026-00001 — their own first booking of the year.
+model ReferenceCounter {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  /// The reference prefix this counter feeds: UC, INV, BP, VISA …
+  prefix    String   @db.VarChar(12)
+  /// The period the number restarts in — the calendar year the reference carries.
+  period    String   @db.VarChar(8)
+  /// The last number handed out. Never reused, even when a create is rolled back.
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, prefix, period])
+  @@map("reference_counters")
+  @@schema("core")
 }

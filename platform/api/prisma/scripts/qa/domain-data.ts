@@ -141,7 +141,7 @@ async function seedBooking(prisma: PrismaClient, tenantId: string, createdBy: st
     createdBy,
   };
   const booking = await upsert(
-    () => prisma.booking.findUnique({ where: { bookingRef: b.ref } }),
+    () => prisma.booking.findUnique({ where: { tenantId_bookingRef: { tenantId: data.tenantId, bookingRef: b.ref } } }),
     () => prisma.booking.create({ data: { bookingRef: b.ref, ...data } }),
     (id) => prisma.booking.update({ where: { id }, data }),
   );
@@ -185,7 +185,7 @@ async function seedInvoice(
     createdBy,
   };
   const invoice = await upsert(
-    () => prisma.invoice.findUnique({ where: { invoiceRef: inv.ref } }),
+    () => prisma.invoice.findUnique({ where: { tenantId_invoiceRef: { tenantId: data.tenantId, invoiceRef: inv.ref } } }),
     () => prisma.invoice.create({ data: { invoiceRef: inv.ref, ...data } }),
     (id) => prisma.invoice.update({ where: { id }, data }),
   );

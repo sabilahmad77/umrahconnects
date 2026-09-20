@@ -5,6 +5,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { assertAllOwned, assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
 import { QueryVisaDto, VISA_DECISION_STATUSES } from './dto/compliance.dto';
 import { VisaDocumentsService } from './visa-documents.service';
+import { ReferenceNumberService } from '../references/reference-number.service';
 import {
   BLOCKING_DOCUMENT_STATUSES, VISA_EDIT_STATUSES, VISA_TERMINAL_STATUSES, VISA_TRANSITIONS,
   assertVisaTransition,
@@ -34,6 +35,7 @@ export class ComplianceService {
     private prisma: PrismaService,
     private notifications: NotificationsService,
     private docs: VisaDocumentsService,
+    private references: ReferenceNumberService, // eng100-fx3
   ) {}
 
   /**
@@ -137,7 +139,13 @@ export class ComplianceService {
     if (!applicantName) {
       throw new BadRequestException('Give the applicant\'s name or link a traveler record');
     }
-    const appNo = dto.applicationNumber ?? `VISA-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+    // A12-3: a generated number comes from the organization's own sequence. An
+    // operator-supplied external number is kept exactly as entered.
+    const appNo =
+      dto.applicationNumber ??
+      (await this.references.next(tenantId, 'VISA', async (ref) =>
+        (await this.prisma.visaApplication.count({ where: { tenantId, applicationNumber: ref } })) > 0,
+      ));
     const visa = await this.prisma.visaApplication.create({
       data: {
         tenantId,
