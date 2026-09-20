@@ -117,16 +117,16 @@ def main():
     # J2 — navigate to a list with the keyboard: skip link, then the menu.
     J = 'J2 list'
     step(J, 'Orca: top of document (Ctrl+Home)', lambda: key('ctrl+Home'), 1.5)
-    tab_until(J, r'Skip to content link', limit=40)
-    tab_until(J, r'My Requests link', limit=30)
-    step(J, 'press Enter on the menu link (client navigation)', lambda: key('Return'), 8)
-    step(J, 'Orca: next heading (h)', lambda: key('h'), 2)
+    step(J, 'Tab — the first stop should be the skip link', lambda: key('Tab'), 1.5)
+    step(J, 'Enter on the skip link (jump into the main region)', lambda: key('Return'), 2.5)
+    tab_until(J, r'My Requests link', limit=30, back=True)
+    step(J, 'press Enter on the menu link (client navigation)', lambda: key('Return'), 9)
     step(J, 'Orca: next heading (h)', lambda: key('h'), 2)
     step(J, 'Orca: next list (l)', lambda: key('l'), 2)
 
     # J3 — open a dialog from the list page.
     J = 'J3 dialog'
-    tab_until(J, r'New request push button', limit=30, back=True)
+    tab_until(J, r'New request push button', limit=30)
     step(J, 'press Enter to open the dialog', lambda: key('Return'), 3)
 
     # J4 — submit the form with an error, then close the dialog.
