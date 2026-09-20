@@ -63,13 +63,13 @@ export function PilgrimList() {
   if (error || pilgrimStatsError) return <QueryFailure error={error || pilgrimStatsError} onRetry={() => { refetch(); retryPilgrimStats(); }} />;
   return (
     <div className="space-y-5 pb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pilgrims & CRM</h1>
+      {/* Header — wraps at narrow widths so the actions never push the page (W30). */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-gray-900">Pilgrims &amp; CRM</h1>
           <p className="text-sm text-gray-600 mt-0.5">{total.toLocaleString()} pilgrims total</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="quiet" type="button" aria-label="Refresh information" onClick={() => refetch()} className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
             <RefreshCw className="h-4 w-4" />
           </Button>
