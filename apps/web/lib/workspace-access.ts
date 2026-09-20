@@ -101,9 +101,9 @@ export const ROUTE_RULES: Readonly<Record<string, RouteRule>> = {
   '/hotels': { all: ['hotel:allotment:read'] },
   '/hotel-bookings': { all: ['hotel:allotment:read'] },
   '/transport-dashboard': { all: ['transport:vehicle:read'] },
+  // Trips (assignments and their bookings view) are readable with transport:vehicle:read, as in the API
+  // catalogue; the pages show a read-only notice and hide the actions without transport:assignment:manage.
   '/transport': { all: ['transport:vehicle:read'] },
-  '/transport/assignments': { all: ['transport:assignment:manage'] },
-  '/transport/bookings': { all: ['transport:assignment:manage'] },
   '/visa-dashboard': { all: ['visa:application:read'] },
   '/compliance': { all: ['visa:application:read'] },
   '/visa-documents': { all: ['visa:application:read'] },

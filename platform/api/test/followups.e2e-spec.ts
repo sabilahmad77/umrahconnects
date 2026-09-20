@@ -86,12 +86,29 @@ describe('core follow-ups: approvals, over-collection, offers, drafts, Stripe we
     });
 
     it('draft and archived listings are not public', async () => {
-      const draft = await ctx.prisma.listing.create({
-        data: { vendorId: vendor.id, type: 'HOTEL_ROOM' as any, name: `Draft ${uniq()}`, status: 'DRAFT', isActive: true, priceCents: BigInt(1000) } as any,
-      });
+      const listing = (name: string, status: string) =>
+        ctx.prisma.listing.create({
+          data: { vendorId: vendor.id, type: 'HOTEL_ROOM' as any, name: `${name} ${uniq()}`, status, isActive: true, priceCents: BigInt(1000) } as any,
+        });
+      const [draft, archived, published] = [await listing('Draft', 'DRAFT'), await listing('Archived', 'ARCHIVED'), await listing('Live', 'PUBLISHED')];
       expect((await call(null, 'get', `/marketplace/listings/${draft.id}`)).status).toBe(404);
-      const list = await call(null, 'get', '/marketplace/listings?includeInactive=true&limit=100');
-      expect(JSON.stringify(list.body)).not.toContain(draft.id);
+      expect((await call(null, 'get', `/marketplace/listings/${archived.id}`)).status).toBe(404);
+      expect((await call(null, 'get', `/marketplace/listings/${published.id}`)).status).toBe(200);
+      // The public catalogue has no "include inactive" switch (an unknown parameter is refused), and the
+      // vendor filter returns that seller's public listings only: the published control proves the
+      // query really covered this vendor, so the absence of the other two means something.
+      expect((await call(null, 'get', '/marketplace/listings?includeInactive=true')).status).toBe(400);
+      const list = await call(null, 'get', `/marketplace/listings?vendorId=${vendor.id}&limit=50`);
+      expect(list.status).toBe(200);
+      const ids = list.body.data.items.map((l: any) => l.id);
+      expect(ids).toContain(published.id);
+      expect(ids).not.toContain(draft.id);
+      expect(ids).not.toContain(archived.id);
+      const profile = await call(null, 'get', `/marketplace/vendors/${vendor.id}`);
+      expect(profile.status).toBe(200);
+      expect(JSON.stringify(profile.body)).toContain(published.id);
+      expect(JSON.stringify(profile.body)).not.toContain(draft.id);
+      expect(JSON.stringify(profile.body)).not.toContain(archived.id);
     });
 
     it('offers cannot be accepted once the request is closed', async () => {

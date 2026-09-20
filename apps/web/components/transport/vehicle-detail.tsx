@@ -54,9 +54,9 @@ export function VehicleDetail({ id }: { id: string }) {
             <Button variant="quiet" type="button" className="text-red-700 hover:bg-red-50" busy={remove.isPending} onClick={() => setConfirm({
               title: `Archive ${v.plateNumber}?`, body: 'The vehicle leaves the active fleet; its trips stay on record. A vehicle with open trips cannot be archived.',
               cta: 'Archive vehicle', tone: 'danger',
+              failureMessage: 'The vehicle could not be archived.',
               onConfirm: async () => {
-                try { await remove.mutateAsync(v.id); toast.success('Vehicle archived'); router.push('/transport/vehicles'); }
-                catch (e) { toast.error(apiErrorMessage(e, 'The vehicle could not be archived.')); }
+                await remove.mutateAsync(v.id); toast.success('Vehicle archived'); router.push('/transport/vehicles');
               },
             })}><Trash2 className="h-4 w-4" /> Archive</Button>
           </div>
@@ -162,9 +162,9 @@ function DriversTab({ vehicle, canManage }: { vehicle: any; canManage: boolean }
                   {canManage && (
                     <Button variant="quiet" type="button" className="text-xs text-red-700 hover:underline" onClick={() => setConfirm({
                       title: `Unassign ${ad.driver.firstName}?`, body: 'The driver is no longer linked to this vehicle. Trips already scheduled keep their driver.', cta: 'Unassign', tone: 'danger',
+                      failureMessage: 'The driver could not be unassigned.',
                       onConfirm: async () => {
-                        try { await unassign.mutateAsync({ vehicleId: vehicle.id, driverId: ad.driverId }); toast.success('Driver unassigned'); }
-                        catch (e) { toast.error(apiErrorMessage(e, 'The driver could not be unassigned.')); }
+                        await unassign.mutateAsync({ vehicleId: vehicle.id, driverId: ad.driverId }); toast.success('Driver unassigned');
                       },
                     })}>Unassign</Button>
                   )}

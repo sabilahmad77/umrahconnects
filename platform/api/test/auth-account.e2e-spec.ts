@@ -79,6 +79,8 @@ describe('account verification and settings actions', () => {
       const tooSoon = await requestVerification(token);
       expect(tooSoon.status).toBe(429);
       expect(tooSoon.body.error.code).toBe('VERIFICATION_COOLDOWN');
+      // F5: a deliberate 429 keeps its own message (the generic one is only for the rate limiter).
+      expect(tooSoon.body.error.message).toMatch(/^A verification email was sent recently\. You can request another in \d+ seconds\.$/);
       expect(tooSoon.body.error.details.retryAfterSeconds).toBeGreaterThan(0);
       expect(tooSoon.body.error.details.retryAfterSeconds).toBeLessThanOrEqual(60);
 

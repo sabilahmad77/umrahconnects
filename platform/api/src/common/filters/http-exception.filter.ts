@@ -1,4 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { ThrottlerException } from '@nestjs/throttler';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
@@ -47,7 +48,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
         if (typeof r.code === 'string') code = r.code;
         details = r.errors ?? r.details ?? (r.tenants ? { tenants: r.tenants } : undefined);
       }
-      if (status === 429) message = 'Too many requests. Please slow down and try again shortly.';
+      // Only the rate limiter's own message ("ThrottlerException: Too Many Requests") is replaced. A 429 a
+      // service raises on purpose (e.g. VERIFICATION_COOLDOWN) keeps its message, code and retry details.
+      if (exception instanceof ThrottlerException) message = 'Too many requests. Please slow down and try again shortly.';
     } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
       ({ status, code, message } = this.fromPrisma(exception));
       if (status >= 500) this.logger.error(`[${requestId}] Prisma ${exception.code}: ${exception.message}`);

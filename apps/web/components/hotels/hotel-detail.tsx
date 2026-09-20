@@ -311,9 +311,9 @@ function RoomsTab({ hotelId, writable }: { hotelId: string; writable: boolean })
                               title: `Archive room ${r.roomNumber}?`,
                               body: 'The room leaves the inventory but keeps its booking history. Rooms with a guest in house or stays ahead cannot be archived.',
                               cta: 'Archive room', tone: 'danger',
+                              failureMessage: 'The room could not be archived.',
                               onConfirm: async () => {
-                                try { await del.mutateAsync(r.id); toast.success(`Room ${r.roomNumber} archived`); }
-                                catch (e) { toast.error(apiErrorMessage(e, 'The room could not be archived.')); }
+                                await del.mutateAsync(r.id); toast.success(`Room ${r.roomNumber} archived`);
                               },
                             })}>
                             <Trash2 className="h-3.5 w-3.5" />
@@ -520,9 +520,9 @@ function AllotmentsTab({ hotel }: { hotel: any }) {
                       <Button variant="quiet" type="button" className="text-xs text-red-700 hover:underline" busy={release.isPending && release.variables?.assignmentId === r.id}
                         onClick={() => setConfirm({
                           title: 'Release this room?', body: 'The assignment is removed and the room goes back to the allotment.', cta: 'Release room', tone: 'danger',
+                          failureMessage: 'The room could not be released.',
                           onConfirm: async () => {
-                            try { await release.mutateAsync({ hotelId: hotel.id, assignmentId: r.id }); toast.success('Room released'); }
-                            catch (e) { toast.error(apiErrorMessage(e, 'The room could not be released.')); }
+                            await release.mutateAsync({ hotelId: hotel.id, assignmentId: r.id }); toast.success('Room released');
                           },
                         })}>Release</Button>
                     )}
@@ -735,9 +735,9 @@ function EditTab({ h, onSaved }: { h: any; onSaved: () => void }) {
           <p className="text-xs text-gray-600 my-2">Takes the hotel out of active inventory; bookings history stays. Hotels with stays ahead cannot be archived.</p>
           <Button variant="danger" type="button" busy={remove.isPending} onClick={() => setConfirm({
             title: `Archive ${h.name}?`, body: 'The hotel becomes inactive and stops taking bookings.', cta: 'Archive hotel', tone: 'danger',
+            failureMessage: 'The hotel could not be archived.',
             onConfirm: async () => {
-              try { await remove.mutateAsync(h.id); toast.success('Hotel archived'); router.push('/hotels'); }
-              catch (e) { toast.error(apiErrorMessage(e, 'The hotel could not be archived.')); }
+              await remove.mutateAsync(h.id); toast.success('Hotel archived'); router.push('/hotels');
             },
           })}>Archive</Button>
         </div>

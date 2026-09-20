@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Pencil, Trash2, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
-import { apiErrorMessage } from '@/lib/api-error';
 import { Button, LoadingState, QueryFailure } from '@/components/ui/system';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { useCapabilities } from '@/hooks/use-capabilities';
@@ -46,9 +45,9 @@ export function DriverDetail({ id }: { id: string }) {
             <Button variant="secondary" type="button" onClick={() => setEditing(true)}><Pencil className="h-4 w-4" /> Edit</Button>
             <Button variant="quiet" type="button" className="text-red-700 hover:bg-red-50" busy={remove.isPending} onClick={() => setConfirm({
               title: `Archive ${name}?`, body: 'The driver leaves the active roster; trip history stays. A driver with open trips cannot be archived.', cta: 'Archive driver', tone: 'danger',
+              failureMessage: 'The driver could not be archived.',
               onConfirm: async () => {
-                try { await remove.mutateAsync(d.id); toast.success('Driver archived'); router.push('/transport/drivers'); }
-                catch (e) { toast.error(apiErrorMessage(e, 'The driver could not be archived.')); }
+                await remove.mutateAsync(d.id); toast.success('Driver archived'); router.push('/transport/drivers');
               },
             })}><Trash2 className="h-4 w-4" /> Archive</Button>
           </div>

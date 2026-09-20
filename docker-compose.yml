@@ -1,8 +1,9 @@
-version: '3.9'
-
-# Umrah Connects — Local Development Stack
-# Run: pnpm docker:up
-# Stop: pnpm docker:down
+# Umrah Connects — Local Development Stack (developer machines only; production is infrastructure/kvm/)
+#   cp .env.docker.example .env      # once: local-only passwords (the stack refuses to start without them)
+#   pnpm docker:up                   # docker compose up -d
+#   pnpm docker:down
+# Every port is published on 127.0.0.1 only, so nothing here is reachable from the network, and no password is
+# written in this file. The values in .env.docker.example are for this machine only — never reuse them.
 
 services:
   # ─── PostgreSQL 16 ─────────────────────────────────────────
@@ -13,10 +14,10 @@ services:
     environment:
       POSTGRES_DB: umrah_connects
       POSTGRES_USER: umrah
-      POSTGRES_PASSWORD: change_me_in_production
+      POSTGRES_PASSWORD: ${UC_DEV_POSTGRES_PASSWORD:?set UC_DEV_POSTGRES_PASSWORD in .env (cp .env.docker.example .env)}
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -32,12 +33,14 @@ services:
     container_name: uc_redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    environment:
+      REDIS_PASSWORD: ${UC_DEV_REDIS_PASSWORD:?set UC_DEV_REDIS_PASSWORD in .env (cp .env.docker.example .env)}
+    command: ['sh', '-c', 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" --no-auth-warning ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,8 +51,8 @@ services:
     container_name: uc_kafka
     restart: unless-stopped
     ports:
-      - '9092:9092'
-      - '9093:9093'
+      - '127.0.0.1:9092:9092'
+      - '127.0.0.1:9093:9093'
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
@@ -81,7 +84,7 @@ services:
     container_name: uc_kafka_ui
     restart: unless-stopped
     ports:
-      - '8080:8080'
+      - '127.0.0.1:8080:8080'
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
@@ -95,11 +98,11 @@ services:
     container_name: uc_minio
     restart: unless-stopped
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${UC_DEV_MINIO_ROOT_USER:-uc-dev-minio}
+      MINIO_ROOT_PASSWORD: ${UC_DEV_MINIO_ROOT_PASSWORD:?set UC_DEV_MINIO_ROOT_PASSWORD in .env (cp .env.docker.example .env)}
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -115,8 +118,8 @@ services:
     container_name: uc_mailhog
     restart: unless-stopped
     ports:
-      - '1025:1025'   # SMTP
-      - '8025:8025'   # Web UI
+      - '127.0.0.1:1025:1025'   # SMTP
+      - '127.0.0.1:8025:8025'   # Web UI
 
   # ─── pgAdmin (optional, DB management UI) ─────────────────
   pgadmin:
@@ -124,10 +127,10 @@ services:
     container_name: uc_pgadmin
     restart: unless-stopped
     ports:
-      - '5050:80'
+      - '127.0.0.1:5050:80'
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@umrahconnects.local
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_PASSWORD: ${UC_DEV_PGADMIN_PASSWORD:?set UC_DEV_PGADMIN_PASSWORD in .env (cp .env.docker.example .env)}
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:

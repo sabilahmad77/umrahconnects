@@ -42,3 +42,31 @@ offsite_remote_valid() {
 # Permission bits for group and other ("------" means private). Portable replacement for stat -c/-f.
 perms_group_other() { ls -ld "$1" | cut -c5-10; }
 owner_of() { ls -ld "$1" | awk '{print $3}'; }
+
+# R05: create/update the API's database login (APP_DB_USER, a member of uc_app_runtime) and re-apply the runtime
+# grants, as the database owner inside uc-postgres (platform/api/prisma/rls/runtime-role.sql, idempotent). The
+# password reaches psql only through the environment of this one exec (never a command line, never printed).
+# Fails unless the login ends up not superuser, not BYPASSRLS and owning nothing.   apply_runtime_role <repo-root>
+apply_runtime_role() {
+  local db db_user login out last
+  db="$(env_get POSTGRES_DB)"
+  db_user="$(env_get POSTGRES_USER)"
+  login="$(env_get APP_DB_USER)"
+  [ -n "$login" ] && [ -n "$(env_get APP_DB_PASSWORD)" ] || {
+    warn "APP_DB_USER and APP_DB_PASSWORD must be set in $ENV_FILE"
+    return 1
+  }
+  out="$(UC_RUNTIME_LOGIN="$login" UC_RUNTIME_PASSWORD="$(env_get APP_DB_PASSWORD)" \
+    compose exec -T -e UC_RUNTIME_LOGIN -e UC_RUNTIME_PASSWORD uc-postgres \
+    psql -X -q -At -v ON_ERROR_STOP=1 -U "${db_user:-umrah}" -d "${db:-umrah_connects}" -f - \
+    < "$1/platform/api/prisma/rls/runtime-role.sql")" || {
+    warn "runtime role script failed for login $login"
+    return 1
+  }
+  last="$(printf '%s\n' "$out" | tail -n 1)"
+  [ "$last" = "$login|f|f|f" ] || {
+    warn "runtime login check failed: expected '$login|f|f|f' (not superuser, no BYPASSRLS, owns nothing), got '$last'"
+    return 1
+  }
+  log "runtime login $login: not superuser, no BYPASSRLS, owns nothing"
+}
