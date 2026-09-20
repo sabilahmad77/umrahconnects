@@ -103,12 +103,55 @@ cookie), so the probe reuses the exact `Authorization` header the application it
 on the page's own requests after a real form sign-in. Nothing was injected into `localStorage` and no
 token was minted outside the login flow.
 
+## 9. The runtime role, probed directly in PostgreSQL (outside the application)
+
+`psql` as the API's own login role (`uc_int_app`) against the development database — the check the
+application cannot make for itself.
+
+| Probe | Result |
+|---|---|
+| `rolsuper`, `rolbypassrls`, `rolcreatedb`, `rolcreaterole` | **f / f / f / f** |
+| Tables owned by the role | **0** |
+| `SELECT count(*) FROM plugin_crm.pilgrims` with no scope set | **0** — fails closed |
+| `UPDATE` and `DELETE` on `audit.audit_logs` | **permission denied** — the trail really is append-only for the runtime role |
+| `ALTER TABLE … DISABLE ROW LEVEL SECURITY` | **must be owner of table** |
+| `DROP POLICY rls_tenant ON plugin_crm.pilgrims` | **must be owner of relation** |
+| `SET ROLE macbook` (the owner) | **permission denied to set role** |
+| Tables with RLS: enabled / forced / total | **36 / 36 / 36** — every RLS table is also FORCEd |
+| `SELECT set_config('app.scope','system',true)` then read every organization | **30 rows returned** |
+
+The last line is the design's own stated limit, not a hidden one: `RLS.md` §8 says "Settings are
+trusted… SQL injection could call `set_config`". A12 confirmed both halves of the mitigation it
+names: there is **no** `$queryRawUnsafe`/`$executeRawUnsafe` anywhere in `src/`, `test/` or
+`prisma/`, all 16 raw queries are tagged templates (parameterised), and `eslint.config.mjs:24-28`
+fails the build on either unsafe call — the lint gate passes with zero findings. So RLS here is
+defence in depth against a **forgotten tenant filter**, which is what it claims to be, and not a
+containment boundary against a compromised application credential. Recorded, not filed as a break.
+
+## 10. Provider integration suite (containers A12 started)
+
+`npx vitest run --config vitest.providers.config.ts` with `stripe/stripe-mock`, `minio/minio` and
+`axllent/mailpit` on ports A12 owns (12412 / 19412 / 11412+18412).
+
+| File | Result |
+|---|---|
+| `storage-s3.int-spec.ts` (the R2 code path against MinIO) | **5/5 pass** — including "private objects are readable only through short-lived presigned URLs" |
+| `storage-cleanup-s3.int-spec.ts` | **1/1 pass** |
+| `smtp-mailpit.int-spec.ts` | **2/2 pass** |
+| `stripe-mock.int-spec.ts` | **2/3 — one FAILS**, see finding A12-6 |
+
+This independently confirms A06's "MinIO 6/6" (5 + 1 = 6, both files green) and that the SMTP driver's
+contract holds against a real SMTP server. Neither makes R2 or a real mailbox verified: O03 and A13
+stay launch-only, correctly.
+
 ## Findings
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
 | **A12-1** | P3 | **Duplicate-submit protection is client state in a single tab.** `apps/web/lib/single-flight.ts` joins identical overlapping writes inside one page, and says so honestly in its own comment. Records that are not money have no server-side idempotency: five identical `POST /pilgrims` create five records, and two real browser tabs signed in as the same operator do the same through the UI. Money is protected (a double-submitted checkout yields one attempt; parallel refunds yield one refund). | `a12-acceptance-probes.e2e-spec.ts` "DEFECT A12-1…"; `browser/summary.json` A12-B2 |
 | **A12-3** | P2 | **Reference numbers are five random digits in a platform-wide unique space, with no retry.** `UC-<year>-<5 digits>` for bookings, `INV-…`, `BP-…`, `VISA-…` (`bookings.service.ts:95,349`, `finance.service.ts:221,952`, `compliance.service.ts:140`, `marketplace-requests.service.ts:482`) — `Math.random`, 100 000 values, and the unique index is global rather than per organization. At a few hundred records a year the birthday bound makes collisions routine, and nothing catches `P2002`: an ordinary create starts failing for the user. | `a12-acceptance-probes.e2e-spec.ts` "DEFECT A12-3…" |
+| **A12-5** | P3 | **A10's DEF-004 is narrowed, not closed, although `2e3857b` says "close the three open defects".** `listing-detail.tsx` now asks for `GET /marketplace/listings/mine/:id` only when the viewer holds `marketplace:listing:manage`, which removes the failed request and console error for travelers, operator staff, finance and the platform account. But `marketplaceProvider` (`catalog.ts:140`) puts that capability in HOTEL_MANAGER, TRANSPORT_MANAGER and VISA_OFFICER as well as OPERATOR_ADMIN — four of the eight system roles, and exactly the ones who browse the marketplace commercially. A provider opening another provider's listing still gets a 404 and a console error on every view. DEF-005 and DEF-006 are genuinely closed (capability gate on Archive in both the list and the detail; `<main id="main">` on `/reset-password`). | `apps/web/components/marketplace/listing-detail.tsx:590-600`; `apps/web/hooks/use-marketplace.ts:75-84`; `platform/api/src/modules/rbac/catalog.ts:140,177-215` |
+| **A12-6** | P3 | **A whole test suite is outside every gate and is currently red.** `vitest.providers.config.ts` (`test/providers/**/*.int-spec.ts`) is run by no gate — unit is `src/**/*.spec.ts`, e2e is `test/**/*.e2e-spec.ts` — yet `docs/control-tower/LOCAL_TEST_GUIDE.md:36-44` presents it as the way to verify the provider code paths. A12 ran it against real MinIO, Mailpit and stripe-mock containers: **11 pass, 1 fails**. `test/providers/stripe-mock.int-spec.ts:35` still asserts `await expect(provider.cancel('pi_123')).resolves.toBeUndefined()`, but `PaymentProvider.cancel` was changed during this loop to return `CancelResult { cancelled: boolean }` (`providers/payment-provider.ts:52,101`) — a change `PaymentsService` now depends on (`if (!res.cancelled) throw new AttemptStillLive(…)`). The unit spec `stripe.provider.spec.ts:167-173` was updated with it; this one rotted unnoticed because nothing runs it. The product behaviour is correct; the contract test is stale. | `gate-logs/providers-suite.txt` |
 | A12-4 | P4 | An invitation token that is valid but belongs to another account answers `403 INVITATION_EMAIL_MISMATCH`, while an unknown token answers `404 INVITATION_INVALID`. The difference tells a token holder that the token is live. The one-message rule the service documents covers only token state, so this is a deliberate UX trade-off — recorded, not filed as a break. | `traveler-links.service.ts` `resolveInvitation` |
 
 Not defects, checked and cleared: the `status=ALL` Prisma enum error (mapped to a clean 400); the

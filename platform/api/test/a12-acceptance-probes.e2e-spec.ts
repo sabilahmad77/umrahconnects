@@ -433,6 +433,42 @@ describe('A12 acceptance probes', () => {
   // 4. Traveler ↔ pilgrim invitation tokens
   // ═════════════════════════════════════════════════════════════════════════
   describe('traveler ↔ pilgrim invitation tokens', () => {
+    /**
+     * A dedicated traveler and dedicated records, so the links these probes create
+     * never appear in another file's view of the shared fixture traveler. Every
+     * record made here is removed again in afterAll.
+     */
+    let linkTraveler: Actor;
+    const madePilgrims: string[] = [];
+
+    beforeAll(async () => {
+      const email = `a12-link-${uniq()}@people.test`;
+      const u = await ctx.prisma.user.create({
+        data: {
+          tenantId: w.tenants.community, email, passwordHash: await bcrypt.hash(PASSWORD, 4),
+          firstName: 'Link', lastName: 'Probe', status: 'ACTIVE', emailVerifiedAt: new Date(),
+        },
+      });
+      await ctx.app.get(RbacService).grantSystemRole(u.id, 'PILGRIM');
+      const login = await ctx.http().post(api('/auth/login')).send({ email, password: PASSWORD });
+      linkTraveler = { id: u.id, email, tenantId: w.tenants.community, token: login.body.data.accessToken, refreshToken: '' };
+    });
+
+    afterAll(async () => {
+      if (!madePilgrims.length) return;
+      await ctx.prisma.pilgrimAccountLink.deleteMany({ where: { pilgrimId: { in: madePilgrims } } });
+      await ctx.prisma.pilgrim.deleteMany({ where: { id: { in: madePilgrims } } });
+    });
+
+    /** A fresh record of organization A whose email on file is the probe traveler's. */
+    const record = async (firstName: string) => {
+      const p = await ok(w.opA, 'post', '/pilgrims', {
+        firstName, lastName: 'Probe', passportNumber: `A12L${uniq()}`, email: linkTraveler.email,
+      });
+      madePilgrims.push(p.id);
+      return p;
+    };
+
     const invite = async (pilgrimId: string, email?: string) => {
       const before = ctx.mails.length;
       const res = await call(w.opA.token, 'post', `/pilgrims/${pilgrimId}/account-links`, email ? { email } : {});
@@ -445,42 +481,36 @@ describe('A12 acceptance probes', () => {
     const linkRow = (id: string) => ctx.prisma.pilgrimAccountLink.findUniqueOrThrow({ where: { id } });
 
     it('a token accepted once cannot be replayed, by the same account or another', async () => {
-      const p = await ok(w.opA, 'post', '/pilgrims', {
-        firstName: 'Replay', lastName: 'Probe', passportNumber: `A12R${uniq()}`, email: w.travelerA.email,
-      });
+      const p = await record('Replay');
       const { linkId, token } = await invite(p.id);
-      expect([200, 201]).toContain((await answer(w.travelerA.token, 'accept', token)).status);
+      expect([200, 201]).toContain((await answer(linkTraveler.token, 'accept', token)).status);
       const accepted = await linkRow(linkId);
-      expect([accepted.status, accepted.userId, accepted.tokenHash]).toEqual(['ACTIVE', w.travelerA.id, null]);
+      expect([accepted.status, accepted.userId, accepted.tokenHash]).toEqual(['ACTIVE', linkTraveler.id, null]);
 
-      for (const who of [w.travelerA, w.travelerB]) {
+      for (const who of [linkTraveler, w.travelerB]) {
         for (const action of ['preview', 'accept', 'decline'] as const) {
           const res = await answer(who.token, action, token);
           expect([403, 404], `${who.email} ${action} replay → ${res.status}`).toContain(res.status);
         }
       }
       const after = await linkRow(linkId);
-      expect([after.status, after.userId, after.tokenHash]).toEqual(['ACTIVE', w.travelerA.id, null]);
+      expect([after.status, after.userId, after.tokenHash]).toEqual(['ACTIVE', linkTraveler.id, null]);
     });
 
     it('a declined and a revoked token are both dead, and a revoked link stops access on the next request', async () => {
-      const declinedPilgrim = await ok(w.opA, 'post', '/pilgrims', {
-        firstName: 'Declined', lastName: 'Probe', passportNumber: `A12D${uniq()}`, email: w.travelerA.email,
-      });
+      const declinedPilgrim = await record('Declined');
       const declined = await invite(declinedPilgrim.id);
-      expect([200, 201]).toContain((await answer(w.travelerA.token, 'decline', declined.token)).status);
+      expect([200, 201]).toContain((await answer(linkTraveler.token, 'decline', declined.token)).status);
       for (const action of ['preview', 'accept'] as const) {
-        expect((await answer(w.travelerA.token, action, declined.token)).status).toBe(404);
+        expect((await answer(linkTraveler.token, action, declined.token)).status).toBe(404);
       }
       expect((await linkRow(declined.linkId)).status).toBe('DECLINED');
 
-      const revokedPilgrim = await ok(w.opA, 'post', '/pilgrims', {
-        firstName: 'Revoked', lastName: 'Probe', passportNumber: `A12V${uniq()}`, email: w.travelerA.email,
-      });
+      const revokedPilgrim = await record('Revoked');
       const revoked = await invite(revokedPilgrim.id);
       await ok(w.opA, 'post', `/pilgrims/${revokedPilgrim.id}/account-links/${revoked.linkId}/revoke`, { reason: 'A12 probe revoke' });
       for (const action of ['preview', 'accept', 'decline'] as const) {
-        expect((await answer(w.travelerA.token, action, revoked.token)).status).toBe(404);
+        expect((await answer(linkTraveler.token, action, revoked.token)).status).toBe(404);
       }
       const row = await linkRow(revoked.linkId);
       expect(row.status).not.toBe('ACTIVE');
@@ -488,21 +518,17 @@ describe('A12 acceptance probes', () => {
     });
 
     it('an expired token is refused and is consumed, not left usable', async () => {
-      const p = await ok(w.opA, 'post', '/pilgrims', {
-        firstName: 'Expired', lastName: 'Probe', passportNumber: `A12E${uniq()}`, email: w.travelerA.email,
-      });
+      const p = await record('Expired');
       const { linkId, token } = await invite(p.id);
       await ctx.prisma.pilgrimAccountLink.update({ where: { id: linkId }, data: { expiresAt: new Date(Date.now() - 1000) } });
-      expect((await answer(w.travelerA.token, 'accept', token)).status).toBe(404);
+      expect((await answer(linkTraveler.token, 'accept', token)).status).toBe(404);
       const row = await linkRow(linkId);
       expect([row.status, row.tokenHash, row.userId]).toEqual(['EXPIRED', null, null]);
-      expect((await answer(w.travelerA.token, 'accept', token)).status).toBe(404);
+      expect((await answer(linkTraveler.token, 'accept', token)).status).toBe(404);
     });
 
     it('a valid token is useless to the wrong account, an organization account and an unverified account', async () => {
-      const p = await ok(w.opA, 'post', '/pilgrims', {
-        firstName: 'Wrong', lastName: 'Account', passportNumber: `A12W${uniq()}`, email: w.travelerA.email,
-      });
+      const p = await record('Wrong');
       const { linkId, token } = await invite(p.id);
 
       // Another traveler.
@@ -515,7 +541,7 @@ describe('A12 acceptance probes', () => {
       // Anonymous.
       expect((await answer(undefined, 'accept', token)).status).toBe(401);
       // A traveler with the right address but an unverified email.
-      const email = w.travelerA.email;
+      const email = linkTraveler.email;
       const impostorEmail = `a12-unverified-${uniq()}@people.test`;
       const u = await ctx.prisma.user.create({
         data: {
@@ -533,18 +559,16 @@ describe('A12 acceptance probes', () => {
       const row = await linkRow(linkId);
       expect([row.status, row.userId]).toEqual(['INVITED', null]);
       // The rightful owner still succeeds afterwards.
-      expect([200, 201]).toContain((await answer(w.travelerA.token, 'accept', token)).status);
+      expect([200, 201]).toContain((await answer(linkTraveler.token, 'accept', token)).status);
     });
 
     it('two accepts of the same token in flight produce exactly one link', async () => {
-      const p = await ok(w.opA, 'post', '/pilgrims', {
-        firstName: 'Race', lastName: 'Probe', passportNumber: `A12C${uniq()}`, email: w.travelerA.email,
-      });
+      const p = await record('Race');
       const { linkId, token } = await invite(p.id);
-      const results = await Promise.all([1, 2, 3, 4].map(() => answer(w.travelerA.token, 'accept', token)));
+      const results = await Promise.all([1, 2, 3, 4].map(() => answer(linkTraveler.token, 'accept', token)));
       expect(results.filter((r) => r.status < 300)).toHaveLength(1);
       const row = await linkRow(linkId);
-      expect([row.status, row.userId]).toEqual(['ACTIVE', w.travelerA.id]);
+      expect([row.status, row.userId]).toEqual(['ACTIVE', linkTraveler.id]);
       expect(await ctx.prisma.pilgrimAccountLink.count({ where: { pilgrimId: p.id, status: 'ACTIVE' } })).toBe(1);
     });
   });

@@ -13,6 +13,8 @@ from another worker's report. Raw output: `gate-logs/`.
 | 3 | API unit | `platform/api$ npx vitest run` | **PASS** — 18 files, **199/199** (`gate-logs/api-unit.txt`) |
 | 4 | API e2e, FULL, runtime role | `platform/api$ set -a; . ./.env.test-db; set +a; npx vitest run --config vitest.e2e.config.ts` | **PASS** — exit 0, 34 files passed + 1 skipped, **494 passed / 5 skipped (499)**, 164 s (`gate-logs/api-e2e-full.txt`) |
 | 4b | the 5 skipped tests, un-skipped | `docker run -d -p 12412:12111 stripe/stripe-mock` then `STRIPE_MOCK_URL=http://127.0.0.1:12412 npx vitest run --config vitest.e2e.config.ts test/payments-stripe-mock.e2e-spec.ts` | **PASS** — **5/5** against Stripe's own OpenAPI mock (`gate-logs/stripe-mock-suite.txt`). stripe-mock is NOT Stripe: T04 stays unverified. |
+| 4c | e2e including A12's own probes, nothing skipped | `STRIPE_MOCK_URL=http://127.0.0.1:12412 npx vitest run --config vitest.e2e.config.ts` on branch `eng100/a12` | **PASS** — exit 0, 36 files, **530/530**, 0 skipped, 272 s (`gate-logs/api-e2e-with-a12-probes.txt`). 494 candidate + 5 stripe-mock + 31 A12 probes = 530. |
+| 4d | provider integration suite (no gate runs it) | `npx vitest run --config vitest.providers.config.ts` against MinIO, Mailpit and stripe-mock containers | **FAIL** — 11 pass, **1 fails** (`gate-logs/providers-suite.txt`). Finding A12-6 in `PROBES.md`. |
 | 5 | Web typecheck | `apps/web$ npx tsc --noEmit` | **PASS** — exit 0, no output (`gate-logs/web-tsc.txt`) |
 | 6 | Web lint | `apps/web$ npx eslint app components hooks lib middleware.ts` | **PASS** — exit 0, no findings (`gate-logs/web-eslint.txt`) |
 | 7 | Web unit | `apps/web$ npx vitest run` | **PASS** — 20 files, **233/233** (`gate-logs/web-vitest.txt`) |

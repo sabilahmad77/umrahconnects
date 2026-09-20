@@ -1,0 +1,49 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/macbook/Projects/umrah-connects-eng100/a12/platform/api
+
+[95m[Nest] 45251  - [39m09/21/2026, 12:53:21 AM [95m  DEBUG[39m [38;5;3m[DbScope] [39m[95msystem scope: jobs.maintenance (user=- tenant=- request=-)[39m
+[32m[Nest] 45251  - [39m09/21/2026, 12:53:21 AM [32m    LOG[39m [38;5;3m[OrphanCleanupService] [39m[32mapply: scanned 5, orphans 0, deleted 0, failed 0, kept {"unrecognised-name":1,"too-recent":4,"referenced":0}[39m
+[95m[Nest] 45251  - [39m09/21/2026, 12:53:21 AM [95m  DEBUG[39m [38;5;3m[DbScope] [39m[95msystem scope: jobs.maintenance (user=- tenant=- request=-)[39m
+[32m[Nest] 45251  - [39m09/21/2026, 12:53:21 AM [32m    LOG[39m [38;5;3m[OrphanCleanupService] [39m[32mdry-run: scanned 5, orphans 2, deleted 0, failed 0, kept {"unrecognised-name":1,"too-recent":0,"referenced":2}[39m
+[95m[Nest] 45251  - [39m09/21/2026, 12:53:21 AM [95m  DEBUG[39m [38;5;3m[DbScope] [39m[95msystem scope: jobs.maintenance (user=- tenant=- request=-)[39m
+[32m[Nest] 45251  - [39m09/21/2026, 12:53:21 AM [32m    LOG[39m [38;5;3m[OrphanCleanupService] [39m[32mapply: scanned 5, orphans 2, deleted 2, failed 0, kept {"unrecognised-name":1,"too-recent":0,"referenced":2}[39m
+ ✓ test/providers/storage-cleanup-s3.int-spec.ts (1 test) 169ms
+ ✓ test/providers/storage-s3.int-spec.ts (5 tests) 2646ms
+   ✓ StorageService S3-compatible driver (R2 code path) against MinIO > private objects are readable only through short-lived presigned URLs 2557ms
+[32m[Nest] 45272  - [39m09/21/2026, 12:53:24 AM [32m    LOG[39m [38;5;3m[MailService] [39m[32mMail delivered via SMTP: "Reset your Umrah Connect password 1789934004705"[39m
+[33m[Nest] 45272  - [39m09/21/2026, 12:53:24 AM [33m   WARN[39m [38;5;3m[MailService] [39m[33mMail not sent (MAIL_DRIVER=none): "s"[39m
+ ✓ test/providers/smtp-mailpit.int-spec.ts (2 tests) 66ms
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+ ❯ test/providers/stripe-mock.int-spec.ts (4 tests | 1 failed) 40ms
+   × StripeProvider against stripe-mock (official Stripe API mock) > creates refunds, customers and cancels intents through the SDK 11ms
+     → expected { cancelled: true } to be undefined
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/providers/stripe-mock.int-spec.ts > StripeProvider against stripe-mock (official Stripe API mock) > creates refunds, customers and cancels intents through the SDK
+AssertionError: expected { cancelled: true } to be undefined
+
+- Expected: 
+undefined
+
++ Received: 
+Object {
+  "cancelled": true,
+}
+
+ ❯ test/providers/stripe-mock.int-spec.ts:35:5
+     33|     const customer = await provider.ensureCustomer({ email: 'traveler@…
+     34|     expect(customer).toMatch(/^cus_/);
+     35|     await expect(provider.cancel('pi_123')).resolves.toBeUndefined();
+       |     ^
+     36|   });
+     37| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 11 passed (12)
+   Start at  00:53:20
+   Duration  4.44s (transform 110ms, setup 0ms, collect 744ms, tests 2.92s, environment 0ms, prepare 156ms)
+
