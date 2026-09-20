@@ -212,6 +212,25 @@ describe('ARIA names are attached to elements that can carry them', () => {
   });
 });
 
+// ─── Focus survives a busy action and a page with no controls (2.4.3, 2.1.1) ─
+
+describe('focus is never left nowhere', () => {
+  it('takes focus back when a busy button stops being busy', () => {
+    const system = read('components/ui/system.tsx');
+    // The button is still disabled while busy (no double submission) …
+    expect(system).toContain('disabled={disabled || busy}');
+    // … and the browser's focus fixup is undone once the action finishes.
+    expect(system).toContain('hadFocus.current = true');
+    expect(system).toMatch(/if \(node\.current && \(!active \|\| active === document\.body\)\) node\.current\.focus\(\);/);
+  });
+
+  it('gives a scrolling page with nothing focusable a tab stop of its own', () => {
+    const shell = read('components/layout/workspace-shell.tsx');
+    expect(shell).toContain('main.tabIndex = scrolls && !focusable ? 0 : -1');
+    expect(shell).toContain("mutations.observe(main, { childList: true, subtree: true })");
+  });
+});
+
 // ─── Charts publish their numbers as text (1.1.1) ───────────────────────────
 
 describe('charts are not the only carrier of their data', () => {
