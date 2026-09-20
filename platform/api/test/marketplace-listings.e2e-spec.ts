@@ -180,6 +180,34 @@ describe('marketplace listings lifecycle', () => {
     expect(after).toEqual(before);
   });
 
+  it('the detail route decides ownership itself: no signed-in viewer 404s on an ordinary page load (A12-5)', async () => {
+    // The owner gets the seller view — status, counters, the lot — from the SAME
+    // route everyone else uses, so the page never has to guess and ask the
+    // owner-only route first (which answered 404 to the four of eight system roles
+    // that hold marketplace:listing:manage without owning this listing).
+    const mine = await ok(w.transportA, 'get', `/marketplace/listings/${listing.id}`);
+    expect([mine.isOwner, mine.status, mine._count.bookings]).toEqual([true, 'PUBLISHED', 0]);
+
+    for (const viewer of [w.hotelB, w.transportB, w.visaB, w.opB, w.financeA, w.travelerB, w.superAdmin]) {
+      const res = await call(viewer, 'get', `/marketplace/listings/${listing.id}`);
+      expect([res.status, res.body.data.isOwner], viewer.email).toEqual([200, false]);
+      for (const k of ['isActive', '_count', 'tenantId']) expect(res.body.data, `${viewer.email}.${k}`).not.toHaveProperty(k);
+    }
+    // Anonymous visitors are unchanged: the published listing, no ownership.
+    expect((await ok(null, 'get', `/marketplace/listings/${listing.id}`)).isOwner).toBe(false);
+
+    // A draft stays private: its owner reads it on the same route, a non-owner is
+    // told it is not available — a genuine answer, not a failed page load.
+    const draft = await ok(w.transportA, 'post', '/marketplace/listings', {
+      title: `Private draft ${uniq()}`, category: 'transport_service', vendorId: vendor.id, priceCents: 1_000, status: 'DRAFT',
+    });
+    expect((await ok(w.transportA, 'get', `/marketplace/listings/${draft.id}`)).isOwner).toBe(true);
+    for (const viewer of [w.hotelB, w.transportB, w.travelerB, null]) {
+      expect((await call(viewer, 'get', `/marketplace/listings/${draft.id}`)).status, viewer?.email ?? 'anon').toBe(404);
+    }
+    await ok(w.transportA, 'delete', `/marketplace/listings/${draft.id}`);
+  });
+
   it('unpublishing hides it everywhere public; lifecycle rules hold', async () => {
     const paused = await ok(w.transportA, 'put', `/marketplace/listings/${listing.id}`, { status: 'PAUSED' });
     expect(paused.status).toBe('PAUSED');
