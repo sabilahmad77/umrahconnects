@@ -77,3 +77,14 @@ work landed in between). Each rule that disappeared is traceable to a specific c
 listed in the table above; the state counts differ slightly because the fixers added and removed screens.
 
 Raw results: `axe-before.json`, `axe-after.json` (every violation with its rule, criterion, impact, route, state and node targets); console logs in `axe-before.log` and `axe-after.log`.
+
+## After the second candidate merge
+
+The branch was merged onto candidate `1abbfb1` (the fx3 work) after the full
+sweep. The sweep was not repeated on that code; instead a spot check covered
+the routes the merge touched most (`axe-spotcheck.json`: operator pilgrims,
+finance, invoice detail and its tab panels, settings, and the platform tenant
+list and detail) — **zero violations, zero best-practice findings** — and the
+two responsive fixes were re-measured on the merged tree: platform tenants and
+users report document scrollWidth 360 at 360 px width and scroll by 0, and the
+landing page reports 320 at 320 px.

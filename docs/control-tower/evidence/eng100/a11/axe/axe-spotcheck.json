@@ -1,0 +1,884 @@
+{
+ "tool": "axe-core 4.13.0",
+ "tags": [
+  "wcag2a",
+  "wcag2aa",
+  "wcag21a",
+  "wcag21aa",
+  "wcag22aa",
+  "best-practice (reported separately)"
+ ],
+ "base": "http://localhost:3411",
+ "started": "2026-09-20T21:37:08.495Z",
+ "finished": "2026-09-20T21:39:51.363Z",
+ "runs": 14,
+ "coverage": {
+  "operatorAdminA": {
+   "audited": [
+    "/finance",
+    "/finance-dashboard",
+    "/finance-payments",
+    "/pilgrims",
+    "/settings",
+    "/finance/invoices/[id]"
+   ],
+   "denied": [
+    "/admin-tenants"
+   ],
+   "redirected": {},
+   "dynamicMissing": [
+    "/admin-tenants/[id]",
+    "/bookings/[id]",
+    "/compliance/[id]",
+    "/groups/[id]",
+    "/hotels/[id]",
+    "/marketplace/[id]",
+    "/pilgrims/[id]",
+    "/requests/[id]",
+    "/social/groups/[id]",
+    "/transport/drivers/[id]",
+    "/transport/routes/[id]",
+    "/transport/vehicles/[id]",
+    "/visa-requests/[id]"
+   ],
+   "landing": "/dashboard"
+  },
+  "superAdmin": {
+   "audited": [
+    "/admin-tenants",
+    "/settings",
+    "/admin-tenants/[id]"
+   ],
+   "denied": [
+    "/finance",
+    "/finance-dashboard",
+    "/finance-payments",
+    "/pilgrims"
+   ],
+   "redirected": {},
+   "dynamicMissing": [
+    "/bookings/[id]",
+    "/compliance/[id]",
+    "/finance/invoices/[id]",
+    "/groups/[id]",
+    "/hotels/[id]",
+    "/marketplace/[id]",
+    "/pilgrims/[id]",
+    "/requests/[id]",
+    "/social/groups/[id]",
+    "/transport/drivers/[id]",
+    "/transport/routes/[id]",
+    "/transport/vehicles/[id]",
+    "/visa-requests/[id]"
+   ],
+   "landing": "/admin-dashboard"
+  }
+ },
+ "summary": [],
+ "results": [
+  {
+   "identity": "operatorAdminA",
+   "route": "/admin-tenants",
+   "viewport": "1280x900",
+   "state": "access-denied",
+   "url": "/admin-tenants",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/finance",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        ".opacity-90"
+       ],
+       "html": "<p class=\"text-sm font-medium opacity-90\">Collected</p>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "4.5:1"
+       }
+      },
+      {
+       "target": [
+        ".from-brand-500 > .text-3xl.font-bold"
+       ],
+       "html": "<p class=\"text-3xl font-bold\">SAR 8,500.00</p>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "22.5pt (30px)",
+        "fontWeight": "bold",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "3:1"
+       }
+      },
+      {
+       "target": [
+        ".opacity-80.mt-1"
+       ],
+       "html": "<p class=\"mt-1 text-xs opacity-80\">0 invoices paid in full</p>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "9.0pt (12px)",
+        "fontWeight": "normal",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "4.5:1"
+       }
+      }
+     ],
+     "nodeCount": 4,
+     "wcag": [
+      "1.4.3"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance",
+   "viewport": "1280x900",
+   "state": "dialog:New invoice",
+   "url": "/finance",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-hidden-focus",
+     "impact": "serious",
+     "tags": [
+      "cat.name-role-value",
+      "wcag2a",
+      "wcag412",
+      "TTv5",
+      "TT6.a",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-10.8.1"
+     ],
+     "help": "ARIA hidden element must not be focusable or contain focusable elements",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+       ],
+       "html": "<span data-radix-focus-guard=\"\" tabindex=\"0\" data-aria-hidden=\"true\" aria-hidden=\"true\" style=\"outline: none; opacity: 0; position: fixed; pointer-events: none;\"></span>",
+       "summary": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state"
+      },
+      {
+       "target": [
+        ".workspace-shell"
+       ],
+       "html": "<div class=\"workspace-shell flex h-dvh min-h-0 overflow-hidden bg-[#F4F6F3]\" data-aria-hidden=\"true\" aria-hidden=\"true\">",
+       "summary": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state"
+      },
+      {
+       "target": [
+        "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(15)"
+       ],
+       "html": "<span data-radix-focus-guard=\"\" tabindex=\"0\" data-aria-hidden=\"true\" aria-hidden=\"true\" style=\"outline: none; opacity: 0; position: fixed; pointer-events: none;\"></span>",
+       "summary": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state"
+      }
+     ],
+     "nodeCount": 3,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    },
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        ".opacity-90"
+       ],
+       "html": "<p class=\"text-sm font-medium opacity-90\">Collected</p>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "4.5:1"
+       }
+      },
+      {
+       "target": [
+        ".from-brand-500 > .text-3xl.font-bold"
+       ],
+       "html": "<p class=\"text-3xl font-bold\">SAR 8,500.00</p>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "22.5pt (30px)",
+        "fontWeight": "bold",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "3:1"
+       }
+      },
+      {
+       "target": [
+        ".opacity-80.mt-1"
+       ],
+       "html": "<p class=\"mt-1 text-xs opacity-80\">0 invoices paid in full</p>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "9.0pt (12px)",
+        "fontWeight": "normal",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "4.5:1"
+       }
+      }
+     ],
+     "nodeCount": 4,
+     "wcag": [
+      "1.4.3"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance-dashboard",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/finance-dashboard",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance-payments",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/finance-payments",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/pilgrims",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/pilgrims",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/pilgrims",
+   "viewport": "1280x900",
+   "state": "dialog:Add Pilgrim",
+   "url": "/pilgrims",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-hidden-focus",
+     "impact": "serious",
+     "tags": [
+      "cat.name-role-value",
+      "wcag2a",
+      "wcag412",
+      "TTv5",
+      "TT6.a",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-10.8.1"
+     ],
+     "help": "ARIA hidden element must not be focusable or contain focusable elements",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-hidden-focus?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(1)"
+       ],
+       "html": "<span data-radix-focus-guard=\"\" tabindex=\"0\" data-aria-hidden=\"true\" aria-hidden=\"true\" style=\"outline: none; opacity: 0; position: fixed; pointer-events: none;\"></span>",
+       "summary": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state"
+      },
+      {
+       "target": [
+        ".workspace-shell"
+       ],
+       "html": "<div class=\"workspace-shell flex h-dvh min-h-0 overflow-hidden bg-[#F4F6F3]\" data-aria-hidden=\"true\" aria-hidden=\"true\">",
+       "summary": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state"
+      },
+      {
+       "target": [
+        "span[data-radix-focus-guard=\"\"][data-aria-hidden=\"true\"][aria-hidden=\"true\"]:nth-child(15)"
+       ],
+       "html": "<span data-radix-focus-guard=\"\" tabindex=\"0\" data-aria-hidden=\"true\" aria-hidden=\"true\" style=\"outline: none; opacity: 0; position: fixed; pointer-events: none;\"></span>",
+       "summary": "Fix all of the following:\n  Check that focusable elements are not tabbable in the current state"
+      }
+     ],
+     "nodeCount": 3,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/settings",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/settings",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-prohibited-attr",
+     "impact": "serious",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "Elements must only use permitted ARIA attributes",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "div[aria-labelledby=\"sign-in-methods-title\"]"
+       ],
+       "html": "<div class=\"space-y-3\" aria-labelledby=\"sign-in-methods-title\">",
+       "summary": "Fix all of the following:\n  aria-labelledby attribute is not well supported, but the elements referenced by aria-labelledby are visible in the page. Verify the label is not necessary."
+      },
+      {
+       "target": [
+        "div[aria-labelledby=\"sign-out-everywhere-title\"]"
+       ],
+       "html": "<div class=\"space-y-3\" aria-labelledby=\"sign-out-everywhere-title\">",
+       "summary": "Fix all of the following:\n  aria-labelledby attribute is not well supported, but the elements referenced by aria-labelledby are visible in the page. Verify the label is not necessary."
+      }
+     ],
+     "nodeCount": 2,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    },
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance/invoices/[id]",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/finance/invoices/e0b7515f-53d6-4c30-adc7-ede338c3704d",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance/invoices/[id]",
+   "viewport": "1280x900",
+   "state": "tab:payments",
+   "url": "/finance/invoices/e0b7515f-53d6-4c30-adc7-ede338c3704d",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        ".border-brand-100"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet rounded-xl px-3 py-2 text-sm font-medium capitalize border-brand-100 bg-brand-50 text-brand-700 border\" role=\"tab\" aria-selected=\"true\">payments</button>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "4.5:1"
+       }
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "1.4.3"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/finance/invoices/[id]",
+   "viewport": "1280x900",
+   "state": "tab:edit",
+   "url": "/finance/invoices/e0b7515f-53d6-4c30-adc7-ede338c3704d",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "color-contrast",
+     "impact": "serious",
+     "tags": [
+      "cat.color",
+      "wcag2aa",
+      "wcag143",
+      "TTv5",
+      "TT13.c",
+      "EN-301-549",
+      "EN-9.1.4.3",
+      "ACT",
+      "RGAAv4",
+      "RGAA-3.2.1"
+     ],
+     "help": "Elements must meet minimum color contrast ratio thresholds",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        ".border-brand-100"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet rounded-xl px-3 py-2 text-sm font-medium capitalize border-brand-100 bg-brand-50 text-brand-700 border\" role=\"tab\" aria-selected=\"true\">edit</button>",
+       "summary": "Fix any of the following:\n  Element's background color could not be determined due to a background gradient",
+       "data": {
+        "contrastRatio": 0,
+        "fontSize": "10.5pt (14px)",
+        "fontWeight": "normal",
+        "messageKey": "bgGradient",
+        "expectedContrastRatio": "4.5:1"
+       }
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "1.4.3"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "superAdmin",
+   "route": "/admin-tenants",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/admin-tenants",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "superAdmin",
+   "route": "/settings",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/settings",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-prohibited-attr",
+     "impact": "serious",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "Elements must only use permitted ARIA attributes",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-prohibited-attr?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "div[aria-labelledby=\"sign-in-methods-title\"]"
+       ],
+       "html": "<div class=\"space-y-3\" aria-labelledby=\"sign-in-methods-title\">",
+       "summary": "Fix all of the following:\n  aria-labelledby attribute is not well supported, but the elements referenced by aria-labelledby are visible in the page. Verify the label is not necessary."
+      },
+      {
+       "target": [
+        "div[aria-labelledby=\"sign-out-everywhere-title\"]"
+       ],
+       "html": "<div class=\"space-y-3\" aria-labelledby=\"sign-out-everywhere-title\">",
+       "summary": "Fix all of the following:\n  aria-labelledby attribute is not well supported, but the elements referenced by aria-labelledby are visible in the page. Verify the label is not necessary."
+      }
+     ],
+     "nodeCount": 2,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    },
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  },
+  {
+   "identity": "superAdmin",
+   "route": "/admin-tenants/[id]",
+   "viewport": "1280x900",
+   "state": "page",
+   "url": "/admin-tenants/7e66f47a-514e-408a-bf7c-230430816ca2",
+   "violations": [],
+   "incomplete": [
+    {
+     "id": "aria-valid-attr-value",
+     "impact": "critical",
+     "tags": [
+      "cat.aria",
+      "wcag2a",
+      "wcag412",
+      "EN-301-549",
+      "EN-9.4.1.2",
+      "RGAAv4",
+      "RGAA-7.1.1"
+     ],
+     "help": "ARIA attributes must conform to valid values",
+     "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/aria-valid-attr-value?application=axeAPI",
+     "nodes": [
+      {
+       "target": [
+        "button[aria-haspopup=\"dialog\"]"
+       ],
+       "html": "<button type=\"button\" class=\"uc-button uc-button-quiet relative px-3\" aria-label=\"Notifications\" aria-haspopup=\"dialog\" aria-expanded=\"false\" aria-controls=\"radix-:r3:\" data-state=\"closed\">",
+       "summary": "Fix all of the following:\n  Unable to determine if aria-controls referenced ID exists on the page while using aria-haspopup: aria-controls=\"radix-:r3:\""
+      }
+     ],
+     "nodeCount": 1,
+     "wcag": [
+      "4.1.2"
+     ],
+     "bestPractice": false
+    }
+   ]
+  }
+ ]
+}
