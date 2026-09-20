@@ -161,6 +161,25 @@ try {
     check('visa detail: no payment badge', !/\bUnpaid\b/i.test(visaDetail), visaDetail.slice(0, 80).replace(/\n/g, ' '));
   }
 
+  // ── N-FORM-1: a fast double click must not create two records ────────────
+  const traveler = await signIn(browser, 'travelerA');
+  await traveler.page.goto(`${WEB}/social`, { waitUntil: 'domcontentloaded' });
+  await traveler.page.waitForSelector('textarea[aria-label="Write a post"]', { timeout: 120_000 });
+  await traveler.page.waitForTimeout(3000);
+  const postText = `FX1 duplicate-submit check ${Date.now().toString(36)}`;
+  await traveler.page.fill('textarea[aria-label="Write a post"]', postText);
+  const postButton = traveler.page.getByRole('button', { name: /^Post$/ });
+  await postButton.click({ clickCount: 1 });
+  await postButton.click({ clickCount: 1, force: true }).catch(() => {});
+  await traveler.page.waitForTimeout(6000);
+  await traveler.page.reload({ waitUntil: 'domcontentloaded' });
+  await traveler.page.waitForTimeout(6000);
+  const feed = await bodyText(traveler.page);
+  const copies = feed.split(postText).length - 1;
+  await shot(traveler.page, 'nform1-social-feed');
+  check('a double-clicked post is created once', copies === 1, `${copies} copies in the feed`);
+  await traveler.context.close();
+
   await admin.context.close();
   await seller.context.close();
   await transport.context.close();

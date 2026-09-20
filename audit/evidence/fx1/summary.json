@@ -1,5 +1,5 @@
 {
-  "at": "2026-09-20T18:48:28.862Z",
+  "at": "2026-09-20T18:55:05.903Z",
   "web": "http://localhost:3421",
   "results": [
     {
@@ -81,6 +81,11 @@
       "name": "visa detail: no payment badge",
       "pass": true,
       "detail": "Skip to content  Umrah Connect  CONNECTED JOURNEYS  Visa Agency  MY VISA CRM  Da"
+    },
+    {
+      "name": "a double-clicked post is created once",
+      "pass": true,
+      "detail": "1 copies in the feed"
     }
   ]
 }
