@@ -146,6 +146,10 @@ stay launch-only, correctly.
 
 ## Findings
 
+A12-2 is deliberately absent: it was opened when a Prisma enum error appeared in an e2e log, and
+withdrawn after checking the actual HTTP envelope, which is a clean 400. The number is left unused so
+the withdrawal is visible rather than silently renumbered away.
+
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
 | **A12-1** | P3 | **Duplicate-submit protection is client state in a single tab.** `apps/web/lib/single-flight.ts` joins identical overlapping writes inside one page, and says so honestly in its own comment. Records that are not money have no server-side idempotency: five identical `POST /pilgrims` create five records, and two real browser tabs signed in as the same operator do the same through the UI. Money is protected (a double-submitted checkout yields one attempt; parallel refunds yield one refund). | `a12-acceptance-probes.e2e-spec.ts` "DEFECT A12-1…"; `browser/summary.json` A12-B2 |
