@@ -1,0 +1,827 @@
+[
+ {
+  "t": "17:40:51",
+  "journey": "setup",
+  "step": "Firefox shows /login (window title contains Umrah Connect)",
+  "speech": [
+   "Finished loading Umrah Connect.",
+   "Page has 3 landmarks, 1 heading, 1 form, 6 unvisited links."
+  ]
+ },
+ {
+  "t": "17:40:52",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Email address entry/)",
+  "speech": [
+   "Umrah Connect Umrah Connect CONNECTED JOURNEYS link."
+  ]
+ },
+ {
+  "t": "17:40:53",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Email address entry/)",
+  "speech": [
+   "Explore the platform link."
+  ]
+ },
+ {
+  "t": "17:40:54",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Email address entry/)",
+  "speech": [
+   "region Sign in to Umrah Connect",
+   "invalid entry",
+   "Email address entry required.",
+   "invalid entry.",
+   "Focus mode"
+  ]
+ },
+ {
+  "t": "17:40:56",
+  "journey": "J1 sign-in",
+  "step": "paste the account email (clipboard)",
+  "speech": []
+ },
+ {
+  "t": "17:40:57",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Password password text/)",
+  "speech": [
+   "Password password text."
+  ]
+ },
+ {
+  "t": "17:40:58",
+  "journey": "J1 sign-in",
+  "step": "paste a WRONG password (clipboard)",
+  "speech": []
+ },
+ {
+  "t": "17:41:00",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Sign in push button/)",
+  "speech": [
+   "Show password toggle button not pressed.",
+   "Browse mode"
+  ]
+ },
+ {
+  "t": "17:41:01",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Sign in push button/)",
+  "speech": [
+   "Forgot password? push button."
+  ]
+ },
+ {
+  "t": "17:41:02",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Sign in push button/)",
+  "speech": [
+   "Sign in push button."
+  ]
+ },
+ {
+  "t": "17:41:07",
+  "journey": "J1 sign-in",
+  "step": "press Enter on Sign in (expect the error to be announced)",
+  "speech": [
+   "leaving form.",
+   "leaving region.",
+   "leaving main content.",
+   "Umrah Connect document web.",
+   "Unable to continue.",
+   "Invalid credentials."
+  ]
+ },
+ {
+  "t": "17:41:08",
+  "journey": "J1 sign-in",
+  "step": "Shift+Tab (seeking /Password password text/)",
+  "speech": [
+   "Forgot password? push button."
+  ]
+ },
+ {
+  "t": "17:41:09",
+  "journey": "J1 sign-in",
+  "step": "Shift+Tab (seeking /Password password text/)",
+  "speech": [
+   "Show password toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:41:11",
+  "journey": "J1 sign-in",
+  "step": "Shift+Tab (seeking /Password password text/)",
+  "speech": [
+   "Password password text  18 black circle characters selected.",
+   "Focus mode"
+  ]
+ },
+ {
+  "t": "17:41:12",
+  "journey": "J1 sign-in",
+  "step": "select the password text (Ctrl+A)",
+  "speech": []
+ },
+ {
+  "t": "17:41:13",
+  "journey": "J1 sign-in",
+  "step": "paste the real password (clipboard)",
+  "speech": []
+ },
+ {
+  "t": "17:41:14",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Sign in push button/)",
+  "speech": [
+   "Show password toggle button not pressed.",
+   "Browse mode"
+  ]
+ },
+ {
+  "t": "17:41:15",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Sign in push button/)",
+  "speech": [
+   "Forgot password? push button."
+  ]
+ },
+ {
+  "t": "17:41:17",
+  "journey": "J1 sign-in",
+  "step": "Tab (seeking /Sign in push button/)",
+  "speech": [
+   "Sign in push button."
+  ]
+ },
+ {
+  "t": "17:41:29",
+  "journey": "J1 sign-in",
+  "step": "press Enter on Sign in (expect the workspace)",
+  "speech": [
+   "leaving form.",
+   "leaving region.",
+   "leaving main content.",
+   "Umrah Connect document web.",
+   "My Travel Plan | Umrah Connect"
+  ]
+ },
+ {
+  "t": "17:41:30",
+  "journey": "J2 list",
+  "step": "Orca: top of document (Ctrl+Home)",
+  "speech": [
+   "Skip to content."
+  ]
+ },
+ {
+  "t": "17:41:32",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "navigation Workspace."
+  ]
+ },
+ {
+  "t": "17:41:33",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Social Hub link."
+  ]
+ },
+ {
+  "t": "17:41:34",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Discover link."
+  ]
+ },
+ {
+  "t": "17:41:35",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Connections link."
+  ]
+ },
+ {
+  "t": "17:41:36",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Messages link."
+  ]
+ },
+ {
+  "t": "17:41:37",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Groups link."
+  ]
+ },
+ {
+  "t": "17:41:39",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Marketplace link."
+  ]
+ },
+ {
+  "t": "17:41:40",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Requests link."
+  ]
+ },
+ {
+  "t": "17:41:41",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Offers link."
+  ]
+ },
+ {
+  "t": "17:41:42",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Bookings link."
+  ]
+ },
+ {
+  "t": "17:41:43",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Travel Plan visited link."
+  ]
+ },
+ {
+  "t": "17:41:45",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Profile link."
+  ]
+ },
+ {
+  "t": "17:41:46",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Notifications link."
+  ]
+ },
+ {
+  "t": "17:41:47",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Register your organization link."
+  ]
+ },
+ {
+  "t": "17:41:48",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Settings link."
+  ]
+ },
+ {
+  "t": "17:41:49",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Sign out push button."
+  ]
+ },
+ {
+  "t": "17:41:51",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Collapse navigation expanded push button.",
+   "Focus mode"
+  ]
+ },
+ {
+  "t": "17:41:52",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Help center link.",
+   "Browse mode"
+  ]
+ },
+ {
+  "t": "17:41:53",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Notifications collapsed push button.",
+   "opens dialog",
+   "Focus mode"
+  ]
+ },
+ {
+  "t": "17:41:54",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Account menu collapsed push button.",
+   "opens menu"
+  ]
+ },
+ {
+  "t": "17:41:55",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "View all link.",
+   "Browse mode"
+  ]
+ },
+ {
+  "t": "17:41:57",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Jeddah Airport to Makkah transfer (per seat) 2 pax \u00b7 10/21/2026 \u2192 10/21/2026 SAR 190 link."
+  ]
+ },
+ {
+  "t": "17:41:58",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "View all link."
+  ]
+ },
+ {
+  "t": "17:41:59",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Family room in Madinah for 4 nights HOTEL \u00b7 OPEN \u00b7 1 offers Up to SAR 5,000 link."
+  ]
+ },
+ {
+  "t": "17:42:00",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "leaving list.",
+   "leaving main content.",
+   "Open Tanstack query devtools push button."
+  ]
+ },
+ {
+  "t": "17:42:02",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Browser tabs tool bar",
+   "Firefox View toggle button not pressed.",
+   "View recent browsing across windows and devices."
+  ]
+ },
+ {
+  "t": "17:42:03",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Travel Plan | Umrah Connect page tab."
+  ]
+ },
+ {
+  "t": "17:42:04",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Open a new tab (Ctrl+T) push button."
+  ]
+ },
+ {
+  "t": "17:42:05",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Back menu button."
+  ]
+ },
+ {
+  "t": "17:42:06",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Google, pick a search engine collapsed push button."
+  ]
+ },
+ {
+  "t": "17:42:08",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Search or enter address editable combo box http://localhost:3411/travel-plan selected."
+  ]
+ },
+ {
+  "t": "17:42:09",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Bookmark this page (Ctrl+D) push button."
+  ]
+ },
+ {
+  "t": "17:42:10",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Account push button."
+  ]
+ },
+ {
+  "t": "17:42:11",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "alert.",
+   "My Travel Plan | Umrah Connect."
+  ]
+ },
+ {
+  "t": "17:42:12",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "navigation Workspace."
+  ]
+ },
+ {
+  "t": "17:42:13",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Social Hub link."
+  ]
+ },
+ {
+  "t": "17:42:15",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Discover link."
+  ]
+ },
+ {
+  "t": "17:42:16",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Connections link."
+  ]
+ },
+ {
+  "t": "17:42:17",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "Messages link."
+  ]
+ },
+ {
+  "t": "17:42:18",
+  "journey": "J2 list",
+  "step": "Tab (seeking /Skip to content link/)",
+  "speech": [
+   "My Groups link."
+  ]
+ },
+ {
+  "t": "17:42:18",
+  "journey": "J2 list",
+  "step": "NOT FOUND /Skip to content link/ after 40 Tabs",
+  "speech": []
+ },
+ {
+  "t": "17:42:20",
+  "journey": "J2 list",
+  "step": "Tab (seeking /My Requests link/)",
+  "speech": [
+   "Marketplace link."
+  ]
+ },
+ {
+  "t": "17:42:21",
+  "journey": "J2 list",
+  "step": "Tab (seeking /My Requests link/)",
+  "speech": [
+   "My Requests link."
+  ]
+ },
+ {
+  "t": "17:42:29",
+  "journey": "J2 list",
+  "step": "press Enter on the menu link (client navigation)",
+  "speech": []
+ },
+ {
+  "t": "17:42:31",
+  "journey": "J2 list",
+  "step": "Orca: next heading (h)",
+  "speech": [
+   "Marketplace requests heading level 1.",
+   "My Marketplace Requests | Umrah Connect"
+  ]
+ },
+ {
+  "t": "17:42:33",
+  "journey": "J2 list",
+  "step": "Orca: next heading (h)",
+  "speech": [
+   "Wrapping to top.",
+   "Marketplace requests heading level 1."
+  ]
+ },
+ {
+  "t": "17:42:35",
+  "journey": "J2 list",
+  "step": "Orca: next list (l)",
+  "speech": [
+   "List with 1 item",
+   "link Family room in Madinah for 4 nights."
+  ]
+ },
+ {
+  "t": "17:42:36",
+  "journey": "J3 dialog",
+  "step": "Shift+Tab (seeking /New request push button/)",
+  "speech": [
+   "leaving list.",
+   "New request push button."
+  ]
+ },
+ {
+  "t": "17:42:39",
+  "journey": "J3 dialog",
+  "step": "press Enter to open the dialog",
+  "speech": [
+   "Hotel room toggle button pressed."
+  ]
+ },
+ {
+  "t": "17:42:41",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Transport toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:42:42",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Visa toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:42:43",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Package toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:42:44",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Guide toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:42:45",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Catering toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:42:46",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Other toggle button not pressed."
+  ]
+ },
+ {
+  "t": "17:42:47",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Title * entry e.g. 5-star room in Makkah for Ramadan.",
+   "Focus mode"
+  ]
+ },
+ {
+  "t": "17:42:49",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "City entry Makkah."
+  ]
+ },
+ {
+  "t": "17:42:50",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Travelers entry 2 selected."
+  ]
+ },
+ {
+  "t": "17:42:51",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Month mm spin button.",
+   "Text unselected."
+  ]
+ },
+ {
+  "t": "17:42:52",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Day dd spin button."
+  ]
+ },
+ {
+  "t": "17:42:53",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Year yyyy spin button."
+  ]
+ },
+ {
+  "t": "17:42:54",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Calendar collapsed push button."
+  ]
+ },
+ {
+  "t": "17:42:56",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Month mm spin button."
+  ]
+ },
+ {
+  "t": "17:42:57",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Day dd spin button."
+  ]
+ },
+ {
+  "t": "17:42:58",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Year yyyy spin button."
+  ]
+ },
+ {
+  "t": "17:42:59",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Calendar collapsed push button."
+  ]
+ },
+ {
+  "t": "17:43:01",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Budget min (SAR) entry 3000."
+  ]
+ },
+ {
+  "t": "17:43:02",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Budget max (SAR) entry 6000."
+  ]
+ },
+ {
+  "t": "17:43:03",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Description entry Requirements, preferences, group composition\u2026"
+  ]
+ },
+ {
+  "t": "17:43:04",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Cancel push button.",
+   "Browse mode"
+  ]
+ },
+ {
+  "t": "17:43:05",
+  "journey": "J4 form error",
+  "step": "Tab (seeking /Post request push button/)",
+  "speech": [
+   "Post request push button."
+  ]
+ },
+ {
+  "t": "17:43:08",
+  "journey": "J4 form error",
+  "step": "press Enter on Post request with an empty title (expect the error)",
+  "speech": [
+   "Describe what you need in the title."
+  ]
+ },
+ {
+  "t": "17:43:09",
+  "journey": "J4 form error",
+  "step": "Tab inside the dialog (focus stays in the dialog)",
+  "speech": [
+   "Service type panel.",
+   "Hotel room toggle button pressed."
+  ]
+ },
+ {
+  "t": "17:43:12",
+  "journey": "J4 form error",
+  "step": "press Escape (dialog closes, focus returns)",
+  "speech": [
+   "main content",
+   "New request push button."
+  ]
+ },
+ {
+  "t": "17:43:13",
+  "journey": "J5 menu",
+  "step": "Shift+Tab (seeking /Account menu/)",
+  "speech": [
+   "leaving main content.",
+   "banner",
+   "Account menu collapsed push button.",
+   "opens menu",
+   "Focus mode"
+  ]
+ },
+ {
+  "t": "17:43:15",
+  "journey": "J5 menu",
+  "step": "press Enter to open the menu",
+  "speech": []
+ },
+ {
+  "t": "17:43:17",
+  "journey": "J5 menu",
+  "step": "Down arrow",
+  "speech": []
+ },
+ {
+  "t": "17:43:18",
+  "journey": "J5 menu",
+  "step": "Down arrow",
+  "speech": []
+ },
+ {
+  "t": "17:43:20",
+  "journey": "J5 menu",
+  "step": "press Escape (menu closes, focus returns)",
+  "speech": [
+   "collapsed",
+   "Account menu collapsed push button.",
+   "opens menu"
+  ]
+ }
+]

@@ -1,0 +1,7 @@
+# Second layer: a window manager (Orca follows the active window) and a clipboard tool
+# (credentials are pasted, never typed, so no key-echo or keystroke log can contain them).
+FROM uc-a11-orca:local
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends openbox xclip python3 \
+    && rm -rf /var/lib/apt/lists/*
+USER tester

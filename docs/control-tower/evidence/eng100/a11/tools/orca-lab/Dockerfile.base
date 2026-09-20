@@ -1,0 +1,13 @@
+# Screen-reader lab for the A11 accessibility acceptance: Orca + Firefox ESR on Xvfb.
+FROM debian:bookworm-slim
+ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      xvfb xauth x11-utils xdotool dbus dbus-x11 at-spi2-core \
+      orca python3-pyatspi gir1.2-atspi-2.0 gir1.2-gtk-3.0 gir1.2-wnck-3.0 python3-gi \
+      speech-dispatcher speech-dispatcher-espeak-ng espeak-ng \
+      firefox-esr socat procps ca-certificates fonts-dejavu-core fonts-liberation2 \
+      gsettings-desktop-schemas dconf-cli dconf-gsettings-backend \
+    && rm -rf /var/lib/apt/lists/*
+RUN useradd -m tester
+USER tester
+WORKDIR /home/tester
