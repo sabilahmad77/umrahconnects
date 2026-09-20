@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { getToken, setToken, clearAuth } from '@/lib/auth';
 import { singleFlight, writeKey } from '@/lib/single-flight';
+import { idempotencyKeyFor } from '@/lib/idempotency-key';
 
 // Default to the same-origin proxy (see next.config rewrites) so the app works
 // on localhost AND through any tunnel/device without rebuilding when URLs rotate.
@@ -104,9 +105,17 @@ apiClient.interceptors.response.use(
 );
 
 /**
- * N-FORM-1: identical writes that overlap in time are joined, so a double click
- * (or a second effect pass) creates one record instead of two. Every screen gets
- * this from the shared client — it is not a per-form fix. See lib/single-flight.ts.
+ * N-FORM-1: duplicate submission, in two layers.
+ *
+ * In this tab, identical writes that overlap in time are joined, so a double
+ * click (or a second effect pass) sends one request instead of two
+ * (lib/single-flight.ts). That is politeness, not a guarantee: a second tab, a
+ * retry after a token refresh or a flaky connection each send their own request.
+ *
+ * So every create also carries an `Idempotency-Key` the SERVER settles
+ * (lib/idempotency-key.ts): the first request creates the record and every
+ * duplicate of the same submit attempt gets that first response back. Every
+ * screen gets both from the shared client — neither is a per-form fix.
  */
 for (const method of ['post', 'put', 'patch'] as const) {
   const send = apiClient[method].bind(apiClient) as (
@@ -114,8 +123,15 @@ for (const method of ['post', 'put', 'patch'] as const) {
     data?: unknown,
     config?: AxiosRequestConfig,
   ) => Promise<AxiosResponse>;
-  apiClient[method] = ((url: string, data?: unknown, config?: AxiosRequestConfig) =>
-    singleFlight(writeKey(method, url, data), () => send(url, data, config))) as typeof apiClient.post;
+  apiClient[method] = ((url: string, data?: unknown, config?: AxiosRequestConfig) => {
+    const idempotencyKey = idempotencyKeyFor(method, url, data);
+    // Kept on the config, so the retry after a token refresh replays the SAME
+    // attempt instead of creating a second record.
+    const withKey = idempotencyKey
+      ? { ...config, headers: { ...config?.headers, 'Idempotency-Key': idempotencyKey } }
+      : config;
+    return singleFlight(writeKey(method, url, data), () => send(url, data, withKey));
+  }) as typeof apiClient.post;
 }
 const sendDelete = apiClient.delete.bind(apiClient) as (
   url: string,

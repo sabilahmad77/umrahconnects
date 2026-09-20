@@ -71,16 +71,6 @@ export function useMyListings(params: { page?: number; limit?: number; search?: 
   });
 }
 
-/** One of the caller organization's listings in any status; a 404 means "not yours". */
-export function useMyListing(id?: string, enabled = true) {
-  return useQuery({
-    queryKey: ['marketplace', 'my-listing', id],
-    queryFn: async () => (await apiClient.get(`/marketplace/listings/mine/${id}`)).data.data as any,
-    enabled: !!id && enabled,
-    retry: false,
-  });
-}
-
 export function useCreateListing() {
   const qc = useQueryClient();
   return useMutation({

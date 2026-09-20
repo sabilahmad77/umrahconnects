@@ -47,7 +47,12 @@ async function ensurePackage(data: Prisma.PackageUncheckedCreateInput) {
 
 /** The booking plus exactly one BookingPilgrim row per traveler, each at the package price. */
 async function ensureBooking(data: Prisma.BookingUncheckedCreateInput, pilgrimIds: string[], priceCents: bigint) {
-  const booking = await prisma.booking.upsert({ where: { bookingRef: data.bookingRef }, create: data, update: {} });
+  // eng100-fx3: booking references are unique per organization, not platform-wide.
+  const booking = await prisma.booking.upsert({
+    where: { tenantId_bookingRef: { tenantId: data.tenantId, bookingRef: data.bookingRef } },
+    create: data,
+    update: {},
+  });
   for (const pilgrimId of pilgrimIds) {
     await prisma.bookingPilgrim.upsert({
       where: { bookingId_pilgrimId: { bookingId: booking.id, pilgrimId } },

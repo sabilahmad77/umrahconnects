@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test:providers": "PROVIDER_TESTS_REQUIRED=true vitest run --config vitest.providers.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
@@ -18,7 +19,7 @@
     "storage:cleanup-orphans": "ts-node --transpile-only src/modules/storage/cleanup/orphan-cleanup.cli.ts",
     "db:reset": "prisma migrate reset",
     "clean": "rm -rf dist",
-    "test:all": "vitest run && vitest run --config vitest.e2e.config.ts"
+    "test:all": "pnpm test && pnpm test:e2e && pnpm test:providers"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3",

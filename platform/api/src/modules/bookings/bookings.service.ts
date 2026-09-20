@@ -5,6 +5,7 @@ import { BOOKING_STATUS_TRANSITIONS, DERIVED_BOOKING_STATUSES, derivedBookingSta
 import { NotificationsService } from '../notifications/notifications.service';
 import { PayActor, PaymentsService } from '../payments/payments.service';
 import { assertAllOwned, findOwned, requireId } from '../../common/tenant-scope';
+import { ReferenceNumberService } from '../references/reference-number.service';
 
 const BOOKING_STATUSES = [
   'DRAFT', 'CONFIRMED', 'PARTIALLY_PAID', 'FULLY_PAID', 'VISA_PROCESSING',
@@ -37,6 +38,7 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly payments: PaymentsService,
+    private readonly references: ReferenceNumberService, // eng100-fx3
   ) {}
 
   private normalizeBigInt(obj: any): any {
@@ -92,7 +94,11 @@ export class BookingsService {
   findOneBooking = this.findOne.bind(this);
 
   async create(tenantId: string, createdBy: string | null, dto: any) {
-    const bookingRef = `UC-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+    // A12-3: the organization's next number, not five digits of Math.random()
+    // against a platform-wide unique index.
+    const bookingRef = await this.references.next(tenantId, 'UC', async (ref) =>
+      (await this.prisma.booking.count({ where: { tenantId, bookingRef: ref } })) > 0,
+    );
     // A supplied packageId must belong to the caller's tenant — never persist an
     // id we could not resolve (previously a failed lookup was ignored).
     const pkg = dto.packageId
@@ -346,7 +352,9 @@ export class BookingsService {
           || 'Customer';
       }
     }
-    const invoiceRef = `INV-${new Date().getFullYear()}-${Math.random().toString().slice(2, 7)}`;
+    const invoiceRef = await this.references.next(tenantId, 'INV', async (ref) =>
+      (await this.prisma.invoice.count({ where: { tenantId, invoiceRef: ref } })) > 0,
+    );
     const issuedAt = new Date();
     const dueAt = new Date();
     dueAt.setDate(dueAt.getDate() + 14);

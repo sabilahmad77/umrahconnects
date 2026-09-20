@@ -24,15 +24,25 @@ npx ts-node prisma/scripts/seed-demo-roles.ts   # one account per role (developm
 
 ## Tests
 
+The three suites below are the API quality gate. All three run in CI
+(`.github/workflows/api-ci.yml`): the `api` job runs unit + e2e, the `providers`
+job runs the provider contracts. A change that does not pass all three is not done.
+
 ```bash
 cd platform/api
 npx tsc --noEmit
 pnpm lint
-npx vitest run                                          # unit
-npx vitest run --config vitest.e2e.config.ts            # e2e security suites
+pnpm test                                               # unit
+pnpm test:e2e                                           # e2e security suites
+pnpm test:providers                                     # provider contracts (needs the stand-ins below)
+# or all three at once:
+pnpm test:all
 ```
 
-Provider integration (local stand-ins):
+Provider integration (local stand-ins). `pnpm test:providers` sets
+`PROVIDER_TESTS_REQUIRED=true`, so a stand-in that is not running fails the run
+instead of skipping the suite — that silent skip is how the `cancel()` contract
+test rotted unnoticed (A12-6). Start them first:
 
 ```bash
 docker run -d --rm --name uc-stripe-mock -p 127.0.0.1:12111:12111 stripe/stripe-mock:latest
@@ -41,7 +51,7 @@ docker run -d --rm --name uc-mailpit -p 127.0.0.1:11025:1025 -p 127.0.0.1:18025:
 ```
 
 ```bash
-STRIPE_MOCK_URL=http://127.0.0.1:12111 S3_TEST_ENDPOINT=http://127.0.0.1:19000 S3_TEST_ACCESS_KEY=ucminioadmin S3_TEST_SECRET_KEY=ucminiosecret123 SMTP_TEST_HOST=127.0.0.1 SMTP_TEST_PORT=11025 SMTP_TEST_API=http://127.0.0.1:18025 npx vitest run --config vitest.providers.config.ts
+STRIPE_MOCK_URL=http://127.0.0.1:12111 S3_TEST_ENDPOINT=http://127.0.0.1:19000 S3_TEST_ACCESS_KEY=ucminioadmin S3_TEST_SECRET_KEY=ucminiosecret123 SMTP_TEST_HOST=127.0.0.1 SMTP_TEST_PORT=11025 SMTP_TEST_API=http://127.0.0.1:18025 pnpm test:providers
 ```
 
 ```bash

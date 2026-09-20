@@ -311,7 +311,7 @@ async function main() {
 
   // Use upsert to handle idempotency
   const inv1 = await prisma.invoice.upsert({
-    where:  { invoiceRef: 'INV-2026-00001' },
+    where:  { tenantId_invoiceRef: { tenantId: tenant.id, invoiceRef: 'INV-2026-00001' } },
     update: {},
     create: {
       tenantId: tenant.id, invoiceRef: 'INV-2026-00001',
@@ -341,7 +341,7 @@ async function main() {
   }
 
   const inv2 = await prisma.invoice.upsert({
-    where:  { invoiceRef: 'INV-2026-00002' },
+    where:  { tenantId_invoiceRef: { tenantId: tenant.id, invoiceRef: 'INV-2026-00002' } },
     update: {},
     create: {
       tenantId: tenant.id, invoiceRef: 'INV-2026-00002',
@@ -374,7 +374,7 @@ async function main() {
   }
 
   await prisma.invoice.upsert({
-    where:  { invoiceRef: 'INV-2026-00003' },
+    where:  { tenantId_invoiceRef: { tenantId: tenant.id, invoiceRef: 'INV-2026-00003' } },
     update: {},
     create: {
       tenantId: tenant.id, invoiceRef: 'INV-2026-00003',
@@ -390,7 +390,7 @@ async function main() {
   });
 
   const inv4 = await prisma.invoice.upsert({
-    where:  { invoiceRef: 'INV-2026-00004' },
+    where:  { tenantId_invoiceRef: { tenantId: tenant.id, invoiceRef: 'INV-2026-00004' } },
     update: {},
     create: {
       tenantId: tenant.id, invoiceRef: 'INV-2026-00004',
@@ -419,7 +419,7 @@ async function main() {
   }
 
   await prisma.invoice.upsert({
-    where:  { invoiceRef: 'INV-2026-00005' },
+    where:  { tenantId_invoiceRef: { tenantId: tenant.id, invoiceRef: 'INV-2026-00005' } },
     update: {},
     create: {
       tenantId: tenant.id, invoiceRef: 'INV-2026-00005',

@@ -8,6 +8,7 @@ import * as express from 'express';
 import { randomUUID } from 'crypto';
 import { HttpExceptionFilter } from '../common/filters/http-exception.filter';
 import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
+import { IdempotencyInterceptor } from '../common/idempotency/idempotency.interceptor';
 import { resolveLocalStorageRoot } from '../modules/storage/storage.service';
 import { makeClientIpResolver } from './client-ip';
 
@@ -127,7 +128,9 @@ export function configureApp(app: INestApplication) {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(app.get(AuditInterceptor));
+  // Order matters: idempotency wraps the audit trail, so a replayed request —
+  // which creates nothing — is not written to the trail as a create (N-FORM-1).
+  app.useGlobalInterceptors(app.get(IdempotencyInterceptor), app.get(AuditInterceptor));
 
   if (!production && config.get<string>('SWAGGER_ENABLED', 'true') !== 'false') {
     const swaggerConfig = new DocumentBuilder()
