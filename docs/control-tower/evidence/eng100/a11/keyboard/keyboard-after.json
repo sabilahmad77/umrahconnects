@@ -1,0 +1,1494 @@
+{
+ "base": "http://localhost:3411",
+ "when": "2026-09-20T19:34:16.316Z",
+ "summary": {
+  "total": 113,
+  "passed": 99,
+  "failed": 14
+ },
+ "checks": [
+  {
+   "id": "skip-link-first-stop",
+   "sc": "2.4.1",
+   "where": "public /",
+   "pass": true,
+   "detail": "Skip to content"
+  },
+  {
+   "id": "skip-link-visible-on-focus",
+   "sc": "2.4.7",
+   "where": "public /",
+   "pass": true,
+   "detail": "top=12"
+  },
+  {
+   "id": "skip-link-moves-focus-to-main",
+   "sc": "2.4.1",
+   "where": "public /",
+   "pass": true,
+   "detail": "MAIN#public-main"
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "public / (1280)",
+   "pass": true,
+   "detail": "50 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "public / (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "public / (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "public / (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "public / (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "login (1280)",
+   "pass": true,
+   "detail": "12 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "login (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "login (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "login (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "login (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "auth-field-allows-paste",
+   "sc": "3.3.8",
+   "where": "login #signin-email",
+   "pass": true,
+   "detail": "value=pasted autocomplete=username"
+  },
+  {
+   "id": "auth-field-allows-paste",
+   "sc": "3.3.8",
+   "where": "login #signin-password",
+   "pass": true,
+   "detail": "value=pasted autocomplete=current-password"
+  },
+  {
+   "id": "login-no-cognitive-test",
+   "sc": "3.3.8",
+   "where": "login",
+   "pass": true,
+   "detail": "0 captcha elements"
+  },
+  {
+   "id": "login-autocomplete-tokens",
+   "sc": "1.3.5/3.3.8",
+   "where": "login",
+   "pass": true,
+   "detail": "{\"email\":\"username\",\"pw\":\"current-password\"}"
+  },
+  {
+   "id": "login-error-in-alert-region",
+   "sc": "3.3.1/4.1.3",
+   "where": "login",
+   "pass": true,
+   "detail": "Unable to continueInvalid credentials"
+  },
+  {
+   "id": "login-focus-kept-after-failed-submit",
+   "sc": "2.4.3",
+   "where": "login",
+   "pass": true,
+   "detail": "BUTTON \"Sign in\""
+  },
+  {
+   "id": "signup-new-password-autocomplete",
+   "sc": "1.3.5",
+   "where": "signup",
+   "pass": true,
+   "detail": "[]"
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "contact (1280)",
+   "pass": true,
+   "detail": "38 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "contact (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "contact (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "contact (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "contact (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "dialog-opens-with-keyboard",
+   "sc": "2.1.1",
+   "where": "public mobile navigation (390)",
+   "pass": true,
+   "detail": "Open navigation"
+  },
+  {
+   "id": "dialog-moves-focus-inside",
+   "sc": "2.4.3",
+   "where": "public mobile navigation (390)",
+   "pass": true,
+   "detail": "BUTTON \"Close dialog\""
+  },
+  {
+   "id": "dialog-has-accessible-name",
+   "sc": "4.1.2",
+   "where": "public mobile navigation (390)",
+   "pass": true,
+   "detail": "Umrah Connect navigation"
+  },
+  {
+   "id": "dialog-traps-focus",
+   "sc": "2.4.3",
+   "where": "public mobile navigation (390)",
+   "pass": true,
+   "detail": "0 of 50 Tab/Shift+Tab presses left the dialog"
+  },
+  {
+   "id": "dialog-closes-with-escape",
+   "sc": "2.1.2",
+   "where": "public mobile navigation (390)",
+   "pass": true
+  },
+  {
+   "id": "dialog-returns-focus-to-trigger",
+   "sc": "2.4.3",
+   "where": "public mobile navigation (390)",
+   "pass": true,
+   "detail": "BUTTON \"Open navigation\" (trigger \"Open navigation\")"
+  },
+  {
+   "id": "skip-link-first-stop",
+   "sc": "2.4.1",
+   "where": "traveler /travel-plan",
+   "pass": true,
+   "detail": "Skip to content"
+  },
+  {
+   "id": "skip-link-visible-on-focus",
+   "sc": "2.4.7",
+   "where": "traveler /travel-plan",
+   "pass": true,
+   "detail": "top=12"
+  },
+  {
+   "id": "skip-link-moves-focus-to-main",
+   "sc": "2.4.1",
+   "where": "traveler /travel-plan",
+   "pass": true,
+   "detail": "MAIN#workspace-main"
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "traveler /travel-plan (1280)",
+   "pass": true,
+   "detail": "25 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "traveler /travel-plan (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "traveler /travel-plan (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "traveler /travel-plan (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "traveler /travel-plan (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "menu-opens-focus-first-item",
+   "sc": "2.1.1",
+   "where": "traveler header",
+   "pass": true,
+   "detail": "A[menuitem] \"Profile\""
+  },
+  {
+   "id": "menu-arrow-moves-focus",
+   "sc": "2.1.1",
+   "where": "traveler header",
+   "pass": true,
+   "detail": "\"Profile\" → \"Account settings\""
+  },
+  {
+   "id": "menu-escape-returns-focus",
+   "sc": "2.4.3",
+   "where": "traveler header",
+   "pass": true,
+   "detail": "BUTTON \"Account menu\""
+  },
+  {
+   "id": "notifications-open-with-keyboard",
+   "sc": "2.1.1",
+   "where": "traveler header",
+   "pass": true,
+   "detail": "aria-expanded=true"
+  },
+  {
+   "id": "notifications-escape-returns-focus",
+   "sc": "2.4.3",
+   "where": "traveler header",
+   "pass": true,
+   "detail": "BUTTON \"Notifications\""
+  },
+  {
+   "id": "dialog-opens-with-keyboard",
+   "sc": "2.1.1",
+   "where": "traveler /requests New request",
+   "pass": true,
+   "detail": "New request"
+  },
+  {
+   "id": "dialog-moves-focus-inside",
+   "sc": "2.4.3",
+   "where": "traveler /requests New request",
+   "pass": true,
+   "detail": "BUTTON \"Hotel room\""
+  },
+  {
+   "id": "dialog-has-accessible-name",
+   "sc": "4.1.2",
+   "where": "traveler /requests New request",
+   "pass": true,
+   "detail": "What do you need?"
+  },
+  {
+   "id": "dialog-traps-focus",
+   "sc": "2.4.3",
+   "where": "traveler /requests New request",
+   "pass": true,
+   "detail": "0 of 50 Tab/Shift+Tab presses left the dialog"
+  },
+  {
+   "id": "dialog-closes-with-escape",
+   "sc": "2.1.2",
+   "where": "traveler /requests New request",
+   "pass": true
+  },
+  {
+   "id": "dialog-returns-focus-to-trigger",
+   "sc": "2.4.3",
+   "where": "traveler /requests New request",
+   "pass": true,
+   "detail": "BUTTON \"New request\" (trigger \"New request\")"
+  },
+  {
+   "id": "dialog-form-error-announced",
+   "sc": "3.3.1/4.1.3",
+   "where": "traveler New request",
+   "pass": true,
+   "detail": "Describe what you need in the title."
+  },
+  {
+   "id": "tabs-arrow-keys-move-and-select",
+   "sc": "2.1.1",
+   "where": "traveler /social tabs",
+   "pass": true,
+   "detail": "\"All posts\" → \"Following\" selected=true"
+  },
+  {
+   "id": "tabs-tab-moves-into-panel",
+   "sc": "2.4.3",
+   "where": "traveler /social tabs",
+   "pass": false
+  },
+  {
+   "id": "dialog-opens-with-keyboard",
+   "sc": "2.1.1",
+   "where": "workspace mobile navigation (390)",
+   "pass": true,
+   "detail": "Open workspace navigation"
+  },
+  {
+   "id": "dialog-moves-focus-inside",
+   "sc": "2.4.3",
+   "where": "workspace mobile navigation (390)",
+   "pass": true,
+   "detail": "BUTTON \"Close dialog\""
+  },
+  {
+   "id": "dialog-has-accessible-name",
+   "sc": "4.1.2",
+   "where": "workspace mobile navigation (390)",
+   "pass": true,
+   "detail": "Workspace navigation"
+  },
+  {
+   "id": "dialog-traps-focus",
+   "sc": "2.4.3",
+   "where": "workspace mobile navigation (390)",
+   "pass": true,
+   "detail": "0 of 50 Tab/Shift+Tab presses left the dialog"
+  },
+  {
+   "id": "dialog-closes-with-escape",
+   "sc": "2.1.2",
+   "where": "workspace mobile navigation (390)",
+   "pass": true
+  },
+  {
+   "id": "dialog-returns-focus-to-trigger",
+   "sc": "2.4.3",
+   "where": "workspace mobile navigation (390)",
+   "pass": true,
+   "detail": "BUTTON \"Open workspace navigation\" (trigger \"Open workspace navigation\")"
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "traveler /settings (1280)",
+   "pass": true,
+   "detail": "38 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "traveler /settings (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "traveler /settings (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "traveler /settings (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "traveler /settings (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "skip-link-first-stop",
+   "sc": "2.4.1",
+   "where": "operator /dashboard",
+   "pass": true,
+   "detail": "Skip to content"
+  },
+  {
+   "id": "skip-link-visible-on-focus",
+   "sc": "2.4.7",
+   "where": "operator /dashboard",
+   "pass": true,
+   "detail": "top=12"
+  },
+  {
+   "id": "skip-link-moves-focus-to-main",
+   "sc": "2.4.1",
+   "where": "operator /dashboard",
+   "pass": true,
+   "detail": "MAIN#workspace-main"
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "operator /dashboard (1280)",
+   "pass": true,
+   "detail": "44 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "operator /dashboard (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "operator /dashboard (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "operator /dashboard (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "operator /dashboard (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "operator /pilgrims (1280)",
+   "pass": true,
+   "detail": "53 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "operator /pilgrims (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "operator /pilgrims (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "operator /pilgrims (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "operator /pilgrims (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "dialog-opens-with-keyboard",
+   "sc": "2.1.1",
+   "where": "operator /pilgrims add pilgrim",
+   "pass": true,
+   "detail": "Add Pilgrim"
+  },
+  {
+   "id": "dialog-moves-focus-inside",
+   "sc": "2.4.3",
+   "where": "operator /pilgrims add pilgrim",
+   "pass": true,
+   "detail": "INPUT \"First Name\""
+  },
+  {
+   "id": "dialog-has-accessible-name",
+   "sc": "4.1.2",
+   "where": "operator /pilgrims add pilgrim",
+   "pass": true,
+   "detail": "Add pilgrim"
+  },
+  {
+   "id": "dialog-traps-focus",
+   "sc": "2.4.3",
+   "where": "operator /pilgrims add pilgrim",
+   "pass": true,
+   "detail": "0 of 50 Tab/Shift+Tab presses left the dialog"
+  },
+  {
+   "id": "dialog-closes-with-escape",
+   "sc": "2.1.2",
+   "where": "operator /pilgrims add pilgrim",
+   "pass": true
+  },
+  {
+   "id": "dialog-returns-focus-to-trigger",
+   "sc": "2.4.3",
+   "where": "operator /pilgrims add pilgrim",
+   "pass": true,
+   "detail": "BUTTON \"Add Pilgrim\" (trigger \"Add Pilgrim\")"
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "operator /bookings (1280)",
+   "pass": true,
+   "detail": "40 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "operator /bookings (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "operator /bookings (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "operator /bookings (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "operator /bookings (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "financeA /finance (1280)",
+   "pass": true,
+   "detail": "35 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "financeA /finance (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "financeA /finance (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "financeA /finance (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "financeA /finance (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "hotelA /hotels (1280)",
+   "pass": true,
+   "detail": "30 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "hotelA /hotels (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "hotelA /hotels (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "hotelA /hotels (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "hotelA /hotels (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "transportA /transport/vehicles (1280)",
+   "pass": true,
+   "detail": "27 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "transportA /transport/vehicles (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "transportA /transport/vehicles (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "transportA /transport/vehicles (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "transportA /transport/vehicles (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "visaA /compliance (1280)",
+   "pass": true,
+   "detail": "37 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "visaA /compliance (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "visaA /compliance (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "visaA /compliance (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "visaA /compliance (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "tab-cycle-completes",
+   "sc": "2.1.1/2.1.2",
+   "where": "superAdmin /admin-tenants (1280)",
+   "pass": true,
+   "detail": "84 stops"
+  },
+  {
+   "id": "no-positive-tabindex",
+   "sc": "2.4.3",
+   "where": "superAdmin /admin-tenants (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-visible-every-stop",
+   "sc": "2.4.7",
+   "where": "superAdmin /admin-tenants (1280)",
+   "pass": false,
+   "detail": "BUTTON \"Open Tanstack query devtools\""
+  },
+  {
+   "id": "no-invisible-stops",
+   "sc": "2.4.3",
+   "where": "superAdmin /admin-tenants (1280)",
+   "pass": true,
+   "detail": ""
+  },
+  {
+   "id": "focus-not-obscured",
+   "sc": "2.4.11",
+   "where": "superAdmin /admin-tenants (1280)",
+   "pass": true,
+   "detail": ""
+  }
+ ],
+ "walks": [
+  {
+   "label": "public / (1280)",
+   "stops": 50,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Umrah ConnectCONNECTED JOURNEYS outline",
+    "SUMMARY Solutions outline",
+    "A Marketplace outline+bg",
+    "SUMMARY Resources outline",
+    "A Pricing outline+bg",
+    "A About Us outline+bg",
+    "A Log in outline",
+    "A Get Started outline",
+    "A Get Started outline",
+    "A Request a Demo outline",
+    "A Hotels / Accommodation outline",
+    "A Transport / Logistics outline",
+    "A Visa Services outline",
+    "A Finance / Payments outline",
+    "A Explore Marketplace outline",
+    "A Travelers / PilgrimsDiscover services, send reques outline",
+    "A Operators / AgenciesCoordinate pilgrims, groups, b outline",
+    "A Hotels / AccommodationManage properties, room inve outline",
+    "A Transport / LogisticsOrganize vehicles, drivers, r outline",
+    "A Visa ServicesOrganize applications, documents and  outline",
+    "A Finance / PaymentsFollow invoices, recorded paymen outline",
+    "A How it works outline",
+    "SUMMARY Can I browse before creating an account? outline",
+    "SUMMARY Is every service booked the same way? outline",
+    "A Visit Help Center outline",
+    "A Get Started outline",
+    "A Log in outline",
+    "INPUT Email outline+border",
+    "BUTTON Subscribe outline",
+    "A Solutions outline",
+    "A How It Works outline",
+    "A Security outline",
+    "A Integrations outline",
+    "A Hotels outline",
+    "A Transport outline",
+    "A Visa Services outline",
+    "A Packages outline",
+    "A Blogs outline",
+    "A Guides outline",
+    "A Help Center outline",
+    "A API Docs outline",
+    "A About Us outline",
+    "A Careers outline",
+    "A Partners outline",
+    "A Contact Us outline",
+    "A Privacy Policy outline",
+    "A Terms of Service outline",
+    "A Umrah ConnectCONNECTED JOURNEYS outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "login (1280)",
+   "stops": 12,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Umrah ConnectCONNECTED JOURNEYS outline",
+    "A Explore the platform outline",
+    "INPUT  outline",
+    "INPUT  outline",
+    "BUTTON Show password outline",
+    "BUTTON Forgot password? outline",
+    "BUTTON Sign in outline",
+    "A Create an account outline",
+    "A Help center outline",
+    "A Privacy outline",
+    "A Terms outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "contact (1280)",
+   "stops": 38,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Umrah ConnectCONNECTED JOURNEYS outline",
+    "SUMMARY Solutions outline",
+    "A Marketplace outline+bg",
+    "SUMMARY Resources outline",
+    "A Pricing outline+bg",
+    "A About Us outline+bg",
+    "A Log in outline",
+    "A Get Started outline",
+    "INPUT Full name outline+border",
+    "INPUT Email address outline+border",
+    "INPUT Phone number outline+border",
+    "INPUT Company / organization outline+border",
+    "INPUT Subject outline+border",
+    "TEXTAREA Message outline+border",
+    "BUTTON Send message outline",
+    "INPUT Email outline+border",
+    "BUTTON Subscribe outline",
+    "A Solutions outline",
+    "A How It Works outline",
+    "A Security outline",
+    "A Integrations outline",
+    "A Hotels outline",
+    "A Transport outline",
+    "A Visa Services outline",
+    "A Packages outline",
+    "A Blogs outline",
+    "A Guides outline",
+    "A Help Center outline",
+    "A API Docs outline",
+    "A About Us outline",
+    "A Careers outline",
+    "A Partners outline",
+    "A Contact Us outline",
+    "A Privacy Policy outline",
+    "A Terms of Service outline",
+    "A Umrah ConnectCONNECTED JOURNEYS outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "traveler /travel-plan (1280)",
+   "stops": 25,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Social Hub outline",
+    "A Discover outline",
+    "A Connections outline",
+    "A Messages outline",
+    "A My Groups outline",
+    "A Marketplace outline",
+    "A My Requests outline",
+    "A My Offers outline",
+    "A My Bookings outline",
+    "A My Travel Plan outline",
+    "A Profile outline",
+    "A Notifications outline",
+    "A Register your organization outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "A View all outline",
+    "A Jeddah Airport to Makkah transfer (per seat)2 pax  outline",
+    "A View all outline",
+    "A Family room in Madinah for 4 nightsHOTEL · OPEN ·  outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "traveler /settings (1280)",
+   "stops": 38,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Social Hub outline",
+    "A Discover outline",
+    "A Connections outline",
+    "A Messages outline",
+    "A My Groups outline",
+    "A Marketplace outline",
+    "A My Requests outline",
+    "A My Offers outline",
+    "A My Bookings outline",
+    "A My Travel Plan outline",
+    "A Profile outline",
+    "A Notifications outline",
+    "A Register your organization outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "A Edit profile outline",
+    "INPUT  outline",
+    "INPUT  outline",
+    "INPUT  outline",
+    "BUTTON Change password outline",
+    "BUTTON Sign out everywhere outline",
+    "SELECT Englishالعربية (Arabic) outline",
+    "SELECT Africa/AbidjanAfrica/AccraAfrica/Addis AbabaAfrica outline",
+    "BUTTON Use this device’s time zone (Asia/Karachi) outline",
+    "BUTTON[switch]  outline",
+    "BUTTON[switch]  outline",
+    "BUTTON[switch]  outline",
+    "BUTTON[switch]  outline",
+    "BUTTON[switch]  outline",
+    "BUTTON[switch]  outline",
+    "BUTTON[switch]  outline",
+    "A Register an organization outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "operator /dashboard (1280)",
+   "stops": 44,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A Pilgrims & CRM outline",
+    "A Bookings outline",
+    "A Packages outline",
+    "A Groups outline",
+    "A Hotels outline",
+    "A Transport outline",
+    "A Visa & Compliance outline",
+    "A Finance outline",
+    "A Reports outline",
+    "A Marketplace outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Requests outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Refresh dashboard outline",
+    "A Review bookings outline",
+    "A Coordinate groups outline",
+    "A Visa cases outline",
+    "A View invoices outline",
+    "A View all groups → outline",
+    "A QA-2026-A0002Confirmed outline",
+    "A QA-2026-A0001Partially paid outline",
+    "A Ibrahim SalehLead outline",
+    "A Khadija NoorProspect outline",
+    "A Hamza AliVisa approved outline",
+    "A Fatima IdrisVisa pending outline",
+    "A Yusuf RahmanDocuments pending outline",
+    "A Pilgrims & CRM outline",
+    "A Bookings outline",
+    "A Hotels & Inventory outline",
+    "A Transport outline",
+    "A Visa & Compliance outline",
+    "A Finance outline",
+    "A Marketplace outline",
+    "A Reports outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "operator /pilgrims (1280)",
+   "stops": 53,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A Pilgrims & CRM outline",
+    "A Bookings outline",
+    "A Packages outline",
+    "A Groups outline",
+    "A Hotels outline",
+    "A Transport outline",
+    "A Visa & Compliance outline",
+    "A Finance outline",
+    "A Reports outline",
+    "A Marketplace outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Requests outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Refresh information outline",
+    "BUTTON Export outline",
+    "BUTTON Add Pilgrim outline",
+    "INPUT Search outline",
+    "BUTTON All Pilgrims outline",
+    "BUTTON Docs Pending outline",
+    "BUTTON Visa Pending outline",
+    "BUTTON Visa Approved outline",
+    "BUTTON Traveling outline",
+    "BUTTON In Kingdom outline",
+    "BUTTON Returned outline",
+    "DIV[region] Scrollable records outline",
+    "BUTTON View outline",
+    "BUTTON Edit outline",
+    "BUTTON Archive outline",
+    "BUTTON View outline",
+    "BUTTON Edit outline",
+    "BUTTON Archive outline",
+    "BUTTON View outline",
+    "BUTTON Edit outline",
+    "BUTTON Archive outline",
+    "BUTTON View outline",
+    "BUTTON Edit outline",
+    "BUTTON Archive outline",
+    "BUTTON View outline",
+    "BUTTON Edit outline",
+    "BUTTON Archive outline",
+    "BUTTON View outline",
+    "BUTTON Edit outline",
+    "BUTTON Archive outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "operator /bookings (1280)",
+   "stops": 40,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A Pilgrims & CRM outline",
+    "A Bookings outline",
+    "A Packages outline",
+    "A Groups outline",
+    "A Hotels outline",
+    "A Transport outline",
+    "A Visa & Compliance outline",
+    "A Finance outline",
+    "A Reports outline",
+    "A Marketplace outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Requests outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Refresh information outline",
+    "BUTTON Export outline",
+    "BUTTON New booking outline",
+    "INPUT Search outline",
+    "BUTTON All Bookings outline",
+    "BUTTON Draft outline",
+    "BUTTON Confirmed outline",
+    "BUTTON Partially paid outline",
+    "BUTTON Fully paid outline",
+    "BUTTON Visa processing outline",
+    "BUTTON Traveling outline",
+    "BUTTON Completed outline",
+    "BUTTON Cancelled outline",
+    "BUTTON Refunded outline",
+    "DIV[region] Scrollable records outline",
+    "BUTTON View outline",
+    "BUTTON View outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "financeA /finance (1280)",
+   "stops": 35,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A Invoices outline",
+    "A Payments outline",
+    "A Bookings outline",
+    "A Budget Plans outline",
+    "A Reports outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Packages outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Refresh information outline",
+    "BUTTON New invoice outline",
+    "INPUT Invoice number or customer… outline",
+    "BUTTON All invoices outline",
+    "BUTTON Draft outline",
+    "BUTTON Issued outline",
+    "BUTTON Sent outline",
+    "BUTTON Partial outline",
+    "BUTTON Paid outline",
+    "BUTTON Overdue outline",
+    "BUTTON Cancelled outline",
+    "BUTTON Void outline",
+    "DIV[region] Invoices outline",
+    "A INV-QA-A-00029/19/2026 outline",
+    "A Open INV-QA-A-0002 outline",
+    "A INV-QA-A-00019/19/2026 outline",
+    "A Open INV-QA-A-0001 outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "hotelA /hotels (1280)",
+   "stops": 30,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A My Hotels & Rooms outline",
+    "A Bookings outline",
+    "A Finance outline",
+    "A Marketplace outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Requests outline",
+    "A Reports outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Refresh hotels outline",
+    "BUTTON Add hotel outline",
+    "INPUT Search hotels outline",
+    "BUTTON All cities outline",
+    "BUTTON Makkah outline",
+    "BUTTON Madinah outline",
+    "BUTTON Jeddah outline",
+    "BUTTON Riyadh outline",
+    "BUTTON Taif outline",
+    "SELECT Hotel status outline",
+    "A Qasr Al-Haram MisfalahMAKKAH · SAOccupied0%3 rooms outline",
+    "A Qasr Al-Haram AjyadMAKKAH · SAOccupied0%7 rooms ·  outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "transportA /transport/vehicles (1280)",
+   "stops": 27,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A Vehicles & Fleet outline",
+    "A Drivers outline",
+    "A Routes outline",
+    "A Assignments outline",
+    "A Bookings outline",
+    "A Finance outline",
+    "A Marketplace outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Requests outline",
+    "A Reports outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Add vehicle outline",
+    "INPUT Search vehicles & fleet outline",
+    "BUTTON Refresh vehicles outline",
+    "A QA 1003 · Van 1Van · Toyota Toyota HiAce · 2024Ava outline",
+    "A QA 1002 · Coach 2Bus medium · Toyota Toyota Coaste outline",
+    "A QA 1001 · Coach 1Bus large · Mercedes-Benz Mercede outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "visaA /compliance (1280)",
+   "stops": 37,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Dashboard outline",
+    "A Visa Applications outline",
+    "A Pilgrims / Applicants outline",
+    "A Document Management outline",
+    "A Service Requests outline",
+    "A Finance outline",
+    "A Reports outline",
+    "A Marketplace outline",
+    "A Social Hub outline",
+    "A Connections outline",
+    "A Groups outline",
+    "A Requests outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Refresh applications outline",
+    "BUTTON New application outline",
+    "INPUT Search applications outline",
+    "BUTTON All outline",
+    "BUTTON Not started outline",
+    "BUTTON Collecting documents outline",
+    "BUTTON Submitted outline",
+    "BUTTON Under review outline",
+    "BUTTON Approved outline",
+    "BUTTON Rejected outline",
+    "BUTTON Expired outline",
+    "BUTTON Cancelled outline",
+    "DIV[region] Visa applications outline",
+    "A Adam Yusuf outline",
+    "A Salma Rashid outline",
+    "A Rashid Anwar outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  },
+  {
+   "label": "superAdmin /admin-tenants (1280)",
+   "stops": 84,
+   "reachedEnd": true,
+   "positive": 0,
+   "noIndicator": [
+    "BUTTON \"Open Tanstack query devtools\""
+   ],
+   "hidden": [],
+   "obscured": [],
+   "offscreen": [],
+   "order": [
+    "A Skip to content outline",
+    "A Overview outline",
+    "A All Tenants outline",
+    "A All Users outline",
+    "A Marketplace Listings outline",
+    "A KYC Verification outline",
+    "A Website Inquiries outline",
+    "A Roles & Permissions outline",
+    "A System Logs outline",
+    "A Support / Issues outline",
+    "A Platform Settings outline",
+    "A Notifications outline",
+    "A Settings outline",
+    "BUTTON Sign out outline",
+    "BUTTON Collapse navigation outline",
+    "A Help center outline",
+    "BUTTON Notifications outline",
+    "BUTTON Account menu outline",
+    "BUTTON Export CSV outline",
+    "BUTTON Refresh tenants outline",
+    "INPUT Search outline",
+    "BUTTON All outline",
+    "BUTTON Pending KYC outline",
+    "BUTTON KYC Submitted outline",
+    "BUTTON KYC Approved outline",
+    "BUTTON KYC Rejected outline",
+    "BUTTON Active outline",
+    "BUTTON Suspended outline",
+    "BUTTON Archived outline",
+    "DIV[region] Scrollable records outline",
+    "A Wijhat Visa Bureau contact@qa-visa-b.qa.umrahconne outline",
+    "BUTTON Suspend Wijhat Visa Bureau outline",
+    "BUTTON Archive Wijhat Visa Bureau outline",
+    "A Masar Visa Services contact@qa-visa-a.qa.umrahconn outline",
+    "BUTTON Suspend Masar Visa Services outline",
+    "BUTTON Archive Masar Visa Services outline",
+    "A Sadeem Transport Company contact@qa-transport-b.qa outline",
+    "BUTTON Suspend Sadeem Transport Company outline",
+    "BUTTON Archive Sadeem Transport Company outline",
+    "A Rahala Coaches contact@qa-transport-a.qa.umrahconn outline",
+    "BUTTON Suspend Rahala Coaches outline",
+    "BUTTON Archive Rahala Coaches outline",
+    "A Taibah Garden Hotels contact@qa-hotel-b.qa.umrahco outline",
+    "BUTTON Suspend Taibah Garden Hotels outline",
+    "BUTTON Archive Taibah Garden Hotels outline",
+    "A Qasr Al-Haram Hotels contact@qa-hotel-a.qa.umrahco outline",
+    "BUTTON Suspend Qasr Al-Haram Hotels outline",
+    "BUTTON Archive Qasr Al-Haram Hotels outline",
+    "A Safa Marwa Travel contact@qa-operator-b.qa.umrahco outline",
+    "BUTTON Suspend Safa Marwa Travel outline",
+    "BUTTON Archive Safa Marwa Travel outline",
+    "A Al-Noor Umrah Services contact@qa-operator-a.qa.um outline",
+    "BUTTON Suspend Al-Noor Umrah Services outline",
+    "BUTTON Archive Al-Noor Umrah Services outline",
+    "A Nusuk Visa Partners B (demo) hello@nusuk-visa-part outline",
+    "BUTTON Suspend Nusuk Visa Partners B (demo) outline",
+    "BUTTON Archive Nusuk Visa Partners B (demo) outline",
+    "A Jeddah Coach Transport B (demo) hello@jeddah-coach outline",
+    "BUTTON Suspend Jeddah Coach Transport B (demo) outline",
+    "BUTTON Archive Jeddah Coach Transport B (demo) outline",
+    "A Madinah Comfort Hotels B (demo) hello@madinah-comf outline",
+    "BUTTON Suspend Madinah Comfort Hotels B (demo) outline",
+    "BUTTON Archive Madinah Comfort Hotels B (demo) outline",
+    "A FastVisa Agency (demo) hello@fastvisa-agency.dev · outline",
+    "BUTTON Suspend FastVisa Agency (demo) outline",
+    "BUTTON Archive FastVisa Agency (demo) outline",
+    "A Haramain Transport Co. (demo) hello@haramain-trans outline",
+    "BUTTON Suspend Haramain Transport Co. (demo) outline",
+    "BUTTON Archive Haramain Transport Co. (demo) outline",
+    "A Makkah Grand Hotels (demo) hello@makkah-grand-hote outline",
+    "BUTTON Suspend Makkah Grand Hotels (demo) outline",
+    "BUTTON Archive Makkah Grand Hotels (demo) outline",
+    "A Umrah Connect Travelers hello@umrah-connect-travel outline",
+    "A Umrah Connect Platform hello@umrah-connect-platfor outline",
+    "A Kaaba Travel & Tours Pvt Ltd admin@kaabatravel.pk  outline",
+    "BUTTON Suspend Kaaba Travel & Tours Pvt Ltd outline",
+    "BUTTON Archive Kaaba Travel & Tours Pvt Ltd outline",
+    "A PT Baitussalam Tours & Travel admin@baitussalam.co outline",
+    "BUTTON Suspend PT Baitussalam Tours & Travel outline",
+    "BUTTON Archive PT Baitussalam Tours & Travel outline",
+    "A Al-Haramain Ground Services admin@alharamain.sa ·  outline",
+    "BUTTON Suspend Al-Haramain Ground Services outline",
+    "BUTTON Archive Al-Haramain Ground Services outline",
+    "BUTTON Open Tanstack query devtools NO-INDICATOR"
+   ]
+  }
+ ]
+}

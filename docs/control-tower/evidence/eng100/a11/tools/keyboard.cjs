@@ -308,6 +308,12 @@ async function pasteCheck(page, label, selector) {
     // Signup and reset-password: paste into password fields.
     await page.goto(`${BASE}/signup`);
     await L.settle(page);
+    // Sign-up asks for the kind of account first; the credentials are on step 2.
+    const kind = page.locator('main button').filter({ hasText: /Traveler \/ Pilgrim/i }).first();
+    if (await kind.isVisible().catch(() => false)) {
+      await kind.click();
+      await page.waitForTimeout(900);
+    }
     const signupPw = await page.locator('input[type="password"]').count();
     for (let i = 0; i < signupPw; i++) await pasteCheck(page, 'signup', `input[type="password"] >> nth=${i}`);
     const signupAc = await page.evaluate(() => [...document.querySelectorAll('input[type="password"]')].map((i) => i.autocomplete));
