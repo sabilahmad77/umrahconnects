@@ -1,0 +1,7 @@
+== D05 (coordinator re-verification): backup → restore into a disposable database → compare every table
+dump bytes: 410153; sha256: d96f418dc89e614a…; toc entries: 743
+restore exit: 0; pg_restore error lines: 0
+tables compared: 79; rows in source: 1522
+RESULT: every table has identical row counts in the restored copy
+tampered dump: refused by pg_restore (good)
+disposable database dropped; source untouched

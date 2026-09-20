@@ -35,6 +35,8 @@ No real messaging channel to Codex exists, so none was claimed.
 | FX2 | Follow-up fixer: RLS in production (F19), security hygiene and tests (F3 F5 F7 F8 F9 F11 F15 F16 F17) | a6aac7db3bd0e79f4 | 21:57 (19 Sep) | `…/eng100/fx2` / `eng100/fx2` | running | — | — |
 | A10 | Independent functional browser QA across all roles (actual Chrome, candidate :3300/:4300) | a5524129f197c0da1 | 21:57 (19 Sep) | none (read-only against the candidate; writes only evidence) | running | — | — |
 | A11 | Accessibility (W31) and responsive (W30) acceptance | a3b67c09c1ccc3b4b | 21:57 (19 Sep) | `…/eng100/a11` / `eng100/a11` | running | — | — |
+| A12 | Independent acceptance review and adversarial regression | acbe9b01f8e5cb88f | 22:0x (20 Sep) | `…/eng100/a12` / `eng100/a12` (from candidate 2e3857b) | **completed** (216 tool uses) | f2cdd57 2b5452a 280b3ee | Re-ran every gate itself (e2e 494+5 skipped; 530/530 with its own 31 probes; cold boot; migrations zero drift; secret scan clean). 31 adversarial API probes + 9 browser probes all refused. No green-washing found. Four findings it refused to sign → FX3. |
+| FX3 | Fixer for the reviewer's findings (N-FORM-1 server idempotency, reference-number collisions, listing 404, stale provider suite) | afcfa490037d3fbab | 22:5x (20 Sep) | `…/eng100/fx3` / `eng100/fx3` | running | — | — |
 
 Not yet launched: A12 independent acceptance reviewer (after the fixers and QA report).
 P08 envelope: connections done by A05; marketplace-requests assigned to A06.
