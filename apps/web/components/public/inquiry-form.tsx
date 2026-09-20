@@ -76,7 +76,7 @@ export function InquiryForm({
                 name={f}
                 rows={4} value={form[f] ?? ''} onChange={(e) => set(f, e.target.value)}
                 placeholder={`Tell us how we can help…`}
-                className="w-full text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400 resize-none"
+                className="w-full text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-brand-400 resize-none"
               />
             ) : (
               <Input aria-label={LABELS[f]}
@@ -85,7 +85,7 @@ export function InquiryForm({
                 autoComplete={f === "email" ? "email" : f === "name" ? "name" : f === "phone" ? "tel" : "off"}
                 type={f === 'email' ? 'email' : f === 'phone' ? 'tel' : 'text'}
                 value={form[f] ?? ''} onChange={(e) => set(f, e.target.value)}
-                className="w-full text-sm px-3.5 py-2.5 border border-sandstone rounded-xl outline-none focus:border-brand-400"
+                className="w-full text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-brand-400"
               />
             )}
           </div>

@@ -41,7 +41,7 @@ export function DiscoverView() {
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {tab !== 'trending' && (
-          <div className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 sm:w-72">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-gray-500 bg-white px-3 py-2.5 sm:w-72">
             <Search aria-hidden="true" className="h-4 w-4 text-gray-600" />
             <Input
               aria-label={tab === 'people' ? 'Search people by name or city' : 'Search groups by name'}

@@ -105,7 +105,7 @@ export function PublicFooter() {
                   aria-label="Email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && subscribe()}
                   placeholder="Enter your email" type="email"
-                  className="flex-1 bg-white/10 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-gold-400"
+                  className="flex-1 bg-white/10 border border-white/50 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-gold-400"
                 />
                 <Button variant="quiet" type="button" disabled={busy} onClick={subscribe} className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-semibold text-sm px-5 rounded-xl transition-colors">{busy ? 'Subscribing…' : 'Subscribe'}</Button>
               </div>

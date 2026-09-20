@@ -189,21 +189,21 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-            <Select  value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
               {DOC_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
             </Select>
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">File name</span>
-            <Input  value={form.fileName} onChange={(e) => setForm({ ...form, fileName: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="passport.pdf" />
+            <Input  value={form.fileName} onChange={(e) => setForm({ ...form, fileName: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg" placeholder="passport.pdf" />
           </label>
           <label className="block col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Public URL</span>
-            <Input  value={form.fileUrl} onChange={(e) => setForm({ ...form, fileUrl: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="https://…" />
+            <Input  value={form.fileUrl} onChange={(e) => setForm({ ...form, fileUrl: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg" placeholder="https://…" />
           </label>
           <label className="block col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Expires at (optional)</span>
-            <Input  type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+            <Input  type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg" />
           </label>
         </div>
         <div className="flex justify-end mt-3">
@@ -274,7 +274,7 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Attach to booking</h2>
         <div className="flex gap-2">
-          <Select aria-label="Selected" value={selected} onChange={(e) => setSelected(e.target.value)} className="flex-1 text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+          <Select aria-label="Selected" value={selected} onChange={(e) => setSelected(e.target.value)} className="flex-1 text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
             <option value="">Select booking…</option>
             {available.map((b: any) => (
               <option key={b.id} value={b.id}>{b.bookingRef} — {b.package?.name ?? '—'} ({b.status})</option>
@@ -362,7 +362,7 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
         <LabeledInput label="Date of birth" type="date" value={form.dateOfBirth} onChange={(v) => setForm({ ...form, dateOfBirth: v })} />
         <label className="block">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-          <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+          <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
             {/* The real PilgrimStatus enum. Six of the values that used to be here
                 (CONFIRMED, DOCUMENTS_COLLECTING, VISA_PROCESSING, PRE_DEPARTURE,
                 IN_KSA, COMPLETED) do not exist and were rejected on save. */}
@@ -373,7 +373,7 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
         </label>
         <label className="block col-span-2">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-          <Textarea  value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
+          <Textarea  value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg resize-none" />
         </label>
       </div>
       <div className="flex justify-end pt-2">

@@ -101,7 +101,7 @@ export function VisaRequestQueue() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
           <Search className="h-4 w-4 text-gray-600 shrink-0" />
           <Input
             value={q}
@@ -332,13 +332,13 @@ function NewRequestModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Category</span>
-              <Select value={category} onChange={(e) => setCategory(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+              <Select value={category} onChange={(e) => setCategory(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none bg-white">
                 {VISA_REQUEST_CATEGORIES.map((c) => <option key={c} value={c}>{humanizeStatus(c)}</option>)}
               </Select>
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Priority</span>
-              <Select value={priority} onChange={(e) => setPriority(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+              <Select value={priority} onChange={(e) => setPriority(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none bg-white">
                 {VISA_REQUEST_PRIORITIES.map((p) => <option key={p} value={p}>{VISA_REQUEST_PRIORITY_META[p].label}</option>)}
               </Select>
             </label>
@@ -347,7 +347,7 @@ function NewRequestModal({
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Requester name</span>
-              <Input value={requesterName} onChange={(e) => setRequesterName(e.target.value)}  placeholder="Fatima Al-Zahrani" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input value={requesterName} onChange={(e) => setRequesterName(e.target.value)}  placeholder="Fatima Al-Zahrani" className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none" />
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Requester email</span>
@@ -360,7 +360,7 @@ function NewRequestModal({
             {assignees ? (
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Assign to</span>
-                <Select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+                <Select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none bg-white">
                   <option value="">Unassigned</option>
                   {assignees.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </Select>
@@ -370,7 +370,7 @@ function NewRequestModal({
             )}
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Due date</span>
-              <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)}  className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none" />
             </label>
           </div>
         </div>

@@ -86,7 +86,7 @@ function PackageModal({ onClose, onCreate, pending }: { onClose: () => void; onC
   const [durationDays, setDurationDays] = useState('');
   const [maxCapacity, setMaxCapacity] = useState('');
   const inFlight = useRef(false);
-  const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400';
+  const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none focus:border-brand-400';
 
   const submit = async () => {
     if (inFlight.current || pending) return;

@@ -156,7 +156,7 @@ export function ReportsView() {
           <ChartFigure label="Visa pipeline by stage" data={visaData}>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={visaData} dataKey="value" nameKey="name" cx="40%" cy="50%" outerRadius={75} innerRadius={45}>{visaData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
+              <Pie rootTabIndex={-1} data={visaData} dataKey="value" nameKey="name" cx="40%" cy="50%" outerRadius={75} innerRadius={45}>{visaData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v: any) => [v, 'Applications']} />
             </PieChart>

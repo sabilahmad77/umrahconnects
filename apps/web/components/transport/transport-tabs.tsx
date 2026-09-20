@@ -62,7 +62,7 @@ export function TransportTabs({ fixedSection = 'vehicles' }: { fixedSection?: Se
       </div>
       {ready && !canManage && <ReadOnlyNotice>You can view the fleet. Adding or changing vehicles, drivers and routes needs the fleet management permission.</ReadOnlyNotice>}
 
-      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80">
+      <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-80">
         <Search className="h-4 w-4 text-gray-600" />
         <Input aria-label={`Search ${meta.title.toLowerCase()}`} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
       </div>

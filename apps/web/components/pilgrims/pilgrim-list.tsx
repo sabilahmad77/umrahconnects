@@ -134,7 +134,7 @@ export function PilgrimList() {
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80 focus-within:border-brand-300 transition-colors">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-80 focus-within:border-brand-300 transition-colors">
           <Search className="h-4 w-4 text-gray-600 shrink-0" />
           <Input aria-label="Search"
             value={search}
@@ -497,7 +497,7 @@ function PilgrimDetailModal({ pilgrim, onClose, onEdit }: { pilgrim: any; onClos
   );
 }
 
-const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none bg-white';
+const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none bg-white';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
