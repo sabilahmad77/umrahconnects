@@ -111,11 +111,16 @@ describe('navigation per identity (only what the capabilities open)', () => {
     expect(landingPathFor(operator)).toBe('/dashboard');
   });
 
-  it('operator staff: no reports (the report endpoints need finance:report:read)', () => {
-    expect(hrefs(staff)).not.toContain('/reports');
+  it('operator staff: operational reports open (reporting:report:read), money figures stay hidden', () => {
+    // The API serves /reports/overview|pilgrims|bookings|hotels|visa|transport on
+    // reporting:report:read and only /reports/finance on finance:report:read, so the page
+    // opens and hides the money sections. Requiring the finance capability here denied a
+    // page the server happily served (A10 browser QA).
+    expect(hrefs(staff)).toContain('/reports');
     expect(hrefs(staff)).toContain('/pilgrims');
-    expect(canOpenRoute(staff, '/reports')).toBe(false);
-    expect(deniedReason(staff, '/reports')).toBe('permission');
+    expect(canOpenRoute(staff, '/reports')).toBe(true);
+    expect(canOpenRoute(staff, '/budget-plans')).toBe(false);
+    expect(deniedReason(staff, '/budget-plans')).toBe('permission');
   });
 
   it('hotel manager: hotel CRM, finance and the shared platform; reports as an extra tool', () => {
@@ -145,12 +150,13 @@ describe('navigation per identity (only what the capabilities open)', () => {
     expect(canOpenRoute({ ...transport, permissions: ['transport:assignment:manage'] }, '/transport/assignments')).toBe(false);
   });
 
-  it('visa officer: visa CRM and applicants, no finance reports', () => {
+  it('visa officer: visa CRM, applicants and operational reports; no money reports', () => {
     expect(hrefs(visa)).toEqual([
       '/visa-dashboard', '/compliance', '/pilgrims', '/visa-documents', '/visa-requests', '/finance',
-      '/marketplace', '/social', '/connections', '/groups', '/requests', '/notifications',
+      '/reports', '/marketplace', '/social', '/connections', '/groups', '/requests', '/notifications',
     ]);
-    expect(canOpenRoute(visa, '/reports')).toBe(false);
+    expect(canOpenRoute(visa, '/reports')).toBe(true);
+    expect(canOpenRoute(visa, '/budget-plans')).toBe(false);
     expect(canOpenRoute(visa, '/hotels')).toBe(false);
   });
 

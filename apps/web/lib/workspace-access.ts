@@ -113,8 +113,11 @@ export const ROUTE_RULES: Readonly<Record<string, RouteRule>> = {
   // GET /finance/payments is authorized on invoice read; payments.view is the product capability.
   '/finance-payments': { all: ['finance:invoice:read', 'finance:payment:read'] },
   '/budget-plans': { all: ['finance:report:read'] },
-  // Every /reports/* endpoint requires finance:report:read (not reporting:report:read).
-  '/reports': { all: ['finance:report:read'] },
+  // Operational reports (overview, pilgrims, bookings, hotels, visa, transport) are served on
+  // reporting:report:read; only /reports/finance and the money figures need finance:report:read,
+  // and the page hides the sections the account may not read. Requiring the finance capability
+  // here denied the page to visa officers and operator staff the API happily serves.
+  '/reports': { all: ['reporting:report:read'] },
 
   // Marketplace and community.
   '/marketplace': { all: ['marketplace:listing:read'] },
