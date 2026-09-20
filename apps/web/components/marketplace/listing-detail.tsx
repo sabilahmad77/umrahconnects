@@ -592,8 +592,11 @@ export function ListingDetail({ id }: { id: string }) {
   const { ready, can } = useCapabilities();
   const canRead = can('marketplace:listing:read');
   const canManage = can('marketplace:listing:manage');
-  const owned = useMyListing(id, ready && canRead);
-  const checkPublic = ready && (!canRead || owned.isError);
+  // GET /listings/mine/:id answers 404 for anyone but the owning organization, so asking
+  // for it as a buyer produced a failed request and a console error on every listing view
+  // (A10 DEF-004). Only an account that can manage listings can own one.
+  const owned = useMyListing(id, ready && canManage);
+  const checkPublic = ready && (!canManage || owned.isError);
   const pub = useMarketplaceListing(id, checkPublic);
 
   const listing = owned.data ?? pub.data;
