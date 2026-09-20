@@ -77,7 +77,7 @@ export function ConfirmDialog({ spec, onClose }: { spec: ConfirmSpec; onClose: (
       <div className="bg-white rounded-xl w-full max-w-md p-5 shadow-xl">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5">
-            <span className={cn('p-2 rounded-xl', danger ? 'bg-red-50 text-red-600' : 'bg-brand-50 text-brand-600')}>
+            <span className={cn('p-2 rounded-xl', danger ? 'bg-red-50 text-red-700' : 'bg-brand-50 text-brand-600')}>
               <AlertTriangle className="h-4 w-4" />
             </span>
             <h2 className="text-lg font-bold text-gray-900">{spec.title}</h2>

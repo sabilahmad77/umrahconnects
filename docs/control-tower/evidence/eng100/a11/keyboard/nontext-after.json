@@ -1,0 +1,361 @@
+{
+ "base": "http://localhost:3411",
+ "when": "2026-09-20T19:07:10.585Z",
+ "report": [
+  {
+   "identity": "anonymous",
+   "route": "/login",
+   "controls": 2,
+   "lowBoundary": [],
+   "focusable": 12,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 12,
+   "small": 4,
+   "smallTargets": []
+  },
+  {
+   "identity": "anonymous",
+   "route": "/signup",
+   "controls": 1,
+   "lowBoundary": [],
+   "focusable": 47,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "a",
+     "name": "Travelers / Pilgrims",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Operators / Agencies",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Hotels / Accommodation",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Transport / Logistics",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Visa Services",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Finance / Payments",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Super Admin / Governance",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Blogs",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Guides",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Help Center",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "API Docs",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 47,
+   "small": 19,
+   "smallTargets": []
+  },
+  {
+   "identity": "anonymous",
+   "route": "/contact",
+   "controls": 7,
+   "lowBoundary": [],
+   "focusable": 47,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "a",
+     "name": "Travelers / Pilgrims",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Operators / Agencies",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Hotels / Accommodation",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Transport / Logistics",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Visa Services",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Finance / Payments",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Super Admin / Governance",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Blogs",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Guides",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "Help Center",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "a",
+     "name": "API Docs",
+     "visible": false,
+     "width": "2px",
+     "contrast": null
+    },
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 47,
+   "small": 18,
+   "smallTargets": []
+  },
+  {
+   "identity": "travelerA",
+   "route": "/settings",
+   "controls": 19,
+   "lowBoundary": [],
+   "focusable": 46,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "button[type=submit]",
+     "name": "Save preferences",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    },
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 46,
+   "small": 0,
+   "smallTargets": []
+  },
+  {
+   "identity": "travelerA",
+   "route": "/requests",
+   "controls": 0,
+   "lowBoundary": [],
+   "focusable": 25,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 25,
+   "small": 0,
+   "smallTargets": []
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/pilgrims",
+   "controls": 1,
+   "lowBoundary": [],
+   "focusable": 53,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 52,
+   "small": 0,
+   "smallTargets": []
+  },
+  {
+   "identity": "operatorAdminA",
+   "route": "/bookings",
+   "controls": 1,
+   "lowBoundary": [],
+   "focusable": 40,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 39,
+   "small": 0,
+   "smallTargets": []
+  },
+  {
+   "identity": "financeA",
+   "route": "/finance",
+   "controls": 1,
+   "lowBoundary": [],
+   "focusable": 35,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 34,
+   "small": 1,
+   "smallTargets": []
+  },
+  {
+   "identity": "superAdmin",
+   "route": "/admin-users",
+   "controls": 41,
+   "lowBoundary": [],
+   "focusable": 109,
+   "lowOutline": [],
+   "noOutline": [
+    {
+     "what": "select[type=select-one]",
+     "name": "Status for Rania Haddad",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    },
+    {
+     "what": "button[type=button]",
+     "name": "Prev",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    },
+    {
+     "what": "button[type=button]",
+     "name": "Open Tanstack query devtools",
+     "visible": false,
+     "width": "3px",
+     "contrast": null
+    }
+   ],
+   "targets": 108,
+   "small": 0,
+   "smallTargets": []
+  }
+ ]
+}

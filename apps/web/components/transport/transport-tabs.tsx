@@ -62,7 +62,7 @@ export function TransportTabs({ fixedSection = 'vehicles' }: { fixedSection?: Se
       </div>
       {ready && !canManage && <ReadOnlyNotice>You can view the fleet. Adding or changing vehicles, drivers and routes needs the fleet management permission.</ReadOnlyNotice>}
 
-      <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-80">
+      <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-80">
         <Search className="h-4 w-4 text-gray-600" />
         <Input aria-label={`Search ${meta.title.toLowerCase()}`} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
       </div>
@@ -138,7 +138,7 @@ function DriversSection({ search }: { search: string }) {
         <div className="py-16 text-center bg-white rounded-xl border border-gray-200"><User className="h-12 w-12 mx-auto mb-3 text-gray-300" /><p className="text-sm text-gray-600">No drivers found</p></div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200">
-          <div role="region" aria-label="Drivers" tabIndex={0} className="max-w-full overflow-x-auto">
+          <div role="region" aria-label="Drivers table" tabIndex={0} className="max-w-full overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
                 <tr><th className="text-left px-4 py-3">Driver</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Licence</th><th className="text-left px-4 py-3">Vehicle</th><th className="text-left px-4 py-3">Open trips</th></tr>

@@ -50,7 +50,7 @@ export function AdminListingsView() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72">
           <Search className="h-4 w-4 text-gray-600" />
           <Input aria-label="Search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search listing…" className="text-sm bg-transparent flex-1 outline-none" />
         </div>
@@ -87,7 +87,7 @@ export function AdminListingsView() {
                 <th className="text-left p-3">Vendor</th>
                 <th className="text-left p-3">Price</th>
                 <th className="text-left p-3">Status</th>
-                <th />
+                <th><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -155,7 +155,7 @@ export function AdminListingsView() {
                           reasonPlaceholder: 'e.g. Photos show a different property',
                           onConfirm: (reason) => run(() => remove.mutateAsync({ id: l.id, reason: reason ?? '' }), `“${l.name}” was taken down`),
                         })}
-                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-700"
                       >
                         <Trash2 className="h-3 w-3" /> Take down
                       </Button>

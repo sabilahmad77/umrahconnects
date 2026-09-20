@@ -146,7 +146,7 @@ export function AdminKycView({ tenantId }: { tenantId?: string }) {
                     <span
                       className={cn(
                         'rounded-full px-2 py-1 text-xs font-medium',
-                        state === 'APPROVED' ? 'bg-green-50 text-green-700' : state === 'REJECTED' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-700',
+                        state === 'APPROVED' ? 'bg-green-50 text-green-700' : state === 'REJECTED' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700',
                       )}
                     >
                       {state === 'APPROVED' ? 'Approved' : state === 'REJECTED' ? 'Sent back' : 'Awaiting review'}
@@ -223,7 +223,7 @@ export function AdminKycView({ tenantId }: { tenantId?: string }) {
                               decide(() => reject.mutateAsync({ id: k.id, reason: reason ?? '' }), `${name} was sent back`),
                           })
                         }
-                        className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-600 hover:bg-red-100"
+                        className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100"
                       >
                         <XCircle className="h-3 w-3" /> Reject
                       </Button>
@@ -242,7 +242,7 @@ export function AdminKycView({ tenantId }: { tenantId?: string }) {
                             onConfirm: () => decide(() => approve.mutateAsync({ id: k.id }), `${name} was approved`),
                           })
                         }
-                        className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs text-white hover:bg-green-700"
+                        className="inline-flex items-center gap-1 rounded-lg bg-green-700 px-3 py-1.5 text-xs text-white hover:bg-green-800"
                       >
                         <CheckCircle2 className="h-3 w-3" /> Approve
                       </Button>

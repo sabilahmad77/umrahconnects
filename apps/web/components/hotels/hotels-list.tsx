@@ -76,7 +76,7 @@ export function HotelsList() {
       ) : null}
 
       <div className="flex flex-col lg:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full lg:w-72 focus-within:border-brand-300">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full lg:w-72 focus-within:border-brand-300">
           <Search className="h-4 w-4 text-gray-600 shrink-0" />
           <Input aria-label="Search hotels" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search hotels…" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
         </div>
@@ -128,7 +128,7 @@ export function HotelsList() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 mb-3" aria-label={h.starRating ? `${h.starRating} star hotel` : 'No star rating'}>
+              <div role="img" className="flex items-center gap-0.5 mb-3" aria-label={h.starRating ? `${h.starRating} star hotel` : 'No star rating'}>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className={cn('h-3.5 w-3.5', i < (h.starRating ?? 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200')} />
                 ))}

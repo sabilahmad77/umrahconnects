@@ -10,16 +10,22 @@ import {
 } from 'lucide-react';
 
 // ── Shared brandmark (identical to landing) ──────────────────────────────────
-export function Brandmark({ light = false }: { light?: boolean }) {
+/**
+ * `shrinkable` is for the sticky header, where the wordmark shares one row with
+ * the actions: below about 360 px it gives way instead of pushing the page
+ * sideways (WCAG 1.4.10 reflow at 320 px). Everywhere else the wordmark keeps
+ * its natural width and wraps as before.
+ */
+export function Brandmark({ light = false, shrinkable = false }: { light?: boolean; shrinkable?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5">
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${light ? 'bg-white/10' : 'bg-brand-500'} shadow-sm`}>
+    <Link href="/" className={`flex items-center gap-2.5 ${shrinkable ? 'min-w-0' : ''}`}>
+      <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${light ? 'bg-white/10' : 'bg-brand-500'} shadow-sm`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-mark-light.png" alt="Umrah Connect" className="w-6 h-6 object-contain" />
+        <img src="/logo-mark-light.png" alt="" className="w-6 h-6 object-contain" />
       </div>
-      <div className="leading-none">
-        <p className={`font-heading font-bold text-[15px] ${light ? 'text-white' : 'text-brand-600'}`}>Umrah Connect</p>
-        <p className={`text-xs tracking-[0.2em] mt-1 ${light ? 'text-gold-400' : 'text-gold-800'}`}>CONNECTED JOURNEYS</p>
+      <div className={`leading-none ${shrinkable ? 'min-w-0' : ''}`}>
+        <p className={`font-heading font-bold text-[15px] ${shrinkable ? 'truncate' : ''} ${light ? 'text-white' : 'text-brand-600'}`}>Umrah Connect</p>
+        <p className={`text-xs tracking-[0.2em] mt-1 ${shrinkable ? 'truncate' : ''} ${light ? 'text-gold-400' : 'text-gold-800'}`}>CONNECTED JOURNEYS</p>
       </div>
     </Link>
   );
@@ -49,7 +55,7 @@ function Dropdown({ label, items }: { label: string; items: typeof SOLUTIONS }) 
 export function PublicHeader() {
  const [open, setOpen] = useState(false);
  const links = [['Solutions','/solutions'],['Marketplace','/marketplace-preview'],['Resources','/resources'],['Pricing','/pricing'],['About Us','/about'],['Help center','/help'],['Contact','/contact'],['Log in','/login']];
- return <header className="sticky top-0 z-30 border-b border-sandstone/70 bg-ivory"><a href="#public-main" className="skip-link">Skip to content</a><div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8"><Brandmark /><nav aria-label="Main navigation" className="hidden items-center gap-5 lg:flex"><Dropdown label="Solutions" items={SOLUTIONS} /><Link href="/marketplace-preview" className="uc-menu-item">Marketplace</Link><Dropdown label="Resources" items={RESOURCES} /><Link href="/pricing" className="uc-menu-item">Pricing</Link><Link href="/about" className="uc-menu-item">About Us</Link></nav><div className="flex shrink-0 items-center gap-2"><Link href="/login" className="uc-button uc-button-secondary hidden sm:inline-flex">Log in</Link><Link href="/signup" className="uc-button uc-button-primary px-3">Get Started</Link><Button variant="quiet" onClick={() => setOpen(true)} aria-label="Open navigation" className="lg:hidden px-2"><Menu className="h-5 w-5" /></Button></div></div><Drawer open={open} onOpenChange={setOpen} title="Umrah Connect navigation"><nav aria-label="Mobile navigation" className="space-y-1">{links.map(([label,href]) => <Link key={href} href={href} onClick={() => setOpen(false)} className="uc-menu-item">{label}</Link>)}</nav></Drawer></header>;
+ return <header className="sticky top-0 z-30 border-b border-sandstone/70 bg-ivory"><a href="#public-main" className="skip-link">Skip to content</a><div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8"><Brandmark shrinkable /><nav aria-label="Main navigation" className="hidden items-center gap-5 lg:flex"><Dropdown label="Solutions" items={SOLUTIONS} /><Link href="/marketplace-preview" className="uc-menu-item">Marketplace</Link><Dropdown label="Resources" items={RESOURCES} /><Link href="/pricing" className="uc-menu-item">Pricing</Link><Link href="/about" className="uc-menu-item">About Us</Link></nav><div className="flex shrink-0 items-center gap-2"><Link href="/login" className="uc-button uc-button-secondary hidden sm:inline-flex">Log in</Link><Link href="/signup" className="uc-button uc-button-primary px-3">Get Started</Link><Button variant="quiet" onClick={() => setOpen(true)} aria-label="Open navigation" className="lg:hidden px-2"><Menu className="h-5 w-5" /></Button></div></div><Drawer open={open} onOpenChange={setOpen} title="Umrah Connect navigation"><nav aria-label="Mobile navigation" className="space-y-1">{links.map(([label,href]) => <Link key={href} href={href} onClick={() => setOpen(false)} className="uc-menu-item">{label}</Link>)}</nav></Drawer></header>;
 }
 
 // FIX-08: real social handles go here when available (set href to the URL).
@@ -105,7 +111,7 @@ export function PublicFooter() {
                   aria-label="Email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && subscribe()}
                   placeholder="Enter your email" type="email"
-                  className="flex-1 bg-white/10 border border-white/15 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-gold-400"
+                  className="flex-1 bg-white/10 border border-white/50 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-gold-400"
                 />
                 <Button variant="quiet" type="button" disabled={busy} onClick={subscribe} className="bg-gold-500 hover:bg-gold-600 text-brand-900 font-semibold text-sm px-5 rounded-xl transition-colors">{busy ? 'Subscribing…' : 'Subscribe'}</Button>
               </div>
@@ -129,12 +135,14 @@ export function PublicFooter() {
             <Link href="/privacy" className="text-[12px] text-white/55 hover:text-white">Privacy Policy</Link>
             <Link href="/terms" className="text-[12px] text-white/55 hover:text-white">Terms of Service</Link>
           </div>
-          <div className="flex items-center gap-3">
+          {/* Wraps below ~360 px so the wordmark and the social row do not push
+              the page sideways (WCAG 1.4.10 reflow at 320 px). */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <Brandmark light />
             {/* FIX-08: social profiles not live yet — rendered as intentionally
                 disabled placeholders (no dead href="#"). Swap `href` in SOCIALS
                 for the real handles when available. */}
-            <div className="flex items-center gap-2.5 ml-3">
+            <div className="flex items-center gap-2.5 sm:ml-3">
               {SOCIALS.map(({ Icon, label, href }) => (
                 href ? (
                   <a key={label} href={href} target="_blank" rel="noopener noreferrer" aria-label={label}

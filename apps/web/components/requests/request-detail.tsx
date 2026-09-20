@@ -28,7 +28,7 @@ import { OfferSeller, REQUEST_STATUS_META, SERVICE_TYPE_META } from './requests-
 const OFFER_STATUS_META: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Pending', color: 'bg-yellow-50 text-yellow-700' },
   ACCEPTED: { label: 'Accepted', color: 'bg-saudi-50 text-saudi-700' },
-  REJECTED: { label: 'Declined', color: 'bg-red-50 text-red-600' },
+  REJECTED: { label: 'Declined', color: 'bg-red-50 text-red-700' },
   WITHDRAWN: { label: 'Withdrawn', color: 'bg-gray-100 text-gray-600' },
 };
 

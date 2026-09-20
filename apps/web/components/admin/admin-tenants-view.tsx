@@ -90,7 +90,7 @@ export function AdminTenantsView() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300">
           <Search className="h-4 w-4 text-gray-600" />
           <Input
             value={search}

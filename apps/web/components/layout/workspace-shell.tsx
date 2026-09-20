@@ -38,7 +38,39 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const decision = user ? routeDecision(user, pathname) : null;
   const redirectTo = decision?.kind === 'redirect' ? decision.to : null;
 
+  // A callback ref, not a plain one: the main element only mounts once the
+  // profile has loaded, which is after the first effects have run.
+  const [mainElement, setMainElement] = useState<HTMLElement | null>(null);
+
   useEffect(() => setNavigationOpen(false), [pathname]);
+  // A page whose content is only figures and text (the reports screens for some
+  // roles) still has to be scrollable from the keyboard. The main region is
+  // always focusable for the skip link; when it scrolls and holds nothing else
+  // to focus, it also takes a tab stop of its own (WCAG 2.1.1).
+  useEffect(() => {
+    const main = mainElement;
+    if (!main) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const scrolls = main.scrollHeight > main.clientHeight + 1;
+      const focusable = main.querySelector('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      main.tabIndex = scrolls && !focusable ? 0 : -1;
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    const resize = new ResizeObserver(schedule);
+    resize.observe(main);
+    const mutations = new MutationObserver(schedule);
+    mutations.observe(main, { childList: true, subtree: true });
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      resize.disconnect();
+      mutations.disconnect();
+    };
+  }, [mainElement, pathname]);
   useEffect(() => {
     // Replace, not push: the page that was refused should not sit in history.
     if (redirectTo && redirectTo !== normalizePath(pathname)) router.replace(redirectTo);
@@ -96,6 +128,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           <Header />
           <main
             id="workspace-main"
+            ref={setMainElement}
             tabIndex={-1}
             className="workspace-main flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-7"
           >

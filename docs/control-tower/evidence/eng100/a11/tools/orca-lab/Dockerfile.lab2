@@ -1,0 +1,5 @@
+FROM uc-a11-orca-lab:local
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends imagemagick x11-apps wmctrl \
+    && rm -rf /var/lib/apt/lists/*
+USER tester

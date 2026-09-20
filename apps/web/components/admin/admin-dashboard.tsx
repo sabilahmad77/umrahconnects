@@ -23,7 +23,7 @@ const QUICK_ACTIONS = [
   { href: '/admin-roles', label: 'Roles & Permissions', icon: Cog, bg: 'bg-blue-50 text-blue-700' },
   { href: '/admin-logs', label: 'System Logs', icon: FileBarChart, bg: 'bg-gray-50 text-gray-700' },
   { href: '/admin-settings', label: 'Settings', icon: Cog, bg: 'bg-gray-50 text-gray-700' },
-  { href: '/admin-support', label: 'Support / Issues', icon: LifeBuoy, bg: 'bg-red-50 text-red-600' },
+  { href: '/admin-support', label: 'Support / Issues', icon: LifeBuoy, bg: 'bg-red-50 text-red-700' },
 ];
 
 export function AdminDashboard() {

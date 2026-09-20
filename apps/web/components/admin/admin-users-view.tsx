@@ -103,7 +103,7 @@ export function AdminUsersView() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full lg:w-72 focus-within:border-brand-300">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full lg:w-72 focus-within:border-brand-300">
           <Search className="h-4 w-4 text-gray-600" />
           <Input
             value={search}
@@ -117,7 +117,7 @@ export function AdminUsersView() {
           value={tenantId}
           aria-label="Tenant Id"
           onChange={(e) => { setTenantId(e.target.value); setPage(1); }}
-          className="text-sm px-3 py-2.5 border border-gray-200 rounded-xl bg-white outline-none"
+          className="text-sm px-3 py-2.5 border border-gray-500 rounded-xl bg-white outline-none"
         >
           <option value="">All tenants</option>
           {tenants.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -157,7 +157,7 @@ export function AdminUsersView() {
                   <th className="text-left p-3">Roles</th>
                   <th className="text-left p-3">Last login</th>
                   <th className="text-left p-3">Status</th>
-                  <th />
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -210,7 +210,7 @@ export function AdminUsersView() {
                                   `${role?.name} granted`),
                               });
                             } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
-                            className="text-xs border border-gray-200 rounded-lg px-1.5 py-0.5 bg-white"
+                            className="text-xs border border-gray-500 rounded-lg px-1.5 py-0.5 bg-white"
                           >
                             <option value="">+ Add role</option>
                             {grantable.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -242,7 +242,7 @@ export function AdminUsersView() {
                                   `${nameOf(u)} → ${USER_STATUS_META[next]?.label ?? next}`),
                               });
                             } catch (error) { toast.error(apiErrorMessage(error, 'This action could not be completed. Try again.')); } }}
-                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                            className="text-xs border border-gray-500 rounded-lg px-2 py-1 bg-white"
                           >
                             {USER_STATUSES.map((s) => <option key={s} value={s}>{USER_STATUS_META[s].label}</option>)}
                           </Select>

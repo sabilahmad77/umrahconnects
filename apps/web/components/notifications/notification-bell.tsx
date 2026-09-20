@@ -48,7 +48,7 @@ export function NotificationBell() {
         </Button>
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" sideOffset={8} className="z-50 w-[min(380px,calc(100vw-32px))] rounded-xl border border-gray-200 bg-white shadow-xl">
+        <Popover.Content align="end" sideOffset={8} aria-label="Notifications" className="z-50 w-[min(380px,calc(100vw-32px))] rounded-xl border border-gray-200 bg-white shadow-xl">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 p-4">
             <h2 className="font-semibold">Notifications</h2>
             {unread > 0 && (

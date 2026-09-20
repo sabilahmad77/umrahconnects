@@ -1,0 +1,17 @@
+user_pref("browser.startup.homepage_override.mstone", "ignore");
+user_pref("startup.homepage_welcome_url", "");
+user_pref("startup.homepage_welcome_url.additional", "");
+user_pref("browser.aboutwelcome.enabled", false);
+user_pref("datareporting.policy.dataSubmissionEnabled", false);
+user_pref("datareporting.healthreport.uploadEnabled", false);
+user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);
+user_pref("browser.shell.checkDefaultBrowser", false);
+user_pref("accessibility.force_disabled", -1);
+user_pref("signon.rememberSignons", false);
+user_pref("app.update.enabled", false);
+user_pref("browser.sessionstore.resume_from_crash", false);
+user_pref("browser.translations.automaticallyPopup", false);
+user_pref("extensions.pocket.enabled", false);
+user_pref("browser.newtabpage.enabled", false);
+user_pref("browser.tabs.warnOnClose", false);
+user_pref("security.sandbox.warn_unprivileged_namespaces", false);

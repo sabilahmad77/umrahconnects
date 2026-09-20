@@ -142,7 +142,7 @@ export function FinanceView() {
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <label className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 sm:w-72">
+        <label className="flex w-full items-center gap-2 rounded-xl border border-gray-500 bg-white px-3 py-2.5 sm:w-72">
           <Search aria-hidden="true" className="h-4 w-4 shrink-0 text-gray-600" />
           <span className="sr-only">Search invoices</span>
           <input

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { MapPin, MessageSquare, Search, TrendingUp, UserPlus, Users, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Input, QueryFailure } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useCapabilities } from '@/hooks/use-capabilities';
@@ -40,7 +41,7 @@ export function DiscoverView() {
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {tab !== 'trending' && (
-          <div className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2.5 sm:w-72">
+          <div className="flex w-full items-center gap-2 rounded-xl border border-gray-500 bg-white px-3 py-2.5 sm:w-72">
             <Search aria-hidden="true" className="h-4 w-4 text-gray-600" />
             <Input
               aria-label={tab === 'people' ? 'Search people by name or city' : 'Search groups by name'}
@@ -51,7 +52,7 @@ export function DiscoverView() {
             />
           </div>
         )}
-        <div role="tablist" aria-label="Discover" className="flex gap-1.5">
+        <div role="tablist" {...tablistKeys()} aria-label="Discover" className="flex gap-1.5">
           {(['people', 'groups', 'trending'] as TabKey[]).map((t) => (
             <button
               type="button"

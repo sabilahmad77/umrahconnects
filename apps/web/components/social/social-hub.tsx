@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Globe, Hash, Loader2, MessageSquare, RefreshCw, TrendingUp, Users, Users2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, Button, QueryFailure } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useAuthContext } from '@/components/providers/auth-provider';
@@ -56,7 +57,7 @@ export function SocialHub() {
           ) : (
             <>
               {ready && can('social:post:create') && <PostComposer />}
-              <div role="tablist" aria-label="Feed" className="flex flex-wrap items-center gap-1.5">
+              <div role="tablist" {...tablistKeys()} aria-label="Feed" className="flex flex-wrap items-center gap-1.5">
                 {TABS.map((t) => (
                   <button
                     key={t.key}

@@ -74,7 +74,7 @@ export function PilgrimDetail({ id }: { id: string }) {
         <span className={cn('text-xs font-medium px-2 py-1 rounded-full',
           p.status === 'CONFIRMED' || p.status === 'IN_KSA' ? 'bg-green-50 text-green-700' :
           p.status === 'PROSPECT' || p.status === 'LEAD' ? 'bg-blue-50 text-blue-700' :
-          p.status === 'CANCELLED' ? 'bg-red-50 text-red-600' :
+          p.status === 'CANCELLED' ? 'bg-red-50 text-red-700' :
           'bg-gray-100 text-gray-600',
         )}>{p.status?.replace(/_/g, ' ')}</span>
         {can('crm:pilgrim:delete') && <Button busy={remove.isPending} variant="quiet" type="button"
@@ -88,7 +88,7 @@ export function PilgrimDetail({ id }: { id: string }) {
               toast.error(apiErrorMessage(e, 'Failed'));
             }
           }}
-          className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-xl"
+          className="px-3 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-700 rounded-xl"
         >
           Archive
         </Button>}
@@ -122,7 +122,7 @@ function Overview({ p, fullName }: { p: any; fullName: string }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Pilgrim details</h3>
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Pilgrim details</h2>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <Field label="Name (EN)" value={[p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || '—'} />
           <Field label="Name (AR)" value={[p.firstNameAr, p.lastNameAr].filter(Boolean).join(' ') || '—'} />
@@ -188,25 +188,25 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Paperclip className="h-4 w-4" /> Upload document</h3>
+        <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Paperclip className="h-4 w-4" /> Upload document</h2>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
-            <Select  value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
               {DOC_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
             </Select>
           </label>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">File name</span>
-            <Input  value={form.fileName} onChange={(e) => setForm({ ...form, fileName: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="passport.pdf" />
+            <Input  value={form.fileName} onChange={(e) => setForm({ ...form, fileName: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg" placeholder="passport.pdf" />
           </label>
           <label className="block col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Public URL</span>
-            <Input  value={form.fileUrl} onChange={(e) => setForm({ ...form, fileUrl: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" placeholder="https://…" />
+            <Input  value={form.fileUrl} onChange={(e) => setForm({ ...form, fileUrl: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg" placeholder="https://…" />
           </label>
           <label className="block col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Expires at (optional)</span>
-            <Input  type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg" />
+            <Input  type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg" />
           </label>
         </div>
         <div className="flex justify-end mt-3">
@@ -238,7 +238,7 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
 
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="text-sm font-bold text-gray-900">Documents ({p.documents?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Documents ({p.documents?.length ?? 0})</h2>
         </div>
         {(p.documents ?? []).length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-600">No documents on file</div>
@@ -275,9 +275,9 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Attach to booking</h3>
+        <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Attach to booking</h2>
         <div className="flex gap-2">
-          <Select aria-label="Selected" value={selected} onChange={(e) => setSelected(e.target.value)} className="flex-1 text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+          <Select aria-label="Selected" value={selected} onChange={(e) => setSelected(e.target.value)} className="flex-1 text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
             <option value="">Select booking…</option>
             {available.map((b: any) => (
               <option key={b.id} value={b.id}>{b.bookingRef} — {b.package?.name ?? '—'} ({b.status})</option>
@@ -305,7 +305,7 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
 
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="text-sm font-bold text-gray-900">Linked bookings ({p.bookings?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Linked bookings ({p.bookings?.length ?? 0})</h2>
         </div>
         {(p.bookings ?? []).length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-600">Not attached to any booking yet</div>
@@ -352,7 +352,7 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 max-w-3xl space-y-3">
-      <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit pilgrim</h3>
+      <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit pilgrim</h2>
       <div className="grid grid-cols-2 gap-3">
         <LabeledInput label="First name (EN)" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} />
         <LabeledInput label="Last name (EN)" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} />
@@ -365,7 +365,7 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
         <LabeledInput label="Date of birth" type="date" value={form.dateOfBirth} onChange={(v) => setForm({ ...form, dateOfBirth: v })} />
         <label className="block">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-          <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+          <Select  value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
             {/* The real PilgrimStatus enum. Six of the values that used to be here
                 (CONFIRMED, DOCUMENTS_COLLECTING, VISA_PROCESSING, PRE_DEPARTURE,
                 IN_KSA, COMPLETED) do not exist and were rejected on save. */}
@@ -376,7 +376,7 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
         </label>
         <label className="block col-span-2">
           <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-          <Textarea  value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
+          <Textarea  value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg resize-none" />
         </label>
       </div>
       <div className="flex justify-end pt-2">

@@ -105,7 +105,7 @@ export function AdminLogsView() {
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full',
                       l.action === 'CREATE' ? 'bg-green-50 text-green-700' :
                       l.action === 'UPDATE' ? 'bg-blue-50 text-blue-700' :
-                      l.action === 'DELETE' ? 'bg-red-50 text-red-600' :
+                      l.action === 'DELETE' ? 'bg-red-50 text-red-700' :
                       'bg-gray-100 text-gray-600')}>{l.action}</span>
                   </td>
                   <td className="p-3 text-xs text-gray-700">{l.namespace}:{l.resource}</td>

@@ -29,7 +29,7 @@ const STATUS: Record<string, { label: string; color: string; dot: string }> = {
   VISA_PROCESSING: { label: 'Visa processing', color: 'bg-indigo-100 text-indigo-700', dot: 'bg-indigo-500' },
   TRAVELING:       { label: 'Traveling',       color: 'bg-sky-100 text-sky-700',       dot: 'bg-sky-500' },
   COMPLETED:       { label: 'Completed',       color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500' },
-  CANCELLED:       { label: 'Cancelled',       color: 'bg-red-100 text-red-600',       dot: 'bg-red-500' },
+  CANCELLED:       { label: 'Cancelled',       color: 'bg-red-100 text-red-700',       dot: 'bg-red-500' },
   REFUNDED:        { label: 'Refunded',        color: 'bg-rose-100 text-rose-700',     dot: 'bg-rose-500' },
 };
 
@@ -133,7 +133,7 @@ export function BookingList() {
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72 focus-within:border-brand-300 transition-colors">
           <Search className="h-4 w-4 text-gray-600 shrink-0" />
           <Input aria-label="Search"
             value={search}
@@ -427,7 +427,7 @@ function NewBookingModal({
             </label>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Travellers priced at the package rate *</span>
-              <Input inputMode="numeric" value={travellers} onChange={(e) => setTravellers(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+              <Input inputMode="numeric" value={travellers} onChange={(e) => setTravellers(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none" />
             </label>
             <p className="text-xs text-gray-600">
               Package price: {pkg ? formatAmount(pkg.basePriceCents, currency) : '—'} × {count} ={' '}
@@ -446,12 +446,12 @@ function NewBookingModal({
               </label>
               <label className="block">
                 <span className="block text-xs font-semibold text-gray-600 mb-1">Deposit received ({currency})</span>
-                <Input inputMode="decimal" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0.00" className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none" />
+                <Input inputMode="decimal" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="0.00" className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none" />
               </label>
             </div>
             <label className="block">
               <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-              <Select  value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none bg-white">
+              <Select  value={status} onChange={(e) => setStatus(e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none bg-white">
                 <option value="DRAFT">Draft / enquiry</option>
                 <option value="CONFIRMED">Confirmed</option>
                 <option value="VISA_PROCESSING">Visa processing</option>

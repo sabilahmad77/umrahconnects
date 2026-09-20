@@ -97,7 +97,7 @@ export function HotelBookingsView() {
       <p className="text-xs text-gray-600">Bookings do not track payments: bill guests with an invoice in Finance, where the money is recorded.</p>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72">
           <Search className="h-4 w-4 text-gray-600" />
           <Input aria-label="Search bookings" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Guest, phone, email or hotel…" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
         </div>

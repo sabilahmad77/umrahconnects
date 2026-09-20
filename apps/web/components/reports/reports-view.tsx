@@ -29,6 +29,28 @@ function Section({ title, icon: Icon, query, empty, children }: { title: string;
   );
 }
 
+/**
+ * A chart drawn in SVG carries no text for assistive technology (its slices are
+ * bare `role="img"` paths), so the drawing is marked decorative and the same
+ * numbers are published as a list (WCAG 1.1.1). The list is visually hidden:
+ * sighted users read the chart, everyone else reads the values.
+ */
+function ChartFigure({ label, data, children }: { label: string; data: { name: string; value: number | string }[]; children: React.ReactNode }) {
+  return (
+    <figure className="m-0">
+      <div aria-hidden="true">{children}</div>
+      <figcaption className="sr-only">
+        {label}
+        <ul>
+          {data.map((d) => (
+            <li key={d.name}>{d.name}: {d.value}</li>
+          ))}
+        </ul>
+      </figcaption>
+    </figure>
+  );
+}
+
 const entries = (o?: Record<string, number>) => Object.entries(o ?? {}).filter(([, v]) => v > 0).map(([name, value]) => ({ name: humanize(name), value }));
 
 function Tiles({ items }: { items: { label: string; value: React.ReactNode; note?: string }[] }) {
@@ -103,6 +125,7 @@ export function ReportsView() {
       </Section>
 
       <Section title="Bookings per month (last 6 months)" icon={BookOpen} query={bookings} empty={trend.every((t) => t.count === 0)}>
+        <ChartFigure label="Bookings per month, last 6 months" data={trend.map((t) => ({ name: t.month, value: t.count }))}>
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={trend} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} />
@@ -111,10 +134,12 @@ export function ReportsView() {
             <Area type="monotone" dataKey="count" stroke="#0F3D37" strokeWidth={2.5} fill="#0F3D37" fillOpacity={0.12} dot={false} />
           </AreaChart>
         </ResponsiveContainer>
+        </ChartFigure>
       </Section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Section title="Travelers by status" icon={Users} query={pilgrims} empty={pilgrimData.length === 0}>
+          <ChartFigure label="Travelers by status" data={pilgrimData}>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={pilgrimData} layout="vertical" margin={{ left: 4, right: 4 }}>
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: '#4b5563' }} axisLine={false} tickLine={false} />
@@ -123,17 +148,20 @@ export function ReportsView() {
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>{pilgrimData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Bar>
             </BarChart>
           </ResponsiveContainer>
+          </ChartFigure>
           {pilgrims.data && <p className="text-xs text-gray-600 mt-2">{pilgrims.data.byGender.MALE ?? 0} male · {pilgrims.data.byGender.FEMALE ?? 0} female</p>}
         </Section>
 
         <Section title="Visa pipeline" icon={FileCheck2} query={visa} empty={(visa.data?.total ?? 0) === 0}>
+          <ChartFigure label="Visa pipeline by stage" data={visaData}>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
-              <Pie data={visaData} dataKey="value" nameKey="name" cx="40%" cy="50%" outerRadius={75} innerRadius={45}>{visaData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
+              <Pie rootTabIndex={-1} data={visaData} dataKey="value" nameKey="name" cx="40%" cy="50%" outerRadius={75} innerRadius={45}>{visaData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie>
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e5e7eb', fontSize: 12 }} formatter={(v: any) => [v, 'Applications']} />
             </PieChart>
           </ResponsiveContainer>
+          </ChartFigure>
           {visa.data && <p className="text-xs text-gray-600 mt-2">{visa.data.decided ? `${visa.data.successRate}% of ${visa.data.decided} decided applications approved` : 'No decisions yet'} · {visa.data.total} applications</p>}
         </Section>
       </div>

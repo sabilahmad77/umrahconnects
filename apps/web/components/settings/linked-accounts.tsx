@@ -50,7 +50,7 @@ export function LinkedAccounts({
         <li className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
           <span>
             <span className="font-medium">Email and password</span>
-            <span className="block text-gray-600">{profile.email}</span>
+            <span className="block break-all text-gray-600">{profile.email}</span>
           </span>
           <Badge tone={profile.hasPassword ? 'success' : 'neutral'}>{profile.hasPassword ? 'Password set' : 'No password'}</Badge>
         </li>

@@ -65,7 +65,7 @@ export function BudgetPlansView() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full sm:w-72">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72">
           <Search className="h-4 w-4 text-gray-600" />
           <Input aria-label="Search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search client / destination…" className="text-sm bg-transparent flex-1 outline-none" />
         </div>
@@ -118,7 +118,7 @@ export function BudgetPlansView() {
                       className={cn('text-xs border rounded-lg px-2 py-1',
                         p.status === 'ACCEPTED' || p.status === 'COMPLETED' ? 'border-green-200 bg-green-50 text-green-700' :
                         p.status === 'PROPOSED' ? 'border-blue-200 bg-blue-50 text-blue-700' :
-                        p.status === 'CANCELLED' ? 'border-red-200 bg-red-50 text-red-600' :
+                        p.status === 'CANCELLED' ? 'border-red-200 bg-red-50 text-red-700' :
                         'border-gray-200 bg-white text-gray-600')}
                     >
                       {[p.status, ...(PLAN_TRANSITIONS[p.status] ?? [])].map((s) => <option key={s} value={s}>{s}</option>)}
@@ -241,7 +241,7 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
           <PlanInput label="Client name *" value={f.clientName} onChange={(v) => set('clientName', v)} placeholder="Ahmed Family" />
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Client type</span>
-            <Select  value={f.clientType} onChange={(e) => set('clientType', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={f.clientType} onChange={(e) => set('clientType', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
               {['TRAVELER', 'OPERATOR', 'EXTERNAL'].map((t) => <option key={t} value={t}>{t}</option>)}
             </Select>
           </label>
@@ -252,7 +252,7 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
           <PlanInput label="Total budget" value={f.totalBudget} onChange={(v) => set('totalBudget', v)} type="number" placeholder="auto-sums if blank" />
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Currency</span>
-            <Select  value={f.currency} onChange={(e) => set('currency', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={f.currency} onChange={(e) => set('currency', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
               {['SAR', 'USD', 'IDR', 'PKR', 'MYR'].map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
           </label>
@@ -264,13 +264,13 @@ function CreateBudgetPlanModal({ onClose, onCreated }: { onClose: () => void; on
           <PlanInput label="Commission rate (%)" value={f.commissionRate} onChange={(v) => set('commissionRate', v)} type="number" />
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Status</span>
-            <Select  value={f.status} onChange={(e) => set('status', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
+            <Select  value={f.status} onChange={(e) => set('status', e.target.value)} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg bg-white">
               {PLAN_INITIAL_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
           </label>
           <label className="block col-span-2">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Notes</span>
-            <Textarea  value={f.notes} onChange={(e) => set('notes', e.target.value)} rows={2} className="w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg resize-none" />
+            <Textarea  value={f.notes} onChange={(e) => set('notes', e.target.value)} rows={2} className="w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg resize-none" />
           </label>
         </div>
         <div className="bg-brand-50 rounded-lg px-3 py-2 text-sm mt-3">

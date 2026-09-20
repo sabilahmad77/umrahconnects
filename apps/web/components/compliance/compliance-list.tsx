@@ -85,7 +85,7 @@ export function ComplianceList() {
       <p className="text-xs text-gray-600">Regulator integrations (Nusuk / Masar, SISKOPATUH …) are planned: applications are tracked here and filed on the official portals, then the outcome is recorded with its visa number.</p>
 
       <div className="flex flex-col lg:flex-row gap-3">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 w-full lg:w-80">
+        <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full lg:w-80">
           <Search className="h-4 w-4 text-gray-600 shrink-0" />
           <Input aria-label="Search applications" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Applicant, passport or application #" className="text-sm bg-transparent flex-1 outline-none border-0 p-0 min-h-0" />
         </div>

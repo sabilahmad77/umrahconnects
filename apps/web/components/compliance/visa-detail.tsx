@@ -7,6 +7,7 @@ import { ArrowLeft, FileCheck2, ListChecks, Activity, Save, CheckCircle2, XCircl
 import { toast } from 'sonner';
 import { apiErrorMessage } from '@/lib/api-error';
 import { Alert, Button, Input, LoadingState, ModalSurface, QueryFailure, Textarea } from '@/components/ui/system';
+import { tablistKeys } from '@/components/ui/tablist';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import {
@@ -53,7 +54,7 @@ export function VisaDetail({ id }: { id: string }) {
       {ready && !canSubmit && <ReadOnlyNotice>You can view this application. Working on it needs the visa submission permission.</ReadOnlyNotice>}
       {closed && <ReadOnlyNotice>This application is {humanize(v.status).toLowerCase()} and closed; its history stays on record.</ReadOnlyNotice>}
 
-      <div role="tablist" aria-label="Application sections" className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
+      <div role="tablist" {...tablistKeys()} aria-label="Application sections" className="bg-white rounded-xl border border-gray-200 p-1.5 flex gap-1 overflow-x-auto">
         {tabs.map((t) => (
           <Button variant="quiet" type="button" role="tab" aria-selected={tab === t} key={t} onClick={() => setTab(t)}
             className={cn('px-3 py-2 rounded-xl text-sm font-medium', tab === t ? 'bg-brand-50 text-brand-700 border border-brand-100' : 'text-gray-600 hover:bg-gray-50')}>{TAB_LABEL[t]}</Button>

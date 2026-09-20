@@ -112,7 +112,7 @@ export function ListingBrowser({ hrefFor, initialCategory = '' }: { hrefFor: (li
   return (
     <section aria-label="Marketplace listings" className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <label className="flex flex-1 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 focus-within:border-brand-300">
+        <label className="flex flex-1 items-center gap-2 rounded-xl border border-gray-500 bg-white px-3 focus-within:border-brand-300">
           <Search className="h-4 w-4 shrink-0 text-gray-600" aria-hidden="true" />
           <Input
             type="search"

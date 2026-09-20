@@ -12,7 +12,7 @@ import { centsToMajor, formatAmount, parseMajorToCents } from '@/components/fina
 
 const TYPES = ['UMRAH', 'HAJJ', 'ZIYARAH', 'CUSTOM'];
 const TYPE_TINT: Record<string, string> = {
-  UMRAH: 'bg-brand-50 text-brand-700', HAJJ: 'bg-gold-50 text-gold-700',
+  UMRAH: 'bg-brand-50 text-brand-700', HAJJ: 'bg-gold-50 text-gold-800',
   ZIYARAH: 'bg-blue-50 text-blue-700', CUSTOM: 'bg-gray-100 text-gray-600',
 };
 const fmt = (cents?: number, currency = 'SAR') => (cents != null ? formatAmount(cents, currency) : '—');
@@ -86,7 +86,7 @@ function PackageModal({ onClose, onCreate, pending }: { onClose: () => void; onC
   const [durationDays, setDurationDays] = useState('');
   const [maxCapacity, setMaxCapacity] = useState('');
   const inFlight = useRef(false);
-  const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-200 rounded-lg outline-none focus:border-brand-400';
+  const inputCls = 'w-full text-sm px-3 py-2.5 border border-gray-500 rounded-lg outline-none focus:border-brand-400';
 
   const submit = async () => {
     if (inFlight.current || pending) return;

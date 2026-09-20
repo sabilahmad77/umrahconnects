@@ -18,7 +18,7 @@ const TYPE_META: Record<string, { label: string; Icon: any }> = {
   SUPPORT: { label: 'Support', Icon: LifeBuoy },
 };
 const STATUS_TINT: Record<string, string> = {
-  NEW: 'bg-brand-50 text-brand-700', IN_REVIEW: 'bg-gold-50 text-gold-700',
+  NEW: 'bg-brand-50 text-brand-700', IN_REVIEW: 'bg-gold-50 text-gold-800',
   RESOLVED: 'bg-gray-100 text-gray-600', ARCHIVED: 'bg-gray-100 text-gray-600',
 };
 
@@ -106,7 +106,7 @@ export function AdminInquiriesView() {
                     <td className="px-4 py-3 max-w-xs"><p className="text-[13px] text-gray-600 truncate">{it.subject ? <span className="font-medium">{it.subject}: </span> : ''}{it.message || <span className="text-gray-300">—</span>}</p></td>
                     <td className="px-4 py-3"><span className={`text-xs font-bold px-2 py-1 rounded-full ${STATUS_TINT[it.status] ?? STATUS_TINT.NEW}`}>{it.status}</span></td>
                     <td className="px-4 py-3">
-                      <Select aria-label={`Status for inquiry from ${it.email ?? it.id}`} disabled={saving === it.id} value={it.status} onChange={(e) => setStatus(it.id, e.target.value)} className="text-[12px] border border-gray-200 rounded-lg px-2 py-1 outline-none focus:border-brand-400">
+                      <Select aria-label={`Status for inquiry from ${it.email ?? it.id}`} disabled={saving === it.id} value={it.status} onChange={(e) => setStatus(it.id, e.target.value)} className="text-[12px] border border-gray-500 rounded-lg px-2 py-1 outline-none focus:border-brand-400">
                         {['NEW', 'IN_REVIEW', 'RESOLVED', 'ARCHIVED'].map((s) => <option key={s} value={s}>{s}</option>)}
                       </Select>
                     </td>

@@ -122,7 +122,7 @@ export function VisaDocumentsView() {
                   <th className="text-left p-3">Status</th>
                   <th className="text-left p-3 hidden md:table-cell">Version</th>
                   <th className="text-left p-3 hidden lg:table-cell">Expires</th>
-                  <th />
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">

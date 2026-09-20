@@ -38,7 +38,7 @@ export function AdminRolesView() {
         {/* Roles list */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="p-4 border-b border-gray-200">
-            <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Cog className="h-4 w-4" /> Roles</h3>
+            <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Cog className="h-4 w-4" /> Roles</h2>
           </div>
           {rl ? (
             <div className="py-8 text-center text-sm text-gray-600"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>
@@ -75,9 +75,9 @@ export function AdminRolesView() {
         {/* Role detail / permissions matrix */}
         <div className="bg-white rounded-xl border border-gray-200 lg:col-span-2">
           <div className="p-4 border-b border-gray-200">
-            <h3 className="text-sm font-bold text-gray-900">
+            <h2 className="text-sm font-bold text-gray-900">
               {role ? `${role.name} permissions` : 'Select a role to view permissions'}
-            </h3>
+            </h2>
           </div>
           {pl || (!role && selectedRoleId) ? (
             <div className="py-8 text-center text-sm text-gray-600"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></div>

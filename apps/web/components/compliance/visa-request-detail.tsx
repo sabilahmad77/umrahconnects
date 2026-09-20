@@ -102,7 +102,7 @@ export function VisaRequestDetail({ id }: { id: string }) {
         </div>
 
         {(canWork || canManage) && (
-          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100" aria-label="Ticket workflow">
+          <div role="group" className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100" aria-label="Ticket workflow">
             {canWork && !terminal && VISA_REQUEST_WORKFLOW_STATUSES.filter((s) => s !== t.status).map((s) => (
               <Button key={s} variant="secondary" type="button" busy={busy === s} disabled={!!busy} className="text-xs px-3 py-1.5 min-h-0"
                 onClick={() => quiet(s, () => changeStatus.mutateAsync({ id, status: s }), `Moved to ${VISA_REQUEST_STATUS_META[s].label}`)}>
