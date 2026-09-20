@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -509,6 +504,16 @@ export class FinanceService {
     const dueAt = dto.dueAt !== undefined ? dto.dueAt : dto.dueDate;
     if (dueAt !== undefined) data.dueAt = dueAt ? new Date(dueAt) : null;
     if (dto.status !== undefined && dto.status !== null && dto.status !== current.status) {
+      // Closing an invoice is an approval decision: PUT /finance/invoices/:id/status and
+      // POST …/void both require finance:invoice:approve, while this route only requires
+      // finance:invoice:create. Accepting VOID/CANCELLED here let a custom role with create
+      // but not approve close an invoice (found by FX1).
+      if (FinanceService.closes(String(dto.status))) {
+        throw new ForbiddenException({
+          code: 'INVOICE_CLOSE_REQUIRES_APPROVAL',
+          message: 'Voiding or cancelling an invoice needs the invoice approval capability. Use the void action.',
+        });
+      }
       this.assertInvoiceTransition(current, String(dto.status));
       data.status = dto.status;
       if (dto.status === 'ISSUED' && !current.issuedAt) data.issuedAt = new Date();
