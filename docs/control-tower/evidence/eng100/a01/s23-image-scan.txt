@@ -1,0 +1,12 @@
+== S23.E / Q06: container image builds, and the image contains no secret
+$ docker build -t uc-a01-scan:candidate .   → exit 0
+image: uc-a01-scan:candidate  size: 1.08GB
+
+scan of the image filesystem (application layers) for credential patterns:
+application-file hits: 0
+env files in the image: 0
+runs as: app
+onrender references: 2
+/app/platform/api/src/bootstrap/env.validation.ts
+/app/platform/api/dist/src/bootstrap/env.validation.js
+---
