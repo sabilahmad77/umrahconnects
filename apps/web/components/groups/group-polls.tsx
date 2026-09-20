@@ -74,7 +74,7 @@ function CreatePoll({ groupId }: { groupId: string }) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-bold text-gray-900">Create a poll</h3>
+      <h2 className="mb-3 text-sm font-bold text-gray-900">Create a poll</h2>
       <Input
         aria-label="Poll question"
         value={question}

@@ -151,7 +151,7 @@ function OverviewTab({ group }: { group: any }) {
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-5 lg:col-span-2">
-          <h3 className="text-sm font-bold text-gray-900">Trip details</h3>
+          <h2 className="text-sm font-bold text-gray-900">Trip details</h2>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <Detail label="Departure" value={group.departureDate ? new Date(group.departureDate).toLocaleDateString() : '—'} icon={Calendar} />
             <Detail label="Return" value={group.returnDate ? new Date(group.returnDate).toLocaleDateString() : '—'} icon={Calendar} />
@@ -166,7 +166,7 @@ function OverviewTab({ group }: { group: any }) {
           )}
         </div>
         <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-          <h3 className="text-sm font-bold text-gray-900">Recent incidents</h3>
+          <h2 className="text-sm font-bold text-gray-900">Recent incidents</h2>
           {group.incidents?.length > 0 ? (
             <ul className="space-y-2">
               {group.incidents.slice(0, 5).map((i: any) => (
@@ -234,9 +234,9 @@ function MembersTab({ groupId, canUpdate }: { groupId: string; canUpdate: boolea
     <div className="space-y-4">
       {canUpdate && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h3 className="mb-1 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="mb-1 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
             <UserPlus aria-hidden="true" className="h-4 w-4" /> Invite by email
-          </h3>
+          </h2>
           <p className="mb-3 text-xs text-gray-600">Invitations are delivered inside Umrah Connect to the account with this email. No email message is sent.</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input aria-label="Invitee email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="traveler@email.com" className="flex-1 text-sm" />
@@ -250,7 +250,7 @@ function MembersTab({ groupId, canUpdate }: { groupId: string; canUpdate: boolea
 
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-900">Members ({members.data?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Members ({members.data?.length ?? 0})</h2>
         </div>
         {members.error ? (
           <div className="p-4">
@@ -306,7 +306,7 @@ function MembersTab({ groupId, canUpdate }: { groupId: string; canUpdate: boolea
 
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-900">Invitations ({invites.data?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Invitations ({invites.data?.length ?? 0})</h2>
         </div>
         {invites.error ? (
           <div className="p-4">
@@ -383,9 +383,9 @@ function NotesTab({ groupId, canUpdate }: { groupId: string; canUpdate: boolean 
     <div className="space-y-4">
       {canUpdate && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
             <FileText aria-hidden="true" className="h-4 w-4" /> New planning note
-          </h3>
+          </h2>
           <div className="mb-2 grid gap-2 sm:grid-cols-3">
             <Input aria-label="Note title" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className="text-sm sm:col-span-2" />
             <Select aria-label="Note category" value={category} onChange={(e) => setCategory(e.target.value)} className="text-sm">
@@ -498,9 +498,9 @@ function DocumentsTab({ groupId, canUpdate }: { groupId: string; canUpdate: bool
     <div className="space-y-4">
       {canUpdate && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h3 className="mb-1 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="mb-1 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
             <Paperclip aria-hidden="true" className="h-4 w-4" /> Share a document link
-          </h3>
+          </h2>
           <p className="mb-3 text-xs text-gray-600">Add a link (https://…) to an itinerary or guide stored elsewhere. Files are not uploaded here.</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Input aria-label="Document name" value={name} maxLength={255} onChange={(e) => setName(e.target.value)} placeholder="Document name" className="text-sm" />
@@ -517,7 +517,7 @@ function DocumentsTab({ groupId, canUpdate }: { groupId: string; canUpdate: bool
       )}
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-4">
-          <h3 className="text-sm font-bold text-gray-900">Documents ({docs.data?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Documents ({docs.data?.length ?? 0})</h2>
         </div>
         {docs.error ? (
           <div className="p-4">
@@ -606,9 +606,9 @@ function IncidentsTab({ groupId, canUpdate }: { groupId: string; canUpdate: bool
     <div className="space-y-4">
       {canUpdate && (
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <h3 className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-gray-900">
             <AlertTriangle aria-hidden="true" className="h-4 w-4 text-red-600" /> Report an incident
-          </h3>
+          </h2>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Select aria-label="Incident type" value={type} onChange={(e) => setType(e.target.value)} className="text-sm">
               {INCIDENT_TYPES.map((t) => (
@@ -714,9 +714,9 @@ function RelatedTab({ groupId }: { groupId: string }) {
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-4">
-          <h3 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
             <Hotel aria-hidden="true" className="h-4 w-4" /> Linked bookings ({bookings.length})
-          </h3>
+          </h2>
         </div>
         {bookings.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-600">No bookings linked to this group yet.</p>
@@ -737,9 +737,9 @@ function RelatedTab({ groupId }: { groupId: string }) {
       </div>
       <div className="rounded-xl border border-gray-200 bg-white">
         <div className="border-b border-gray-200 p-4">
-          <h3 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+          <h2 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
             <Bus aria-hidden="true" className="h-4 w-4" /> Transport assignments ({assignments.length})
-          </h3>
+          </h2>
         </div>
         {assignments.length === 0 ? (
           <p className="py-8 text-center text-sm text-gray-600">No transport assignments linked to this group yet.</p>
@@ -814,9 +814,9 @@ function SettingsTab({ group }: { group: any }) {
   return (
     <div className="max-w-2xl space-y-4">
       <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-        <h3 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
+        <h2 className="inline-flex items-center gap-2 text-sm font-bold text-gray-900">
           <Edit3 aria-hidden="true" className="h-4 w-4" /> Group settings
-        </h3>
+        </h2>
         <Field label="Name">
           <Input aria-label="Name" value={name} maxLength={200} onChange={(e) => setName(e.target.value)} className="w-full text-sm" />
         </Field>
@@ -863,9 +863,9 @@ function SettingsTab({ group }: { group: any }) {
       </div>
 
       <div className="rounded-xl border border-red-100 bg-white p-5">
-        <h3 className="mb-2 inline-flex items-center gap-2 text-sm font-bold text-red-700">
+        <h2 className="mb-2 inline-flex items-center gap-2 text-sm font-bold text-red-700">
           <AlertTriangle aria-hidden="true" className="h-4 w-4" /> Delete group
-        </h3>
+        </h2>
         <p className="mb-3 text-xs text-gray-600">
           Removes the group with its members, discussion, polls, notes and document links. Groups with incident reports, linked bookings or transport
           assignments cannot be deleted — set their status to Completed or Cancelled instead.

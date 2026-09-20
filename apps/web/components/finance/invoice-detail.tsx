@@ -174,7 +174,7 @@ export function InvoiceDetail({ id }: { id: string }) {
       </div>
 
       {(actions.length > 0 || (canEdit && inv.status === 'DRAFT')) && (
-        <div className="flex flex-wrap gap-2" aria-label="Invoice actions">
+        <div role="group" className="flex flex-wrap gap-2" aria-label="Invoice actions">
           {actions.map((a) => (
             <Button
               key={a.status}

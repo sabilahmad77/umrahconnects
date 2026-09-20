@@ -54,7 +54,7 @@ function ResetForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ivory p-6">
+    <main className="flex min-h-screen items-center justify-center bg-ivory p-6">
       <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500">
           {done ? <CheckCircle2 className="h-6 w-6 text-white" /> : <KeyRound className="h-6 w-6 text-white" />}
@@ -113,7 +113,7 @@ function ResetForm() {
           </form>
         )}
       </div>
-    </div>
+    </main>
   );
 }
 

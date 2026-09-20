@@ -138,7 +138,7 @@ function DriversSection({ search }: { search: string }) {
         <div className="py-16 text-center bg-white rounded-xl border border-gray-200"><User className="h-12 w-12 mx-auto mb-3 text-gray-300" /><p className="text-sm text-gray-600">No drivers found</p></div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200">
-          <div role="region" aria-label="Drivers" tabIndex={0} className="max-w-full overflow-x-auto">
+          <div role="region" aria-label="Drivers table" tabIndex={0} className="max-w-full overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
                 <tr><th className="text-left px-4 py-3">Driver</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Licence</th><th className="text-left px-4 py-3">Vehicle</th><th className="text-left px-4 py-3">Open trips</th></tr>

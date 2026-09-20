@@ -128,7 +128,7 @@ export function HotelsList() {
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 mb-3" aria-label={h.starRating ? `${h.starRating} star hotel` : 'No star rating'}>
+              <div role="img" className="flex items-center gap-0.5 mb-3" aria-label={h.starRating ? `${h.starRating} star hotel` : 'No star rating'}>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Star key={i} className={cn('h-3.5 w-3.5', i < (h.starRating ?? 0) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-200')} />
                 ))}

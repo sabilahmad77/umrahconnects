@@ -72,9 +72,9 @@ export function FinanceDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Revenue breakdown */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-              <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-brand-600" /> Revenue
-              </h3>
+              </h2>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{fmt(stats.paid.amountCents, stats.currency)}</p>
                 <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1"><FileCheck2 className="h-3 w-3" /> Collected</p>
@@ -91,9 +91,9 @@ export function FinanceDashboard() {
 
             {/* Budget plans */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
-              <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-purple-600" /> Budget plans
-              </h3>
+              </h2>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.budgetPlans.total}</p>
                 <p className="text-xs text-gray-600 mt-1">Total plans</p>
@@ -109,9 +109,9 @@ export function FinanceDashboard() {
 
             {/* Recent transactions */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
+              <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-blue-600" /> Recent transactions
-              </h3>
+              </h2>
               {(stats.recentTransactions ?? []).length === 0 ? (
                 <p className="text-xs text-gray-600">No payments recorded yet</p>
               ) : (
@@ -135,7 +135,7 @@ export function FinanceDashboard() {
 
           {/* Quick navigation */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h3>
+            <h2 className="text-sm font-bold text-gray-900 mb-3">Quick navigation</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <QuickAction href="/finance" label="Invoices" icon={FileText} bg="bg-brand-50 text-brand-600" />
               <QuickAction href="/finance-payments" label="Payments" icon={CreditCard} bg="bg-blue-50 text-blue-600" />

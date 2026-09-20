@@ -119,7 +119,7 @@ function Overview({ p, fullName }: { p: any; fullName: string }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5 lg:col-span-2 space-y-3">
-        <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Pilgrim details</h3>
+        <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><ListChecks className="h-4 w-4" /> Pilgrim details</h2>
         <dl className="grid grid-cols-2 gap-3 text-sm">
           <Field label="Name (EN)" value={[p.firstNameEn, p.lastNameEn].filter(Boolean).join(' ') || '—'} />
           <Field label="Name (AR)" value={[p.firstNameAr, p.lastNameAr].filter(Boolean).join(' ') || '—'} />
@@ -185,7 +185,7 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Paperclip className="h-4 w-4" /> Upload document</h3>
+        <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Paperclip className="h-4 w-4" /> Upload document</h2>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="block text-xs font-semibold text-gray-600 mb-1">Type</span>
@@ -235,7 +235,7 @@ function DocumentsTab({ p, refetch }: { p: any; refetch: () => void }) {
 
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="text-sm font-bold text-gray-900">Documents ({p.documents?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Documents ({p.documents?.length ?? 0})</h2>
         </div>
         {(p.documents ?? []).length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-600">No documents on file</div>
@@ -272,7 +272,7 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h3 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Attach to booking</h3>
+        <h2 className="text-sm font-bold text-gray-900 mb-3 inline-flex items-center gap-2"><Calendar className="h-4 w-4" /> Attach to booking</h2>
         <div className="flex gap-2">
           <Select aria-label="Selected" value={selected} onChange={(e) => setSelected(e.target.value)} className="flex-1 text-sm px-3 py-2.5 border border-gray-200 rounded-lg bg-white">
             <option value="">Select booking…</option>
@@ -302,7 +302,7 @@ function BookingsTab({ p, refetch }: { p: any; refetch: () => void }) {
 
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="text-sm font-bold text-gray-900">Linked bookings ({p.bookings?.length ?? 0})</h3>
+          <h2 className="text-sm font-bold text-gray-900">Linked bookings ({p.bookings?.length ?? 0})</h2>
         </div>
         {(p.bookings ?? []).length === 0 ? (
           <div className="py-10 text-center text-sm text-gray-600">Not attached to any booking yet</div>
@@ -349,7 +349,7 @@ function EditTab({ p, refetch }: { p: any; refetch: () => void }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 max-w-3xl space-y-3">
-      <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit pilgrim</h3>
+      <h2 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2"><Edit3 className="h-4 w-4" /> Edit pilgrim</h2>
       <div className="grid grid-cols-2 gap-3">
         <LabeledInput label="First name (EN)" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} />
         <LabeledInput label="Last name (EN)" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} />

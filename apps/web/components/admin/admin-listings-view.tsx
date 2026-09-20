@@ -86,7 +86,7 @@ export function AdminListingsView() {
                 <th className="text-left p-3">Vendor</th>
                 <th className="text-left p-3">Price</th>
                 <th className="text-left p-3">Status</th>
-                <th />
+                <th><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">

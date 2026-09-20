@@ -280,7 +280,7 @@ function RoomsTab({ hotelId, writable }: { hotelId: string; writable: boolean })
         {isLoading ? <LoadingState label="Loading rooms…" /> : rooms.length === 0 ? (
           <p className="py-10 text-center text-sm text-gray-600">No rooms yet{writable ? ' — add rooms to track availability and occupancy' : ''}.</p>
         ) : (
-          <div role="region" aria-label="Rooms" tabIndex={0} className="max-w-full overflow-x-auto">
+          <div role="region" aria-label="Rooms table" tabIndex={0} className="max-w-full overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-xs text-gray-600 border-b border-gray-200">
                 <tr><th className="text-left p-3">Room</th><th className="text-left p-3">Type</th><th className="text-left p-3">Floor</th><th className="text-left p-3">Sleeps</th><th className="text-left p-3">Price / night</th><th className="text-left p-3">Status</th><th className="p-3"><span className="sr-only">Actions</span></th></tr>

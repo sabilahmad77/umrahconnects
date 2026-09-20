@@ -157,7 +157,7 @@ export function AdminUsersView() {
                   <th className="text-left p-3">Roles</th>
                   <th className="text-left p-3">Last login</th>
                   <th className="text-left p-3">Status</th>
-                  <th />
+                  <th><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
