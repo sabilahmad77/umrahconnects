@@ -34,6 +34,7 @@ import { MailModule } from './modules/mail/mail.module';
 import { TravelersModule } from './modules/travelers/travelers.module'; // eng100-a07
 import { PreferencesModule } from './modules/preferences/preferences.module'; // eng100-a02
 import { ReferencesModule } from './modules/references/references.module'; // eng100-fx3
+import { IdempotencyModule } from './common/idempotency/idempotency.module'; // eng100-fx3
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 
@@ -77,6 +78,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
     EventsModule,
     MailModule,
     ReferencesModule, // eng100-fx3 — per-organization reference numbers (global)
+    IdempotencyModule, // eng100-fx3 — Idempotency-Key on ordinary creates (global)
 
     // Platform modules
     AuthModule,

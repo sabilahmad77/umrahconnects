@@ -2576,3 +2576,35 @@ model ReferenceCounter {
   @@map("reference_counters")
   @@schema("core")
 }
+
+/// N-FORM-1 (eng100-fx3) — server-side idempotency for ordinary creates.
+///
+/// The web client joins identical writes that overlap in ONE tab, which a second
+/// tab, a retry after a token refresh or a plain API client all walk straight
+/// past: five identical `POST /pilgrims` created five pilgrims. A create that
+/// carries an `Idempotency-Key` header is now recorded here with the caller, the
+/// method, the path and a hash of the body; a repeat within the retention window
+/// replays the first response instead of creating a second record, and the same
+/// key with a DIFFERENT body is refused (409). Money keeps its own, older
+/// idempotency (Payment.idempotencyKey) and is not routed through this table.
+model IdempotencyKey {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// The caller. A key is private to the user who used it.
+  userId      String    @map("user_id") @db.Uuid
+  key         String    @db.VarChar(200)
+  method      String    @db.VarChar(10)
+  path        String    @db.VarChar(500)
+  /// SHA-256 of the canonical request body: the same key with a different body is a conflict.
+  requestHash String    @map("request_hash") @db.Char(64)
+  /// The first response. Null while the first request is still running.
+  statusCode  Int?      @map("status_code")
+  response    Json?     @db.JsonB
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+
+  @@unique([userId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+  @@schema("core")
+}
