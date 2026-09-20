@@ -1,0 +1,22 @@
+{
+  "ranAt": "2026-09-20T20:34:00.206Z",
+  "web": "http://localhost:3423",
+  "stamp": "MUA9XAZ0KMDP",
+  "results": [
+    {
+      "name": "N-FORM-1: two tabs, same account, same form → one pilgrim",
+      "pass": true,
+      "detail": "2 POST /pilgrims from A+B, 1 distinct Idempotency-Key, 1 record(s) for passport FX3MUA9XAZ0KMDP"
+    },
+    {
+      "name": "A12-5: hotel manager opens listings it does not own — no failed request, no console error",
+      "pass": true,
+      "detail": "3 foreign listing(s) opened as HOTEL_MANAGER; failed /proxy-api requests: none; console errors: none"
+    },
+    {
+      "name": "A12-5: the owner still gets the seller view from the same route",
+      "pass": true,
+      "detail": "listing 9b14e4ee-4488-4bb9-9364-c84e8bd6b64f: seller tabs 1, failed requests: none"
+    }
+  ]
+}
