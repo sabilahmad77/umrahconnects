@@ -9,7 +9,6 @@ import { ASSIGNMENT_STATUSES, useAssignments } from '@/hooks/use-transport';
 import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
 import { downloadCsv } from '@/components/dashboard/csv';
 import { dateTime, humanize, sar } from '@/components/dashboard/workflow-ui';
-import { PaymentBadge } from '@/components/hotels/hotel-ui';
 import { cn } from '@/lib/utils';
 import { TripActions, TripModal, TripStatusBadge } from './trip-shared';
 
@@ -33,11 +32,11 @@ export function TransportBookingsView() {
   const items = data?.items ?? [];
 
   const exportCsv = () => downloadCsv(`transport-bookings-${new Date().toISOString().slice(0, 10)}.csv`, [
-    ['Customer', 'Type', 'Phone', 'Route', 'Vehicle', 'Driver', 'Pickup', 'Passengers', 'Price', 'Payment', 'Status'],
+    ['Customer', 'Type', 'Phone', 'Route', 'Vehicle', 'Driver', 'Pickup', 'Passengers', 'Price', 'Status'],
     ...items.map((a: any) => [
       a.customerName ?? '', a.customerType ?? '', a.customerPhone ?? '', a.route?.name ?? '', a.vehicle?.plateNumber ?? '',
       a.driver ? `${a.driver.firstName} ${a.driver.lastName}` : '', a.scheduledAt ?? '', a.passengerCount,
-      (a.priceCents / 100).toFixed(2), a.paymentStatus, a.status,
+      (a.priceCents / 100).toFixed(2), a.status,
     ]),
   ]);
 
@@ -58,7 +57,7 @@ export function TransportBookingsView() {
         </div>
       </div>
       {ready && !canManage && <ReadOnlyNotice>You can view bookings. Recording and moving bookings needs the transport assignment permission.</ReadOnlyNotice>}
-      <p className="text-xs text-gray-600">Payment status is read-only here: it follows the payments recorded in Finance.</p>
+      <p className="text-xs text-gray-600">Trips do not track payments: bill customers with an invoice in Finance, where the money is recorded.</p>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72">
@@ -87,7 +86,7 @@ export function TransportBookingsView() {
               <thead className="text-xs text-gray-600 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left p-3">Customer</th><th className="text-left p-3">Route / vehicle</th><th className="text-left p-3">Pickup</th>
-                  <th className="text-left p-3">Pax</th><th className="text-left p-3">Price</th><th className="text-left p-3">Payment</th><th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Pax</th><th className="text-left p-3">Price</th><th className="text-left p-3">Status</th>
                   {canManage && <th className="text-left p-3">Next step</th>}
                 </tr>
               </thead>
@@ -105,7 +104,6 @@ export function TransportBookingsView() {
                     <td className="p-3 text-xs text-gray-700 whitespace-nowrap">{dateTime(a.scheduledAt)}</td>
                     <td className="p-3">{a.passengerCount}</td>
                     <td className="p-3 font-medium whitespace-nowrap">{sar(a.priceCents, a.currency)}</td>
-                    <td className="p-3"><PaymentBadge status={a.paymentStatus} /></td>
                     <td className="p-3"><TripStatusBadge status={a.status} /></td>
                     {canManage && <td className="p-3"><TripActions trip={a} onEdit={() => setEditing(a)} /></td>}
                   </tr>

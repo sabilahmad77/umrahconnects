@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 
 /*
  * Visa application workflow. The server is authoritative; the web client
@@ -42,11 +42,3 @@ export function assertVisaTransition(from: string, to: string) {
   }
 }
 
-/** Payment state is written by the payments module only — never from a form. */
-export function rejectClientPaymentStatus(paymentStatus: unknown) {
-  if (paymentStatus !== undefined) {
-    throw new BadRequestException(
-      'paymentStatus cannot be set here; it follows the payments recorded in Finance',
-    );
-  }
-}

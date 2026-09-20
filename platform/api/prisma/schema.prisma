@@ -1920,6 +1920,13 @@ model Listing {
 
   city String? @db.VarChar(100) // eng100-a06: mirrors attributes.city so the marketplace can filter by city
 
+  // eng100-fx1 (F2): platform moderation. Written only through platform:marketplace:moderate.
+  // A TAKEN_DOWN listing never reaches a public route and its owner cannot republish it.
+  moderationStatus String    @default("CLEAR") @map("moderation_status") @db.VarChar(20) // CLEAR / TAKEN_DOWN
+  moderationReason String?   @map("moderation_reason") // eng100-fx1: shown to the owner
+  moderatedBy      String?   @map("moderated_by") @db.Uuid // eng100-fx1: platform user of the last decision
+  moderatedAt      DateTime? @map("moderated_at") @db.Timestamptz // eng100-fx1
+
   @@index([vendorId])
   @@index([type, status])
   @@index([status, isActive, createdAt]) // eng100-a06: public catalogue scans

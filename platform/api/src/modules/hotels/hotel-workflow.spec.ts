@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import {
   HOTEL_BOOKING_INITIAL_STATUSES, HOTEL_BOOKING_TERMINAL_STATUSES, HOTEL_BOOKING_TRANSITIONS, ROOM_MANUAL_STATUSES,
-  assertHotelBookingTransition, rejectClientPaymentStatus, staysOverlap,
+  assertHotelBookingTransition, staysOverlap,
 } from './hotel-workflow';
 import { HOTEL_BOOKING_STATUSES, ROOM_STATUSES } from './dto/hotel.dto';
 
@@ -27,9 +27,7 @@ describe('hotel booking workflow', () => {
     expect(() => assertHotelBookingTransition('PENDING', 'PENDING')).not.toThrow();
   });
 
-  it('never lets a form set payment state or room occupancy', () => {
-    expect(() => rejectClientPaymentStatus('PAID')).toThrow(BadRequestException);
-    expect(() => rejectClientPaymentStatus(undefined)).not.toThrow();
+  it('never lets a form set room occupancy', () => {
     expect(ROOM_MANUAL_STATUSES).not.toContain('OCCUPIED');
     for (const s of ROOM_MANUAL_STATUSES) expect(ROOM_STATUSES).toContain(s);
   });

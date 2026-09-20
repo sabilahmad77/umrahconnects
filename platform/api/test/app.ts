@@ -23,9 +23,16 @@ export interface TestContext {
   close: () => Promise<void>;
 }
 
-/** `imports` adds test-only modules (e.g. the RLS probe controller in rls.e2e-spec.ts). */
-export async function createTestApp(options: { imports?: any[] } = {}): Promise<TestContext> {
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule, ...(options.imports ?? [])] }).compile();
+/**
+ * `imports` adds test-only modules (e.g. the RLS probe controller in rls.e2e-spec.ts);
+ * `overrides` replaces providers by token (e.g. the production-only readiness rule in health.e2e-spec.ts).
+ */
+export async function createTestApp(
+  options: { imports?: any[]; overrides?: { provide: any; useValue: unknown }[] } = {},
+): Promise<TestContext> {
+  let builder = Test.createTestingModule({ imports: [AppModule, ...(options.imports ?? [])] });
+  for (const o of options.overrides ?? []) builder = builder.overrideProvider(o.provide).useValue(o.useValue);
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ rawBody: true, bodyParser: false, logger: ['error'] });
   configureApp(app);
   await app.init();

@@ -4,6 +4,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
+import { RbacService } from '../rbac/rbac.service';
 import { TenantId, CurrentUser } from '../../common/decorators/tenant.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { AnyAuthenticated } from '../../common/decorators/access.decorator';
@@ -11,10 +12,16 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CreateIntentDto, ConfirmIntentDto, RefundDto, CheckoutDto } from './dto/payment.dto';
 import type { Principal } from '../auth/principal';
 
+/** Who may see which gateway settings are missing (deployment detail), not just whether one is configured. */
+const CONFIG_DETAIL_CAPABILITIES = ['finance:payment:process', 'platform:settings:read'];
+
 @ApiTags('payments')
 @Controller({ path: 'payments', version: '1' })
 export class PaymentsController {
-  constructor(private readonly service: PaymentsService) {}
+  constructor(
+    private readonly service: PaymentsService,
+    private readonly rbac: RbacService,
+  ) {}
 
   /**
    * Gateway callback. Public by necessity — authentication is the signature,
@@ -33,7 +40,10 @@ export class PaymentsController {
   ) {
     // Without the exact bytes no signature can be checked: refuse, so the
     // provider shows a failed delivery and retries instead of believing it landed.
-    if (!req.rawBody) throw new BadRequestException('Webhook body must be sent as application/json');
+    // An empty body cannot carry an event either (F18): refuse it the same way.
+    if (!req.rawBody?.length) {
+      throw new BadRequestException('Webhook body must be a non-empty application/json payload');
+    }
     const raw: string = req.rawBody.toString('utf8');
     const data = await this.service.handleWebhook(provider, raw, stripeSignature ?? xSignature);
     return { success: true, data };
@@ -42,9 +52,15 @@ export class PaymentsController {
   @ApiBearerAuth()
   @Get('providers')
   @AnyAuthenticated()
-  @ApiOperation({ summary: 'Active payment provider and its public configuration' })
-  async providers() {
-    return { success: true, data: this.service.providerStatus() };
+  @ApiOperation({
+    summary: 'Active payment provider and its public configuration',
+    description:
+      'Everyone signed in sees whether each provider is configured; the names of missing settings are returned only to holders of finance:payment:process or platform:settings:read.',
+  })
+  async providers(@Req() req: any) {
+    const granted = await this.rbac.permissionsFor(req);
+    const detail = CONFIG_DETAIL_CAPABILITIES.some((c) => granted.has(c));
+    return { success: true, data: this.service.providerStatus(detail) };
   }
 
   // ── Organization staff ──────────────────────────────────────────────────

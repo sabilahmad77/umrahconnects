@@ -51,6 +51,11 @@ describe('red team: rate limiting (throttling enabled)', () => {
     expect(retryAfter).toBeGreaterThan(0);
     expect(retryAfter).toBeLessThanOrEqual(300);
     expect(JSON.stringify(ninth.body)).not.toMatch(/stack|prisma/i);
+    // The limiter's own 429 gets the generic message (F5: only throttler exceptions are genericized).
+    expect(ninth.body.error).toMatchObject({
+      code: 'TOO_MANY_REQUESTS',
+      message: 'Too many requests. Please slow down and try again shortly.',
+    });
 
     // Case / whitespace variations of the same address count against the same bucket.
     const variant = await ctx.http().post(api('/auth/login')).send({ email: `  ${email.toUpperCase()} `, password: 'x' });

@@ -1,0 +1,604 @@
+
+$ sed -i 's/^APP_DB_USER=.*/APP_DB_USER=umrah/' .env.production && ./scripts/preflight.sh   # negative: API login = owner
+PASS .env.production is owned by macbook
+PASS .env.production is not readable by group/other (chmod 600)
+PASS proxy mode: shared (an existing reverse proxy owns :80/:443)
+PASS SHARED_PROXY_NETWORK is set and the Docker network exists
+PASS POSTGRES_PASSWORD is set
+PASS APP_DB_USER is set
+PASS APP_DB_PASSWORD is set
+PASS JWT_SECRET is set
+PASS API_DOMAIN is set
+PASS WEB_URL is set
+PASS CORS_ORIGINS is set
+PASS OFFSITE_REMOTE is set
+PASS POSTGRES_PASSWORD is URL-safe and at least 24 characters (openssl rand -hex 32)
+FAIL APP_DB_USER is a plain role name (a-z 0-9 _), not POSTGRES_USER, postgres, uc_app_runtime or pg_*
+PASS APP_DB_PASSWORD is URL-safe, at least 24 characters and not the owner password (openssl rand -hex 32)
+PASS JWT_SECRET is at least 32 characters
+PASS no template placeholder (<…>) is left in a value
+PASS no setting points at Render (onrender.com / render.com) — Render is retired
+PASS OFFSITE_REMOTE has the form <rclone-remote>:<bucket>[/<prefix>]
+SKIP off-site round trip (PREFLIGHT_SKIP_OFFSITE=1)
+PASS docker compose configuration is valid
+PASS no service publishes a host port
+PASS $TMPDIR/uc-fx2/rehearsal/backups exists, is owned by macbook and is private
+PASS disk holding $TMPDIR/uc-fx2/rehearsal/backups is below 85 % used (46 %)
+preflight: 1 check(s) failed
+[exit 1]
+
+$ (APP_DB_PASSWORD set to the owner's value) ./scripts/preflight.sh   # negative: shared password
+PASS .env.production is owned by macbook
+PASS .env.production is not readable by group/other (chmod 600)
+PASS proxy mode: shared (an existing reverse proxy owns :80/:443)
+PASS SHARED_PROXY_NETWORK is set and the Docker network exists
+PASS POSTGRES_PASSWORD is set
+PASS APP_DB_USER is set
+PASS APP_DB_PASSWORD is set
+PASS JWT_SECRET is set
+PASS API_DOMAIN is set
+PASS WEB_URL is set
+PASS CORS_ORIGINS is set
+PASS OFFSITE_REMOTE is set
+PASS POSTGRES_PASSWORD is URL-safe and at least 24 characters (openssl rand -hex 32)
+PASS APP_DB_USER is a plain role name (a-z 0-9 _), not POSTGRES_USER, postgres, uc_app_runtime or pg_*
+FAIL APP_DB_PASSWORD is URL-safe, at least 24 characters and not the owner password (openssl rand -hex 32)
+PASS JWT_SECRET is at least 32 characters
+PASS no template placeholder (<…>) is left in a value
+PASS no setting points at Render (onrender.com / render.com) — Render is retired
+PASS OFFSITE_REMOTE has the form <rclone-remote>:<bucket>[/<prefix>]
+SKIP off-site round trip (PREFLIGHT_SKIP_OFFSITE=1)
+PASS docker compose configuration is valid
+PASS no service publishes a host port
+PASS $TMPDIR/uc-fx2/rehearsal/backups exists, is owned by macbook and is private
+PASS disk holding $TMPDIR/uc-fx2/rehearsal/backups is below 85 % used (46 %)
+preflight: 1 check(s) failed
+[exit 1]
+
+$ ./scripts/preflight.sh   # the real throwaway configuration
+PASS .env.production is owned by macbook
+PASS .env.production is not readable by group/other (chmod 600)
+PASS proxy mode: shared (an existing reverse proxy owns :80/:443)
+PASS SHARED_PROXY_NETWORK is set and the Docker network exists
+PASS POSTGRES_PASSWORD is set
+PASS APP_DB_USER is set
+PASS APP_DB_PASSWORD is set
+PASS JWT_SECRET is set
+PASS API_DOMAIN is set
+PASS WEB_URL is set
+PASS CORS_ORIGINS is set
+PASS OFFSITE_REMOTE is set
+PASS POSTGRES_PASSWORD is URL-safe and at least 24 characters (openssl rand -hex 32)
+PASS APP_DB_USER is a plain role name (a-z 0-9 _), not POSTGRES_USER, postgres, uc_app_runtime or pg_*
+PASS APP_DB_PASSWORD is URL-safe, at least 24 characters and not the owner password (openssl rand -hex 32)
+PASS JWT_SECRET is at least 32 characters
+PASS no template placeholder (<…>) is left in a value
+PASS no setting points at Render (onrender.com / render.com) — Render is retired
+PASS OFFSITE_REMOTE has the form <rclone-remote>:<bucket>[/<prefix>]
+SKIP off-site round trip (PREFLIGHT_SKIP_OFFSITE=1)
+PASS docker compose configuration is valid
+PASS no service publishes a host port
+PASS $TMPDIR/uc-fx2/rehearsal/backups exists, is owned by macbook and is private
+PASS disk holding $TMPDIR/uc-fx2/rehearsal/backups is below 85 % used (46 %)
+preflight: all checks passed
+[exit 0]
+
+$ COMPOSE_PROJECT_NAME=uc-fx2-deploy BACKUP_DIR=$R/backups PREFLIGHT_SKIP_OFFSITE=1 UC_DEPLOY_CHECKED_OUT=137ce9e03463c5c8ece7ab95cac5599bfeb84889 heavy ./scripts/deploy.sh 137ce9e03463c5c8ece7ab95cac5599bfeb84889   # first deployment, empty database
+PASS .env.production is owned by macbook
+PASS .env.production is not readable by group/other (chmod 600)
+PASS proxy mode: shared (an existing reverse proxy owns :80/:443)
+PASS SHARED_PROXY_NETWORK is set and the Docker network exists
+PASS POSTGRES_PASSWORD is set
+PASS APP_DB_USER is set
+PASS APP_DB_PASSWORD is set
+PASS JWT_SECRET is set
+PASS API_DOMAIN is set
+PASS WEB_URL is set
+PASS CORS_ORIGINS is set
+PASS OFFSITE_REMOTE is set
+PASS POSTGRES_PASSWORD is URL-safe and at least 24 characters (openssl rand -hex 32)
+PASS APP_DB_USER is a plain role name (a-z 0-9 _), not POSTGRES_USER, postgres, uc_app_runtime or pg_*
+PASS APP_DB_PASSWORD is URL-safe, at least 24 characters and not the owner password (openssl rand -hex 32)
+PASS JWT_SECRET is at least 32 characters
+PASS no template placeholder (<…>) is left in a value
+PASS no setting points at Render (onrender.com / render.com) — Render is retired
+PASS OFFSITE_REMOTE has the form <rclone-remote>:<bucket>[/<prefix>]
+SKIP off-site round trip (PREFLIGHT_SKIP_OFFSITE=1)
+PASS docker compose configuration is valid
+PASS no service publishes a host port
+PASS $TMPDIR/uc-fx2/rehearsal/backups exists, is owned by macbook and is private
+PASS disk holding $TMPDIR/uc-fx2/rehearsal/backups is below 85 % used (46 %)
+preflight: all checks passed
+17:27:27Z building umrah-connect-api:137ce9e03463
+
+Successfully built 64117e6b183e
+Successfully tagged umrah-connect-api:137ce9e03463
+ Volume uc-fx2-deploy_uploads Creating 
+ Network uc-fx2-deploy_uc-edge Creating 
+ Network uc-fx2-deploy_uc-edge Creating 
+ Volume uc-fx2-deploy_uploads Creating 
+ Network uc-fx2-deploy_uc-backend Creating 
+ Network uc-fx2-deploy_uc-backend Creating 
+ Volume uc-fx2-deploy_pgdata Creating 
+ Volume uc-fx2-deploy_pgdata Creating 
+ Volume uc-fx2-deploy_uploads Created 
+ Volume uc-fx2-deploy_uploads Created 
+ Volume uc-fx2-deploy_pgdata Created 
+ Volume uc-fx2-deploy_pgdata Created 
+ Network uc-fx2-deploy_uc-backend Created 
+ Network uc-fx2-deploy_uc-backend Created 
+ Network uc-fx2-deploy_uc-edge Created 
+ Network uc-fx2-deploy_uc-edge Created 
+ Container uc-fx2-deploy-uc-api-run-5563e76765e2 Creating 
+ Container uc-fx2-deploy-uc-api-run-5563e76765e2 Created 
+production configuration ok
+17:27:29Z database
+ Container uc-fx2-deploy-uc-postgres-1 Creating 
+ Container uc-fx2-deploy-uc-postgres-1 Created 
+ Container uc-fx2-deploy-uc-postgres-1 Starting 
+ Container uc-fx2-deploy-uc-postgres-1 Started 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+17:27:40Z database umrah_connects is empty (first deployment): nothing to back up yet
+17:27:40Z migrating (uc-migrate, as the database owner)
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-migrate-run-c45150c89ba2 Creating 
+ Container uc-fx2-deploy-uc-migrate-run-c45150c89ba2 Created 
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "umrah_connects", schemas "audit, core, marketplace, plugin_booking, plugin_crm, plugin_finance, plugin_group_ops, plugin_hotel, plugin_portal, plugin_reporting, plugin_transport, plugin_visa, social" at "uc-postgres:5432"
+
+9 migrations found in prisma/migrations
+
+Applying migration `20260917000000_baseline`
+Applying migration `20260917154700_auth_hardening_platform_role`
+Applying migration `20260917160539_payments_checkout_stripe`
+Applying migration `20260918120000_user_preferences`
+Applying migration `20260918135000_derived_seat_and_room_counters`
+Applying migration `20260918150000_social_comment_threads`
+Applying migration `20260918160000_media_registry_listing_city`
+Applying migration `20260918170000_pilgrim_account_links`
+Applying migration `20260918180000_rls_defence_in_depth`
+
+The following migration(s) have been applied:
+
+migrations/
+  └─ 20260917000000_baseline/
+    └─ migration.sql
+  └─ 20260917154700_auth_hardening_platform_role/
+    └─ migration.sql
+  └─ 20260917160539_payments_checkout_stripe/
+    └─ migration.sql
+  └─ 20260918120000_user_preferences/
+    └─ migration.sql
+  └─ 20260918135000_derived_seat_and_room_counters/
+    └─ migration.sql
+  └─ 20260918150000_social_comment_threads/
+    └─ migration.sql
+  └─ 20260918160000_media_registry_listing_city/
+    └─ migration.sql
+  └─ 20260918170000_pilgrim_account_links/
+    └─ migration.sql
+  └─ 20260918180000_rls_defence_in_depth/
+    └─ migration.sql
+      
+All migrations have been successfully applied.
+17:27:44Z runtime database login
+17:27:44Z runtime login uc_app: not superuser, no BYPASSRLS, owns nothing
+17:27:44Z starting umrah-connect-api:137ce9e03463
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-api-1 Creating 
+ Container uc-fx2-deploy-uc-api-1 Created 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-api-1 Starting 
+ Container uc-fx2-deploy-uc-api-1 Started 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-api-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-api-1 Healthy 
+17:27:51Z deployed 137ce9e03463c5c8ece7ab95cac5599bfeb84889
+[exit 0]
+
+$ compose exec -T uc-api curl -sS http://127.0.0.1:4000/api/v1/health/ready
+{"status":"ready","rowLevelSecurity":"enforced","timestamp":"2026-09-19T17:28:03.519Z"}[exit 0]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d umrah_connects -c "SELECT usename, count(*) FROM pg_stat_activity WHERE datname = 'umrah_connects' AND pid <> pg_backend_pid() GROUP BY usename"   # who the API's pool is
+uc_app|1
+[exit 0]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d umrah_connects -c "SELECT rolname, rolsuper, rolbypassrls, rolcanlogin, pg_has_role('uc_app','uc_app_runtime','MEMBER') FROM pg_roles WHERE rolname IN ('umrah','uc_app','uc_app_runtime') ORDER BY 1"
+uc_app|f|f|t|t
+uc_app_runtime|f|f|f|t
+umrah|t|t|t|t
+[exit 0]
+
+$ docker inspect <uc-api> --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E '^(POSTGRES_PASSWORD|DATABASE_URL)=' (passwords masked)
+DATABASE_URL=postgresql://uc_app:***@uc-postgres:5432/umrah_connects?schema=public&connection_limit=20
+POSTGRES_PASSWORD=
+[exit 0]
+
+$ docker inspect <uc-api> | grep -c <owner password value>   # the owner password is nowhere in the API container
+0
+[exit 1]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d umrah_connects   # fixtures as the owner: two transport companies, one vehicle each
+INSERT 0 2
+INSERT 0 2
+probe-a|1
+probe-b|1
+[exit 0]
+
+$ compose exec -T -e PGPASSWORD uc-postgres psql -X -h 127.0.0.1 -U uc_app -d umrah_connects   # PGPASSWORD=APP_DB_PASSWORD from the env file, never printed
+-- as the API login, over TCP with its password (scram): who am I
+ current_user | session_user 
+--------------+--------------
+ uc_app       | uc_app
+(1 row)
+
+-- no scope (public route / outside a request): no protected row
+ visible_without_scope 
+-----------------------
+                     0
+(1 row)
+
+-- tenant scope of company A (what the API sets per request)
+BEGIN
+ scoped | tenant_set 
+--------+------------
+ t      | t
+(1 row)
+
+unterminated quoted string
+ plate_number 
+--------------
+ PLATE-A
+(1 row)
+
+-- cross-tenant probe: read, change, delete and plant company
+ b_rows_visible 
+----------------
+              0
+(1 row)
+
+UPDATE 0
+DELETE 0
+ERROR:  new row violates row-level security policy for table "vehicles"
+ROLLBACK
+-- escape attempts: switch RLS off for the session, disable it on the table
+SET
+ERROR:  query would be affected by row-level security policy for table "vehicles"
+RESET
+ERROR:  must be owner of table vehicles
+[exit 0]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d umrah_connects -c 'SELECT t.slug, v.plate_number, v.capacity FROM plugin_transport.vehicles v JOIN core.tenants t ON t.id = v.tenant_id ORDER BY 1'   # company B unchanged (owner view)
+probe-a|PLATE-A|4
+probe-b|PLATE-B|4
+[exit 0]
+
+$ (re-run, clean label) compose exec -T -e PGPASSWORD uc-postgres psql -X -h 127.0.0.1 -U uc_app -d umrah_connects   # tenant scope A, probing company B
+BEGIN
+ scoped | tenant_set 
+--------+------------
+ t      | t
+(1 row)
+
+ plate_number 
+--------------
+ PLATE-A
+(1 row)
+
+-- cross-tenant probe on the rows of company B: read, change, delete, plant
+ b_rows_visible 
+----------------
+              0
+(1 row)
+
+UPDATE 0
+DELETE 0
+ERROR:  new row violates row-level security policy for table "vehicles"
+ROLLBACK
+[exit 0]
+
+$ DATABASE_URL=<owner URL> compose run -d --no-deps --name uc-fx2-deploy-owner-probe -e DATABASE_URL uc-api   # a misconfigured API: connects as the owner/superuser
+ Container uc-fx2-deploy-owner-probe Creating 
+ Container uc-fx2-deploy-owner-probe Created 
+36b39d70bfec8b92593d0a53b24071800306248ccc923d5ab1c78a2382ca358f
+[exit 0]
+
+$ docker exec uc-fx2-deploy-owner-probe curl -s -w ' [HTTP %{http_code}]' http://127.0.0.1:4000/api/v1/health/ready
+{"success":false,"error":{"code":"DATABASE_ROLE_UNSAFE","message":"The API database role check failed; see the API log.","requestId":"706e2be5-c190-450f-93d1-f591cffac5d3","timestamp":"2026-09-19T17:29:02.958Z"}} [HTTP 503][exit 0]
+
+$ docker exec uc-fx2-deploy-owner-probe curl -s -w ' [HTTP %{http_code}]' http://127.0.0.1:4000/api/v1/health   # liveness unaffected
+{"status":"ok","service":"umrah-connect-api","release":"137ce9e03463","db":"connected","uptime":5,"timestamp":"2026-09-19T17:29:03.020Z"} [HTTP 200][exit 0]
+
+$ docker logs uc-fx2-deploy-owner-probe 2>&1 | grep HealthController
+[Nest] 6  - 09/19/2026, 5:29:00 PM     LOG [RoutesResolver] HealthController {/api/health} (version: 1): +0ms
+[Nest] 6  - 09/19/2026, 5:29:02 PM   ERROR [HealthController] Database role "umrah" is a superuser, has BYPASSRLS, owns (or can act as the owner of) application tables: Row-Level Security does NOT apply to the API. Connect as the runtime login (platform/api/prisma/rls/runtime-role.sql, docs/control-tower/RLS.md). Readiness answers 503.
+[exit 0]
+
+$ docker inspect uc-fx2-deploy-owner-probe --format '{{.State.Health.Status}}'   # the image HEALTHCHECK (/health/ready) marks it unhealthy
+starting
+[exit 0]
+
+$ docker rm -f uc-fx2-deploy-owner-probe
+uc-fx2-deploy-owner-probe
+[exit 0]
+
+$ UC_RUNTIME_LOGIN=uc_app compose exec -T -e UC_RUNTIME_LOGIN uc-postgres psql -X -q -At -v ON_ERROR_STOP=1 -U umrah -d umrah_connects -f - < runtime-role.sql   # negative: no password in the environment
+Set UC_RUNTIME_PASSWORD (read from the environment, never printed)
+psql:<stdin>:39: ERROR:  UC_RUNTIME_PASSWORD is not set
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+[exit 3]
+
+$ UC_RUNTIME_LOGIN=umrah UC_RUNTIME_PASSWORD=<throwaway> compose exec -T -e UC_RUNTIME_LOGIN -e UC_RUNTIME_PASSWORD uc-postgres psql … -f - < runtime-role.sql   # negative: the owner as the API login
+Refusing: UC_RUNTIME_LOGIN names the owner of the schema/tables (or the role running this script); use a dedicated login
+psql:<stdin>:54: ERROR:  UC_RUNTIME_LOGIN must be a dedicated role, not the owner
+CONTEXT:  PL/pgSQL function inline_code_block line 1 at RAISE
+[exit 3]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d umrah_connects -c "SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'umrah'"   # the owner is untouched
+umrah|t|t
+[exit 0]
+
+$ ./scripts/runtime-role.sh   # idempotent re-run (what an operator runs after a manual restore)
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+psql:<stdin>:80: NOTICE:  role "uc_app" has already been granted membership in role "uc_app_runtime" by role "umrah"
+17:30:08Z runtime login uc_app: not superuser, no BYPASSRLS, owns nothing
+[exit 0]
+
+$ compose logs uc-postgres | grep -ci 'PASSWORD'   # the ALTER ROLE … PASSWORD statement never reached the server log
+2
+[exit 0]
+
+$ compose logs uc-postgres | grep -i password (values masked); grep -c <APP_DB_PASSWORD>; grep -c <POSTGRES_PASSWORD>   # only the 'not set' error mentions the word; neither password value is in the log
+uc-postgres-1  | 2026-09-19 17:30:06.518 UTC [289] ERROR:  UC_RUNTIME_PASSWORD is not set
+uc-postgres-1  | 2026-09-19 17:30:06.518 UTC [289] STATEMENT:  DO $$ BEGIN RAISE EXCEPTION 'UC_RUNTIME_PASSWORD is not set'; END $$;
+APP_DB_PASSWORD value in log: 0
+POSTGRES_PASSWORD value in log: 0
+[exit 0]
+
+$ compose run --rm uc-api sync-rbac   # as the runtime login (explicit system scope)
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-api-run-0abcd726ce06 Creating 
+ Container uc-fx2-deploy-uc-api-run-0abcd726ce06 Created 
+RBAC synced. OPERATOR_ADMIN granted to 0 legacy admin(s); 0 traveler(s) received PILGRIM.
+[exit 0]
+
+$ PLATFORM_ADMIN_EMAIL=root@rehearsal.test PLATFORM_ADMIN_PASSWORD=<throwaway> compose run --rm -e PLATFORM_ADMIN_EMAIL -e PLATFORM_ADMIN_PASSWORD uc-api bootstrap-admin
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-api-run-cad3addb576a Creating 
+ Container uc-fx2-deploy-uc-api-run-cad3addb576a Created 
+Super Admin ready: root@rehearsal.test (platform organization 7186538f-c97b-47d0-bdb1-1989afcd67da)
+[exit 0]
+
+$ curl login as the bootstrapped Super Admin through the API (runtime login) — HTTP status only
+HTTP 200
+[exit 0]
+
+$ compose run --rm uc-migrate status   # migration status needs the owner
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-migrate-run-f276ef8a3e64 Creating 
+ Container uc-fx2-deploy-uc-migrate-run-f276ef8a3e64 Created 
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "umrah_connects", schemas "audit, core, marketplace, plugin_booking, plugin_crm, plugin_finance, plugin_group_ops, plugin_hotel, plugin_portal, plugin_reporting, plugin_transport, plugin_visa, social" at "uc-postgres:5432"
+
+9 migrations found in prisma/migrations
+
+Database schema is up to date!
+[exit 0]
+
+$ ALLOW_LOCAL_ONLY_BACKUP=1 ./scripts/pg-backup.sh
+17:31:08Z dumping database umrah_connects
+17:31:09Z local backup ok: $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump (300K, 79 tables, sha256 recorded)
+OFFSITE BACKUP FAILED: rclone is not installed (apt install rclone)
+The local backup $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump is complete; only its off-site copy is missing.
+[exit 3]
+
+$ compose exec -T uc-postgres pg_restore --list < <dump> | grep -c 'uc_app_runtime'   # the dump's privileges name the runtime group
+0
+[exit 1]
+
+$ compose exec -T uc-postgres psql -U umrah -d umrah_connects -c "DELETE FROM plugin_transport.vehicles WHERE plate_number = 'PLATE-B'"   # damage after the backup
+DELETE 1
+[exit 0]
+
+$ printf 'umrah_connects\n' | ./scripts/pg-restore.sh <dump> replace
+17:31:10Z dump ok: checksum verified, archive lists 79 tables
+This REPLACES database umrah_connects with $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump.
+Everything written after that dump was taken is lost.
+17:31:10Z safety backup of the current state
+17:31:10Z dumping database umrah_connects
+17:31:10Z local backup ok: $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173110Z.dump (300K, 79 tables, sha256 recorded)
+OFFSITE BACKUP FAILED: rclone is not installed (apt install rclone)
+The local backup $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173110Z.dump is complete; only its off-site copy is missing.
+ERROR: the safety backup failed; nothing was changed (set SKIP_SAFETY_BACKUP=1 only if the current database is unrecoverable)
+[exit 1]
+
+$ compose exec -T uc-api curl -sS http://127.0.0.1:4000/api/v1/health/ready   # after the restore
+{"status":"ready","rowLevelSecurity":"enforced","timestamp":"2026-09-19T17:31:10.766Z"}[exit 0]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d umrah_connects -c "SELECT usename, count(*) FROM pg_stat_activity WHERE datname='umrah_connects' AND pid <> pg_backend_pid() GROUP BY 1"; … vehicles by company
+uc_app|1
+probe-a|PLATE-A
+[exit 0]
+
+$ (clone updated to 073f0c6: pg-restore.sh accepts exit 3 from its safety backup) compose exec -T uc-postgres pg_restore -f - < <dump> | grep -c 'TO uc_app_runtime'   # the dump's privileges name the runtime group
+117
+[exit 0]
+
+$ printf 'umrah_connects\n' | ./scripts/pg-restore.sh <dump taken before the damage> replace
+17:31:59Z dump ok: checksum verified, archive lists 79 tables
+This REPLACES database umrah_connects with $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump.
+Everything written after that dump was taken is lost.
+17:31:59Z safety backup of the current state
+17:31:59Z dumping database umrah_connects
+17:32:00Z local backup ok: $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173159Z.dump (300K, 79 tables, sha256 recorded)
+OFFSITE BACKUP FAILED: rclone is not installed (apt install rclone)
+The local backup $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173159Z.dump is complete; only its off-site copy is missing.
+WARNING: the safety backup is complete locally but its off-site copy failed; continuing
+ Container uc-fx2-deploy-uc-api-1 Stopping 
+ Container uc-fx2-deploy-uc-api-1 Stopped 
+psql:<stdin>:80: NOTICE:  role "uc_app" has already been granted membership in role "uc_app_runtime" by role "umrah"
+17:32:01Z runtime login uc_app: not superuser, no BYPASSRLS, owns nothing
+psql:<stdin>:80: NOTICE:  role "uc_app" has already been granted membership in role "uc_app_runtime" by role "umrah"
+17:32:02Z runtime login uc_app: not superuser, no BYPASSRLS, owns nothing
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Container uc-fx2-deploy-uc-api-1 Recreate 
+ Container uc-fx2-deploy-uc-api-1 Recreated 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-api-1 Starting 
+ Container uc-fx2-deploy-uc-api-1 Started 
+17:32:03Z database umrah_connects replaced from $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump; runtime login re-applied; uc-api restarted
+[exit 0]
+
+$ compose exec -T uc-api curl -sS http://127.0.0.1:4000/api/v1/health/ready   # after the restore
+{"status":"ready","rowLevelSecurity":"enforced","timestamp":"2026-09-19T17:32:06.076Z"}[exit 0]
+
+$ owner: API connections by user; vehicles by company (PLATE-B is back)
+uc_app|1
+probe-a|PLATE-A
+probe-b|PLATE-B
+[exit 0]
+
+$ compose down && docker volume rm uc-fx2-deploy_pgdata && compose up -d --wait uc-postgres   # a new host: empty cluster
+ Container uc-fx2-deploy-uc-api-1 Stopping 
+ Container uc-fx2-deploy-uc-api-1 Stopped 
+ Container uc-fx2-deploy-uc-api-1 Removing 
+ Container uc-fx2-deploy-uc-api-1 Removed 
+ Container uc-fx2-deploy-uc-postgres-1 Stopping 
+ Container uc-fx2-deploy-uc-postgres-1 Stopped 
+ Container uc-fx2-deploy-uc-postgres-1 Removing 
+ Container uc-fx2-deploy-uc-postgres-1 Removed 
+ Network uc-fx2-deploy_uc-edge Removing 
+ Network uc-fx2-deploy_uc-backend Removing 
+ Network uc-fx2-deploy_uc-edge Removed 
+ Network uc-fx2-deploy_uc-backend Removed 
+uc-fx2-deploy_pgdata
+ Network uc-fx2-deploy_uc-backend Creating 
+ Volume uc-fx2-deploy_pgdata Creating 
+ Volume uc-fx2-deploy_pgdata Creating 
+ Network uc-fx2-deploy_uc-backend Creating 
+ Volume uc-fx2-deploy_pgdata Created 
+ Volume uc-fx2-deploy_pgdata Created 
+ Network uc-fx2-deploy_uc-backend Created 
+ Network uc-fx2-deploy_uc-backend Created 
+ Container uc-fx2-deploy-uc-postgres-1 Creating 
+ Container uc-fx2-deploy-uc-postgres-1 Created 
+ Container uc-fx2-deploy-uc-postgres-1 Starting 
+ Container uc-fx2-deploy-uc-postgres-1 Started 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+[exit 0]
+
+$ compose exec -T uc-postgres psql -X -At -U umrah -d postgres -c "SELECT count(*) FROM pg_roles WHERE rolname IN ('uc_app_runtime','uc_app')"   # no runtime roles on the new cluster
+0
+[exit 0]
+
+$ compose exec -T uc-postgres createdb -U umrah old_flow_check && compose exec -T uc-postgres pg_restore -U umrah -d old_flow_check --no-owner --exit-on-error < <dump>   # the pre-fx2 replace step on a new host
+pg_restore: error: could not execute query: ERROR:  role "uc_app_runtime" does not exist
+Command was: GRANT USAGE ON SCHEMA audit TO uc_app_runtime;
+
+
+[exit 1]
+
+$ compose exec -T uc-postgres dropdb -U umrah old_flow_check
+[exit 0]
+
+$ printf 'umrah_connects\n' | SKIP_SAFETY_BACKUP=1 ./scripts/pg-restore.sh <dump> replace   # new host: nothing to protect
+17:32:41Z dump ok: checksum verified, archive lists 79 tables
+This REPLACES database umrah_connects with $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump.
+Everything written after that dump was taken is lost.
+WARNING: SKIP_SAFETY_BACKUP=1: no safety copy of the current state
+17:32:42Z runtime login uc_app: not superuser, no BYPASSRLS, owns nothing
+psql:<stdin>:80: NOTICE:  role "uc_app" has already been granted membership in role "uc_app_runtime" by role "umrah"
+17:32:43Z runtime login uc_app: not superuser, no BYPASSRLS, owns nothing
+ Container uc-fx2-deploy-uc-postgres-1 Running 
+ Network uc-fx2-deploy_uc-edge Creating 
+ Network uc-fx2-deploy_uc-edge Creating 
+ Network uc-fx2-deploy_uc-edge Created 
+ Network uc-fx2-deploy_uc-edge Created 
+ Container uc-fx2-deploy-uc-api-1 Creating 
+ Container uc-fx2-deploy-uc-api-1 Created 
+ Container uc-fx2-deploy-uc-postgres-1 Waiting 
+ Container uc-fx2-deploy-uc-postgres-1 Healthy 
+ Container uc-fx2-deploy-uc-api-1 Starting 
+ Container uc-fx2-deploy-uc-api-1 Started 
+17:32:44Z database umrah_connects replaced from $TMPDIR/uc-fx2/rehearsal/backups/daily/umrah_connects-20260919T173108Z.dump; runtime login re-applied; uc-api restarted
+[exit 0]
+
+$ compose exec -T uc-api curl -sS http://127.0.0.1:4000/api/v1/health/ready
+{"status":"ready","rowLevelSecurity":"enforced","timestamp":"2026-09-19T17:32:47.012Z"}[exit 0]
+
+$ owner: roles, API connections by user, vehicles by company
+uc_app|f|f|t
+uc_app_runtime|f|f|f
+uc_app|1
+probe-a|PLATE-A
+probe-b|PLATE-B
+[exit 0]
+
+$ (after the new-host restore) compose exec -T -e PGPASSWORD uc-postgres psql -X -h 127.0.0.1 -U uc_app -d umrah_connects   # cross-tenant probe again
+ visible_without_scope 
+-----------------------
+                     0
+(1 row)
+
+BEGIN
+ scoped | tenant_set 
+--------+------------
+ t      | t
+(1 row)
+
+ plate_number 
+--------------
+ PLATE-A
+(1 row)
+
+UPDATE 0
+ERROR:  new row violates row-level security policy for table "vehicles"
+ROLLBACK
+[exit 0]
+
+$ compose down -v   # containers, networks and volumes of uc-fx2-deploy
+ Container uc-fx2-deploy-uc-api-1 Stopping 
+ Container uc-fx2-deploy-uc-api-1 Stopped 
+ Container uc-fx2-deploy-uc-api-1 Removing 
+ Container uc-fx2-deploy-uc-api-1 Removed 
+ Container uc-fx2-deploy-uc-postgres-1 Stopping 
+ Container uc-fx2-deploy-uc-postgres-1 Stopped 
+ Container uc-fx2-deploy-uc-postgres-1 Removing 
+ Container uc-fx2-deploy-uc-postgres-1 Removed 
+ Volume uc-fx2-deploy_uploads Removing 
+ Volume uc-fx2-deploy_pgdata Removing 
+ Network uc-fx2-deploy_uc-edge Removing 
+ Network uc-fx2-deploy_uc-backend Removing 
+ Volume uc-fx2-deploy_uploads Removed 
+ Network uc-fx2-deploy_uc-edge Removed 
+ Volume uc-fx2-deploy_pgdata Removed 
+ Network uc-fx2-deploy_uc-backend Removed 
+[exit 0]
+
+$ docker network rm uc-fx2-proxy
+uc-fx2-proxy
+[exit 0]
+
+$ docker rmi umrah-connect-api:current umrah-connect-api:137ce9e03463 (tags created by this rehearsal)
+Untagged: umrah-connect-api:current
+Untagged: umrah-connect-api:137ce9e03463
+[exit 0]
+
+$ docker ps -a --filter name=uc-fx2 --format '{{.Names}}'; docker volume ls -q --filter name=uc-fx2; docker network ls -q --filter name=uc-fx2; docker images umrah-connect-api --format '{{.Repository}}:{{.Tag}}'
+umrah-connect-api:core-check
+[exit 0]

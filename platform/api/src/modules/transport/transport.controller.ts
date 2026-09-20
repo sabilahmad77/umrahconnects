@@ -120,14 +120,16 @@ export class TransportController {
   }
 
   // ── Assignments / Bookings ──────────────────────────────────────────
+  // Viewing trips is `transport:vehicle:read` ("View vehicles, drivers, routes and trips" in the
+  // catalogue); booking, changing and cancelling them stays on `transport:assignment:manage`.
   @Get('assignments')
-  @RequirePermissions('transport:assignment:manage')
+  @RequirePermissions('transport:vehicle:read')
   async findAssignments(@TenantId() tenantId: string, @Query() query: QueryAssignmentsDto) {
     return { success: true, data: await this.service.findAssignments(tenantId, query) };
   }
 
   @Get('assignments/:id')
-  @RequirePermissions('transport:assignment:manage')
+  @RequirePermissions('transport:vehicle:read')
   async findAssignmentById(@TenantId() tenantId: string, @Param('id', ParseUUIDPipe) id: string) {
     return { success: true, data: await this.service.findAssignmentById(tenantId, id) };
   }
@@ -152,7 +154,7 @@ export class TransportController {
 
   // Bookings = assignments — alias for readability
   @Get('bookings')
-  @RequirePermissions('transport:assignment:manage')
+  @RequirePermissions('transport:vehicle:read')
   async findBookings(@TenantId() tenantId: string, @Query() query: QueryAssignmentsDto) {
     return { success: true, data: await this.service.findAssignments(tenantId, query) };
   }

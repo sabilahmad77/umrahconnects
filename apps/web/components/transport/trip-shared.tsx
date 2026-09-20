@@ -189,7 +189,7 @@ export function TripModal({ trip, onClose }: { trip?: any; onClose: () => void }
             <FormField label="Notes" full>{(p) => <Textarea {...p} rows={2} value={form.notes} onChange={set('notes')} />}</FormField>
           </div>
         )}
-        <p className="text-xs text-gray-600 mt-3">Payment status is not set here: it follows the payments recorded in Finance.</p>
+        <p className="text-xs text-gray-600 mt-3">Trips do not track payments: bill customers with an invoice in Finance, where the money is recorded.</p>
         <ModalFooter onClose={onClose} pending={pending} cta={trip ? 'Save trip' : 'Schedule trip'} />
       </form>
     </ModalSurface>

@@ -52,13 +52,19 @@ case "$MODE_FILE" in
 esac
 
 # 3. Required values and their shape (names only in the output).
-required="POSTGRES_PASSWORD JWT_SECRET API_DOMAIN WEB_URL CORS_ORIGINS OFFSITE_REMOTE"
+required="POSTGRES_PASSWORD APP_DB_USER APP_DB_PASSWORD JWT_SECRET API_DOMAIN WEB_URL CORS_ORIGINS OFFSITE_REMOTE"
 [ "$MODE" = bundled ] && required="$required ACME_EMAIL"
 for k in $required; do
   check "$k is set" [ -n "$(env_get "$k")" ]
 done
 check "POSTGRES_PASSWORD is URL-safe and at least 24 characters (openssl rand -hex 32)" \
   eval 'printf "%s" "$(env_get POSTGRES_PASSWORD)" | grep -Eq "^[A-Za-z0-9._~-]{24,}$"'
+# R05: the API's login must be a dedicated role (runtime-role.sql refuses the owner; pg_ names are reserved).
+check "APP_DB_USER is a plain role name (a-z 0-9 _), not POSTGRES_USER, postgres, uc_app_runtime or pg_*" \
+  eval 'u="$(env_get APP_DB_USER)"; o="$(env_get POSTGRES_USER)"; printf "%s" "$u" | grep -Eq "^[a-z_][a-z0-9_]{0,62}$" &&
+    [ "$u" != "${o:-umrah}" ] && [ "$u" != postgres ] && [ "$u" != uc_app_runtime ] && [ "${u#pg_}" = "$u" ]'
+check "APP_DB_PASSWORD is URL-safe, at least 24 characters and not the owner password (openssl rand -hex 32)" \
+  eval 'p="$(env_get APP_DB_PASSWORD)"; printf "%s" "$p" | grep -Eq "^[A-Za-z0-9._~-]{24,}$" && [ "$p" != "$(env_get POSTGRES_PASSWORD)" ]'
 check "JWT_SECRET is at least 32 characters" eval '[ "$(env_get JWT_SECRET | wc -c)" -gt 32 ]'
 check "no template placeholder (<…>) is left in a value" eval '! grep -E "^[A-Z0-9_]+=.*<[a-z-]+>" "$ENV_FILE" >/dev/null'
 check "no setting points at Render (onrender.com / render.com) — Render is retired" \

@@ -95,3 +95,14 @@ export class TenantKycSubmissionDto {
   @Type(() => KycDocumentRefDto)
   documents!: KycDocumentRefDto[];
 }
+
+/** Platform takedown of a marketplace listing (F2): the reason is shown to the listing's owner. */
+export class TakeDownListingDto {
+  @IsString() @MinLength(3, { message: 'Give the seller a reason of at least 3 characters' }) @MaxLength(500)
+  reason!: string;
+}
+
+/** Legacy DELETE /admin/listings/:id: the reason is optional there. */
+export class RemoveListingDto {
+  @IsOptional() @IsString() @MinLength(3) @MaxLength(500) reason?: string;
+}

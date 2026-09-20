@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Deploy a reviewed commit of main:
-#   preflight → build → configuration check → backup → migrate → start → health check → tag :current
-#   (or roll the API container back to :previous).
+#   preflight → build → configuration check → backup → migrate (owner) → runtime login (R05) → start →
+#   health check → tag :current (or roll the API container back to :previous).
 #   scripts/deploy.sh <git-sha>
 # Migrations run once, as their own step, after the backup — never on container start. They are additive,
-# so the previous image keeps working against the migrated schema (README: Rollback).
+# so the previous image keeps working against the migrated schema (README: Rollback). They run in the one-off
+# uc-migrate container as the database owner; the API itself only ever connects as APP_DB_USER, the restricted
+# runtime login that platform/api/prisma/rls/runtime-role.sql creates/updates right after the migrations
+# (Row-Level Security, docs/control-tower/RLS.md). /health/ready fails if the API's login could bypass RLS.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . scripts/lib.sh
@@ -52,8 +55,11 @@ else
   esac
 fi
 
-log "migrating"
-API_IMAGE="$TAG" compose run --rm uc-api migrate
+log "migrating (uc-migrate, as the database owner)"
+API_IMAGE="$TAG" compose run --rm uc-migrate
+log "runtime database login"
+apply_runtime_role "$REPO" ||
+  die "the runtime database login could not be set up; the running API was not touched (the migrations are applied — README: Rollback)"
 
 if docker image inspect umrah-connect-api:current >/dev/null 2>&1; then
   docker tag umrah-connect-api:current umrah-connect-api:previous

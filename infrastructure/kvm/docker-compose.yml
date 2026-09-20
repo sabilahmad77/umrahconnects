@@ -2,17 +2,23 @@
 # The HTTPS entry point is added by exactly one proxy-mode file, selected with COMPOSE_FILE in .env.production:
 #   docker-compose.bundled-proxy.yml  this stack's own Caddy owns the host's :80/:443 (dedicated host)
 #   docker-compose.shared-proxy.yml   an existing reverse proxy on the host serves several projects
-# Run every command from this directory:
+# Run every command from this directory (scripts/deploy.sh does all of it):
 #   docker compose --env-file .env.production config -q        # validate
-#   docker compose --env-file .env.production run --rm uc-api migrate
+#   docker compose --env-file .env.production run --rm uc-migrate    # migrations, as the database owner
 #   docker compose --env-file .env.production up -d
+#
+# Database roles (R05, docs/control-tower/RLS.md): Row-Level Security binds the API only when it is not a
+# superuser, not BYPASSRLS and not the table owner.
+#   POSTGRES_USER  owner (superuser of this cluster): migrations (uc-migrate), backups, restores, the role script.
+#   APP_DB_USER    the API's login, a member of uc_app_runtime (platform/api/prisma/rls/runtime-role.sql, applied
+#                  by scripts/deploy.sh). uc-api connects only as this login and never receives the owner password.
 #
 # Coexistence with other projects on the same host:
 #   - Everything is namespaced by the project name below: containers umrah-connect-uc-<service>-1,
 #     volumes umrah-connect_<volume>, networks umrah-connect_<network>.
 #   - Service names carry the uc- prefix because a service name is also a DNS name on every network the
 #     service joins; a shared proxy network must never see two projects' "api" or "postgres".
-#   - This file publishes no host port at all. PostgreSQL is reachable only from uc-api on an internal
+#   - This file publishes no host port at all. PostgreSQL is reachable only from uc-api (and the one-off uc-migrate) on an internal
 #     network without internet access; operators use `docker compose exec uc-postgres …`.
 name: umrah-connect
 
@@ -70,7 +76,12 @@ services:
       NODE_ENV: production
       PORT: 4000
       TRUST_PROXY: "1"
-      DATABASE_URL: postgresql://${POSTGRES_USER:-umrah}:${POSTGRES_PASSWORD}@uc-postgres:5432/${POSTGRES_DB:-umrah_connects}?schema=public&connection_limit=${API_DB_CONNECTION_LIMIT:-20}
+      # The restricted runtime login (R05): Row-Level Security applies to every query of the API, and
+      # /api/v1/health/ready answers 503 if this login is ever a superuser, BYPASSRLS or an owner.
+      DATABASE_URL: postgresql://${APP_DB_USER:?APP_DB_USER is required}:${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}@uc-postgres:5432/${POSTGRES_DB:-umrah_connects}?schema=public&connection_limit=${API_DB_CONNECTION_LIMIT:-20}
+      # env_file passes every line of .env.production; blank the owner's password so the running API (and
+      # every one-off command run in this service) never holds it. Only uc-postgres and uc-migrate get it.
+      POSTGRES_PASSWORD: ""
     depends_on:
       uc-postgres:
         condition: service_healthy
@@ -85,6 +96,29 @@ services:
       # proxy reaches it. The alias is the one upstream name every proxy mode uses.
       uc-edge:
         aliases: [umrah-connect-api]
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    logging: *logging
+
+  # One-off: `prisma migrate deploy` (or `status`, or another prisma command) as the database owner. Only
+  # scripts/deploy.sh and operators run it (`run --rm uc-migrate [status]`); profile "tools" keeps `up` from
+  # ever starting it. It gets the owner URL and nothing else from .env.production, and no internet access.
+  uc-migrate:
+    image: ${API_IMAGE:-umrah-connect-api:current}
+    profiles: [tools]
+    command: ["migrate"]
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-umrah}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@uc-postgres:5432/${POSTGRES_DB:-umrah_connects}?schema=public
+    depends_on:
+      uc-postgres:
+        condition: service_healthy
+    networks: [uc-backend]
     read_only: true
     tmpfs:
       - /tmp

@@ -233,7 +233,11 @@ export class ConnectionsService {
     };
   }
 
-  /** Returns status of the connection between current user and target. */
+  /**
+   * Returns status of the connection between current user and target. A block is reported to both
+   * parties as UNAVAILABLE — no direction, no id — so neither side learns who blocked whom (same
+   * answer as the people directory in SocialService).
+   */
   async status(currentUserId: string, otherUserId: string) {
     if (currentUserId === otherUserId) return { status: 'SELF' };
     const c = await this.prisma.connection.findFirst({
@@ -245,6 +249,7 @@ export class ConnectionsService {
       },
     });
     if (!c) return { status: 'NONE' };
+    if (c.status === 'BLOCKED') return { status: 'UNAVAILABLE' };
     const direction = c.requesterId === currentUserId ? 'OUTGOING' : 'INCOMING';
     return { status: c.status, direction, connectionId: c.id };
   }

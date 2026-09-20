@@ -16,7 +16,7 @@ import { ReadOnlyNotice } from '@/components/dashboard/read-only-notice';
 import { downloadCsv } from '@/components/dashboard/csv';
 import { cn } from '@/lib/utils';
 import { FormField } from './hotel-form';
-import { BookingStatusBadge, ModalFooter, ModalHeader, PaymentBadge, humanize, sar, shortDate } from './hotel-ui';
+import { BookingStatusBadge, ModalFooter, ModalHeader, humanize, sar, shortDate } from './hotel-ui';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -68,10 +68,10 @@ export function HotelBookingsView() {
   };
 
   const exportCsv = () => downloadCsv(`hotel-bookings-${today()}.csv`, [
-    ['Guest', 'Email', 'Phone', 'Hotel', 'Room', 'Check-in', 'Check-out', 'Guests', 'Source', 'Status', 'Payment', 'Amount'],
+    ['Guest', 'Email', 'Phone', 'Hotel', 'Room', 'Check-in', 'Check-out', 'Guests', 'Source', 'Status', 'Amount'],
     ...filtered.map((b: any) => [
       b.guestName, b.guestEmail ?? '', b.guestPhone ?? '', b.hotel?.name ?? '', b.room?.roomNumber ?? '',
-      b.checkIn?.slice(0, 10) ?? '', b.checkOut?.slice(0, 10) ?? '', b.guests, b.source, b.status, b.paymentStatus,
+      b.checkIn?.slice(0, 10) ?? '', b.checkOut?.slice(0, 10) ?? '', b.guests, b.source, b.status,
       (b.totalAmountCents / 100).toFixed(2),
     ]),
   ]);
@@ -94,7 +94,7 @@ export function HotelBookingsView() {
       </div>
 
       {ready && !canManage && <ReadOnlyNotice>You can view bookings. Recording and moving bookings needs the hotel management permission.</ReadOnlyNotice>}
-      <p className="text-xs text-gray-600">Payment status is read-only here: it follows the payments recorded in Finance.</p>
+      <p className="text-xs text-gray-600">Bookings do not track payments: bill guests with an invoice in Finance, where the money is recorded.</p>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2 bg-white border border-gray-500 rounded-xl px-3 py-2.5 w-full sm:w-72">
@@ -124,7 +124,7 @@ export function HotelBookingsView() {
               <thead className="text-xs text-gray-600 bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="text-left p-3">Guest</th><th className="text-left p-3">Hotel / room</th><th className="text-left p-3">Stay</th>
-                  <th className="text-left p-3">Amount</th><th className="text-left p-3">Payment</th><th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Amount</th><th className="text-left p-3">Status</th>
                   {canManage && <th className="text-left p-3">Next step</th>}
                 </tr>
               </thead>
@@ -142,7 +142,6 @@ export function HotelBookingsView() {
                     </td>
                     <td className="p-3 text-xs text-gray-700 whitespace-nowrap">{shortDate(b.checkIn)} → {shortDate(b.checkOut)}</td>
                     <td className="p-3 font-medium whitespace-nowrap">{sar(b.totalAmountCents, b.currency)}</td>
-                    <td className="p-3"><PaymentBadge status={b.paymentStatus} /></td>
                     <td className="p-3"><BookingStatusBadge status={b.status} /></td>
                     {canManage && (
                       <td className="p-3">

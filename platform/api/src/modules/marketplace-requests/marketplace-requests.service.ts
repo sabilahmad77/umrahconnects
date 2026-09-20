@@ -13,6 +13,9 @@ import { RbacService } from '../rbac/rbac.service';
 import { COMMUNITY_TENANT_SLUG } from '../rbac/catalog';
 import { findOwned } from '../../common/tenant-scope';
 import type { Principal } from '../auth/principal';
+import { assertNotPlatformAccount, listingCapacity, PUBLIC_LISTING } from '../marketplace/listing-rules';
+import { MAX_PARTY_SIZE } from '../marketplace/dto/marketplace.dto';
+import { checkTrip, recountSeats, withoutUntrackedPayment } from '../transport/transport-workflow';
 import { ConvertOfferDto, CreateMarketplaceRequestDto, CreateOfferDto } from './dto/marketplace-requests.dto';
 
 /** Request states in which providers may browse and make offers. */
@@ -49,11 +52,16 @@ export class MarketplaceRequestsService {
   ) {}
 
   // ─── Traveler-side: create a request ────────────────────────────────────
-  async create(tenantId: string, travelerUserId: string, dto: CreateMarketplaceRequestDto) {
+  async create(tenantId: string, author: Principal, dto: CreateMarketplaceRequestDto) {
+    assertNotPlatformAccount(author);
+    const travelerUserId = author.sub;
     // Accept either `serviceType` (Prisma field) or `category` (legacy/UI form field)
     const serviceType = dto.serviceType ?? dto.category;
     if (!serviceType) {
       throw new BadRequestException('serviceType (or category) is required');
+    }
+    if (dto.dateFrom && dto.dateTo && dto.dateTo.slice(0, 10) < dto.dateFrom.slice(0, 10)) {
+      throw new BadRequestException('dateTo cannot be before dateFrom');
     }
     const created = await this.prisma.marketplaceRequest.create({
       data: {
@@ -299,9 +307,15 @@ export class MarketplaceRequestsService {
   /**
    * Convert an accepted offer into a concrete booking record. Only the requester may convert,
    * only the ACCEPTED offer of the request, and only once. Everything is created inside the
-   * PROVIDER's organization, from the provider's own vehicles / routes / listings.
-   * - HOTEL / OTHER / PACKAGE → ListingBooking against the provider's vendor listing
-   * - TRANSPORT → TransportAssignment (requires a vehicle of the provider)
+   * PROVIDER's organization, from the provider's own vehicles / routes / listings, through the
+   * same availability rules as the provider's own screens (F14):
+   * - HOTEL / OTHER / PACKAGE → ListingBooking. A chosen listing must be live on the
+   *   marketplace (published, not taken down, seller in good standing) and hold the party
+   *   (its capacity, as for a direct booking). Listings carry no room inventory — the
+   *   provider assigns rooms in its hotel workflow — so there is no room to double-book here.
+   * - TRANSPORT → TransportAssignment, checked and counted by the transport workflow
+   *   (vehicle active and large enough, route selling with seats left, no vehicle clash),
+   *   with the vehicle and route rows locked so parallel bookings cannot oversell.
    * - VISA → VisaApplication in the provider's organization
    */
   // R05: the traveler's request creates rows in the PROVIDER organization (transport assignment,
@@ -350,11 +364,22 @@ export class MarketplaceRequestsService {
     let chosenListing: { id: string } | null = null;
     if (isListingType && dto.listingId) {
       if (!vendor) throw new NotFoundException('Listing not found');
-      chosenListing = await this.prisma.listing.findFirst({
-        where: { id: dto.listingId, vendor: { tenantId: providerTenantId } },
-        select: { id: true },
+      // The same listings a traveler could book directly: live, not taken down, the provider's own.
+      const live = await this.prisma.listing.findFirst({
+        where: { AND: [PUBLIC_LISTING, { id: dto.listingId, vendor: { tenantId: providerTenantId } }] },
+        select: { id: true, attributes: true },
       });
-      if (!chosenListing) throw new NotFoundException('Listing not found');
+      if (!live) throw new NotFoundException('Listing not found');
+      const partySize = req.travelers ?? 1;
+      const capacity = listingCapacity(live.attributes);
+      const maxParty = capacity != null ? Math.min(capacity, MAX_PARTY_SIZE) : MAX_PARTY_SIZE;
+      if (partySize > maxParty) {
+        throw new BadRequestException(`This listing takes at most ${maxParty} people; the request is for ${partySize}`);
+      }
+      chosenListing = { id: live.id };
+    }
+    if (isListingType && req.dateFrom && req.dateTo && req.dateTo < req.dateFrom) {
+      throw new BadRequestException("The request's end date is before its start date");
     }
 
     if (isListingType && !vendor) {
@@ -385,22 +410,33 @@ export class MarketplaceRequestsService {
       let kind: string;
       if (req.serviceType === 'TRANSPORT') {
         kind = 'TRANSPORT_ASSIGNMENT';
+        const trip = {
+          vehicleId: dto.vehicleId!,
+          driverId: null,
+          routeId: dto.routeId ?? null,
+          scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : (req.dateFrom ?? new Date()),
+          seats: dto.passengerCount ?? req.travelers ?? 1,
+        };
+        // The transport workflow's own checks, on locked vehicle / route rows (F14).
+        await checkTrip(tx, providerTenantId, trip, { vehicleChanged: true, driverChanged: true, routeChanged: true, clashes: true });
         created = await tx.transportAssignment.create({
           data: {
             tenantId: providerTenantId,
-            vehicleId: dto.vehicleId!,
-            routeId: dto.routeId,
+            vehicleId: trip.vehicleId,
+            routeId: trip.routeId ?? undefined,
             customerType: 'PLATFORM_USER',
             customerName: 'Traveler',
-            scheduledAt: dto.scheduledAt ? new Date(dto.scheduledAt) : (req.dateFrom ?? new Date()),
-            passengerCount: dto.passengerCount ?? req.travelers ?? 1,
+            scheduledAt: trip.scheduledAt,
+            passengerCount: trip.seats,
             priceCents: BigInt(offer.priceCents),
             currency: offer.currency,
-            paymentStatus: 'UNPAID',
             status: 'CONFIRMED',
             notes: dto.notes ?? offer.description,
           },
         });
+        // Seat counters and FULLY_BOOKED follow the trips, exactly as for a trip booked by the provider.
+        await recountSeats(tx, providerTenantId, [created.vehicleId], [created.routeId]);
+        created = { ...withoutUntrackedPayment(created), priceCents: Number(created.priceCents) };
       } else if (isListingType) {
         kind = 'LISTING_BOOKING';
         let listing: { id: string } | null = chosenListing;
@@ -456,13 +492,12 @@ export class MarketplaceRequestsService {
             requiredDocuments: ['PASSPORT', 'PHOTO'],
             priceCents: BigInt(offer.priceCents),
             currency: offer.currency,
-            paymentStatus: 'UNPAID',
             notes: dto.notes ?? offer.description,
             documents: [],
             timeline: [{ at: new Date().toISOString(), event: 'CREATED_FROM_REQUEST', requestId }],
           },
         });
-        created = { ...visa, priceCents: Number((visa as any).priceCents) };
+        created = { ...withoutUntrackedPayment(visa), priceCents: Number((visa as any).priceCents) };
       }
 
       await tx.marketplaceRequest.update({

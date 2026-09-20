@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/system';
 import { ConfirmDialog, type ConfirmSpec } from '@/components/ui/confirm-dialog';
 import { PaymentGatewayPanel } from './payment-gateway-panel';
-import { RefundDialog, isGatewayPayment, refundableCents } from './refund-dialog';
+import { RefundDialog, isGatewayPayment, isHeldForRefund, refundableCents } from './refund-dialog';
 import { amountProblem, centsToInput, formatAmount, parseMajorToCents } from './money';
 import { tablistKeys } from '@/components/ui/tablist';
 
@@ -483,9 +483,9 @@ function PaymentsTab({ inv, refetch }: { inv: any; refetch: () => void }) {
                                   : 'bg-gray-100 text-gray-700',
                           )}
                         >
-                          {String(p.status).replace(/_/g, ' ')}
+                          {isHeldForRefund(p) ? 'Refund required' : String(p.status).replace(/_/g, ' ')}
                         </span>
-                        {p.status === 'FAILED' && p.failureReason && (
+                        {(p.status === 'FAILED' || isHeldForRefund(p)) && p.failureReason && (
                           <span className="block text-xs text-gray-600">
                             {String(p.failureReason).replace(/_/g, ' ')}
                           </span>

@@ -101,9 +101,9 @@ export const ROUTE_RULES: Readonly<Record<string, RouteRule>> = {
   '/hotels': { all: ['hotel:allotment:read'] },
   '/hotel-bookings': { all: ['hotel:allotment:read'] },
   '/transport-dashboard': { all: ['transport:vehicle:read'] },
+  // Trips (assignments and their bookings view) are readable with transport:vehicle:read, as in the API
+  // catalogue; the pages show a read-only notice and hide the actions without transport:assignment:manage.
   '/transport': { all: ['transport:vehicle:read'] },
-  '/transport/assignments': { all: ['transport:assignment:manage'] },
-  '/transport/bookings': { all: ['transport:assignment:manage'] },
   '/visa-dashboard': { all: ['visa:application:read'] },
   '/compliance': { all: ['visa:application:read'] },
   '/visa-documents': { all: ['visa:application:read'] },
@@ -113,8 +113,11 @@ export const ROUTE_RULES: Readonly<Record<string, RouteRule>> = {
   // GET /finance/payments is authorized on invoice read; payments.view is the product capability.
   '/finance-payments': { all: ['finance:invoice:read', 'finance:payment:read'] },
   '/budget-plans': { all: ['finance:report:read'] },
-  // Every /reports/* endpoint requires finance:report:read (not reporting:report:read).
-  '/reports': { all: ['finance:report:read'] },
+  // Operational reports (overview, pilgrims, bookings, hotels, visa, transport) are served on
+  // reporting:report:read; only /reports/finance and the money figures need finance:report:read,
+  // and the page hides the sections the account may not read. Requiring the finance capability
+  // here denied the page to visa officers and operator staff the API happily serves.
+  '/reports': { all: ['reporting:report:read'] },
 
   // Marketplace and community.
   '/marketplace': { all: ['marketplace:listing:read'] },

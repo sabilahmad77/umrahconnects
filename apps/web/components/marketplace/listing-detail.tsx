@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, BadgeCheck, CalendarCheck2, Edit3, FileText, ListChecks, MapPin, MessageSquare, Send, Store,
 } from 'lucide-react';
-import { Badge, Button, Input, LoadingState, ModalSurface, QueryFailure, Select, Textarea } from '@/components/ui/system';
+import { Alert, Badge, Button, Input, LoadingState, ModalSurface, QueryFailure, Select, Textarea } from '@/components/ui/system';
 import { tablistKeys } from '@/components/ui/tablist';
 import { apiErrorMessage } from '@/lib/api-error';
 import { bookingTransitions } from '@/lib/booking-transitions';
@@ -31,7 +31,7 @@ import {
 import { ListingMedia } from './listing-visual';
 import { ListingForm } from './listing-form';
 import { ListingStatusActions, STATUS_TONE } from './seller-workspace';
-import { categoryLabel, formatMoney, isDirectlyBookable, listingPriceLabel, PRICING_MODEL_LABEL, STATUS_LABEL } from './listing-rules';
+import { categoryLabel, formatMoney, isDirectlyBookable, isTakenDown, listingPriceLabel, PRICING_MODEL_LABEL, STATUS_LABEL } from './listing-rules';
 
 // ─── Shared pieces ──────────────────────────────────────────────────────────
 
@@ -510,12 +510,22 @@ function OwnerListingView({ listing, canManage, refetch }: { listing: any; canMa
   ];
   return (
     <>
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
-        <p className="text-sm text-gray-700">
-          You manage this listing. {listing.status === 'PUBLISHED' ? 'Travelers can see and book it.' : 'It is not visible to travelers.'}
-        </p>
-        {canManage && <div className="ml-auto"><ListingStatusActions listing={listing} onDone={refetch} size="md" /></div>}
-      </div>
+      {isTakenDown(listing) ? (
+        <Alert title="This listing was taken down by the platform">
+          <p>{listing.moderationReason ? `Reason: ${listing.moderationReason}` : 'No reason was recorded.'}</p>
+          <p className="mt-1">
+            It is hidden from travelers and cannot be published or restored from here. You can still correct its content;
+            contact Umrah Connect support to have it reviewed. Its existing bookings are kept.
+          </p>
+        </Alert>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-sm text-gray-700">
+            You manage this listing. {listing.status === 'PUBLISHED' ? 'Travelers can see and book it.' : 'It is not visible to travelers.'}
+          </p>
+          {canManage && <div className="ml-auto"><ListingStatusActions listing={listing} onDone={refetch} size="md" /></div>}
+        </div>
+      )}
       <div role="tablist" {...tablistKeys()} aria-label="Listing sections" className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200 bg-white p-1.5">
         {tabs.filter((t) => t.show).map((t) => (
           <button
@@ -613,7 +623,12 @@ export function ListingDetail({ id }: { id: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">{listing.name}</h1>
             <Badge>{categoryLabel(listing.type)}</Badge>
-            {isOwner && <Badge tone={STATUS_TONE[listing.status] ?? 'neutral'}>{STATUS_LABEL[listing.status] ?? listing.status}</Badge>}
+            {isOwner &&
+              (isTakenDown(listing) ? (
+                <Badge tone="danger">Taken down by the platform</Badge>
+              ) : (
+                <Badge tone={STATUS_TONE[listing.status] ?? 'neutral'}>{STATUS_LABEL[listing.status] ?? listing.status}</Badge>
+              ))}
           </div>
           <p className="mt-1 text-sm text-gray-600">
             {listing.vendor?.name ? `by ${listing.vendor.name}` : ''}

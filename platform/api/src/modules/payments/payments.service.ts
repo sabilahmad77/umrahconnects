@@ -15,7 +15,12 @@ import { SystemScoped } from '../../prisma/db-context';
 import { AuditService } from '../audit/audit.service';
 import { adjustBookingPaid } from '../bookings/booking-money';
 import { requireId } from '../../common/tenant-scope';
-import { CaptureResult, PaymentProvider, WebhookVerification } from './providers/payment-provider';
+import {
+  CancelResult,
+  CaptureResult,
+  PaymentProvider,
+  WebhookVerification,
+} from './providers/payment-provider';
 import { SandboxProvider } from './providers/sandbox.provider';
 import { StripeProvider } from './providers/stripe.provider';
 
@@ -65,6 +70,41 @@ const CAPTURE_FINAL: PaymentStatus[] = [
 ];
 /** Gateways the payments module drives; everything else is manual bookkeeping. */
 export const PROVIDER_GATEWAYS = new Set(['sandbox', 'stripe']);
+
+/**
+ * `gatewayStatus` of a capture that reached us after the record it paid for was
+ * closed (a cancelled booking, a void invoice). Such money is held as DISPUTED —
+ * never counted towards the record, never reviving it — until it is refunded;
+ * the payment then becomes REFUNDED and keeps this marker as its history.
+ */
+export const CAPTURED_AFTER_CANCEL = 'CAPTURED_AFTER_CANCEL';
+/** Holds whose money was never counted towards what the payment was for. */
+const UNCOUNTED_HOLDS = [CAPTURED_AFTER_CANCEL, 'AMOUNT_MISMATCH'];
+/** Booking states (marketplace and operator) that take no more money. */
+const CLOSED_BOOKING = ['CANCELLED', 'REFUNDED'];
+/** Invoice states that take no more money. */
+const CLOSED_INVOICE = ['VOID', 'CANCELLED'];
+
+/** A captured payment held because what it paid for was closed first; refundable in full. */
+export function isCapturedAfterCancel(p: {
+  status: PaymentStatus | string;
+  gatewayStatus?: string | null;
+  paidAt?: Date | null;
+}): boolean {
+  return (
+    p.status === PaymentStatus.DISPUTED && p.gatewayStatus === CAPTURED_AFTER_CANCEL && !!p.paidAt
+  );
+}
+
+/** Raised inside a serialised section when a provider refuses to cancel an open attempt. */
+class AttemptStillLive extends Error {
+  constructor(
+    readonly payment: Payment,
+    readonly state?: CaptureResult,
+  ) {
+    super('open payment attempt could not be cancelled at the provider');
+  }
+}
 
 /** Payment attempts are serialised per paid record while they are opened or refunded. */
 const LOCKED_TX = { maxWait: 10_000, timeout: 45_000 };
@@ -163,14 +203,18 @@ export class PaymentsService {
     return p;
   }
 
-  /** What the UI shows so nobody assumes a live gateway that isn't there. */
-  providerStatus() {
+  /**
+   * What the UI shows so nobody assumes a live gateway that isn't there. Which
+   * settings are missing is deployment detail: only callers who administer
+   * payments (`withConfigDetail`) see it; everyone else learns configured or not.
+   */
+  providerStatus(withConfigDetail = false) {
     return {
       active: this.defaultProviderName,
       providers: [...this.providers.values()].map((p) => ({
         name: p.name,
         configured: p.isConfigured(),
-        missing: p.missingConfig(),
+        ...(withConfigDetail ? { missing: p.missingConfig() } : {}),
         sandbox: p.name === 'sandbox',
         ...(p.name === 'stripe'
           ? { publishableKey: this.stripe.publishableKey ?? null, testMode: this.stripe.testMode }
@@ -181,8 +225,12 @@ export class PaymentsService {
 
   private requireConfigured(p: PaymentProvider) {
     if (!p.isConfigured()) {
-      throw new ServiceUnavailableException(
+      // The missing setting names go to the server log, never to the caller.
+      this.logger.warn(
         `Payment provider "${p.name}" is not configured. Missing: ${p.missingConfig().join(', ')}`,
+      );
+      throw new ServiceUnavailableException(
+        `Payment provider "${p.name}" is not configured on this deployment`,
       );
     }
   }
@@ -248,6 +296,190 @@ export class PaymentsService {
   /** Row lock on one payment for this transaction (refunds, webhook refund sync, disputes). */
   private async lockPayment(tx: Tx, id: string) {
     await tx.$executeRaw`SELECT 1 FROM plugin_finance.payments WHERE id = ${id}::uuid FOR UPDATE`;
+  }
+
+  /**
+   * The lock a payment's attempts are opened under (`createIntent` / `createCheckout`)
+   * — settling and closing take it too, so a capture and a cancellation of the same
+   * record can never interleave.
+   */
+  private targetLockKey(p: {
+    invoiceId: string | null;
+    bookingId: string | null;
+    listingBookingId: string | null;
+  }): string | null {
+    if (p.listingBookingId) return `checkout:${p.listingBookingId}`;
+    if (p.invoiceId) return `pay:invoice:${p.invoiceId}`;
+    if (p.bookingId) return `pay:booking:${p.bookingId}`;
+    return null;
+  }
+
+  /**
+   * Why the record a payment pays for no longer takes money — a cancelled or
+   * refunded booking, a void or cancelled invoice — or null while it still does.
+   */
+  private async closedTarget(
+    db: Db,
+    p: { invoiceId: string | null; bookingId: string | null; listingBookingId: string | null },
+  ): Promise<string | null> {
+    if (p.listingBookingId) {
+      const lb = await db.listingBooking.findUnique({
+        where: { id: p.listingBookingId },
+        select: { status: true },
+      });
+      if (lb && CLOSED_BOOKING.includes(lb.status))
+        return `the booking was ${lb.status.toLowerCase()}`;
+    }
+    if (p.invoiceId) {
+      const inv = await db.invoice.findUnique({
+        where: { id: p.invoiceId },
+        select: { status: true },
+      });
+      if (inv && CLOSED_INVOICE.includes(String(inv.status))) {
+        return inv.status === 'VOID' ? 'the invoice was voided' : 'the invoice was cancelled';
+      }
+    }
+    if (p.bookingId) {
+      const b = await db.booking.findUnique({
+        where: { id: p.bookingId },
+        select: { status: true },
+      });
+      if (b && CLOSED_BOOKING.includes(String(b.status))) {
+        return `the booking was ${String(b.status).toLowerCase()}`;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Close every attempt still open under `where`, inside the caller's serialised
+   * section: each one is invalidated at its provider first, so it can never be
+   * paid afterwards, and only then marked FAILED. An attempt the provider can no
+   * longer cancel (it is processing or already paid) aborts the caller's
+   * transaction with `AttemptStillLive`.
+   *
+   * An attempt whose gateway this deployment cannot reach at all (not installed or
+   * not configured) is closed on our side only; if it is paid anyway, `settle`
+   * holds that money for a refund because the record is closed.
+   */
+  private async closeOpenAttemptsTx(
+    tx: Tx,
+    where: Prisma.PaymentWhereInput,
+    reason: string,
+    actor?: PayActor,
+  ): Promise<Payment[]> {
+    const open = await tx.payment.findMany({
+      where: { AND: [where, { status: { in: OPEN } }] },
+      orderBy: { createdAt: 'asc' },
+    });
+    const closed: Payment[] = [];
+    for (const attempt of open) {
+      const provider = this.providers.get(String(attempt.gateway).toLowerCase());
+      let note = '';
+      if (!attempt.gatewayRef) note = ' (no intent had been opened at the provider)';
+      else if (!provider?.isConfigured())
+        note = ' (closed here only: its gateway is not reachable from this deployment)';
+      if (provider?.isConfigured() && attempt.gatewayRef) {
+        let res: CancelResult;
+        try {
+          res = await provider.cancel(attempt.gatewayRef);
+        } catch (err) {
+          this.logger.warn(
+            `Cancel of payment ${attempt.id} failed: ${redact((err as Error).message)}`,
+          );
+          throw new ServiceUnavailableException(
+            'The payment provider could not be reached. Try again.',
+          );
+        }
+        if (!res.cancelled) throw new AttemptStillLive(attempt, res.state);
+      }
+      const moved = await tx.payment.updateMany({
+        where: { id: attempt.id, status: { in: OPEN } },
+        data: {
+          status: PaymentStatus.FAILED,
+          failedAt: new Date(),
+          failureReason: reason.slice(0, 200),
+          gatewayStatus: 'CANCELLED',
+        },
+      });
+      if (moved.count === 0) continue;
+      await this.record(tx, attempt.tenantId, attempt.id, attempt.gateway, 'CANCELLED', {
+        amountCents: BigInt(attempt.amountCents),
+        currency: attempt.currency,
+        providerRef: attempt.gatewayRef ?? undefined,
+        status: 'FAILED',
+        message: `${reason}${note}`,
+        actorId: actor?.sub,
+      });
+      closed.push(attempt);
+    }
+    return closed;
+  }
+
+  /**
+   * Close a booking or an invoice together with every payment attempt still open
+   * on it, in the serialised section its attempts are opened and settled under:
+   *
+   *  1. take `lockKeys` (sorted, so two closers never deadlock);
+   *  2. `verify` re-reads the record under the lock and throws if it may no longer
+   *     be closed — before anything is cancelled at a provider;
+   *  3. every open attempt matched by `attempts` is cancelled at its provider and
+   *     marked FAILED;
+   *  4. `apply` closes the record.
+   *
+   * If a provider refuses to cancel an attempt (it is processing, or the payer just
+   * paid), nothing is closed: the attempt's reported state is recorded (a capture
+   * settles normally, because the record is still open) and a 409 explains why.
+   */
+  async closeWithOpenAttempts<T>(
+    spec: {
+      /** What is being closed, for messages: "booking", "invoice". */
+      subject: string;
+      lockKeys: string[];
+      attempts: Prisma.PaymentWhereInput;
+      reason: string;
+      actor?: PayActor;
+    },
+    steps: { verify: (tx: Tx) => Promise<void>; apply: (tx: Tx) => Promise<T> },
+  ): Promise<T> {
+    let outcome: { value: T; closed: Payment[] };
+    try {
+      outcome = await this.prisma.$transaction(async (tx) => {
+        for (const key of [...new Set(spec.lockKeys)].sort()) await this.lockKey(tx, key);
+        await steps.verify(tx);
+        const closed = await this.closeOpenAttemptsTx(tx, spec.attempts, spec.reason, spec.actor);
+        return { value: await steps.apply(tx), closed };
+      }, LOCKED_TX);
+    } catch (err) {
+      if (!(err instanceof AttemptStillLive)) throw err;
+      // Outside the lock: settling takes the same lock.
+      if (err.state) {
+        await this.applyProviderState(err.payment, err.state, spec.actor).catch((e) =>
+          this.logger.warn(
+            `Recording the state of payment ${err.payment.id} failed: ${redact((e as Error).message)}`,
+          ),
+        );
+      }
+      throw new ConflictException({
+        message: `A payment for this ${spec.subject} is being processed or has just been completed, so the ${spec.subject} cannot be cancelled right now. Refresh to see where the payment stands.`,
+        details: { paymentId: err.payment.id },
+      });
+    }
+    for (const attempt of outcome.closed) {
+      await this.audit.log({
+        tenantId: attempt.tenantId,
+        actorId: spec.actor?.sub,
+        actorEmail: spec.actor?.email ?? undefined,
+        action: 'PAYMENT_FAIL',
+        namespace: 'finance',
+        resource: 'payment',
+        resourceId: attempt.id,
+        beforeState: { status: attempt.status },
+        afterState: { status: PaymentStatus.FAILED },
+        metadata: { reason: spec.reason, closedWith: 'record cancellation' },
+      });
+    }
+    return outcome.value;
   }
 
   private serialize<T extends Record<string, any>>(row: T): T {
@@ -349,6 +581,18 @@ export class PaymentsService {
         if (!inv) throw new NotFoundException('Invoice not found');
         if (['DRAFT', 'VOID', 'CANCELLED', 'PAID'].includes(String(inv.status))) {
           throw new BadRequestException(`Invoice is ${inv.status} and cannot take payments`);
+        }
+        // Cancelling the booking takes this invoice's lock too, so this read is current.
+        if (inv.bookingId) {
+          const b = await tx.booking.findFirst({
+            where: { id: inv.bookingId, tenantId },
+            select: { status: true },
+          });
+          if (b && CLOSED_BOOKING.includes(String(b.status))) {
+            throw new BadRequestException(
+              `The booking of this invoice is ${b.status} and cannot take payments`,
+            );
+          }
         }
         outstanding = BigInt(inv.totalCents) - BigInt(inv.paidCents);
         currency = inv.currency;
@@ -753,6 +997,49 @@ export class PaymentsService {
     }
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Same section as opening and closing attempts on the record: a cancellation
+      // either lands before this capture (and the money is held below) or after it
+      // (and sees the booking paid) — never in between.
+      const lockKey = this.targetLockKey(payment);
+      if (lockKey) await this.lockKey(tx, lockKey);
+
+      // The record was closed first (the traveler cancelled, the invoice was voided):
+      // the money moved at the provider, but it must not revive or pay the record.
+      // It is held, uncounted, until Finance refunds it.
+      const closed = await this.closedTarget(tx, payment);
+      if (closed) {
+        const held = await tx.payment.updateMany({
+          where: { id, status: { notIn: CAPTURE_FINAL } },
+          data: {
+            status: PaymentStatus.DISPUTED,
+            paidAt: new Date(),
+            gatewayStatus: CAPTURED_AFTER_CANCEL,
+            gatewayRef: providerRef || payment.gatewayRef,
+            gatewayResponse: raw as Prisma.InputJsonValue,
+            failedAt: null,
+            failureReason: `captured after ${closed}; refund required`,
+          },
+        });
+        if (held.count === 0) return { claimed: false, overpaid: BigInt(0) };
+        await this.record(tx, payment.tenantId, id, providerName, 'CAPTURED', {
+          amountCents: expected,
+          currency: payment.currency,
+          providerRef,
+          status: 'HELD',
+          message: `captured after ${closed}`,
+          actorId: actor?.sub,
+          payload: raw,
+        });
+        await this.record(tx, payment.tenantId, id, providerName, 'REFUND_REQUIRED', {
+          amountCents: expected,
+          currency: payment.currency,
+          providerRef,
+          status: 'REFUND_REQUIRED',
+          message: `${closed} before this payment was captured; the money is not counted and must be refunded`,
+        });
+        return { claimed: false, overpaid: BigInt(0), heldBecause: closed };
+      }
+
       const claimed = await tx.payment.updateMany({
         where: { id, status: { notIn: CAPTURE_FINAL } },
         data: {
@@ -786,8 +1073,30 @@ export class PaymentsService {
         });
       }
       return { claimed: true, overpaid: overpaidCents };
-    });
+    }, LOCKED_TX);
     const updated = await this.prisma.payment.findUniqueOrThrow({ where: { id } });
+    if ('heldBecause' in result && result.heldBecause) {
+      const reason = `captured after ${result.heldBecause}; refund required`;
+      this.logger.warn(`Payment ${id} was ${reason}`);
+      await this.audit.log({
+        tenantId: payment.tenantId,
+        actorId: actor?.sub,
+        actorEmail: actor?.email ?? undefined,
+        action: 'UPDATE',
+        namespace: 'finance',
+        resource: 'payment',
+        resourceId: id,
+        beforeState: { status: payment.status },
+        afterState: { status: updated.status, gatewayStatus: updated.gatewayStatus },
+        metadata: {
+          hold: CAPTURED_AFTER_CANCEL,
+          reason,
+          providerRef,
+          amountCents: Number(expected),
+        },
+      });
+      return { payment: updated, outcome: `held: captured after ${result.heldBecause}` };
+    }
     if (!result.claimed) return { payment: updated, outcome: 'already settled' };
     if (result.overpaid > BigInt(0)) {
       this.logger.warn(
@@ -856,8 +1165,12 @@ export class PaymentsService {
       if (lb) {
         const paid = await this.received(tx, { listingBookingId: lb.id });
         const total = BigInt(lb.totalAmountCents);
+        // Refunds of held money (never counted) do not make the booking "refunded".
         const refunds = await tx.payment.aggregate({
-          where: { listingBookingId: lb.id },
+          where: {
+            listingBookingId: lb.id,
+            OR: [{ gatewayStatus: null }, { gatewayStatus: { notIn: UNCOUNTED_HOLDS } }],
+          },
           _sum: { refundedCents: true },
         });
         const anyRefund = BigInt(refunds._sum.refundedCents ?? 0) > BigInt(0);
@@ -897,7 +1210,9 @@ export class PaymentsService {
     const { updated, already, refunded } = await this.prisma.$transaction(async (tx) => {
       await this.lockPayment(tx, id);
       const payment = await tx.payment.findUniqueOrThrow({ where: { id } });
-      if (!SETTLED.includes(payment.status))
+      // Money captured after its booking was cancelled is held until exactly this happens.
+      const heldAfterCancel = isCapturedAfterCancel(payment);
+      if (!SETTLED.includes(payment.status) && !heldAfterCancel)
         throw new BadRequestException('Only a captured payment can be refunded');
       const already = BigInt(payment.refundedCents);
       const remaining = BigInt(payment.amountCents) - already;
@@ -925,18 +1240,21 @@ export class PaymentsService {
         throw new ServiceUnavailableException('The payment provider could not process the refund');
       }
       const total = already + res.refundedCents;
+      const full = total >= BigInt(payment.amountCents);
       const row = await tx.payment.update({
         where: { id },
         data: {
           refundedCents: total,
           refundedAt: new Date(),
-          status:
-            total >= BigInt(payment.amountCents)
-              ? PaymentStatus.REFUNDED
+          status: full
+            ? PaymentStatus.REFUNDED
+            : heldAfterCancel
+              ? PaymentStatus.DISPUTED
               : PaymentStatus.PARTIALLY_REFUNDED,
         },
       });
-      await this.reconcileTargets(tx, payment, -res.refundedCents);
+      // Held money never counted towards the booking or invoice, so returning it changes neither.
+      if (!heldAfterCancel) await this.reconcileTargets(tx, payment, -res.refundedCents);
       await this.record(tx, tenantId, id, provider.name, 'REFUNDED', {
         amountCents: res.refundedCents,
         currency: payment.currency,
@@ -1010,6 +1328,17 @@ export class PaymentsService {
 
     const outcome = await this.prisma.$transaction(async (tx) => {
       await this.lockKey(tx, `checkout:${lb.id}`);
+      // Re-read under the lock: a cancellation may have landed since the booking was loaded
+      // (cancelling takes this lock too), and a cancelled booking must never get a new attempt.
+      const current = await tx.listingBooking.findUnique({
+        where: { id: lb.id },
+        select: { status: true, paymentStatus: true },
+      });
+      if (!current || ['CANCELLED', 'REFUNDED', 'COMPLETED'].includes(current.status)) {
+        throw new BadRequestException(`Booking is ${current?.status ?? 'gone'} and cannot be paid`);
+      }
+      if (current.paymentStatus === 'PAID')
+        throw new BadRequestException('Booking is already paid');
       const outstanding =
         BigInt(lb.totalAmountCents) - (await this.received(tx, { listingBookingId: lb.id }));
       if (outstanding <= BigInt(0)) throw new BadRequestException('Nothing is outstanding');
@@ -1400,17 +1729,25 @@ export class PaymentsService {
       const delta = cumulative - BigInt(p.refundedCents);
       if (p.status === PaymentStatus.DISPUTED) {
         // Money returned on a held payment: keep the hold, record what the provider reports.
+        // A capture held because its booking was cancelled is resolved by its full refund.
+        const resolved = isCapturedAfterCancel(p) && cumulative >= BigInt(p.amountCents);
         await tx.payment.update({
           where: { id: p.id },
-          data: { refundedCents: cumulative, refundedAt: new Date() },
+          data: {
+            refundedCents: cumulative,
+            refundedAt: new Date(),
+            ...(resolved ? { status: PaymentStatus.REFUNDED } : {}),
+          },
         });
         await this.record(tx, p.tenantId, p.id, providerName, 'REFUND_SYNCED', {
           amountCents: delta,
           currency: p.currency,
-          status: p.status,
-          message: 'refund recorded on a held payment',
+          status: resolved ? PaymentStatus.REFUNDED : p.status,
+          message: resolved
+            ? 'the payment captured after cancellation was refunded in full'
+            : 'refund recorded on a held payment',
         });
-        return 'refund recorded on held payment';
+        return resolved ? 'held payment refunded' : 'refund recorded on held payment';
       }
       if (!SETTLED.includes(p.status)) return 'deferred: capture not recorded';
       const row = await tx.payment.update({

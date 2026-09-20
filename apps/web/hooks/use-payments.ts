@@ -20,7 +20,8 @@ export interface ProviderStatus {
   providers: {
     name: string;
     configured: boolean;
-    missing: string[];
+    /** Only for callers who administer payments (finance:payment:process / platform:settings:read). */
+    missing?: string[];
     sandbox: boolean;
     publishableKey?: string | null;
     testMode?: boolean;

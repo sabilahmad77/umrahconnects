@@ -7,7 +7,7 @@ import {
   Bus, UserCircle2, Map as MapIcon, ClipboardList, ListChecks,
   DollarSign, AlertTriangle, RefreshCw, ArrowRight,
   Store, CheckCircle2, Calendar, Loader2, AlertCircle, Plus,
-  Wallet, PauseCircle,
+  Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTransportStatsFull } from '@/hooks/use-transport';
@@ -69,25 +69,17 @@ export function TransportDashboard() {
             {/* Revenue */}
             <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
               <h3 className="text-sm font-bold text-gray-900 inline-flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-brand-600" /> Trip payments
+                <Wallet className="h-4 w-4 text-brand-600" /> Booked value
               </h3>
               <div>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats.revenue.currency} {(stats.revenue.collectedCents / 100).toLocaleString()}
+                  {stats.bookedValue.currency} {(stats.bookedValue.amountCents / 100).toLocaleString()}
                 </p>
-                <p className="text-xs text-green-800 inline-flex items-center gap-1 mt-1">
-                  <CheckCircle2 className="h-3 w-3" /> Trips recorded as paid
-                </p>
-              </div>
-              <div className="pt-2 border-t border-gray-50">
-                <p className="text-lg font-semibold text-gray-700">
-                  {stats.revenue.currency} {(stats.revenue.pendingCents / 100).toLocaleString()}
-                </p>
-                <p className="text-xs text-orange-800 inline-flex items-center gap-1 mt-1">
-                  <PauseCircle className="h-3 w-3" /> Not yet paid (open trips)
+                <p className="text-xs text-gray-600 mt-1">
+                  {stats.bookedValue.count} trip{stats.bookedValue.count === 1 ? '' : 's'} in {stats.bookedValue.currency}, cancelled ones excluded
                 </p>
               </div>
-              <p className="text-xs text-gray-600">Payment status comes from payments recorded in Finance.</p>
+              <p className="text-xs text-gray-600">Trips do not track payments: customers are billed with invoices in Finance, where the money is recorded.</p>
               {canFinance && (
                 <Link href="/finance" className="text-xs text-brand-500 font-medium hover:underline inline-flex items-center gap-1">
                   Go to finance <ArrowRight className="h-3 w-3" />

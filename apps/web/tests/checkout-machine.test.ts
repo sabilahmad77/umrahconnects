@@ -275,3 +275,18 @@ describe('money units', () => {
     expect(amountProblem('ten', 10_000)).toMatch(/Enter an amount/);
   });
 });
+
+describe('money captured after a cancellation (F1)', () => {
+  it('is held (on hold for the payer) and refundable in full by staff, and only that hold is', async () => {
+    const { isHeldForRefund, refundableCents } = await import('../components/finance/refund-dialog');
+    const held = { status: 'DISPUTED', gatewayStatus: 'CAPTURED_AFTER_CANCEL', amountCents: 50_000, refundedCents: 0 };
+    expect(phaseFromServer(view({ status: 'DISPUTED', providerStatus: 'CAPTURED_AFTER_CANCEL' }))).toBe('on_hold');
+    expect(isHeldForRefund(held)).toBe(true);
+    expect(refundableCents(held)).toBe(50_000);
+    expect(refundableCents({ ...held, refundedCents: 20_000 })).toBe(30_000);
+    // A chargeback or an amount mismatch is a different hold: nothing to refund from here.
+    expect(refundableCents({ ...held, gatewayStatus: 'DISPUTE_OPEN' })).toBe(0);
+    expect(refundableCents({ ...held, gatewayStatus: 'AMOUNT_MISMATCH' })).toBe(0);
+    expect(refundableCents({ ...held, status: 'REFUNDED', refundedCents: 50_000 })).toBe(0);
+  });
+});

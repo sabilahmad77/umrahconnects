@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useCapabilities } from '@/hooks/use-capabilities';
 import { useFinancePayments, useUpdatePayment } from '@/hooks/use-finance';
 import { Button, LoadingState, QueryFailure, Select } from '@/components/ui/system';
-import { RefundDialog, isGatewayPayment, refundableCents } from './refund-dialog';
+import { RefundDialog, isGatewayPayment, isHeldForRefund, refundableCents } from './refund-dialog';
 import { formatAmount } from './money';
 
 /**
@@ -213,11 +213,17 @@ export function FinancePaymentsView() {
                       <td className="p-3">
                         {gateway || settledOrRefunded || !canProcess ? (
                           <span className="text-xs font-medium">
-                            {String(p.status).replace(/_/g, ' ')}
-                            {gateway && (
-                              <span className="block font-normal text-gray-600">
-                                Managed by the provider
+                            {isHeldForRefund(p) ? 'Refund required' : String(p.status).replace(/_/g, ' ')}
+                            {isHeldForRefund(p) ? (
+                              <span className="block font-normal text-orange-800">
+                                Paid after the booking or invoice was cancelled; not counted until refunded
                               </span>
+                            ) : (
+                              gateway && (
+                                <span className="block font-normal text-gray-600">
+                                  Managed by the provider
+                                </span>
+                              )
                             )}
                           </span>
                         ) : (

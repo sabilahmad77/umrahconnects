@@ -559,9 +559,6 @@ async function main() {
         language: 'en',
         sourceCountry: 'SA',
         expiresAt: new Date('2026-02-15'),
-        likeCount: 24,
-        commentCount: 7,
-        shareCount: 12,
       },
       {
         authorId: idSocialAccount.id,
@@ -572,9 +569,6 @@ async function main() {
         tags: ['kemenag', 'siskopatuh', 'regulasi2026', 'ppiu'],
         language: 'id',
         sourceCountry: 'ID',
-        likeCount: 156,
-        commentCount: 43,
-        shareCount: 89,
       },
       {
         authorId: pkSocialAccount.id,
@@ -585,9 +579,6 @@ async function main() {
         tags: ['madinah', 'hotels', 'advice', 'pakistan'],
         language: 'en',
         sourceCountry: 'PK',
-        likeCount: 8,
-        commentCount: 15,
-        shareCount: 2,
       },
       {
         authorId: ksaSocialAccount.id,
@@ -603,9 +594,6 @@ async function main() {
         tags: ['hajj1447', 'b2b', 'partnership', 'indonesia', 'saudi'],
         language: 'en',
         sourceCountry: 'SA',
-        likeCount: 42,
-        commentCount: 18,
-        shareCount: 31,
       },
       {
         authorId: idSocialAccount.id,
@@ -616,9 +604,6 @@ async function main() {
         tags: ['madinah', 'alhamdulillah', 'baitussalam', 'update'],
         language: 'id',
         sourceCountry: 'ID',
-        likeCount: 203,
-        commentCount: 67,
-        shareCount: 45,
       },
   ];
   for (const post of seedPosts) {
@@ -626,7 +611,30 @@ async function main() {
     if (!exists) await prisma.post.create({ data: post });
   }
 
-  console.log('   ✓ Social feed posts seeded\n');
+  // The engagement counters are denormalised copies of real rows, kept by the API on every like, share,
+  // comment, save, follow and post. Seeded posts start with no reactions, comments or saves, so every counter
+  // of the seeded accounts is recomputed from the rows that exist (older versions of this seed wrote invented
+  // numbers such as 203 likes with no reaction behind them). Re-running converges on the same values.
+  for (const account of [ksaSocialAccount, idSocialAccount, pkSocialAccount]) {
+    const posts = await prisma.post.findMany({ where: { authorId: account.id }, select: { id: true } });
+    for (const { id } of posts) {
+      const [likeCount, shareCount, commentCount, saveCount] = await Promise.all([
+        prisma.reaction.count({ where: { postId: id, type: 'LIKE' } }),
+        prisma.reaction.count({ where: { postId: id, type: 'SHARE' } }),
+        prisma.comment.count({ where: { postId: id, deletedAt: null } }),
+        prisma.savedPost.count({ where: { postId: id } }),
+      ]);
+      await prisma.post.update({ where: { id }, data: { likeCount, shareCount, commentCount, saveCount } });
+    }
+    const [postCount, followerCount, followingCount] = await Promise.all([
+      prisma.post.count({ where: { authorId: account.id, deletedAt: null } }),
+      prisma.follow.count({ where: { followedId: account.id } }),
+      prisma.follow.count({ where: { followerId: account.id } }),
+    ]);
+    await prisma.socialAccount.update({ where: { id: account.id }, data: { postCount, followerCount, followingCount } });
+  }
+
+  console.log('   ✓ Social feed posts seeded (engagement counters match their rows)\n');
 
   // ================================================================
   // SUMMARY

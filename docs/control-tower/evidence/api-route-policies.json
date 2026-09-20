@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-09-17T21:07:26.301Z",
-  "total": 325,
+  "generatedAt": "2026-09-20T18:32:36.161Z",
+  "total": 357,
   "summary": {
-    "permissions": 260,
-    "authenticated": 40,
+    "permissions": 271,
+    "authenticated": 61,
     "public": 25
   },
   "routes": [
@@ -436,7 +436,7 @@
       "handler": "BookingsController.cancel",
       "policy": "permissions",
       "permissions": [
-        "booking:booking:update"
+        "booking:booking:cancel"
       ]
     },
     {
@@ -445,7 +445,8 @@
       "handler": "BookingsController.generateInvoice",
       "policy": "permissions",
       "permissions": [
-        "booking:booking:update"
+        "booking:booking:update",
+        "finance:invoice:create"
       ]
     },
     {
@@ -723,6 +724,13 @@
     },
     {
       "method": "GET",
+      "path": "/connections/outgoing",
+      "handler": "ConnectionsController.outgoing",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
       "path": "/connections/pending",
       "handler": "ConnectionsController.pending",
       "policy": "authenticated",
@@ -922,7 +930,7 @@
       "handler": "FinanceController.findPayments",
       "policy": "permissions",
       "permissions": [
-        "finance:invoice:read"
+        "finance:payment:read"
       ]
     },
     {
@@ -931,7 +939,7 @@
       "handler": "FinanceController.findPayment",
       "policy": "permissions",
       "permissions": [
-        "finance:invoice:read"
+        "finance:payment:read"
       ]
     },
     {
@@ -1001,10 +1009,8 @@
       "method": "GET",
       "path": "/groups/:id",
       "handler": "GroupsController.findOne",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:read"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "PUT",
@@ -1150,10 +1156,8 @@
       "method": "GET",
       "path": "/groups/:id/polls",
       "handler": "GroupsController.listPolls",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:read"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "POST",
@@ -1168,19 +1172,15 @@
       "method": "GET",
       "path": "/groups/:id/posts",
       "handler": "GroupsController.listPosts",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:read"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "POST",
       "path": "/groups/:id/posts",
       "handler": "GroupsController.createPost",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:update"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "GET",
@@ -1204,6 +1204,22 @@
       "method": "POST",
       "path": "/groups/invites/:inviteId/respond",
       "handler": "GroupsController.respondInvite",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/groups/invites/:inviteId/revoke",
+      "handler": "GroupsController.revokeInvite",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/groups/invites/mine",
+      "handler": "GroupsController.myInvites",
       "policy": "authenticated",
       "permissions": []
     },
@@ -1245,37 +1261,36 @@
       "method": "POST",
       "path": "/groups/polls/:pollId/vote",
       "handler": "GroupsController.vote",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:read"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "DELETE",
       "path": "/groups/posts/:postId",
       "handler": "GroupsController.deletePost",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:update"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "GET",
       "path": "/groups/posts/:postId/comments",
       "handler": "GroupsController.listComments",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:read"
-      ]
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "POST",
       "path": "/groups/posts/:postId/comments",
       "handler": "GroupsController.createComment",
-      "policy": "permissions",
-      "permissions": [
-        "crm:pilgrim:update"
-      ]
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/groups/posts/:postId/comments/:commentId",
+      "handler": "GroupsController.deleteComment",
+      "policy": "authenticated",
+      "permissions": []
     },
     {
       "method": "GET",
@@ -1358,7 +1373,7 @@
       "handler": "HotelsController.getAllotments",
       "policy": "permissions",
       "permissions": [
-        "hotel:allotment:manage"
+        "hotel:allotment:read"
       ]
     },
     {
@@ -1376,7 +1391,7 @@
       "handler": "HotelsController.getAssignments",
       "policy": "permissions",
       "permissions": [
-        "hotel:assignment:manage"
+        "hotel:allotment:read"
       ]
     },
     {
@@ -1385,7 +1400,25 @@
       "handler": "HotelsController.createAssignment",
       "policy": "permissions",
       "permissions": [
+        "hotel:room:assign"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/hotels/:id/assignments/:assignmentId",
+      "handler": "HotelsController.deleteAssignment",
+      "policy": "permissions",
+      "permissions": [
         "hotel:assignment:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/hotels/:id/room-availability",
+      "handler": "HotelsController.roomAvailability",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:read"
       ]
     },
     {
@@ -1419,6 +1452,15 @@
       "method": "POST",
       "path": "/hotels/:id/rooms",
       "handler": "HotelsController.createRoom",
+      "policy": "permissions",
+      "permissions": [
+        "hotel:allotment:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/hotels/allotments/:allotmentId",
+      "handler": "HotelsController.updateAllotment",
       "policy": "permissions",
       "permissions": [
         "hotel:allotment:manage"
@@ -1549,6 +1591,13 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/marketplace/bookings/:id/cancel",
+      "handler": "MarketplaceController.cancelMyBooking",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
       "method": "GET",
       "path": "/marketplace/bookings/mine",
       "handler": "MarketplaceController.listMyTravelerBookings",
@@ -1657,6 +1706,15 @@
     },
     {
       "method": "GET",
+      "path": "/marketplace/listings/mine/:id",
+      "handler": "MarketplaceController.findMyListing",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/marketplace/quotes",
       "handler": "MarketplaceController.findMyQuotes",
       "policy": "permissions",
@@ -1689,6 +1747,24 @@
       "policy": "permissions",
       "permissions": [
         "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/marketplace/quotes/:id/reject",
+      "handler": "MarketplaceController.rejectQuote",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/quotes/incoming",
+      "handler": "MarketplaceController.findIncomingQuotes",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
       ]
     },
     {
@@ -1791,6 +1867,15 @@
       "permissions": []
     },
     {
+      "method": "PUT",
+      "path": "/marketplace/vendors/:id",
+      "handler": "MarketplaceController.updateVendor",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:manage"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/marketplace/vendors/:id/ratings",
       "handler": "MarketplaceController.rateVendor",
@@ -1803,6 +1888,15 @@
       "method": "GET",
       "path": "/marketplace/vendors/mine",
       "handler": "MarketplaceController.findMyVendor",
+      "policy": "permissions",
+      "permissions": [
+        "marketplace:listing:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/marketplace/vendors/mine/all",
+      "handler": "MarketplaceController.findMyVendors",
       "policy": "permissions",
       "permissions": [
         "marketplace:listing:read"
@@ -1931,8 +2025,26 @@
     },
     {
       "method": "POST",
+      "path": "/payments/intents/:id/cancel",
+      "handler": "PaymentsController.cancelIntent",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:process"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/payments/intents/:id/confirm",
       "handler": "PaymentsController.confirmIntent",
+      "policy": "permissions",
+      "permissions": [
+        "finance:payment:process"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/intents/:id/resume",
+      "handler": "PaymentsController.resumeIntent",
       "policy": "permissions",
       "permissions": [
         "finance:payment:process"
@@ -2019,6 +2131,42 @@
       "method": "PUT",
       "path": "/pilgrims/:id/family-group",
       "handler": "PilgrimsController.assignToFamilyGroup",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/pilgrims/:pilgrimId/account-links/",
+      "handler": "PilgrimAccountLinksController.list",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:read"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pilgrims/:pilgrimId/account-links/",
+      "handler": "PilgrimAccountLinksController.invite",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pilgrims/:pilgrimId/account-links/:linkId/resend",
+      "handler": "PilgrimAccountLinksController.resend",
+      "policy": "permissions",
+      "permissions": [
+        "crm:pilgrim:update"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/pilgrims/:pilgrimId/account-links/:linkId/revoke",
+      "handler": "PilgrimAccountLinksController.revoke",
       "policy": "permissions",
       "permissions": [
         "crm:pilgrim:update"
@@ -2118,7 +2266,17 @@
       "handler": "ReportsController.getBookingAnalytics",
       "policy": "permissions",
       "permissions": [
-        "finance:report:read"
+        "reporting:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/export",
+      "handler": "ReportsController.export",
+      "policy": "permissions",
+      "permissions": [
+        "reporting:report:read",
+        "reporting:report:export"
       ]
     },
     {
@@ -2136,7 +2294,7 @@
       "handler": "ReportsController.getHotelAnalytics",
       "policy": "permissions",
       "permissions": [
-        "finance:report:read"
+        "reporting:report:read"
       ]
     },
     {
@@ -2145,7 +2303,7 @@
       "handler": "ReportsController.getOverview",
       "policy": "permissions",
       "permissions": [
-        "finance:report:read"
+        "reporting:report:read"
       ]
     },
     {
@@ -2154,7 +2312,16 @@
       "handler": "ReportsController.getPilgrimAnalytics",
       "policy": "permissions",
       "permissions": [
-        "finance:report:read"
+        "reporting:report:read"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/transport",
+      "handler": "ReportsController.getTransportAnalytics",
+      "policy": "permissions",
+      "permissions": [
+        "reporting:report:read"
       ]
     },
     {
@@ -2163,7 +2330,7 @@
       "handler": "ReportsController.getVisaAnalytics",
       "policy": "permissions",
       "permissions": [
-        "finance:report:read"
+        "reporting:report:read"
       ]
     },
     {
@@ -2294,6 +2461,15 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/social/posts/:id/comments",
+      "handler": "SocialController.listComments",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:read"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/social/posts/:id/comments",
       "handler": "SocialController.addComment",
@@ -2306,6 +2482,15 @@
       "method": "DELETE",
       "path": "/social/posts/:id/comments/:commentId",
       "handler": "SocialController.deleteComment",
+      "policy": "permissions",
+      "permissions": [
+        "social:post:create"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/social/posts/:id/comments/:commentId",
+      "handler": "SocialController.updateComment",
       "policy": "permissions",
       "permissions": [
         "social:post:create"
@@ -2423,7 +2608,7 @@
       "handler": "TransportController.findAssignments",
       "policy": "permissions",
       "permissions": [
-        "transport:assignment:manage"
+        "transport:vehicle:read"
       ]
     },
     {
@@ -2441,7 +2626,7 @@
       "handler": "TransportController.findAssignmentById",
       "policy": "permissions",
       "permissions": [
-        "transport:assignment:manage"
+        "transport:vehicle:read"
       ]
     },
     {
@@ -2468,7 +2653,7 @@
       "handler": "TransportController.findBookings",
       "policy": "permissions",
       "permissions": [
-        "transport:assignment:manage"
+        "transport:vehicle:read"
       ]
     },
     {
@@ -2661,9 +2846,72 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/travelers/me/links",
+      "handler": "TravelersController.listLinks",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/travelers/me/links/:linkId",
+      "handler": "TravelersController.unlink",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/travelers/me/links/accept",
+      "handler": "TravelersController.accept",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/travelers/me/links/decline",
+      "handler": "TravelersController.decline",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "POST",
+      "path": "/travelers/me/links/preview",
+      "handler": "TravelersController.preview",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/travelers/me/trips",
+      "handler": "TravelersController.listTrips",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
       "method": "POST",
       "path": "/uploads/",
       "handler": "UploadsController.upload",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "DELETE",
+      "path": "/uploads/:id",
+      "handler": "UploadsController.remove",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "GET",
+      "path": "/users/me/preferences/",
+      "handler": "PreferencesController.get",
+      "policy": "authenticated",
+      "permissions": []
+    },
+    {
+      "method": "PUT",
+      "path": "/users/me/preferences/",
+      "handler": "PreferencesController.update",
       "policy": "authenticated",
       "permissions": []
     },

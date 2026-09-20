@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/system';
 import { ModalSurface, Input, Textarea, Alert } from './system';
 import { useState } from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
+import { apiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 
 export interface ConfirmSpec {
@@ -17,7 +18,34 @@ export interface ConfirmSpec {
   /** When set, a free-text reason is captured and passed to onConfirm. */
   reasonLabel?: string;
   reasonPlaceholder?: string;
+  /**
+   * The action. Throw (or reject) when it fails: the dialog stays open and shows the reason
+   * (the server's message, else `failureMessage`). Resolving closes the dialog.
+   */
   onConfirm: (reason?: string) => Promise<unknown> | unknown;
+  /** Shown when the failure carries no message of its own. */
+  failureMessage?: string;
+}
+
+const CONFIRM_FAILED = 'This action could not be completed. Try again.';
+
+/**
+ * Runs a confirmed action. Success closes the dialog; a failure keeps it open and returns the reason to
+ * show in it — the server's message when there is one (e.g. "A vehicle with open trips cannot be
+ * archived"), never silently dropped.
+ */
+export async function runConfirmAction(
+  action: () => Promise<unknown> | unknown,
+  close: () => void,
+  failureMessage = CONFIRM_FAILED,
+): Promise<string | null> {
+  try {
+    await action();
+  } catch (error) {
+    return apiErrorMessage(error, failureMessage);
+  }
+  close();
+  return null;
 }
 
 /**
@@ -38,7 +66,10 @@ export function ConfirmDialog({ spec, onClose }: { spec: ConfirmSpec; onClose: (
   const go = async () => {
     if (blocked) return;
     setBusy(true);
-    try { setError(''); await spec.onConfirm(reason.trim() || undefined); onClose(); } catch { setError('This action could not be completed. Try again.'); } finally { setBusy(false); }
+    setError('');
+    const problem = await runConfirmAction(() => spec.onConfirm(reason.trim() || undefined), onClose, spec.failureMessage);
+    setBusy(false);
+    if (problem) setError(problem);
   };
 
   return (

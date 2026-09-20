@@ -1,13 +1,9 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PayActor, PaymentsService } from '../payments/payments.service';
 import { assertOwnedIfPresent, requireId } from '../../common/tenant-scope';
 import { adjustBookingPaid } from '../bookings/booking-money';
 
@@ -56,7 +52,47 @@ export class FinanceService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private payments: PaymentsService,
   ) {}
+
+  /**
+   * Write an update that closes an invoice (VOID / CANCELLED). Card attempts still
+   * open on it are cancelled at the payment provider and closed first, in the
+   * section payments are opened and settled under (F1), so none of them can be
+   * paid afterwards; a capture that still arrives is held for a refund.
+   */
+  private async closeInvoice(
+    tenantId: string,
+    current: { id: string; status: string },
+    data: Prisma.InvoiceUpdateInput,
+    actor?: PayActor,
+  ) {
+    return this.payments.closeWithOpenAttempts(
+      {
+        subject: 'invoice',
+        lockKeys: [`pay:invoice:${current.id}`],
+        attempts: { tenantId, invoiceId: current.id },
+        reason: data.status === 'VOID' ? 'invoice voided' : 'invoice cancelled',
+        actor,
+      },
+      {
+        verify: async (tx) => {
+          const fresh = await tx.invoice.findFirst({
+            where: { id: current.id, tenantId },
+            select: { status: true },
+          });
+          if (fresh?.status !== current.status) {
+            throw new ConflictException('This invoice changed meanwhile. Refresh and try again.');
+          }
+        },
+        apply: (tx) => tx.invoice.update({ where: { id: current.id }, data }),
+      },
+    );
+  }
+
+  private static closes(status: unknown) {
+    return status === 'VOID' || status === 'CANCELLED';
+  }
 
   private normalizeInvoice(inv: any): any {
     if (!inv) return inv;
@@ -249,12 +285,12 @@ export class FinanceService {
     );
   }
 
-  async voidInvoice(tenantId: string, id: string) {
+  async voidInvoice(tenantId: string, id: string, actor?: PayActor) {
     const current = await this.findOne(tenantId, id);
     if (current.status === 'VOID') return current;
     this.assertInvoiceTransition(current, 'VOID');
     return this.normalizeInvoice(
-      await this.prisma.invoice.update({ where: { id }, data: { status: 'VOID' } }),
+      await this.closeInvoice(tenantId, current, { status: 'VOID' }, actor),
     );
   }
 
@@ -440,7 +476,7 @@ export class FinanceService {
   }
 
   // ── Invoice edit / status / delete ─────────────────────────────────────
-  async updateInvoice(tenantId: string, id: string, dto: any) {
+  async updateInvoice(tenantId: string, id: string, dto: any, actor?: PayActor) {
     const current = await this.findOne(tenantId, id);
     await this.assertInvoiceParties(tenantId, {
       bookingId: dto.bookingId,
@@ -468,6 +504,16 @@ export class FinanceService {
     const dueAt = dto.dueAt !== undefined ? dto.dueAt : dto.dueDate;
     if (dueAt !== undefined) data.dueAt = dueAt ? new Date(dueAt) : null;
     if (dto.status !== undefined && dto.status !== null && dto.status !== current.status) {
+      // Closing an invoice is an approval decision: PUT /finance/invoices/:id/status and
+      // POST …/void both require finance:invoice:approve, while this route only requires
+      // finance:invoice:create. Accepting VOID/CANCELLED here let a custom role with create
+      // but not approve close an invoice (found by FX1).
+      if (FinanceService.closes(String(dto.status))) {
+        throw new ForbiddenException({
+          code: 'INVOICE_CLOSE_REQUIRES_APPROVAL',
+          message: 'Voiding or cancelling an invoice needs the invoice approval capability. Use the void action.',
+        });
+      }
       this.assertInvoiceTransition(current, String(dto.status));
       data.status = dto.status;
       if (dto.status === 'ISSUED' && !current.issuedAt) data.issuedAt = new Date();
@@ -518,6 +564,9 @@ export class FinanceService {
       }
       data.totalCents = total;
     }
+    if (FinanceService.closes(data.status)) {
+      return this.normalizeInvoice(await this.closeInvoice(tenantId, current, data, actor));
+    }
     return this.normalizeInvoice(await this.prisma.invoice.update({ where: { id }, data }));
   }
 
@@ -557,13 +606,16 @@ export class FinanceService {
     });
   }
 
-  async setInvoiceStatus(tenantId: string, id: string, status: string) {
+  async setInvoiceStatus(tenantId: string, id: string, status: string, actor?: PayActor) {
     const current = await this.findOne(tenantId, id);
     if (status === current.status) return current;
     // Same lifecycle rules as PUT /finance/invoices/:id — PAID / PARTIALLY_PAID are derived from payments.
     this.assertInvoiceTransition(current, status);
     const patch: any = { status };
     if (status === 'ISSUED' && !current.issuedAt) patch.issuedAt = new Date();
+    if (FinanceService.closes(status)) {
+      return this.normalizeInvoice(await this.closeInvoice(tenantId, current, patch, actor));
+    }
     return this.normalizeInvoice(await this.prisma.invoice.update({ where: { id }, data: patch }));
   }
 
@@ -572,7 +624,7 @@ export class FinanceService {
    * document the customer may hold, so it is voided (finance:invoice:approve)
    * rather than quietly cancelled.
    */
-  async deleteInvoice(tenantId: string, id: string) {
+  async deleteInvoice(tenantId: string, id: string, actor?: PayActor) {
     const current = await this.findOne(tenantId, id);
     if (current.status === 'CANCELLED') return current;
     if (current.status !== 'DRAFT') {
@@ -581,7 +633,7 @@ export class FinanceService {
       );
     }
     return this.normalizeInvoice(
-      await this.prisma.invoice.update({ where: { id }, data: { status: 'CANCELLED' as any } }),
+      await this.closeInvoice(tenantId, current, { status: 'CANCELLED' as any }, actor),
     );
   }
 

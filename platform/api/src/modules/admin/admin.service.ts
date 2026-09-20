@@ -4,6 +4,8 @@ import { ASSIGNABLE_ROLES_BY_TENANT_TYPE, COMMUNITY_TENANT_SLUG } from '../rbac/
 import { REGISTRY_SOURCES } from './dto/admin.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { MODERATION_CLEAR, MODERATION_TAKEN_DOWN } from '../marketplace/listing-rules';
 import { DocumentAccessService } from '../storage/document-access.service';
 
 /** Who performed a privileged action — threaded into every audit row. */
@@ -72,6 +74,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private notifications: NotificationsService,
   ) {}
 
   /**
@@ -741,7 +744,9 @@ export class AdminService {
   async listAllListings(query: any = {}) {
     const { status, type, search, page = 1, limit = 50 } = query;
     const where: any = {};
-    if (status) where.status = status;
+    // TAKEN_DOWN filters on the moderation decision (F2); the others on the owner's lifecycle status.
+    if (status === MODERATION_TAKEN_DOWN) where.moderationStatus = MODERATION_TAKEN_DOWN;
+    else if (status) where.status = status;
     if (type) where.type = type;
     if (search) where.name = { contains: search, mode: 'insensitive' };
     const skip = (+page - 1) * +limit;
@@ -758,20 +763,99 @@ export class AdminService {
     };
   }
 
+  /**
+   * Publish a listing — and, for one the platform took down, restore it: this is
+   * the only way a takedown is lifted (F2).
+   */
   async approveListing(id: string, actor?: AdminActor) {
     const before = await this.prisma.listing.findUnique({ where: { id }, include: { vendor: { select: { tenantId: true } } } });
     if (!before) throw new NotFoundException('Listing not found');
-    const listing = await this.prisma.listing.update({ where: { id }, data: { status: 'PUBLISHED', isActive: true } });
-    await this.trail(actor, 'UPDATE', 'listing', id, { status: before.status }, { status: listing.status }, undefined, before.vendor?.tenantId ?? undefined);
+    const restoring = before.moderationStatus === MODERATION_TAKEN_DOWN;
+    const listing = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        status: 'PUBLISHED',
+        isActive: true,
+        ...(restoring
+          ? { moderationStatus: MODERATION_CLEAR, moderationReason: null, moderatedBy: actor?.sub ?? null, moderatedAt: new Date() }
+          : {}),
+      },
+    });
+    await this.trail(
+      actor, 'UPDATE', 'listing', id,
+      { status: before.status, moderationStatus: before.moderationStatus },
+      { status: listing.status, moderationStatus: listing.moderationStatus },
+      restoring ? { moderation: 'restored', previousReason: before.moderationReason } : undefined,
+      before.vendor?.tenantId ?? undefined,
+    );
+    if (restoring) {
+      await this.notifyListingOwner(before.vendor?.tenantId, actor, {
+        title: `“${before.name}” was restored`,
+        body: 'The platform restored this listing; it is published on the marketplace again.',
+        listingId: id,
+      });
+    }
     return { ...listing, priceCents: Number(listing.priceCents) };
   }
 
-  async removeListing(id: string, actor?: AdminActor) {
+  /**
+   * Platform takedown (F2): the listing leaves the marketplace and is recorded as
+   * TAKEN_DOWN with the reason, which its owner sees and cannot undo — the owner
+   * can no longer publish it or move it back to draft. Existing bookings are kept.
+   */
+  async removeListing(id: string, actor?: AdminActor, reason?: string) {
     const before = await this.prisma.listing.findUnique({ where: { id }, include: { vendor: { select: { tenantId: true } } } });
     if (!before) throw new NotFoundException('Listing not found');
-    const listing = await this.prisma.listing.update({ where: { id }, data: { status: 'ARCHIVED', isActive: false } });
-    await this.trail(actor, 'SOFT_DELETE', 'listing', id, { status: before.status }, { status: listing.status }, undefined, before.vendor?.tenantId ?? undefined);
+    const why = reason?.trim() || 'Removed by the platform.';
+    const listing = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        status: 'ARCHIVED',
+        isActive: false,
+        moderationStatus: MODERATION_TAKEN_DOWN,
+        moderationReason: why,
+        moderatedBy: actor?.sub ?? null,
+        moderatedAt: new Date(),
+      },
+    });
+    await this.trail(
+      actor, 'SOFT_DELETE', 'listing', id,
+      { status: before.status, moderationStatus: before.moderationStatus },
+      { status: listing.status, moderationStatus: listing.moderationStatus },
+      { moderation: 'taken_down', reason: why },
+      before.vendor?.tenantId ?? undefined,
+    );
+    await this.notifyListingOwner(before.vendor?.tenantId, actor, {
+      title: `“${before.name}” was taken down by the platform`,
+      body: why,
+      listingId: id,
+    });
     return { ...listing, priceCents: Number(listing.priceCents) };
+  }
+
+  /** Best effort: tell the seller organization (its first user) about a moderation decision. */
+  private async notifyListingOwner(
+    tenantId: string | null | undefined,
+    actor: AdminActor | undefined,
+    note: { title: string; body: string; listingId: string },
+  ) {
+    if (!tenantId) return;
+    try {
+      const recipient = await this.prisma.user.findFirst({ where: { tenantId, deletedAt: null }, orderBy: { createdAt: 'asc' } });
+      if (!recipient) return;
+      await this.notifications.fire({
+        tenantId,
+        recipientUserId: recipient.id,
+        actorUserId: actor?.sub,
+        type: 'SYSTEM',
+        title: note.title.slice(0, 200),
+        body: note.body,
+        link: `/marketplace/${note.listingId}`,
+        data: { listingId: note.listingId },
+      });
+    } catch {
+      // The decision stands without the notification; the owner also sees it on the listing.
+    }
   }
 
   // ── Cross-tenant bookings ───────────────────────────────────────────

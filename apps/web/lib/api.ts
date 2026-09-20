@@ -1,5 +1,6 @@
-import axios from 'axios';
+import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import { getToken, setToken, clearAuth } from '@/lib/auth';
+import { singleFlight, writeKey } from '@/lib/single-flight';
 
 // Default to the same-origin proxy (see next.config rewrites) so the app works
 // on localhost AND through any tunnel/device without rebuilding when URLs rotate.
@@ -101,5 +102,28 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+/**
+ * N-FORM-1: identical writes that overlap in time are joined, so a double click
+ * (or a second effect pass) creates one record instead of two. Every screen gets
+ * this from the shared client — it is not a per-form fix. See lib/single-flight.ts.
+ */
+for (const method of ['post', 'put', 'patch'] as const) {
+  const send = apiClient[method].bind(apiClient) as (
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig,
+  ) => Promise<AxiosResponse>;
+  apiClient[method] = ((url: string, data?: unknown, config?: AxiosRequestConfig) =>
+    singleFlight(writeKey(method, url, data), () => send(url, data, config))) as typeof apiClient.post;
+}
+const sendDelete = apiClient.delete.bind(apiClient) as (
+  url: string,
+  config?: AxiosRequestConfig,
+) => Promise<AxiosResponse>;
+apiClient.delete = ((url: string, config?: AxiosRequestConfig) =>
+  singleFlight(writeKey('delete', url, config?.data), () =>
+    sendDelete(url, config),
+  )) as typeof apiClient.delete;
 
 export type ApiResponse<T> = { success: true; data: T } | { success: false; error: { code: string; message: string } };
