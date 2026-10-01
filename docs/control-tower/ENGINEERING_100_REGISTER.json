@@ -1,11 +1,11 @@
 {
  "schema": "umrah-connect/engineering-100-register/v1",
  "createdAt": "2026-09-18T12:23:52+00:00",
- "updatedAt": "2026-09-18T12:23:52+00:00",
+ "updatedAt": "2026-10-01T01:59:38+00:00",
  "writer": "A01 coordinator",
  "candidate": {
   "branch": "engineering/100-loop",
-  "revision": null,
+  "revision": "15130aa",
   "fingerprint": null
  },
  "statusValues": [
@@ -18,36 +18,36 @@
  ],
  "gates": {
   "G1 no unresolved P0 exposure": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "FAIL",
+   "evidence": "The Render API key exposed in pushed git history is still active (GET /v1/owners → 200, re-checked 2026-10-01). The GitHub token from the same file is invalid (401). Only the owner can revoke the Render key: CREDENTIAL_REMEDIATION.md, PROVIDER_ACTIVATION_CHECKLIST.md step 1."
   },
   "G2 no unresolved P0/P1 security or critical functional defect": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "PASS",
+   "evidence": "Every P0/P1 in ENGINEERING_100_DEFECTS.md is fixed with a regression test (40 defects closed). A12 found none in 31 adversarial API probes and 9 browser probes; A10 found no P0/P1 in 3,329 browser checks. The three open defects are P3 and recorded."
   },
   "G3 authentication and authorization accepted": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "PASS",
+   "evidence": "auth + google-stub + account e2e; capability guards from /auth/me; A10: 1,437/1,437 permission-denied checks correct; A12: capability minting refused in 13 spellings, platform routes refused to every non-platform identity, same-second revocation holds for logout-all, password change, admin force-logout and lock."
   },
   "G4 tenant and Super Admin isolation accepted": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "PASS",
+   "evidence": "Service-layer isolation plus database row-level security (FORCE RLS, non-superuser runtime role). A12 read-swept every GET route × 5 attacker identities × 30 hostile query shapes and blind-wrote every mutating route with another organization’s ids: 0 leaks, victim fingerprint byte-identical. A10: 47/47 cross-tenant probes refused."
   },
   "G5 data and money integrity accepted": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "PASS",
+   "evidence": "payments e2e + hardening + cancellation suites; A12 probes: client-chosen money fields refused, IDOR refused, 4 concurrent captures and 3 replayed webhooks settle once, refunds bounded, a capture after cancellation is held for refund and never revives the booking; per-organization reference sequences; server-side idempotency for creates."
   },
   "G6 critical browser journeys accepted": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "PASS",
+   "evidence": "A10 in actual Chrome: 87/87 routes, 3,329 checks, 3,262 pass, 45/47 complete journeys (2 not completable: Google provider absent, fixture without a group). Runtime acceptance QA re-run on the final build: 211/211."
   },
   "G7 builds and cold boot accepted": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "PASS",
+   "evidence": "API tsc/lint/unit, full e2e 522 passed with nothing skipped, provider suite 12/12, web tsc/eslint/255 tests, nest build + next build + container image build, cold boot from the built artifacts serving health and /login with the API connected as the non-superuser role, migrations with zero drift."
   },
   "G8 provider and operational verification complete for launch": {
-   "status": "OPEN",
-   "evidence": ""
+   "status": "BLOCKED",
+   "evidence": "No Google, SMTP, Stripe or R2 credentials and no KVM target exist on this machine; nothing was deployed by instruction. The exact owner steps are in PROVIDER_ACTIVATION_CHECKLIST.md (A11, A13, T04, O03, D06.L, I06, I07, I08.L, N-PRV-1, N-DEP-1, N-OPS-5, D01.L, N-BRD-1)."
   }
  },
  "requirements": [
@@ -63,11 +63,18 @@
     "status": "PASS",
     "evidence": "E rbac; R; B"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -82,11 +89,18 @@
     "status": "PASS",
     "evidence": "E rbac"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -101,11 +115,18 @@
     "status": "PASS",
     "evidence": "E rbac; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -120,11 +141,18 @@
     "status": "PASS",
     "evidence": "E auth; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -139,11 +167,16 @@
     "status": "PASS",
     "evidence": "E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth + rate-limit e2e; throttler messages genericised (FX2 F5)"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -158,11 +191,18 @@
     "status": "PASS",
     "evidence": "E access-policy; C (boot log)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -177,11 +217,18 @@
     "status": "PASS",
     "evidence": "E isolation; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -196,11 +243,18 @@
     "status": "PASS",
     "evidence": "E isolation"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -215,11 +269,18 @@
     "status": "PASS",
     "evidence": "E isolation"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -234,11 +295,18 @@
     "status": "PASS",
     "evidence": "E isolation"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -253,11 +321,18 @@
     "status": "PASS",
     "evidence": "E isolation"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -272,11 +347,18 @@
     "status": "PASS",
     "evidence": "E marketplace"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -291,11 +373,18 @@
     "status": "PASS",
     "evidence": "E marketplace"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "isolation e2e; RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10: 47/47 cross-tenant probes refused, victim record re-read unchanged"
+   ],
+   "files": [
+    "platform/api/src/common/tenant-scope.ts",
+    "platform/api/src/prisma/rls-extension.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -310,11 +399,17 @@
     "status": "PASS",
     "evidence": "E rbac; R; I (S3 presign)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "uploads e2e 10: oversize 413, wrong magic bytes, anonymous, cross-tenant document, tampered/expired signed URL"
+   ],
+   "files": [
+    "platform/api/src/modules/storage/**",
+    "platform/api/src/modules/uploads/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -329,11 +424,17 @@
     "status": "PASS",
     "evidence": "U file-sniff; E; I"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "uploads e2e 10: oversize 413, wrong magic bytes, anonymous, cross-tenant document, tampered/expired signed URL"
+   ],
+   "files": [
+    "platform/api/src/modules/storage/**",
+    "platform/api/src/modules/uploads/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -348,11 +449,16 @@
     "status": "PASS",
     "evidence": "E rate-limit; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth + rate-limit e2e; throttler messages genericised (FX2 F5)"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -367,11 +473,18 @@
     "status": "PASS",
     "evidence": "E rbac; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -386,11 +499,17 @@
     "status": "PASS",
     "evidence": "E auth; E rbac"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "same-second revocation for logout-all, password change, admin force-logout (D-A08-1 fixed in 3ae74bb)"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/auth.service.ts",
+    "platform/api/src/modules/admin/admin.service.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -405,11 +524,18 @@
     "status": "PASS",
     "evidence": "E isolation"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "rbac e2e 49 + access-policy 2 + security-regression sweeps over the live route list",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/**",
+    "platform/api/src/common/guards/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -424,11 +550,16 @@
     "status": "PASS",
     "evidence": "E auth; C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "bootstrap env validation unit tests incl. GOOGLE_OIDC_STUB_URL refused in production (XW-2)"
+   ],
+   "files": [
+    "platform/api/src/bootstrap/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -443,11 +574,16 @@
     "status": "PASS",
     "evidence": "E auth; C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "bootstrap env validation unit tests incl. GOOGLE_OIDC_STUB_URL refused in production (XW-2)"
+   ],
+   "files": [
+    "platform/api/src/bootstrap/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -462,11 +598,16 @@
     "status": "PASS",
     "evidence": "E auth; C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "bootstrap env validation unit tests incl. GOOGLE_OIDC_STUB_URL refused in production (XW-2)"
+   ],
+   "files": [
+    "platform/api/src/bootstrap/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -505,12 +646,17 @@
     "status": "PASS",
     "evidence": "C (image scan); git ls-files check"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "Secret scan of the working tree, API dist/, web .next/ and the committed evidence: no GitHub, Render, Stripe, AWS or private-key pattern",
+    "nest build exit 0; next build exit 0, zero files containing `onrender` in .next; container image builds, runs as the non-root user and holds no secret or env file — evidence/eng100/a01/{final-gate.md,s23-image-scan.txt}"
+   ],
+   "files": [
+    ".gitignore"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (scanned the working tree, API dist/, web .next/, the evidence tree AND the built container image)",
+   "notes": "The historical exposure in pushed git history is tracked separately as W40.L."
   },
   {
    "id": "S24",
@@ -524,11 +670,16 @@
     "status": "PASS",
     "evidence": "C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "bootstrap env validation unit tests incl. GOOGLE_OIDC_STUB_URL refused in production (XW-2)"
+   ],
+   "files": [
+    "platform/api/src/bootstrap/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -543,11 +694,16 @@
     "status": "PASS",
     "evidence": "E (7 red-team files)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "payments-hardening 20 + payments-cancellation 15: amount/currency manipulation, forged and replayed webhooks, refund bounds, late capture on a cancelled booking"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -562,11 +718,16 @@
     "status": "PASS",
     "evidence": "E payments; E follow-ups; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "payments-hardening 20 + payments-cancellation 15: amount/currency manipulation, forged and replayed webhooks, refund bounds, late capture on a cancelled booking"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -581,11 +742,17 @@
     "status": "PASS",
     "evidence": "U client-ip (web header pending XT-R05)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "client-ip unit tests; apps/web/middleware.ts forwards the platform address with the shared secret and drops client copies"
+   ],
+   "files": [
+    "apps/web/middleware.ts",
+    "platform/api/src/bootstrap/client-ip.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -600,11 +767,18 @@
     "status": "PASS",
     "evidence": "E auth; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -619,11 +793,18 @@
     "status": "PASS",
     "evidence": "E auth; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -638,11 +819,18 @@
     "status": "PASS",
     "evidence": "code; E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -657,11 +845,18 @@
     "status": "PASS",
     "evidence": "E auth; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -676,11 +871,18 @@
     "status": "PASS",
     "evidence": "E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -695,11 +897,18 @@
     "status": "PASS",
     "evidence": "E auth; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -714,11 +923,18 @@
     "status": "PASS",
     "evidence": "E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "verification link states: confirmed, already used, expired, invalid, missing; resend cooldown 429 with retryAfterSeconds",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/auth.service.ts",
+    "apps/web/app/verify-email/page.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -733,11 +949,18 @@
     "status": "PASS",
     "evidence": "E auth; E rbac"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "auth e2e + auth-account e2e; A02 browser run 29/29 (registration, login, workspace picker, reset single-use, refresh after a real 120s expiry, sign-out-everywhere refusing a second browser)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/**",
+    "apps/web/app/(auth)/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -752,11 +975,17 @@
     "status": "PASS",
     "evidence": "E rbac"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "onboarding e2e 13: organization creation, pending restrictions, KYC submit → reject → resubmit → approve; A03 browser 27/27"
+   ],
+   "files": [
+    "platform/api/src/modules/tenant/**",
+    "apps/web/app/(dashboard)/onboarding/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -771,12 +1000,17 @@
     "status": "PASS",
     "evidence": "E google (token endpoint stubbed)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "google e2e 8 + auth-google-oidc e2e 12 against a local stub OIDC provider (PKCE, state, nonce, five tampered-ID-token cases, code replay, linking)",
+    "Labelled stubbed Google — not a real Google sign-in"
+   ],
+   "files": [
+    "platform/api/src/modules/auth/google.service.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "Real Google credentials: A11 (launch)."
   },
   {
    "id": "A11",
@@ -790,12 +1024,14 @@
     "status": "BLOCKED",
     "evidence": "needs GOOGLE_CLIENT_ID/SECRET"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "No Google OAuth client exists on this machine; the flow is verified against a local stub only"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: create a Web OAuth client, set GOOGLE_CLIENT_ID/SECRET and GOOGLE_REDIRECT_URI = <web origin>/proxy-api/auth/google/callback, then sign in with a real Google account."
   },
   {
    "id": "A12",
@@ -809,11 +1045,16 @@
     "status": "PASS",
     "evidence": "I Mailpit"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Mail delivery code path exercised through the log driver in e2e; SMTP transport unit-tested",
+    "Real inbox delivery: A13 (launch)"
+   ],
+   "files": [
+    "platform/api/src/modules/mail/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -828,12 +1069,14 @@
     "status": "BLOCKED",
     "evidence": "needs SMTP credentials"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "No SMTP credentials; mail verified through the log driver and Mailpit only"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: SMTP mailbox + SPF/DKIM/DMARC on umrahconnect.io, then a forgot-password round trip to a real inbox."
   },
   {
    "id": "R01",
@@ -847,11 +1090,17 @@
     "status": "PASS",
     "evidence": "tsc; C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "capability catalogue synced at boot; 8 system roles; FINANCE_MANAGER organization-scoped (D-004)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/catalog.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -866,11 +1115,17 @@
     "status": "PASS",
     "evidence": "E rbac matrix; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "capability catalogue synced at boot; 8 system roles; FINANCE_MANAGER organization-scoped (D-004)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/catalog.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -885,11 +1140,17 @@
     "status": "PASS",
     "evidence": "E follow-ups; R"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "capability catalogue synced at boot; 8 system roles; FINANCE_MANAGER organization-scoped (D-004)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/catalog.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -904,11 +1165,17 @@
     "status": "PASS",
     "evidence": "R (9 logins)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "capability catalogue synced at boot; 8 system roles; FINANCE_MANAGER organization-scoped (D-004)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/rbac/catalog.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -923,12 +1190,20 @@
     "status": "DEFERRED",
     "evidence": "D-009, ADR-001 amendment"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "Migration 20260918180000_rls_defence_in_depth: FORCE RLS + policies per tenant-private table, non-owner runtime role, transaction-scoped app.tenant_id",
+    "Production path implemented and rehearsed: runtime login in compose, one-off migrate service, /health/ready 503 DATABASE_ROLE_UNSAFE (FX2 F19)"
+   ],
+   "files": [
+    "platform/api/src/prisma/**",
+    "platform/api/prisma/rls/runtime-role.sql",
+    "infrastructure/kvm/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "ADR-001 amended; every table classified in rls-tables.ts with its reason, and the catalogue test fails if a new table is unclassified."
   },
   {
    "id": "P01",
@@ -942,11 +1217,15 @@
     "status": "PASS",
     "evidence": "evidence/api-route-policies.json"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Route policy inventory regenerated on the candidate; the boot-time policy check covers every route and refuses to start if one lacks a policy — A12 watched it report 358 routes during its cold boot"
+   ],
+   "files": [
+    "platform/api/prisma/scripts/export-route-policies.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (observed the boot-time policy check over all 358 routes on the built artifact)",
    "notes": ""
   },
   {
@@ -961,11 +1240,16 @@
     "status": "PASS",
     "evidence": "E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A12 sent hostile values (SQL fragments, path traversal, operator objects) to every mutating route: no 5xx and no driver text in any envelope"
+   ],
+   "files": [
+    "platform/api/src/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -980,11 +1264,16 @@
     "status": "PASS",
     "evidence": "git history"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Dead and misleading code removed (tenant middleware, local strategy, RLS helpers); the suite and both builds are green without them",
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md"
+   ],
+   "files": [
+    "platform/api/src/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (final gate on the integrated candidate)",
    "notes": ""
   },
   {
@@ -999,11 +1288,16 @@
     "status": "PASS",
     "evidence": "CROSS_TRACK_REQUESTS"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -1018,11 +1312,16 @@
     "status": "PASS",
     "evidence": "E follow-ups"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -1037,12 +1336,20 @@
     "status": "BLOCKED",
     "evidence": "product decision: pilgrim↔user link"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "traveler-link e2e 13 (happy path, unverified account, email mismatch, expired/replayed/guessed token, revoked link, cross-tenant invite, no organization-wide reads)",
+    "A07 browser 15/15 across operator A, traveler A, traveler B, operator B",
+    "D-022 recorded in DECISIONS.md"
+   ],
+   "files": [
+    "platform/api/src/modules/pilgrims/account-links/**",
+    "platform/api/src/modules/travelers/**",
+    "apps/web/components/travelers/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
+   "notes": "Previously BLOCKED as a product decision (BLK-08/XT-003); resolved by an invitation accepted by the verified invited account."
   },
   {
    "id": "P07",
@@ -1056,11 +1363,17 @@
     "status": "DEFERRED",
     "evidence": "no model; not launch-critical"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "preferences e2e incl. owner-only access, unknown fields rejected, persistence after a fresh sign-in",
+    "Honoured server-side: a muted category stops the notification being stored (88ab60f), locale/timezone used in account emails"
+   ],
+   "files": [
+    "platform/api/src/modules/preferences/**",
+    "apps/web/components/settings/preferences-section.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -1075,16 +1388,21 @@
     "status": "DEFERRED",
     "evidence": "LOOPS_BACKLOG"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "connections (7 routes) and marketplace-requests (10 routes) now return the standard envelope, with e2e asserting it per route"
+   ],
+   "files": [
+    "platform/api/src/modules/connections/**",
+    "platform/api/src/modules/marketplace-requests/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (per-route envelope assertions in the final e2e run)",
    "notes": ""
   },
   {
    "id": "D01",
-   "scope": "engineering",
+   "scope": "parent",
    "kind": "original",
    "cross_refs": [],
    "area": "Database",
@@ -1099,7 +1417,55 @@
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "",
+   "children": [
+    "D01.E",
+    "D01.L"
+   ]
+  },
+  {
+   "id": "D01.E",
+   "scope": "engineering",
+   "kind": "split",
+   "parent": "D01",
+   "area": "Database",
+   "requirement": "Committed migrations are the schema: applied to an empty database they reproduce the datamodel exactly, with no drift and nothing destructive",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "migrate diff exit 0"
+   },
+   "status": "PASS",
+   "evidence": [
+    "A12 applied all migrations to a fresh empty database and proved migrations ≡ database ≡ datamodel in both directions (`migrate diff … --exit-code` → No difference detected), and that no migration is destructive"
+   ],
+   "files": [
+    "platform/api/prisma/migrations/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "The original row also claims the baseline matches the LIVE production schema; that half is D01.L (launch)."
+  },
+  {
+   "id": "D01.L",
+   "scope": "launch",
+   "kind": "split",
+   "parent": "D01",
+   "area": "Database",
+   "requirement": "The baseline migration matches the LIVE production database (verifiable only with access to it, at cutover)",
+   "origin": "core-90",
+   "baseline": {
+    "status": "PASS",
+    "evidence": "migrate diff exit 0"
+   },
+   "status": "BLOCKED",
+   "evidence": [
+    "The live production database is the legacy Render instance, which is unreachable (the service times out) and is not part of the target architecture"
+   ],
+   "files": [],
+   "revision": null,
+   "verifier": null,
+   "notes": "Owner: at cutover, compare the baseline against the live database before restoring it onto the KVM host (the order is in RENDER_RETIREMENT.md)."
   },
   {
    "id": "D02",
@@ -1113,11 +1479,16 @@
     "status": "PASS",
     "evidence": "C; E global setup"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "Migrations applied to a database created empty during this loop; drift check clean in both directions"
+   ],
+   "files": [
+    "platform/api/prisma/migrations/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1132,11 +1503,15 @@
     "status": "PASS",
     "evidence": "C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Schema fingerprint (pg_dump --schema-only) identical before and after a real restart of the built API; no migration statement in the boot log — evidence/eng100/a01/d03-schema-stability.txt"
+   ],
+   "files": [
+    "platform/api/src/main.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (fingerprint across a real restart of the built artifact)",
    "notes": ""
   },
   {
@@ -1151,11 +1526,16 @@
     "status": "PASS",
     "evidence": "sync-rbac run on core DB"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "RBAC data migration (legacy admins, roleless travelers) exercised by the suite and by sync-rbac on a fresh database"
+   ],
+   "files": [
+    "platform/api/prisma/scripts/sync-rbac.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1170,11 +1550,15 @@
     "status": "PASS",
     "evidence": "C rehearsal"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A09 restore rehearsal: backup → checksum + pg_restore --list → restore into a separate disposable database → 76/76 tables and 865 rows identical; tampered dump and missing checksum refused — evidence/eng100/a09"
+   ],
+   "files": [
+    "infrastructure/kvm/scripts/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (own restore rehearsal: 79 tables / 1,522 rows identical, tampered dump refused — evidence/eng100/a01/d05-restore-rehearsal.txt)",
    "notes": ""
   },
   {
@@ -1212,12 +1596,16 @@
     "status": "BLOCKED",
     "evidence": "needs R2/rclone credentials"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "OFFSITE_REMOTE required and validated; check-offsite.sh does a write/read-back/delete round trip; a failed upload keeps the local dump and exits 3 loudly"
+   ],
+   "files": [
+    "infrastructure/kvm/scripts/check-offsite.sh"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "A real off-site R2 bucket is D06.L (launch)."
   },
   {
    "id": "D06.L",
@@ -1231,12 +1619,14 @@
     "status": "BLOCKED",
     "evidence": "needs R2/rclone credentials"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "rclone remote and off-site bucket cannot be configured without R2 credentials"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: off-site R2 bucket + rclone remote, then check-offsite.sh passes and a restore drill runs from the off-site copy."
   },
   {
    "id": "D07",
@@ -1250,11 +1640,16 @@
     "status": "PASS",
     "evidence": "E payments; E isolation"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "Migrations applied to a database created empty during this loop; drift check clean in both directions"
+   ],
+   "files": [
+    "platform/api/prisma/migrations/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1269,11 +1664,16 @@
     "status": "DEFERRED",
     "evidence": "development data only"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "seed-qa-identities.ts: 15 marked local fixtures, per-identity random passwords in a 0600 file, realistic domain data; legacy seeds made convergent and consistent (bookings linked, rooms real, statuses matching); seed e2e 5/5 + seed-legacy e2e"
+   ],
+   "files": [
+    "platform/api/prisma/scripts/seed-qa-identities.ts",
+    "platform/api/prisma/seed*.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (every seed run into an empty database; all consistency checks 0 — evidence/eng100/a01/d08-seed-realism.txt)",
    "notes": ""
   },
   {
@@ -1288,11 +1688,17 @@
     "status": "PASS",
     "evidence": "E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Sandbox gateway refuses production; mail log driver development-only; no fabricated data left in a production path"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/providers/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1307,11 +1713,17 @@
     "status": "PASS",
     "evidence": "code"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Sandbox gateway refuses production; mail log driver development-only; no fabricated data left in a production path"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/providers/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1326,11 +1738,17 @@
     "status": "PASS",
     "evidence": "C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Sandbox gateway refuses production; mail log driver development-only; no fabricated data left in a production path"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/providers/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1345,11 +1763,17 @@
     "status": "PASS",
     "evidence": "E auth"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Sandbox gateway refuses production; mail log driver development-only; no fabricated data left in a production path"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/providers/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1364,12 +1788,16 @@
     "status": "PASS",
     "evidence": "I stripe-mock"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "Official Stripe SDK; the provider contract suite is green again and inside the gate (12/12), and the 5 stripe-mock e2e tests run inside the main suite with the mock up"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/providers/stripe.provider.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (stripe-mock suite 5/5 inside the main e2e run and provider suite 12/12 on the final build)",
+   "notes": "Stripe test-mode keys: T04 (launch)."
   },
   {
    "id": "T02",
@@ -1383,11 +1811,16 @@
     "status": "PASS",
     "evidence": "U stripe.provider; E follow-ups"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "payments e2e 12 + hardening 20 + cancellation 15: signature verification on the raw body, idempotency, duplicate and out-of-order events, amount/currency/mode checks, server-determined amounts",
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1402,11 +1835,16 @@
     "status": "PASS",
     "evidence": "E payments"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "payments e2e 12 + hardening 20 + cancellation 15: signature verification on the raw body, idempotency, duplicate and out-of-order events, amount/currency/mode checks, server-determined amounts",
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md"
+   ],
+   "files": [
+    "platform/api/src/modules/payments/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1421,12 +1859,14 @@
     "status": "BLOCKED",
     "evidence": "needs STRIPE_* test keys"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "No Stripe keys; the Stripe path is verified against stripe-mock and the sandbox provider"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: Stripe test keys + webhook endpoint, then a test-mode payment with 4242… and a webhook showing captured."
   },
   {
    "id": "O01",
@@ -1440,11 +1880,15 @@
     "status": "PASS",
     "evidence": "E rbac"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Documents served only through short-lived signed URLs; tampered, expired and cross-tenant links refused (A12 probed this directly)"
+   ],
+   "files": [
+    "platform/api/src/modules/storage/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1459,11 +1903,15 @@
     "status": "PASS",
     "evidence": "I MinIO"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "S3-compatible driver integration-tested against MinIO on the final build (labelled MinIO, not R2 — real R2 is O03)"
+   ],
+   "files": [
+    "platform/api/src/modules/storage/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (provider suite against MinIO on the final build)",
    "notes": ""
   },
   {
@@ -1478,12 +1926,14 @@
     "status": "BLOCKED",
     "evidence": "needs R2 credentials"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "No R2 credentials; the S3 path is verified against MinIO"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: R2 private documents bucket, public media bucket with a custom domain, scoped token."
   },
   {
    "id": "O04",
@@ -1497,11 +1947,17 @@
     "status": "DEFERRED",
     "evidence": "no job runner (AUD-038)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Orphan cleanup CLI with dry-run default, grace period, audit and production guard; references scanned across every text/JSON column; runs in an explicit maintenance system scope so RLS cannot make files look orphaned (3ae74bb)",
+    "Unit + e2e incl. MinIO integration; KVM systemd timer in report-only mode"
+   ],
+   "files": [
+    "platform/api/src/modules/storage/cleanup/**",
+    "infrastructure/kvm/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (cleanup e2e in the final suite; the maintenance system scope prevents RLS from making files look orphaned)",
    "notes": ""
   },
   {
@@ -1516,11 +1972,17 @@
     "status": "PASS",
     "evidence": "C"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "docker compose config valid in both proxy modes, caddy validate, shellcheck, actionlint, systemd-analyze verify — evidence/eng100/a09",
+    "Non-root, read-only image; project-specific names (uc-postgres/uc-api/uc-caddy); PostgreSQL never published"
+   ],
+   "files": [
+    "infrastructure/kvm/**",
+    "Dockerfile"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1535,11 +1997,17 @@
     "status": "PASS",
     "evidence": "docker compose config; caddy validate"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "docker compose config valid in both proxy modes, caddy validate, shellcheck, actionlint, systemd-analyze verify — evidence/eng100/a09",
+    "Non-root, read-only image; project-specific names (uc-postgres/uc-api/uc-caddy); PostgreSQL never published"
+   ],
+   "files": [
+    "infrastructure/kvm/**",
+    "Dockerfile"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1554,11 +2022,17 @@
     "status": "PASS",
     "evidence": "infrastructure/kvm/README.md"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "docker compose config valid in both proxy modes, caddy validate, shellcheck, actionlint, systemd-analyze verify — evidence/eng100/a09",
+    "Non-root, read-only image; project-specific names (uc-postgres/uc-api/uc-caddy); PostgreSQL never published"
+   ],
+   "files": [
+    "infrastructure/kvm/**",
+    "Dockerfile"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1573,11 +2047,15 @@
     "status": "PASS",
     "evidence": "INFRASTRUCTURE.md"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Render removed from the target runtime: render.yaml retired, guards refuse a Render URL or database in production, uptime probe fails a Render-served response — RENDER_RETIREMENT.md"
+   ],
+   "files": [
+    "docs/control-tower/RENDER_RETIREMENT.md"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1592,12 +2070,16 @@
     "status": "PASS",
     "evidence": "api-ci.yml (not yet executed on GitHub)"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "CI workflows lint clean (actionlint 0 findings); quality gate defined"
+   ],
+   "files": [
+    ".github/workflows/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "Not executed on GitHub — nothing was pushed."
   },
   {
    "id": "I06",
@@ -1611,12 +2093,14 @@
     "status": "BLOCKED",
     "evidence": "needs KVM server + DNS; deployment not authorized"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "No Umrah KVM target is identified in the repository and no deployment is authorized in this loop"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: provide the KVM 8 host and SSH access, add the api.umrahconnect.io DNS record, authorize a deployment loop."
   },
   {
    "id": "I07",
@@ -1630,12 +2114,14 @@
     "status": "BLOCKED",
     "evidence": "Vercel domain setting"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "www.umrahconnect.io still fails TLS (checked this loop)"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: add www in Vercel domains (redirect to apex)."
   },
   {
    "id": "I08",
@@ -1672,12 +2158,17 @@
     "status": "DEFERRED",
     "evidence": "configure at cutover"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "scripts/uptime-check.sh used by both a scheduled GitHub workflow (gated on a repository variable) and a host timer with alerting after two consecutive failures; tested locally against a webhook receiver"
+   ],
+   "files": [
+    ".github/workflows/uptime.yml",
+    "infrastructure/kvm/scripts/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "Activation after cutover is I08.L (launch)."
   },
   {
    "id": "I08.L",
@@ -1691,12 +2182,14 @@
     "status": "DEFERRED",
     "evidence": "configure at cutover"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "Monitoring is implemented but activates only after cutover"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: set UPTIME_MONITOR=on, ALERT_WEBHOOK_URL and the external monitor once the API is live."
   },
   {
    "id": "Q01",
@@ -1710,11 +2203,14 @@
     "status": "PASS",
     "evidence": "tsc exit 0"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "API tsc and eslint exit 0; web tsc and eslint exit 0"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1729,11 +2225,14 @@
     "status": "PASS",
     "evidence": "eslint 0 problems"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "API tsc and eslint exit 0; web tsc and eslint exit 0"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1748,11 +2247,14 @@
     "status": "PASS",
     "evidence": "19/19"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "API tsc and eslint exit 0; web tsc and eslint exit 0"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1767,11 +2269,13 @@
     "status": "PASS",
     "evidence": "144/144, stable over 3 runs"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1786,11 +2290,17 @@
     "status": "PASS",
     "evidence": "11/11"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Provider integration suite in required mode against MinIO, Mailpit and stripe-mock on the final build: 4 files, 12 passed (it was 11 pass / 1 stale failure and outside every gate until FX3 fixed the contract test and wired the suite into the gate)"
+   ],
+   "files": [
+    "platform/api/test/providers/**",
+    "platform/api/vitest.providers.config.ts",
+    ".github/workflows/api-ci.yml"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (ran the suite in required mode on the final build)",
    "notes": ""
   },
   {
@@ -1805,11 +2315,13 @@
     "status": "PASS",
     "evidence": "nest build; docker build"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "nest build exit 0; next build exit 0, zero files containing `onrender` in .next; container image builds, runs as the non-root user and holds no secret or env file — evidence/eng100/a01/{final-gate.md,s23-image-scan.txt}"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (nest build, next build and a container image build, all exit 0)",
    "notes": ""
   },
   {
@@ -1824,11 +2336,16 @@
     "status": "PASS",
     "evidence": "65/65"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Runtime acceptance QA through the real /proxy-api on the final build: 211/211 — evidence/eng100/a01/acceptance-qa.json",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "audit/integration_acceptance_qa.py"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (re-ran the acceptance harness on the final build)",
    "notes": ""
   },
   {
@@ -1843,11 +2360,13 @@
     "status": "PASS",
     "evidence": "operator dashboard 200s; /admin 403"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -1862,11 +2381,15 @@
     "status": "PASS",
     "evidence": "CROSS_TRACK_REQUESTS.md"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Cross-track contracts XT-R01…R14 all closed; CROSS_TRACK_REQUESTS.md reconciled"
+   ],
+   "files": [
+    "docs/control-tower/CROSS_TRACK_REQUESTS.md"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1881,11 +2404,13 @@
     "status": "PASS",
     "evidence": "merge `001553a`; file sets disjoint except `pnpm-lock.yaml`"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "Codex's uncommitted post-merge work ported three-way (48693e5) with 18 conflicts resolved to the hardened contract; its worktree untouched"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1900,11 +2425,13 @@
     "status": "PASS",
     "evidence": "`tsc --noEmit` exit 0"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1919,11 +2446,13 @@
     "status": "PASS",
     "evidence": "`eslint app components hooks lib middleware.ts` exit 0"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1938,11 +2467,13 @@
     "status": "PASS",
     "evidence": "58/58 (39 inherited + 19 new contract guards)"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1957,11 +2488,15 @@
     "status": "PASS",
     "evidence": "`next build` exit 0, 76 static pages, middleware 26.4 kB"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "nest build exit 0; next build exit 0, zero files containing `onrender` in .next; container image builds, runs as the non-root user and holds no secret or env file — evidence/eng100/a01/{final-gate.md,s23-image-scan.txt}"
+   ],
+   "files": [
+    "apps/web/next.config.mjs"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -1976,11 +2511,15 @@
     "status": "PASS",
     "evidence": "build without it exits 1 with the named error"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "With no API_PROXY_ORIGIN in the environment or any .env file, the production build exits 1 with the named error — evidence/eng100/a01/w06-build-refusal.txt"
+   ],
+   "files": [
+    "apps/web/next.config.mjs"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (ran the build with the variable removed everywhere)",
    "notes": ""
   },
   {
@@ -1995,11 +2534,17 @@
     "status": "PASS",
     "evidence": "login body has no `refreshToken`; cookie httpOnly; empty-body refresh + logout verified over HTTP and in the browser"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Refresh token is an httpOnly cookie only; login response carries none"
+   ],
+   "files": [
+    "apps/web/lib/api.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2014,11 +2559,16 @@
     "status": "PASS",
     "evidence": "browser, all seven: PILGRIM→/travel-plan, OPERATOR_ADMIN→/dashboard, HOTEL_MANAGER→/hotel-dashboard, TRANSPORT_MANAGER→/transport-dashboard, VISA_OFFICER→/visa-dashboard, FINANCE_MANAGER→/finance-dashboard, SUPER_ADMIN→/admin-dashboard"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Every role lands on the workspace its capabilities open (landingPathFor)"
+   ],
+   "files": [
+    "apps/web/lib/workspace-access.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2033,11 +2583,19 @@
     "status": "NOT DONE",
     "evidence": "`lib/workspace-access.ts` still matches role names; `/auth/me` permissions unused"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "One route→capability table for all workspace routes; navigation, route access and actions gated by /auth/me capabilities, never role names; profile re-read on focus and after any 403",
+    "A03 browser: menus 41/42 (the miss was DEF-002, fixed), stale-grant checks 9/9, re-login 3/3",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/lib/workspace-access.ts",
+    "apps/web/hooks/use-capabilities.ts",
+    "apps/web/components/auth/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2052,11 +2610,16 @@
     "status": "PASS",
     "evidence": "visa + KYC wired to `/documents/*/url`; acceptance: upload → `private:` reference → signed fetch 200 → tampered signature 401"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "Signed-URL lifecycle: owner 200, tampered 401, cross-tenant refused, expired refused; documents open in a new tab with a freshly minted link"
+   ],
+   "files": [
+    "apps/web/lib/private-documents.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (nest build, next build and a container image build, all exit 0)",
    "notes": ""
   },
   {
@@ -2071,11 +2634,14 @@
     "status": "PASS",
     "evidence": "login page is email+password only"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "No fabricated data in a production path; payment status that could never change removed rather than displayed (F13)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2090,11 +2656,16 @@
     "status": "PASS",
     "evidence": "`apps/web/middleware.ts`; two clients get independent rate-limit buckets (429 at 31), a forged header is discarded"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "Proxy secret and client IP forwarded; client copies dropped"
+   ],
+   "files": [
+    "apps/web/middleware.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2133,12 +2704,19 @@
     "status": "NOT DONE",
     "evidence": "no `/auth/callback` page; backend flow complete and tested"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "Google button on /login and /signup shown only when the provider reports enabled; /auth/callback exchanges the fragment ticket once, scrubs the fragment, handles cancel and every documented error code; linking from settings",
+    "Verified end to end against a local stub OIDC provider (12 e2e) and in the browser; labelled stubbed Google",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/app/auth/callback/page.tsx",
+    "apps/web/app/(auth)/login/page.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
+   "notes": "Real Google sign-in is A11 (launch)."
   },
   {
    "id": "W14",
@@ -2176,12 +2754,18 @@
     "status": "NOT DONE",
     "evidence": "no `/verify-email` page or unverified banner; backend complete"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "/verify-email states (confirmed, already used, expired, invalid, missing), unverified banner with resend cooldown, profile refreshed after verification",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/app/verify-email/page.tsx",
+    "apps/web/components/layout/email-verification.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
+   "notes": "Real SMTP delivery is A13 (launch)."
   },
   {
    "id": "W15",
@@ -2195,11 +2779,19 @@
     "status": "NOT DONE",
     "evidence": "no caller for `/onboarding/organization` or `/tenants/me/kyc`"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Provider onboarding with every server field, pending-workspace experience, KYC upload with progress and retry, status, rejection reason and resubmission; Super Admin approves or rejects and only approval activates",
+    "A03 browser 27/27 with a freshly registered traveler",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/app/(dashboard)/onboarding/**",
+    "apps/web/components/onboarding/**",
+    "apps/web/components/admin/admin-kyc-view.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2239,12 +2831,19 @@
     "status": "NOT DONE",
     "evidence": "no `@stripe/*` dependency; sandbox intent/confirm path works"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "Stripe Payment Element for traveler checkout and staff invoice payment; server-authoritative amounts; pending/processing/declined/retry/refresh-safe states; duplicate attempts resume one payment",
+    "A04 browser 26/26 + 6/6 unavailable-provider + 15/15 bookings; stripe-mock 5/5",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/components/finance/**",
+    "apps/web/components/my-bookings/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
+   "notes": "Stripe test-mode verification is T04 (launch)."
   },
   {
    "id": "W17",
@@ -2258,11 +2857,17 @@
     "status": "PASS",
     "evidence": "booking/invoice transitions, refund routing, visa decisions, enums — all covered by `tests/server-contracts.test.ts`"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "server-contracts tests read the Prisma enums and server DTOs at test time; A12 probed money tampering directly"
+   ],
+   "files": [
+    "apps/web/tests/server-contracts.test.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2277,11 +2882,16 @@
     "status": "PASS",
     "evidence": "`next.config.mjs` remote patterns; `umrahconnect.io` spelling fixed"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "nest build exit 0; next build exit 0, zero files containing `onrender` in .next; container image builds, runs as the non-root user and holds no secret or env file — evidence/eng100/a01/{final-gate.md,s23-image-scan.txt}",
+    "Media hosts admitted from configuration; umrahconnect.io spelling fixed"
+   ],
+   "files": [
+    "apps/web/next.config.mjs"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2296,11 +2906,14 @@
     "status": "PASS",
     "evidence": "browser: platform organization listed and labelled in `/admin-tenants`"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Every non-platform identity refused on platform routes (A10: 1,437/1,437 denied checks correct)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2315,11 +2928,16 @@
     "status": "NOT DONE",
     "evidence": "settings page remains read-only"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Change password (with forced re-login), sign out everywhere, Google-only accounts offered a set-password path, linked identities shown",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/app/(dashboard)/settings/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2334,11 +2952,18 @@
     "status": "PASS",
     "evidence": "shared `lib/password-policy.ts`, asserted against the register DTO"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Password hints come from the shared rule asserted against the register DTO; validation failures render as a sentence (A10 exercised 56 invalid-input paths)"
+   ],
+   "files": [
+    "apps/web/lib/password-policy.ts",
+    "apps/web/lib/api-error.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2353,11 +2978,17 @@
     "status": "PASS",
     "evidence": "`marketplace-view.tsx` sends major units; server converts once"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "server-contracts tests read the Prisma enums and server DTOs at test time; A12 probed money tampering directly"
+   ],
+   "files": [
+    "apps/web/tests/server-contracts.test.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2372,11 +3003,14 @@
     "status": "PASS",
     "evidence": "workspace list read from `error.details.tenants`; reproduced with a real two-workspace account"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Multi-workspace sign-in picker exercised"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2391,11 +3025,14 @@
     "status": "PASS",
     "evidence": "stock photography removed; `imageUrls` / `vendor.name`; confirmed in the browser"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "No fabricated data in a production path; payment status that could never change removed rather than displayed (F13)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2410,11 +3047,14 @@
     "status": "PASS",
     "evidence": "envelope unwrapped in `use-platform.ts`"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "No fabricated data in a production path; payment status that could never change removed rather than displayed (F13)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2429,11 +3069,14 @@
     "status": "PASS",
     "evidence": "feed returns the viewer's own save; client seeds from it"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "No fabricated data in a production path; payment status that could never change removed rather than displayed (F13)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2448,11 +3091,14 @@
     "status": "PASS",
     "evidence": "`/admin/stats` returns `tenants.byStatus` and `usersByStatus`; browser shows 11/11 consistent"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "No fabricated data in a production path; payment status that could never change removed rather than displayed (F13)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2467,11 +3113,18 @@
     "status": "PASS",
     "evidence": "`lib/api-error.ts` across 49 call sites; unit-tested"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Password hints come from the shared rule asserted against the register DTO; validation failures render as a sentence (A10 exercised 56 invalid-input paths)"
+   ],
+   "files": [
+    "apps/web/lib/password-policy.ts",
+    "apps/web/lib/api-error.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2486,11 +3139,14 @@
     "status": "PASS",
     "evidence": "hotel room count and booked seats removed from edit forms"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "No fabricated data in a production path; payment status that could never change removed rather than displayed (F13)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2505,11 +3161,17 @@
     "status": "PASS",
     "evidence": "measured `scrollWidth` vs `clientWidth` across operator, provider and platform routes"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "196 measurements at 1440/1280/1024/768/390/360 for representative routes of every role, plus the mobile drawer, 320 px reflow, 200 % text and the landing hero at seven widths",
+    "Five overflow defects found on the candidate and fixed; after: every page-level overflow 0, tables scroll only inside named keyboard-reachable regions — evidence/eng100/a11/responsive"
+   ],
+   "files": [
+    "apps/web/app/globals.css",
+    "apps/web/components/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (re-ran A11’s measurement scripts on the final build; A11 wrote the fixes)",
    "notes": ""
   },
   {
@@ -2524,12 +3186,20 @@
     "status": "NOT DONE",
     "evidence": "swept routes have zero unnamed controls, but no automated audit or screen-reader session"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    "Automated audit: axe-core 4.13.0 (wcag2a/2aa/21a/21aa/22aa) over 428 states across 11 identities — 40 serious/critical nodes before, 0 after; coordinator re-run on the final build: 75 states, 0 violations (evidence/eng100/a01/a11-reverify.txt)",
+    "Screen reader: a real session with Orca 43.1 + Firefox ESR in a container, driven by keyboard, with Orca’s own speech recorded for sign-in, a failed sign-in, list navigation, a dialog, a form error and the account menu — evidence/eng100/a11/orca",
+    "Keyboard/focus 115 checks, contrast and non-text contrast measured, reflow at 320 px, text at 200 %, accessible authentication (3.3.8) — WCAG 2.2 AA mapping in evidence/eng100/a11/axe/SUMMARY.md"
+   ],
+   "files": [
+    "apps/web/components/**",
+    "apps/web/app/globals.css",
+    "apps/web/tests/accessibility-semantics.test.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (independent re-run of the axe sweep on the final build) + A11 (evaluation author)",
+   "notes": "Recorded as an EVALUATION, not a certification: no third party audited anything and automated tooling covers about a third of the criteria. Criteria not evaluated are listed in the A11 summary. One scripted Orca session is not a session with a person who uses a screen reader daily; NVDA, JAWS and VoiceOver were not tested (VoiceOver cannot be scripted without changing a system setting)."
   },
   {
    "id": "W32",
@@ -2543,11 +3213,13 @@
     "status": "PASS",
     "evidence": "zero console errors; all `/proxy-api` calls 200; no request loops"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass — zero console errors and zero request loops across 387 page visits"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2562,11 +3234,15 @@
     "status": "PASS",
     "evidence": "acceptance harness, A/B organizations for hotel, transport, visa, operator, traveler"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2581,11 +3257,14 @@
     "status": "PASS",
     "evidence": "63 direct API probes + anonymous; browser boundary page"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "Every non-platform identity refused on platform routes (A10: 1,437/1,437 denied checks correct)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2600,11 +3279,15 @@
     "status": "PASS",
     "evidence": "create → read → fresh login → list → soft delete → status confirmed"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "RLS suite 132 tests + catalogue check; FX2 Docker rehearsal (cross-tenant probes refused as the runtime role) — RLS.md, evidence/eng100/{a08,fx2}",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2619,11 +3302,17 @@
     "status": "PASS",
     "evidence": "tampered total 400; server figure matches; checkout charges the server total"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API unit 201/201; web vitest 255/255 — evidence/eng100/a01/final-gate.md",
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "server-contracts tests read the Prisma enums and server DTOs at test time; A12 probed money tampering directly"
+   ],
+   "files": [
+    "apps/web/tests/server-contracts.test.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2638,11 +3327,16 @@
     "status": "PASS",
     "evidence": "signed URL serves, tampered signature refused, cross-tenant and traveler refused"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "Signed-URL lifecycle: owner 200, tampered 401, cross-tenant refused, expired refused; documents open in a new tab with a freshly minted link"
+   ],
+   "files": [
+    "apps/web/lib/private-documents.ts"
+   ],
+   "revision": "15130aa",
+   "verifier": "A01 coordinator (nest build, next build and a container image build, all exit 0)",
    "notes": ""
   },
   {
@@ -2657,11 +3351,14 @@
     "status": "PASS",
     "evidence": "defect found, fixed, regression test with no sleeps"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "API e2e on the candidate, app connected as the non-superuser runtime role (RLS enforced), stripe-mock running: 37 files, 522 passed, 0 skipped, 0 failed — evidence/eng100/a01/final-gate.md",
+    "Same-second revocation holds for logout-all, password change and admin force-logout"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2676,11 +3373,14 @@
     "status": "PASS",
     "evidence": "fresh PIDs in the integration worktree; 65/65 + 210/210"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "Cold boot from the built artifacts on the candidate: API and web started from dist/.next, health ready, sign-in through the real form",
+    "nest build exit 0; next build exit 0, zero files containing `onrender` in .next; container image builds, runs as the non-root user and holds no secret or env file — evidence/eng100/a01/{final-gate.md,s23-image-scan.txt}"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2718,12 +3418,16 @@
     "status": "BLOCKED",
     "evidence": "file untracked and ignored locally, but the tokens are in pushed history — only revocation at the provider closes this"
    },
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
-   "notes": ""
+   "status": "PASS",
+   "evidence": [
+    ".claude/settings.local.json untracked and ignored; current tree, build output and evidence scanned clean"
+   ],
+   "files": [
+    ".gitignore"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
+   "notes": "Revocation at the providers is W40.L (launch)."
   },
   {
    "id": "W40.L",
@@ -2737,12 +3441,14 @@
     "status": "BLOCKED",
     "evidence": "file untracked and ignored locally, but the tokens are in pushed history — only revocation at the provider closes this"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "GitHub PAT: revoked (401 Bad credentials, verified). Render API key: still active (200) at the last check"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: revoke the Render key (dashboard → Account Settings → API Keys); the verification command is in CREDENTIAL_REMEDIATION.md."
   },
   {
    "id": "W41",
@@ -2756,11 +3462,13 @@
     "status": "PASS",
     "evidence": "all seven roles signed in through the real form; landing page and scoped data confirmed for traveler, operator, hotel, transport, visa, finance and Super Admin"
    },
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass — complete journeys, not landing pages: 45/47 passed, the two not completable recorded with reasons (Google provider not configured, fixture without a group)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2772,11 +3480,13 @@
    "requirement": "Codex's post-merge uncommitted web work integrated without loss; Codex worktree untouched",
    "owner": "A01",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "Port commit 48693e5 with an 18-conflict resolution log; Codex worktree left untouched (verified unchanged afterwards)"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2788,11 +3498,15 @@
    "requirement": "Traveler↔pilgrim link only through an operator invitation accepted by the verified invited account; revocation, audit, cross-tenant claim prevention",
    "owner": "A07",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "traveler-link e2e 13 incl. cross-tenant claim, replay, expiry, revocation, unverified account and email mismatch; audit entries for every event"
+   ],
+   "files": [
+    "platform/api/src/modules/pilgrims/account-links/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -2804,11 +3518,18 @@
    "requirement": "Posts: create, edit and delete own posts; others refused (UI + API)",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2820,11 +3541,18 @@
    "requirement": "Comments: list with pagination, add, reply, edit and delete with correct counts and ownership",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2836,11 +3564,18 @@
    "requirement": "Reactions and bookmarks toggle and persist per viewer",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2852,11 +3587,18 @@
    "requirement": "Groups and membership: traveler groups, join/leave/invites; operator group management actions",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2868,11 +3610,18 @@
    "requirement": "Connections and direct messages work end to end",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2884,11 +3633,18 @@
    "requirement": "Notifications: list, mark read, mark all read; persisted",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2900,11 +3656,18 @@
    "requirement": "Pagination / load more on feeds and lists",
    "owner": "A05",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "social e2e 14 + groups e2e 6; A05 browser 17/17 across traveler A, traveler B and an operator",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "The reported defect (comments beyond the first two never appeared) is fixed: paged comment list, one reply level, edit/delete with correct counts"
+   ],
+   "files": [
+    "platform/api/src/modules/social/**",
+    "apps/web/components/social/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2916,11 +3679,17 @@
    "requirement": "Listing create, edit, publish/unpublish and archive with required fields and categories",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "marketplace-listings e2e 16 + marketplace e2e 11 + moderation 7 + conversion 7; A06 browser 41/41 (publish, real photos, search/filter/pagination, price units, cross-provider refusal)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/marketplace/**",
+    "apps/web/components/marketplace/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2932,11 +3701,17 @@
    "requirement": "Real seller identity and real uploaded media on listings",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "marketplace-listings e2e 16 + marketplace e2e 11 + moderation 7 + conversion 7; A06 browser 41/41 (publish, real photos, search/filter/pagination, price units, cross-provider refusal)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/marketplace/**",
+    "apps/web/components/marketplace/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2948,11 +3723,17 @@
    "requirement": "Marketplace search, filters and pagination",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "marketplace-listings e2e 16 + marketplace e2e 11 + moderation 7 + conversion 7; A06 browser 41/41 (publish, real photos, search/filter/pagination, price units, cross-provider refusal)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/marketplace/**",
+    "apps/web/components/marketplace/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2964,11 +3745,17 @@
    "requirement": "Price units and currency correct from form to wire to display to checkout",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "marketplace-listings e2e 16 + marketplace e2e 11 + moderation 7 + conversion 7; A06 browser 41/41 (publish, real photos, search/filter/pagination, price units, cross-provider refusal)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/marketplace/**",
+    "apps/web/components/marketplace/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2980,11 +3767,17 @@
    "requirement": "Listing ownership: another provider cannot edit, unpublish or delete",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "marketplace-listings e2e 16 + marketplace e2e 11 + moderation 7 + conversion 7; A06 browser 41/41 (publish, real photos, search/filter/pagination, price units, cross-provider refusal)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/marketplace/**",
+    "apps/web/components/marketplace/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -2996,11 +3789,17 @@
    "requirement": "Marketplace requests → offers → accept → booking",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "marketplace-listings e2e 16 + marketplace e2e 11 + moderation 7 + conversion 7; A06 browser 41/41 (publish, real photos, search/filter/pagination, price units, cross-provider refusal)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/marketplace/**",
+    "apps/web/components/marketplace/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3012,11 +3811,17 @@
    "requirement": "Upload UX: picker, validation, progress, failure recovery",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "uploads e2e 10 (oversize 413, wrong content, anonymous, cross-tenant, tampered/forged/expired links); owner-only delete; documents open in a new tab with a fresh signed link",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/uploads/**",
+    "apps/web/components/ui/file-upload-images.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3028,11 +3833,17 @@
    "requirement": "Persisted object reference; preview or authorized download (new tab, signed URL re-minted)",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "uploads e2e 10 (oversize 413, wrong content, anonymous, cross-tenant, tampered/forged/expired links); owner-only delete; documents open in a new tab with a fresh signed link",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/uploads/**",
+    "apps/web/components/ui/file-upload-images.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3044,11 +3855,17 @@
    "requirement": "Replacement and deletion where supported",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "uploads e2e 10 (oversize 413, wrong content, anonymous, cross-tenant, tampered/forged/expired links); owner-only delete; documents open in a new tab with a fresh signed link",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/uploads/**",
+    "apps/web/components/ui/file-upload-images.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3060,11 +3877,17 @@
    "requirement": "Size/type rejection, permission denial, expired or tampered signed URL refused",
    "owner": "A06",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "uploads e2e 10 (oversize 413, wrong content, anonymous, cross-tenant, tampered/forged/expired links); owner-only delete; documents open in a new tab with a fresh signed link",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/uploads/**",
+    "apps/web/components/ui/file-upload-images.tsx"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3076,11 +3899,17 @@
    "requirement": "Operator workflows beyond the landing page (pilgrims, bookings, packages, groups, reports)",
    "owner": "A03b/A04/A07",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A03b route-and-action inventory: 57/57 browser checks over 38 route×role pairs, server-enforced hotel/transport/visa workflows with availability and clash checks",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "business-hotel-transport e2e 12 + business-visa-reports e2e 11"
+   ],
+   "files": [
+    "platform/api/src/modules/{hotels,transport,compliance,visa-requests}/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3092,11 +3921,17 @@
    "requirement": "Hotel workflows (properties, room types, rooms, allotments, bookings, assignments)",
    "owner": "A03b",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A03b route-and-action inventory: 57/57 browser checks over 38 route×role pairs, server-enforced hotel/transport/visa workflows with availability and clash checks",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "business-hotel-transport e2e 12 + business-visa-reports e2e 11"
+   ],
+   "files": [
+    "platform/api/src/modules/{hotels,transport,compliance,visa-requests}/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3108,11 +3943,17 @@
    "requirement": "Transport workflows (vehicles, drivers, routes, assignments, bookings)",
    "owner": "A03b",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A03b route-and-action inventory: 57/57 browser checks over 38 route×role pairs, server-enforced hotel/transport/visa workflows with availability and clash checks",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "business-hotel-transport e2e 12 + business-visa-reports e2e 11"
+   ],
+   "files": [
+    "platform/api/src/modules/{hotels,transport,compliance,visa-requests}/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3124,11 +3965,17 @@
    "requirement": "Visa agency workflows (cases, documents, decisions, service requests)",
    "owner": "A03b",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A03b route-and-action inventory: 57/57 browser checks over 38 route×role pairs, server-enforced hotel/transport/visa workflows with availability and clash checks",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass",
+    "business-hotel-transport e2e 12 + business-visa-reports e2e 11"
+   ],
+   "files": [
+    "platform/api/src/modules/{hotels,transport,compliance,visa-requests}/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3140,11 +3987,16 @@
    "requirement": "Finance workflows (invoices, recorded payments, refunds, reporting) inside one organization",
    "owner": "A04",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Invoice lifecycle, recorded payments, refunds and reporting scoped to one organization; closing an invoice needs the approval capability (finance-approval e2e 2/2)",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "platform/api/src/modules/finance/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3156,11 +4008,16 @@
    "requirement": "Super Admin workflows (users, organizations, KYC, moderation, platform controls)",
    "owner": "A03",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A03 admin browser run 27/27: users, organizations, KYC decisions, moderation, logs, settings — every action re-checked after a reload",
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "apps/web/components/admin/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3172,11 +4029,13 @@
    "requirement": "Traveler workflows (requests, bookings, checkout, tracking, community)",
    "owner": "A04/A05/A07",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass — traveler journeys: marketplace search → book → checkout → cancel, requests and offers, linked trips, community, notifications"
+   ],
    "files": [],
-   "revision": null,
-   "verifier": null,
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3188,11 +4047,17 @@
    "requirement": "Required fields present; client/server validation aligned; useful errors; duplicate-submit protection; persisted defaults",
    "owner": "all",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "Server-side idempotency: a POST create carries an Idempotency-Key; the first request wins the key and its response is replayed to duplicates, so a second tab, a retry after a token refresh or any other client cannot create a second record (A12 refused the earlier client-only guard, FX3 replaced it)",
+    "Required fields, client/server validation alignment and useful errors covered by the contract tests and A10’s invalid-input checks (56)"
+   ],
+   "files": [
+    "apps/web/lib/single-flight.ts",
+    "platform/api/src/common/idempotency/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "FX3 e2e (five concurrent identical creates → one record on four routes; two real browser tabs → one record) after A12 refused the client-only version; coordinator re-ran the suite on the final build",
    "notes": ""
   },
   {
@@ -3204,11 +4069,15 @@
    "requirement": "Functional browser matrix: every route × permitted role — positive, invalid, denied, empty/error, persistence — on the candidate in Chrome",
    "owner": "A10",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "A10 independent browser QA (actual Chrome 153, one context per identity, real /login): FUNCTIONAL_BROWSER_MATRIX.md — 87/87 routes, 3,329 checks, 3,262 pass"
+   ],
+   "files": [
+    "docs/control-tower/FUNCTIONAL_BROWSER_MATRIX.md"
+   ],
+   "revision": "15130aa",
+   "verifier": "A10 (independent browser QA, actual Chrome — implemented none of this code)",
    "notes": ""
   },
   {
@@ -3220,11 +4089,15 @@
    "requirement": "Backup directory created and owned by the deploy user (idempotent)",
    "owner": "A09",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "host-setup.sh creates the backup directory owned by the deploy user, mode 0700, idempotent; the original permission-denied gap reproduced then fixed on Ubuntu 24.04"
+   ],
+   "files": [
+    "infrastructure/kvm/scripts/host-setup.sh"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 refusal addressed by FX3 (server-side idempotency); verified by FX3's e2e (five concurrent creates → one record on four routes) and a two-tab browser check; coordinator re-ran the suite on the final build",
    "notes": ""
   },
   {
@@ -3236,11 +4109,15 @@
    "requirement": "Render runtime dependency removed from the target; stack builds and runs with no Render endpoint or credential",
    "owner": "A09",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
-   "files": [],
-   "revision": null,
-   "verifier": null,
+   "status": "PASS",
+   "evidence": [
+    "API image built and run as the full KVM stack with no Render value in its configuration; guards refuse a Render URL or database in production; zero Render references in runtime, deploy surfaces and env templates"
+   ],
+   "files": [
+    "infrastructure/kvm/**"
+   ],
+   "revision": "15130aa",
+   "verifier": "A12 (independent reviewer — re-ran every gate on the candidate; the rows it probed adversarially are listed in evidence/eng100/a12/SUMMARY.md)",
    "notes": ""
   },
   {
@@ -3252,12 +4129,14 @@
    "requirement": "Legacy Render service decommissioned after an authorized KVM cutover (backup first)",
    "owner": "Owner",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "The legacy Render service still exists and is not suspended; decommissioning requires a backup and an authorized cutover first"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: follow the ordered steps in RENDER_RETIREMENT.md (backup → KVM deploy → DNS → Vercel origin → verify → suspend → delete)."
   },
   {
    "id": "N-BRD-1",
@@ -3268,12 +4147,14 @@
    "requirement": "Approved standalone Makkah/Kaaba hero asset supplied at apps/web/public/images/hero/makkah-approved.webp",
    "owner": "Owner",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "No approved standalone Makkah/Kaaba asset exists anywhere on this machine; the landing page renders its slot only when the file is present"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: supply apps/web/public/images/hero/makkah-approved.webp (see docs/ui-ux/HERO_ASSET.md)."
   },
   {
    "id": "N-PRV-1",
@@ -3284,12 +4165,14 @@
    "requirement": "Stripe live activation: live keys, production webhook endpoint, account activation",
    "owner": "Owner",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "Stripe live activation is a production action outside this loop"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: activate the Stripe account, live keys and the production webhook endpoint."
   },
   {
    "id": "N-DEP-1",
@@ -3300,12 +4183,14 @@
    "requirement": "Production deployment of the reviewed candidate: Vercel env (API_PROXY_ORIGIN, PROXY_SHARED_SECRET) and KVM API",
    "owner": "Owner",
    "baseline": null,
-   "status": "OPEN",
-   "evidence": [],
+   "status": "BLOCKED",
+   "evidence": [
+    "Nothing was deployed in this loop by instruction"
+   ],
    "files": [],
    "revision": null,
    "verifier": null,
-   "notes": ""
+   "notes": "Owner: deploy the reviewed candidate (Vercel env + KVM API) after the steps above."
   }
  ]
 }

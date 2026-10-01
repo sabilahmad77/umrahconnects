@@ -1,0 +1,8 @@
+== W31/W30 re-verification by the coordinator on the final build (A11 wrote the fixes; this run is independent of it)
+tool: axe-core 4.13.0 | tags: wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa,best-practice (reported separately)
+base: http://localhost:3300 | audited states: 75 | identities: travelerA, operatorAdminA, superAdmin (pages)
+
+WCAG violations: none — 0 rules, 0 nodes
+total violating nodes: 0
+
+The one finding the previous run showed (Void/Cancelled badge at 4.39:1, WCAG 1.4.3) was fixed in 15130aa and is gone from this run.
