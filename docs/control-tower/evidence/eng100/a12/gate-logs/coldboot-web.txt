@@ -1,0 +1,8 @@
+  ▲ Next.js 14.2.35
+  - Local:        http://127.0.0.1:3413
+  - Network:      http://127.0.0.1:3413
+
+ ✓ Starting...
+ ✓ Ready in 328ms
+(node:39901) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)

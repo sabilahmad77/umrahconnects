@@ -1,0 +1,292 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/macbook/Projects/umrah-connects-eng100/a12/platform/api
+
+<claude-code-hint v="1" type="plugin" value="stripe@claude-plugins-official" />
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > no GET route hands another organization a row of organization A, however the query is shaped
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"f19ec424-d0cb-4929-aaff-8597b6e4f34d\",\"2a839b41-cfe1-4591-bc23-16e1f906183c\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "f19ec424-d0cb-4929-aaff-8597b6e4f34d",
+          status: "ALL"
+                  ~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > no GET route hands another organization a row of organization A, however the query is shaped
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"dc3d3ed4-cdcd-4460-a353-553eb7a244cf\",\"723f5f51-fd8b-4001-90aa-c096be39b7bf\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "dc3d3ed4-cdcd-4460-a353-553eb7a244cf",
+          status: "ALL"
+                  ~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"5701f9d2-7504-4a9a-a43b-f8cfbef9d599\",\"10dd5a8d-4f52-4e8d-8e79-825eb165373a\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "5701f9d2-7504-4a9a-a43b-f8cfbef9d599",
+          status: "ALL"
+                  ~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"5701f9d2-7504-4a9a-a43b-f8cfbef9d599\",\"10dd5a8d-4f52-4e8d-8e79-825eb165373a\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "5701f9d2-7504-4a9a-a43b-f8cfbef9d599",
+          status: "ANY"
+                  ~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"5701f9d2-7504-4a9a-a43b-f8cfbef9d599\",\"10dd5a8d-4f52-4e8d-8e79-825eb165373a\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "5701f9d2-7504-4a9a-a43b-f8cfbef9d599",
+          status: "'; DROP TABLE users; --"
+                  ~~~~~~~~~~~~~~~~~~~~~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"5701f9d2-7504-4a9a-a43b-f8cfbef9d599\",\"10dd5a8d-4f52-4e8d-8e79-825eb165373a\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "5701f9d2-7504-4a9a-a43b-f8cfbef9d599",
+          status: "../../etc/passwd"
+                  ~~~~~~~~~~~~~~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"5701f9d2-7504-4a9a-a43b-f8cfbef9d599\",\"10dd5a8d-4f52-4e8d-8e79-825eb165373a\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "5701f9d2-7504-4a9a-a43b-f8cfbef9d599",
+          status: "{\"gt\":\"\"}"
+                  ~~~~~~~~~~~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+stdout | test/a12-acceptance-probes.e2e-spec.ts > A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text
+prisma:error 
+Invalid `prisma.$executeRaw()` invocation:
+
+{
+  query: "SELECT set_config('app.scope', $1, true), set_config('app.tenant_id', $2, true), set_config('app.user_id', $3, true)",
+  parameters: {
+    values: "[\"tenant\",\"5701f9d2-7504-4a9a-a43b-f8cfbef9d599\",\"10dd5a8d-4f52-4e8d-8e79-825eb165373a\"]",
+    __prismaRawParameters__: true
+  }
+}
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+prisma:error 
+Invalid `this.prisma.visaDocument.findMany()` invocation in
+/Users/macbook/Projects/umrah-connects-eng100/a12/platform/api/src/modules/compliance/visa-documents.service.ts:189:49
+
+  186   where.expiresAt = { gte: new Date(), lte: until };
+  187 }
+  188 
+→ 189 const docs = await this.prisma.visaDocument.findMany({
+        where: {
+          tenantId: "5701f9d2-7504-4a9a-a43b-f8cfbef9d599",
+          status: "null"
+                  ~~~~~~
+        },
+        orderBy: {
+          updatedAt: "desc"
+        },
+        take: 500
+      })
+
+Invalid value for argument `status`. Expected VisaDocumentStatus.
+
+ ✓ test/a12-acceptance-probes.e2e-spec.ts (31 tests) 100977ms
+   ✓ A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > no GET route hands another organization a row of organization A, however the query is shaped 65588ms
+   ✓ A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > exports and reports refuse an organization id that is not the caller's 2892ms
+   ✓ A12 acceptance probes > cross-organization reads: filters, includes, counts, exports and reports > a hostile query value never produces a 5xx or leaks driver text 17614ms
+   ✓ A12 acceptance probes > cross-organization writes > no mutating route lets another organization move a row of organization A 10265ms
+   ✓ A12 acceptance probes > capability minting > every platform route refuses every non-platform identity, including a custom-role holder 708ms
+   ✓ A12 acceptance probes > sessions > logout-everywhere kills a token minted in the same second 708ms
+   ✓ A12 acceptance probes > sessions > a password change kills a token minted in the same second 596ms
+   ✓ A12 acceptance probes > sessions > an administrative force-logout and a lock kill a token minted in the same second 389ms
+
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+   Start at  00:39:44
+   Duration  104.96s (transform 734ms, setup 10ms, collect 1.88s, tests 100.98s, environment 0ms, prepare 41ms)
+

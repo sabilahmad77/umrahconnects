@@ -1,0 +1,34 @@
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v2.1.9 /Users/macbook/Projects/umrah-connects-eng100/a12/apps/web
+
+ ✓ tests/server-contracts.test.ts (25 tests) 19ms
+ ✓ tests/transaction-contracts.test.ts (36 tests) 16ms
+ ✓ tests/capabilities.test.ts (24 tests) 358ms
+   ✓ landing > matches the auth provider’s dashboard for every workspace 330ms
+ ✓ tests/auth-google-callback.test.ts (16 tests) 10ms
+ ✓ tests/marketplace-rules.test.ts (8 tests) 18ms
+ ✓ tests/checkout-machine.test.ts (17 tests) 655ms
+   ✓ money captured after a cancellation (F1) > is held (on hold for the payer) and refundable in full by staff, and only that hold is 634ms
+ ✓ tests/traveler-links.test.tsx (12 tests) 36ms
+ ✓ tests/auth-settings-forms.test.tsx (7 tests) 51ms
+ ✓ tests/capability-onboarding.test.tsx (32 tests) 881ms
+   ✓ organization rules match the server DTO > offers exactly the countries the server’s ISO 3166-1 check accepts 307ms
+   ✓ the onboarding page > stops an unverified traveler with a way to confirm the email 531ms
+ ✓ tests/private-documents.test.ts (6 tests) 4ms
+ ✓ tests/session-contracts.test.ts (5 tests) 24ms
+ ✓ tests/auth-verify-email.test.ts (6 tests) 3ms
+ ✓ tests/auth-preferences-contract.test.tsx (7 tests) 49ms
+ ✓ tests/social-components.test.tsx (5 tests) 18ms
+ ✓ tests/capability-guards.test.tsx (5 tests) 27ms
+ ✓ tests/duplicate-submit.test.ts (4 tests) 117ms
+ ✓ tests/social-helpers.test.ts (5 tests) 3ms
+ ✓ tests/component-semantics.test.tsx (8 tests) 9ms
+ ✓ tests/confirm-dialog.test.ts (4 tests) 3ms
+ ✓ tests/current-settings-contract.test.tsx (1 test) 9ms
+
+ Test Files  20 passed (20)
+      Tests  233 passed (233)
+   Start at  00:24:29
+   Duration  2.30s (transform 933ms, setup 0ms, collect 4.76s, tests 2.31s, environment 2ms, prepare 1.68s)
+
