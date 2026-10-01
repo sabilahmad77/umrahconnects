@@ -8,7 +8,7 @@ first; the one-shot prompt at the end does the setup.
 | Repository | **https://github.com/sabilahmad77/umrahconnects** (public) |
 | Branch to clone | **`engineering/100-loop`** — the complete, verified codebase |
 | Do not use | `main` and `develop` (old code; `main` is what production currently runs) |
-| Handoff written | 2026-10-01, at commit `c58d48a` plus this file |
+| Handoff written | 2026-10-01. Verified by a dry run: fresh clone of this branch → install → migrate → runtime role → seeds → API + web → sign-in in a browser → full test gate, all green. |
 
 ```bash
 git clone --branch engineering/100-loop https://github.com/sabilahmad77/umrahconnects.git umrah-connects
@@ -65,7 +65,7 @@ pg_dump -h 127.0.0.1 -p 5433 -Fc umrah_connects_integration > ~/Desktop/umrah-de
 | Ready-to-launch | **155 / 169 = 91.7** — the 14 open rows are all owner actions (§9) |
 | Historical requirements | 117 / 131 (the 14 remaining are the same external obligations) |
 | Mandatory gates | G2–G7 PASS · G1 FAIL (the exposed Render key is still live) · G8 BLOCKED (no provider credentials or server yet) |
-| API e2e | 522 passed, 0 skipped, 0 failed — run as a non-superuser database role so row-level security is enforced |
+| API e2e | 553 tests (including the independent reviewer's 31 adversarial probes), 0 failed — run as a non-superuser database role so row-level security is enforced |
 | Browser QA | 87/87 routes, 3,329 checks, 3,262 passed, actual Chrome, 18 identities |
 | Accessibility | axe WCAG 2.2 AA: 0 violations; a real Orca screen-reader session |
 | Defects | 40 fixed in the last loop; 3 open, all minor (P3) |
@@ -301,8 +301,9 @@ npx tsc --noEmit && npx eslint app components hooks lib middleware.ts && npx vit
 NODE_ENV=production API_PROXY_ORIGIN=http://localhost:4000 npx next build
 ```
 
-Expected: API unit 201, e2e 522 (5 of them need `STRIPE_MOCK_URL`, otherwise skipped),
-web 255, both builds succeed.
+Expected (verified by a dry run from a fresh GitHub clone on 2026-10-01): API unit **201**;
+e2e **553** — 548 pass and the 5 stripe-mock tests are skipped unless `STRIPE_MOCK_URL` points
+at a running stripe-mock, in which case all 553 pass; web **255**; both builds succeed.
 
 ---
 
