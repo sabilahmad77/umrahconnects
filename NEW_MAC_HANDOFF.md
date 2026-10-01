@@ -1,230 +1,97 @@
 # Umrah Connect — new Mac handoff
 
-Everything needed to continue on a fresh Mac with a fresh Claude Code. Read this
-first; the one-shot prompt at the end does the setup.
+## The short prompt (paste this into Claude Code on the new Mac)
+
+```text
+Clone https://github.com/sabilahmad77/umrahconnects.git on branch engineering/100-loop into ~/Projects/umrah-connects, then open NEW_MAC_HANDOFF.md at the repo root and carry out its "Claude Code: start here" procedure from beginning to end. That file has the full project context, the exact commands, the checks and the rules. Ask me only for things that need my password or an account sign-in, and finish with the report it asks for.
+```
+
+---
 
 | | |
 |---|---|
+| Project | Umrah Connect: a multi-tenant SaaS and marketplace for the Umrah ecosystem (travelers, operators, hotels, transport, visa agencies, finance, platform Super Admin) |
 | Repository | **https://github.com/sabilahmad77/umrahconnects** (public) |
-| Branch to clone | **`engineering/100-loop`** — the complete, verified codebase |
-| Do not use | `main` and `develop` (old code; `main` is what production currently runs) |
-| Handoff written | 2026-10-01. Verified by a dry run: fresh clone of this branch → install → migrate → runtime role → seeds → API + web → sign-in in a browser → full test gate, all green. |
+| Branch to use | **`engineering/100-loop`** (the complete, verified codebase) |
+| Do not use | `main` or `develop`. They hold old code, and `main` is what production currently runs. |
+| Verified | 2026-10-01 by a dry run: a fresh clone of this branch, then install, migrate, runtime role, seeds, API and web up, sign-in in a browser, and the full test gate. All green. |
+
+---
+
+## Claude Code: start here
+
+You are setting up an existing, finished-to-engineering-acceptance project on a fresh Mac.
+Do **not** redesign, refactor or "improve" anything during setup. The goal is one clean
+local install that matches the verified state. Work through the steps in order; each one has
+a check, and you move on only when it passes.
+
+**Ask the owner only for:** anything needing their macOS password (installing Homebrew or the
+Xcode command-line tools), and account sign-ins (`gh auth login`). Everything else you do yourself.
+
+**Never:** push to `main` (it auto-deploys umrahconnect.io on Vercel), deploy anything, change
+DNS, touch Render, commit any `.env*` file or credential (the repository is **public**), or
+print a secret in a reply.
+
+### Step 0 — Be in the repository
+
+If the repo is not cloned yet:
 
 ```bash
-git clone --branch engineering/100-loop https://github.com/sabilahmad77/umrahconnects.git umrah-connects
+git clone --branch engineering/100-loop https://github.com/sabilahmad77/umrahconnects.git ~/Projects/umrah-connects
+cd ~/Projects/umrah-connects
 ```
 
----
+Check: `git rev-parse --abbrev-ref HEAD` prints `engineering/100-loop`. Then read sections A–E
+below once for context before continuing.
 
-## 1. Where things are
+### Step 1 — Prerequisites
 
-| Thing | Where | Notes |
-|---|---|---|
-| **Code** | GitHub, branch `engineering/100-loop` | 200 commits newer than `main`. Also pushed as history labels: `integration/web-final`, `claude/core-finalization`, `codex/web-frontend-finalization` (all already contained in `engineering/100-loop`). |
-| **Domain / web hosting** | Vercel, `umrahconnect.io` | Auto-deploys from `main` only. Still serving the **old** code, whose API is the dead Render service. |
-| **API hosting (target)** | Hostinger KVM 8 | Fully prepared in `infrastructure/kvm/`, **not provisioned or deployed yet**. |
-| **API hosting (legacy)** | Render service `umrah-connect-api` | Retired from the target, still exists, unresponsive. To be decommissioned after cutover. |
-| **Production database** | **None exists.** | The Render account holds no PostgreSQL (checked through the Render API on 2026-09-18). There is no production data to migrate. |
-| **Development data** | Local PostgreSQL on the old Mac | Development and QA data only, recreated on the new Mac by the seeds (§6). Nothing irreplaceable. |
-| **Secrets** | Nowhere in the repository | Every `.env*` file is gitignored. Local development secrets are generated fresh (§6). No Google, Stripe, R2 or SMTP credentials exist yet. |
-
-### What stays the same on the new Mac
-
-- The GitHub account and repository (sign in again with `gh auth login`).
-- The Vercel project and the domain. The Vercel MCP connection can be re-authorized when needed.
-- The open owner actions in §9. They are not tied to a machine.
-
-### What is deliberately left behind on the old Mac, and why that is fine
-
-| Left behind | Why it does not matter |
-|---|---|
-| `platform/api/.env`, `apps/web/.env*.local` | Local development secrets only. Regenerate them (§6). |
-| Local PostgreSQL databases | Development/QA data. The seeds rebuild it, including 15 QA accounts with new random passwords. |
-| `.project/local/qa-credentials.json` | Rebuilt by `seed-qa-identities.ts` with new passwords. |
-| `.claude/settings.local.json` (all copies) | **Do not copy them.** They contain the exposed Render API key, which is still live — revoke it (§9.1). |
-| Extra git worktrees (`umrah-connects-eng100/*`, core, integration, Codex) | Every one of their commits is in `engineering/100-loop`. The Codex worktree's uncommitted files were ported in commit `48693e5` (verified file-by-file). |
-| Docker images and containers | None are needed; the test stand-ins are pulled on demand. |
-
-If you want to keep the old Mac's development database anyway (for example records you
-typed in through the UI), dump it to a file and copy that file across yourself. **Never
-commit it** — the repository is public.
+Check each; install only what is missing (Apple Silicon paths shown).
 
 ```bash
-pg_dump -h 127.0.0.1 -p 5433 -Fc umrah_connects_integration > ~/Desktop/umrah-dev.dump
-```
-
----
-
-## 2. Current state (2026-10-01)
-
-**Verdict: ENGINEERING COMPLETE — LAUNCH BLOCKED.**
-
-| Measure | Value |
-|---|---|
-| Engineering acceptance | **155 / 155 = 100.0** |
-| Ready-to-launch | **155 / 169 = 91.7** — the 14 open rows are all owner actions (§9) |
-| Historical requirements | 117 / 131 (the 14 remaining are the same external obligations) |
-| Mandatory gates | G2–G7 PASS · G1 FAIL (the exposed Render key is still live) · G8 BLOCKED (no provider credentials or server yet) |
-| API e2e | 553 tests (including the independent reviewer's 31 adversarial probes), 0 failed — run as a non-superuser database role so row-level security is enforced |
-| Browser QA | 87/87 routes, 3,329 checks, 3,262 passed, actual Chrome, 18 identities |
-| Accessibility | axe WCAG 2.2 AA: 0 violations; a real Orca screen-reader session |
-| Defects | 40 fixed in the last loop; 3 open, all minor (P3) |
-
-The full record is in `docs/control-tower/`. Start with `ENGINEERING_100_FINAL_REPORT.md`,
-then `PROVIDER_ACTIVATION_CHECKLIST.md`.
-
----
-
-## 3. Repository layout
-
-pnpm workspace + Turborepo monorepo.
-
-```
-apps/web/            Next.js 14 frontend (App Router)
-apps/mobile/         Expo app — NOT at parity, out of scope for now
-platform/api/        NestJS 10 API + Prisma 5 (PostgreSQL)
-infrastructure/kvm/  Production stack for Hostinger KVM 8 (Compose, Caddy, PostgreSQL 16, scripts, systemd units)
-infrastructure/docker/  Local dev-stack helpers
-plugins/             Plugin packages (plugin host in the API)
-audit/               QA harnesses: acceptance QA (Python), browser scripts, register tooling (audit/eng100/)
-docs/control-tower/  Engineering record: register, scorecards, decisions, blockers, evidence
-docs/ui-ux/          Design system, design decisions, route inventory, UI evidence
-docs/adr/            Architecture decision records
-.github/workflows/   api-ci.yml, infra-ci.yml, uptime.yml
-```
-
-### Frontend layout — `apps/web`
-
-| Path | What lives there |
-|---|---|
-| `app/` | Routes (87 page templates). Public marketing pages at the root (`/`, `/solutions`, `/pricing`, `/about`, `/marketplace-preview`, `/resources/[slug]`, …); auth in `app/(auth)/` (`/login`, `/reset-password`) plus `/signup`, `/verify-email`, `/auth/callback`; the signed-in workspace in `app/(dashboard)/` (traveler, operator, hotel, transport, visa, finance and Super Admin areas, `/settings`, `/onboarding`, `/notifications`, …). |
-| `components/ui/system.tsx` | The design system: Button, Input, Select, Dialog, Alert, Card, PageHeader, FileUpload, LoadingState, QueryFailure, Tooltip… Build new screens from these. |
-| `components/layout/` | Workspace shell, sidebar, header, notification bell, email-verification banner. |
-| `components/<domain>/` | One folder per area: admin, auth, bookings, compliance, connections, dashboard, discover, finance, groups, hotels, marketplace, messages, my-bookings, my-offers, notifications, onboarding, packages, pilgrims, profile, providers, public, reports, requests, settings, social, transport, travel-plan, travelers. |
-| `hooks/` | TanStack Query hooks per domain; `use-capabilities.ts` (all UI permission checks). |
-| `lib/api.ts` | Axios client to `/proxy-api` (same origin), silent refresh through the httpOnly cookie, single-flight writes, `Idempotency-Key` on creates. |
-| `lib/workspace-access.ts` | The one route→capability table: navigation, route guards and landing pages. Never authorize by role name. |
-| `lib/session.ts`, `lib/auth.ts` | Profile from `GET /auth/me` (roles, capabilities, verification state). |
-| `middleware.ts` | Adds the proxy secret and the real client IP to `/proxy-api/*` requests. |
-| `next.config.mjs` | `/proxy-api/*` → `API_PROXY_ORIGIN/api/v1/*`; production build **fails** without `API_PROXY_ORIGIN` (by design). |
-| `tailwind.config.ts`, `app/globals.css` | Brand palette (deep green `brand`, `gold`, `ivory`, `navy`, `midnight`) and component classes. |
-| `public/` | Logos and favicons. The approved hero image is expected at `public/images/hero/makkah-approved.webp` (not supplied yet). |
-| `tests/` | Vitest: contracts against the server DTOs and enums, capabilities, checkout state machine, accessibility semantics, … |
-
-### Backend architecture — `platform/api`
-
-| Path | What lives there |
-|---|---|
-| `src/main.ts`, `src/bootstrap/` | App bootstrap, environment validation (refuses unsafe production config, including any Render URL), client-IP trust, Swagger (`/api/docs`, development only). |
-| `src/common/` | Guards (JWT, capabilities, throttling), decorators (`@Public`, `@RequirePermissions`, `@AnyAuthenticated`, `@PublicWithOptionalUser`), the error filter, audit and **idempotency** interceptors, tenant-scope helpers. Every route must declare a policy or the API refuses to boot. |
-| `src/prisma/` | PrismaService plus **row-level security**: `db-context.ts` (request scope: tenant / platform / system), `rls-extension.ts`, `rls-tables.ts` (every table classified). Crossing organizations needs `withSystemScope(reason)` from a closed list. |
-| `src/modules/` | 31 modules: admin, audit, auth (password, Google OIDC, verification, sessions), bookings, compliance (visa cases), connections, events, finance, groups, health, hotels, inquiries, mail, marketplace, marketplace-requests, notifications, payments (sandbox + Stripe), pilgrims (+ traveler account links), plugin-host, preferences, rbac (capability catalogue in `catalog.ts`), references (per-organization sequences), reports, social, storage (local + S3/R2, signed URLs, orphan cleanup), tenant (onboarding, KYC), transport, travelers, uploads, visa-requests. |
-| `prisma/schema.prisma` | PostgreSQL multiSchema: `core`, `marketplace`, `social`, `audit`, `plugin_crm`, `plugin_booking`, `plugin_hotel`, `plugin_visa`, `plugin_transport`, `plugin_finance`, `plugin_group_ops`, `plugin_portal`, `plugin_reporting`. |
-| `prisma/migrations/` | 12 migrations, applied with `prisma migrate deploy` (never `db push`). |
-| `prisma/rls/runtime-role.sql` | Creates the non-superuser login the API must run as. |
-| `prisma/seed*.ts`, `prisma/scripts/` | Seeds, `sync-rbac`, demo and QA identities, `bootstrap-platform-admin`, route-policy export. |
-| `test/` | e2e suites (`*.e2e-spec.ts`), provider integration suites (`test/providers/`), the Google OIDC stub (`test/support/google-oidc-stub.mjs`). |
-
-Security model in one paragraph: 8 system roles (PILGRIM shown as Traveler, OPERATOR_ADMIN,
-OPERATOR_STAFF, HOTEL_MANAGER, TRANSPORT_MANAGER, VISA_OFFICER, FINANCE_MANAGER, SUPER_ADMIN);
-authorization by capability keys (`namespace:resource:action`), deny by default; Super Admin
-lives in a dedicated PLATFORM organization; travelers share one community organization;
-15-minute access JWTs re-validated against the database, rotating refresh tokens in an
-httpOnly cookie; tenant isolation in the service layer **and** in PostgreSQL (FORCE RLS).
-
-The decisions behind all of this are in `docs/control-tower/DECISIONS.md` (D-001 … D-025).
-
----
-
-## 4. Libraries
-
-**Toolchain:** Node.js ≥ 20 (verified on 22.23), pnpm 9.12.0 (`packageManager`), Turborepo 2,
-TypeScript 5.6, Prettier 3, Husky, commitlint, lint-staged.
-
-**Web (`apps/web`):** next 14.2, react 18.3, @tanstack/react-query 5, axios 1.7, tailwindcss 3.4
-(+ tailwindcss-animate, tailwind-merge, class-variance-authority, clsx), Radix UI primitives
-(dialog, dropdown-menu, popover, select, tabs, tooltip, switch, avatar, label, scroll-area,
-separator, slot, toast), lucide-react, sonner, vaul, cmdk, framer-motion, recharts,
-react-hook-form + @hookform/resolvers + zod, date-fns, next-intl, next-auth (beta, present but
-not the auth path), **@stripe/stripe-js 9.16 + @stripe/react-stripe-js 6.10**. Dev: eslint 9,
-vitest 2.
-
-**API (`platform/api`):** @nestjs/* 10 (core, common, config, jwt, passport, swagger, throttler,
-platform-express, microservices, mapped-types), **@prisma/client 5 + prisma 5**, passport +
-passport-jwt, bcryptjs, class-validator, class-transformer, helmet, compression, multer,
-**google-auth-library 10**, **stripe 22**, **@aws-sdk/client-s3 + s3-request-presigner 3**,
-**nodemailer 7**, zod, nanoid, ioredis and kafkajs (present, Kafka disabled by default). Dev:
-@nestjs/cli, vitest 2 + unplugin-swc, supertest, ts-node, typescript-eslint.
-
-Exact versions are pinned in `pnpm-lock.yaml`; `pnpm install --frozen-lockfile` reproduces them.
-
----
-
-## 5. APIs
-
-### The application API
-
-- Base path `/api/v1`; the browser always calls it through the web origin at `/proxy-api/*`.
-- **358 routes**, each with a declared policy. Full inventory with the capability each route
-  requires: `docs/control-tower/evidence/api-route-policies.json`.
-- Swagger UI in development: `http://localhost:4000/api/docs`.
-- Health: `/api/v1/health` (liveness) and `/api/v1/health/ready` (readiness; in production it
-  returns 503 if the API connects as a superuser, a BYPASSRLS role or the table owner).
-- Response envelope: `{ success: true, data }` / `{ success: false, error: { code, message, details? } }`.
-
-### Third-party services
-
-| Service | Used for | State | Settings (names only) |
-|---|---|---|---|
-| GitHub | Code, CI (Actions), uptime workflow | Active | `gh auth login` |
-| Vercel | Web hosting, domain `umrahconnect.io` | Active, old code | `API_PROXY_ORIGIN`, `PROXY_SHARED_SECRET` in the Vercel project |
-| Hostinger KVM 8 | Production API + PostgreSQL 16 + Caddy | **Not provisioned** | `infrastructure/kvm/.env.production` |
-| Cloudflare R2 | Private documents (signed URLs) and public media | **No account/buckets yet**; verified against MinIO | `STORAGE_DRIVER=r2`, `S3_*` |
-| Stripe | Card payments (Payment Element, PaymentIntents, webhooks) | **No keys yet**; verified against stripe-mock and the sandbox | `PAYMENT_PROVIDER`, `STRIPE_*` |
-| Google Identity | "Continue with Google" (OIDC code flow + PKCE) | **No OAuth client yet**; verified against a local stub | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` |
-| SMTP provider | Verification, reset and invitation email | **No mailbox yet**; verified with the log driver and Mailpit | `MAIL_DRIVER`, `SMTP_*`, `MAIL_FROM` |
-| rclone → R2 | Off-site backups | **Not configured** | `OFFSITE_REMOTE` |
-| Render | Legacy API host | **Retired from the target**; service still exists; its API key is exposed and live | — (decommission, do not use) |
-
-Local stand-ins for tests (Docker, optional): `stripe/stripe-mock`, `minio/minio`, `axllent/mailpit`
-— commands in `docs/control-tower/LOCAL_TEST_GUIDE.md`.
-
----
-
-## 6. Local setup on the new Mac
-
-### Prerequisites
-
-```bash
-xcode-select --install                      # if not already installed
+xcode-select -p || xcode-select --install          # owner may need to click through the installer
+command -v brew || echo "ASK THE OWNER to install Homebrew (it needs their password)"
+#   official installer, to be run by the owner in Terminal:
+#   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew install node@22 postgresql@15 gh
+brew link --overwrite --force node@22               # versioned formulae are not on PATH until linked
+brew link --overwrite --force postgresql@15
 brew services start postgresql@15
 corepack enable && corepack prepare pnpm@9.12.0 --activate
-gh auth login                               # GitHub account sabilahmad77
-# Optional: Docker Desktop or colima (provider test stand-ins); Google Chrome (browser QA scripts)
+gh auth status || echo "ASK THE OWNER to run: gh auth login   (GitHub account sabilahmad77)"
 ```
 
-### Databases and the runtime role
+Check: `node -v` reports v22 or later (v20 or later works; v22 was verified), `pnpm -v` reports
+`9.12.0`, `psql --version` reports 15, and `pg_isready` says "accepting connections".
+Optional: Docker Desktop or colima (only for the provider test stand-ins) and Google Chrome
+(only for the browser QA scripts).
 
-The API must run as a **non-superuser** role, or row-level security is silently bypassed.
-Migrations and seeds run as the owner (your macOS user, a superuser in Homebrew's PostgreSQL).
+### Step 2 — Databases
 
 ```bash
 createdb umrah_connects_dev
-createdb umrah_connects_test                # e2e suite; resets it on every run (name must end in _test)
+createdb umrah_connects_test      # the e2e suite resets this one on every run; the name must end in _test
 ```
 
-### Environment files (generate fresh secrets; never commit them)
+Check: `psql -l` lists both. If port 5432 is already taken by something else, use the port your
+PostgreSQL is actually on in every URL below.
+
+### Step 3 — Environment files (fresh secrets, never committed)
+
+Generate two secrets with `openssl rand -hex 32` (JWT secrets) and one with `openssl rand -hex 24`
+(runtime database password). Create these three files.
 
 `platform/api/.env`:
 
 ```bash
 NODE_ENV=development
 PORT=4000
-MIGRATE_DATABASE_URL=postgresql://<your-mac-user>@127.0.0.1:5432/umrah_connects_dev?schema=public
+# Migrations and seeds run as the owner (your macOS user, a superuser in Homebrew PostgreSQL).
+MIGRATE_DATABASE_URL=postgresql://<your-mac-username>@127.0.0.1:5432/umrah_connects_dev?schema=public
+# The API itself runs as a NON-superuser role, otherwise row-level security is silently bypassed.
 DATABASE_URL=postgresql://uc_app:<runtime-password>@127.0.0.1:5432/umrah_connects_dev?schema=public
-JWT_SECRET=<openssl rand -hex 32>
-JWT_REFRESH_SECRET=<openssl rand -hex 32>
+JWT_SECRET=<hex secret 1>
+JWT_REFRESH_SECRET=<hex secret 2>
 JWT_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=30d
 WEB_URL=http://localhost:3000
@@ -251,150 +118,271 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 API_PROXY_ORIGIN=http://localhost:4000
 ```
 
-The templates with comments are `platform/api/.env.example`, `apps/web/.env.local.example`
-and, for production, `infrastructure/kvm/.env.production.example`. `PROXY_SHARED_SECRET` and
-`CLIENT_IP_HEADER` are optional locally (set the same secret in both API and web if used).
+Check: `git status --short` shows none of these files. They are gitignored; if one appears, stop
+and fix `.gitignore` before anything else.
 
-### Install, migrate, create the runtime role, seed
+### Step 4 — Install, migrate, create the runtime role, seed
 
 ```bash
+cd ~/Projects/umrah-connects
 pnpm install --frozen-lockfile
 cd platform/api
 npx prisma generate
+
+# Read the owner URL from .env into this shell (a fresh shell does not have it).
+export MIGRATE_DATABASE_URL="$(grep '^MIGRATE_DATABASE_URL=' .env | cut -d= -f2-)"
+
+# 1. Migrations, as the owner (12 migrations; never `prisma db push`).
 DATABASE_URL="$MIGRATE_DATABASE_URL" npx prisma migrate deploy
+
+# 2. The runtime role the API connects as (use the same password as in DATABASE_URL).
 UC_RUNTIME_LOGIN=uc_app UC_RUNTIME_PASSWORD='<runtime-password>' \
-  psql "postgresql://$(whoami)@127.0.0.1:5432/umrah_connects_dev" -v ON_ERROR_STOP=1 -f prisma/rls/runtime-role.sql
-export DATABASE_URL="$MIGRATE_DATABASE_URL"        # seeds run as the owner
+  psql "${MIGRATE_DATABASE_URL%%\?*}" -v ON_ERROR_STOP=1 -f prisma/rls/runtime-role.sql
+
+# 3. Seeds, as the owner, in this order.
+export DATABASE_URL="$MIGRATE_DATABASE_URL"
 npx ts-node prisma/seed.ts
 npx ts-node prisma/seed-modules.ts
 npx ts-node prisma/seed-marketplace.ts
 npx ts-node prisma/scripts/sync-rbac.ts
-npx ts-node prisma/scripts/seed-demo-roles.ts      # one account per role, password Admin@1234 (dev only)
-npx ts-node prisma/scripts/seed-isolation-pairs.ts # a second organization per type
-npx ts-node prisma/scripts/seed-qa-identities.ts   # 15 QA accounts, random passwords → .project/local/qa-credentials.json (0600)
+npx ts-node prisma/scripts/seed-demo-roles.ts        # one account per role, password Admin@1234 (local only)
+npx ts-node prisma/scripts/seed-isolation-pairs.ts   # a second organization of each type
+npx ts-node prisma/scripts/seed-qa-identities.ts     # 15 QA accounts, random passwords → .project/local/qa-credentials.json (mode 0600)
 unset DATABASE_URL
 ```
 
-(The runtime-role script prints the role's flags; superuser, bypass and owner must all be `f`.)
+Checks: `migrate deploy` ends with "All migrations have been successfully applied"; the role
+script's last line reads `uc_app | f | f | f` (not superuser, no RLS bypass, not an owner); every
+seed exits 0; `.project/local/qa-credentials.json` exists with mode `-rw-------`.
 
-### Run
+### Step 5 — Run and verify
+
+In two terminals (or as background processes you track):
 
 ```bash
-pnpm --filter @umrah-connects/api dev     # API → http://localhost:4000/api/v1/health
-pnpm --filter @umrah-connects/web dev     # Web → http://localhost:3000
+pnpm --filter @umrah-connects/api dev     # http://localhost:4000/api/v1/health
+pnpm --filter @umrah-connects/web dev     # http://localhost:3000
 ```
 
-Sign in at http://localhost:3000/login, for example `admin@alharamain.sa` / `Admin@1234`
-(operator), `traveler@umrahconnect.dev`, `hotel@makkahgrand.dev`, `superadmin@umrahconnect.dev`
-(all `Admin@1234`, development only), or any QA account from `.project/local/qa-credentials.json`.
+Checks, all required:
 
-### Quality gate
+- `curl http://localhost:4000/api/v1/health` returns `"status":"ok"` and `"db":"connected"`.
+- `curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/login` returns `200`.
+- `curl http://localhost:3000/proxy-api/health` returns the same health JSON (the web proxy works).
+- Signing in through the **real form** at http://localhost:3000/login as `admin@alharamain.sa`
+  / `Admin@1234` lands on `/dashboard` (the operator workspace, deep-green sidebar, seeded figures).
+- `psql -d postgres -Atc "select distinct usename from pg_stat_activity where datname='umrah_connects_dev'"`
+  shows `uc_app`, not your superuser.
+
+### Step 6 — Quality gate
 
 ```bash
-cd platform/api
+cd ~/Projects/umrah-connects/platform/api
 npx tsc --noEmit && pnpm lint && npx vitest run
-npx vitest run --config vitest.e2e.config.ts           # uses umrah_connects_test, as the runtime role
-# provider suite (needs the three Docker stand-ins; see LOCAL_TEST_GUIDE.md):
-pnpm test:providers
+npx vitest run --config vitest.e2e.config.ts             # resets umrah_connects_test; runs as uc_app
 cd ../../apps/web
 npx tsc --noEmit && npx eslint app components hooks lib middleware.ts && npx vitest run
 NODE_ENV=production API_PROXY_ORIGIN=http://localhost:4000 npx next build
 ```
 
-Expected (verified by a dry run from a fresh GitHub clone on 2026-10-01): API unit **201**;
-e2e **553** — 548 pass and the 5 stripe-mock tests are skipped unless `STRIPE_MOCK_URL` points
-at a running stripe-mock, in which case all 553 pass; web **255**; both builds succeed.
+Expected (from the verification dry run):
+
+- API unit **201** passed.
+- API e2e **553** tests: 548 pass and 5 are skipped. The skipped 5 are the stripe-mock tests; they
+  pass when `STRIPE_MOCK_URL` points at a running stripe-mock (see `docs/control-tower/LOCAL_TEST_GUIDE.md`).
+- Web **255** passed, and the production build succeeds.
+- Typecheck and lint are clean everywhere.
+
+Report any difference with the exact output. Do not change tests or code to make numbers match.
+
+Note: the production build refuses to start without `API_PROXY_ORIGIN`. That is deliberate.
+
+### Step 7 — Report to the owner
+
+Give: the local URLs; the start and stop commands; the test results against the expected numbers;
+anything that needed the owner; and a reminder of owner action **E1** (revoking the exposed Render
+key) if they have not confirmed it is done. Leave the API and web running.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `prisma migrate deploy`: "the URL must start with postgresql://" | `MIGRATE_DATABASE_URL` is not exported in this shell; rerun the `export` line in Step 4. |
+| Role script prints `t` in any column | `DATABASE_URL` is pointing at a superuser. The API must use `uc_app`. |
+| QA seed refuses the database | The name must look local (`umrah_connects_dev` does). To allow another name deliberately, set `QA_SEED_ALLOW_DATABASE=<exact name>`. |
+| API fails at boot with `role "uc_app" does not exist` or an authentication error | The runtime role was not created, or its password differs from the one in `DATABASE_URL`. Rerun Step 4.2 with the same password. |
+| API answers 500 and its log shows `permission denied for table …` | The runtime role exists but has no grants on this database (for example after recreating it). Rerun Step 4.2; it reapplies the grants. |
+| Port 3000, 4000 or 5432 busy | Change `PORT`/`WEB_URL`/`CORS_ORIGINS`/`API_PROXY_ORIGIN` consistently, or the PostgreSQL port in both URLs. |
+| `pnpm` is not 9.12.0 | `corepack prepare pnpm@9.12.0 --activate` (or `npm i -g pnpm@9.12.0`). |
 
 ---
 
-## 7. Working rules for the next sessions
+## A. Where things are
 
-- **Never push to `main` without deciding to deploy.** Vercel deploys `main` to
-  `umrahconnect.io` automatically. Work on `engineering/100-loop` or feature branches and
-  merge through a pull request when a deployment is intended.
-- The repository is **public**: never commit `.env*`, dumps, credentials or `.project/local/`.
-- Run migrations and seeds as the owner; run the API as the runtime role.
-- Any new table must be classified in `platform/api/src/prisma/rls-tables.ts` (a test fails otherwise).
-- Any flow that crosses organizations must use `withSystemScope(reason)` with a reason from the closed list.
-- Gate UI with `useCapabilities()` and `lib/workspace-access.ts`, never with role names.
-- Native mobile is out of scope until the owner says otherwise.
+| Thing | Where | Notes |
+|---|---|---|
+| **Code** | GitHub, branch `engineering/100-loop` | Also pushed as history labels: `integration/web-final`, `claude/core-finalization` and `codex/web-frontend-finalization`. All three are already contained in `engineering/100-loop`. |
+| **Domain and web hosting** | Vercel, `umrahconnect.io` | Auto-deploys from `main` only. Still serves the **old** code, whose API is the dead Render service. |
+| **API hosting (target)** | Hostinger KVM 8 | Fully prepared in `infrastructure/kvm/`. **Not provisioned or deployed yet.** |
+| **API hosting (legacy)** | Render service `umrah-connect-api` | Retired from the target. Still exists and is unresponsive. Decommission it only after cutover. |
+| **Production database** | **None exists.** | The Render account holds no PostgreSQL (checked through the Render API). There is no production data to migrate. |
+| **Development data** | Local PostgreSQL | Development and QA data only, rebuilt by the seeds. Nothing irreplaceable. |
+| **Secrets** | Never in the repository | Every `.env*` file is gitignored, and local secrets are generated fresh. No Google, Stripe, R2 or SMTP credentials exist yet. |
 
----
+Left behind on the old Mac on purpose: its `.env` files (regenerated), its local databases
+(rebuilt by the seeds), its QA credential file (regenerated with new passwords) and its
+`.claude/settings.local.json` files. **Never copy those last ones: they contain the exposed Render
+key.** All worker worktrees and Codex's uncommitted work are already inside `engineering/100-loop`.
 
-## 8. Production plan (when you decide to launch)
+## B. Current state (2026-10-01)
 
-1. Revoke the Render key (§9.1). 2. Provision the KVM 8 host and DNS. 3. Create R2, SMTP,
-Google and Stripe test credentials. 4. `infrastructure/kvm/scripts/preflight.sh`, then
-`deploy.sh <commit>` (backup → one-off migrate as owner → runtime role → start → readiness).
-5. Set `API_PROXY_ORIGIN=https://api.umrahconnect.io` and `PROXY_SHARED_SECRET` in Vercel.
-6. Merge `engineering/100-loop` into `main` (this deploys the web). 7. Verify, enable
-monitoring, then decommission Render. Every step with its check is in
-`docs/control-tower/PROVIDER_ACTIVATION_CHECKLIST.md`; the server runbook is
-`infrastructure/kvm/README.md`; the Render order is `docs/control-tower/RENDER_RETIREMENT.md`.
+**Verdict: ENGINEERING COMPLETE — LAUNCH BLOCKED.**
 
----
+| Measure | Value |
+|---|---|
+| Engineering acceptance | **155 / 155 = 100.0** |
+| Ready-to-launch | **155 / 169 = 91.7**. The 14 open rows are all owner actions (section E). |
+| Historical requirements | 117 / 131. The remaining 14 are the same external obligations. |
+| Mandatory gates | G2–G7 PASS · G1 FAIL (the exposed Render key is still live) · G8 BLOCKED (no provider credentials or server yet) |
+| Browser QA | 87/87 routes and 3,329 checks in actual Chrome across 18 identities; no P0 or P1 found |
+| Accessibility | axe WCAG 2.2 AA: 0 violations. A real Orca screen-reader session was run. |
+| Defects | 40 fixed in the last loop; 3 open, all minor |
 
-## 9. Owner action list (things only you can do)
+Full record: `docs/control-tower/`. Read `ENGINEERING_100_FINAL_REPORT.md` first, then
+`PROVIDER_ACTIVATION_CHECKLIST.md`, `ENGINEERING_100_DEFECTS.md` and `DECISIONS.md` (D-001 … D-025).
+
+## C. Architecture
+
+pnpm workspace + Turborepo monorepo.
+
+```
+apps/web/            Next.js 14 frontend (App Router)
+apps/mobile/         Expo app: NOT at parity, out of scope for now
+platform/api/        NestJS 10 API + Prisma 5 (PostgreSQL)
+infrastructure/kvm/  Production stack for Hostinger KVM 8 (Compose, Caddy, PostgreSQL 16, scripts, systemd units)
+plugins/             Plugin packages (loaded by the API's plugin host)
+audit/               QA harnesses: acceptance QA (Python), browser scripts, register tooling (audit/eng100/)
+docs/control-tower/  Engineering record: register, scorecards, decisions, blockers, evidence
+docs/ui-ux/          Design system and design decisions
+.github/workflows/   api-ci.yml, infra-ci.yml, uptime.yml
+```
+
+### Frontend, `apps/web`
+
+| Path | What lives there |
+|---|---|
+| `app/` | 87 route templates. Public marketing pages at the root. Auth: `/login`, `/reset-password`, `/signup`, `/verify-email`, `/auth/callback`. The signed-in workspace is in `app/(dashboard)/`: traveler, operator, hotel, transport, visa, finance, Super Admin, `/settings`, `/onboarding`, `/notifications`. |
+| `components/ui/system.tsx` | The design system: Button, Input, Select, Dialog, Alert, Card, PageHeader, FileUpload, LoadingState, QueryFailure, Tooltip. Build every screen from these. |
+| `components/layout/` | Workspace shell, sidebar, header, notification bell, email-verification banner. |
+| `components/<domain>/` | One folder per area (admin, bookings, finance, hotels, marketplace, onboarding, pilgrims, social, transport, travel-plan, …). |
+| `hooks/` | TanStack Query hooks per domain, plus `use-capabilities.ts` (every UI permission check). |
+| `lib/api.ts` | Axios client to `/proxy-api` (same origin). Handles silent refresh via the httpOnly cookie, single-flight writes, and `Idempotency-Key` on creates. |
+| `lib/workspace-access.ts` | The one route→capability table, used for navigation, route guards and landing pages. Never authorize by role name. |
+| `middleware.ts` | Adds the proxy secret and the real client IP to `/proxy-api/*` requests. |
+| `next.config.mjs` | Rewrites `/proxy-api/*` to `API_PROXY_ORIGIN/api/v1/*`. |
+| `tailwind.config.ts`, `app/globals.css` | Brand palette: deep green `brand`, `gold`, `ivory`, `navy`, `midnight`. |
+| `public/` | Logos. The approved hero image is expected at `public/images/hero/makkah-approved.webp` and has not been supplied yet. |
+
+### Backend, `platform/api`
+
+| Path | What lives there |
+|---|---|
+| `src/main.ts`, `src/bootstrap/` | Bootstrap and environment validation (refuses unsafe production config, including any Render URL). Client-IP trust. Swagger at `/api/docs` in development only. |
+| `src/common/` | Guards (JWT, capabilities, throttling). Decorators: `@Public`, `@RequirePermissions`, `@AnyAuthenticated`, `@PublicWithOptionalUser`. Error filter, audit and **idempotency** interceptors, tenant-scope helpers. A route without a declared policy stops the API from booting. |
+| `src/prisma/` | PrismaService plus **row-level security**: `db-context.ts` (request scope: tenant / platform / system), `rls-extension.ts`, and `rls-tables.ts` (every table classified). Crossing organizations needs `withSystemScope(reason)`, with the reason taken from a closed list. |
+| `src/modules/` | 31 modules: admin, audit, auth (password, Google OIDC, verification, sessions), bookings, compliance (visa cases), connections, events, finance, groups, health, hotels, inquiries, mail, marketplace, marketplace-requests, notifications, payments (sandbox + Stripe), pilgrims (+ traveler account links), plugin-host, preferences, rbac (capability catalogue `catalog.ts`), references, reports, social, storage (local + S3/R2, signed URLs, orphan cleanup), tenant (onboarding, KYC), transport, travelers, uploads, visa-requests. |
+| `prisma/schema.prisma` | PostgreSQL multiSchema: `core`, `marketplace`, `social`, `audit`, `plugin_crm`, `plugin_booking`, `plugin_hotel`, `plugin_visa`, `plugin_transport`, `plugin_finance`, `plugin_group_ops`, `plugin_portal`, `plugin_reporting`. 12 migrations in `prisma/migrations/`. |
+| `prisma/rls/runtime-role.sql` | Creates the non-superuser login the API runs as. |
+| `test/` | e2e suites (`*.e2e-spec.ts`), provider suites (`test/providers/`), the Google OIDC stub (`test/support/google-oidc-stub.mjs`). |
+
+**Security model.**
+- **Roles:** 8 system roles — PILGRIM (shown as Traveler), OPERATOR_ADMIN, OPERATOR_STAFF, HOTEL_MANAGER, TRANSPORT_MANAGER, VISA_OFFICER, FINANCE_MANAGER and SUPER_ADMIN.
+- **Authorization:** by capability keys of the form `namespace:resource:action`, deny by default.
+- **Organizations:** Super Admin lives in a dedicated PLATFORM organization; travelers share one community organization.
+- **Sessions:** 15-minute access JWTs re-checked against the database, and rotating refresh tokens in an httpOnly cookie.
+- **Tenant isolation:** enforced in the service layer **and** in PostgreSQL (FORCE RLS).
+
+### Libraries
+
+- **Toolchain:**
+  - Node.js ≥ 20 (verified on 22) and pnpm 9.12.0
+  - Turborepo 2, TypeScript 5.6, Prettier 3
+  - Husky, commitlint, lint-staged
+- **Web:**
+  - next 14.2, react 18.3, @tanstack/react-query 5, axios
+  - tailwindcss 3.4 with tailwind-merge, class-variance-authority, clsx, tailwindcss-animate
+  - Radix UI (dialog, dropdown-menu, popover, select, tabs, tooltip, switch, avatar, label, scroll-area, separator, slot, toast)
+  - lucide-react, sonner, vaul, cmdk, framer-motion, recharts
+  - react-hook-form, @hookform/resolvers, zod, date-fns, next-intl
+  - next-auth (beta; present but not the auth path)
+  - **@stripe/stripe-js 9.16** and **@stripe/react-stripe-js 6.10**
+  - Dev: eslint 9, vitest 2.
+- **API:**
+  - @nestjs/* 10 (core, common, config, jwt, passport, swagger, throttler, platform-express, microservices, mapped-types)
+  - **Prisma 5**, passport-jwt, bcryptjs, class-validator, class-transformer, helmet, compression, multer
+  - **google-auth-library 10**, **stripe 22**, **@aws-sdk/client-s3 3** with s3-request-presigner, **nodemailer 7**
+  - zod, nanoid
+  - ioredis and kafkajs (present; Kafka is off by default)
+  - Dev: @nestjs/cli, vitest 2 with unplugin-swc, supertest, ts-node, typescript-eslint.
+- Exact versions are pinned in `pnpm-lock.yaml`.
+
+## D. APIs and third-party services
+
+**Application API:**
+- Base path `/api/v1`. The browser always goes through the web origin at `/proxy-api/*`.
+- **358 routes**, each with a declared policy. The full inventory, with the capability each route needs, is in `docs/control-tower/evidence/api-route-policies.json`.
+- Health endpoints: `/api/v1/health` and `/api/v1/health/ready`. In production, readiness returns 503 if the API connects as a superuser, a BYPASSRLS role or the table owner.
+- Envelope: `{ success, data }` / `{ success: false, error: { code, message, details? } }`.
+
+| Service | Used for | State | Settings (names only) |
+|---|---|---|---|
+| GitHub | Code, CI, uptime workflow | Active | `gh auth login` |
+| Vercel | Web hosting, `umrahconnect.io` | Active, serving old code | `API_PROXY_ORIGIN`, `PROXY_SHARED_SECRET` (project env) |
+| Hostinger KVM 8 | Production API, PostgreSQL 16, Caddy | **Not provisioned** | `infrastructure/kvm/.env.production` (template `.env.production.example`) |
+| Cloudflare R2 | Private documents (signed URLs), public media | **No buckets yet**; verified against MinIO | `STORAGE_DRIVER=r2`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_PUBLIC_BUCKET`, `S3_PUBLIC_BASE_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` |
+| Stripe | Card payments (Payment Element, PaymentIntents, webhooks) | **No keys yet**; verified against stripe-mock and the sandbox | `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` |
+| Google Identity | "Continue with Google" (OIDC + PKCE) | **No OAuth client yet**; verified against a local stub | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` |
+| SMTP provider | Verification, reset and invitation email | **No mailbox yet**; verified with the log driver and Mailpit | `MAIL_DRIVER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` |
+| rclone → R2 | Off-site backups | **Not configured** | `OFFSITE_REMOTE` |
+| Render | Legacy API host | **Retired**; service still exists; its exposed API key is still live | Decommission it; do not use it |
+
+The production stack's other settings are in `infrastructure/kvm/.env.production.example`. Among them:
+- `APP_DB_USER` / `APP_DB_PASSWORD` for the runtime role
+- `PROXY_SHARED_SECRET`, `CLIENT_IP_HEADER`
+- `PLATFORM_ADMIN_EMAIL` / `PLATFORM_ADMIN_PASSWORD` for bootstrapping the first Super Admin
+- `ALERT_WEBHOOK_URL`, `ORPHAN_CLEANUP_MODE`
+
+## E. Owner actions (only the owner can do these)
 
 | # | Action | Why |
 |---|---|---|
-| 1 | **Revoke the Render API key** beginning `rnd_Dsvl` — Render Dashboard → Account Settings → API Keys. Do not create a replacement. | It is in public git history and still works (checked 2026-10-01). The GitHub token from the same file is already dead. |
-| 2 | Add `www.umrahconnect.io` in Vercel domains (redirect to the apex) | `www` currently fails TLS |
-| 3 | Provide the Hostinger KVM 8 host, SSH access and a DNS `A` record `api.umrahconnect.io` | Production API |
-| 4 | Create Cloudflare R2 buckets (private documents, public media, backups) and a scoped token | Document/media storage and off-site backups |
-| 5 | Create an SMTP mailbox with SPF, DKIM and DMARC on `umrahconnect.io` | Verification, reset and invitation email |
-| 6 | Create a Google OAuth Web client; redirect URI `https://umrahconnect.io/proxy-api/auth/google/callback` | "Continue with Google" |
-| 7 | Create Stripe test keys and a webhook endpoint; later activate live mode | Card payments |
-| 8 | Supply the approved Makkah/Kaaba hero image (`apps/web/public/images/hero/makkah-approved.webp`) | Landing-page hero |
-| 9 | After the KVM cutover: switch on monitoring, then suspend and delete the Render service | Retire the legacy host |
+| E1 | **Revoke the Render API key** beginning `rnd_Dsvl`: Render Dashboard → Account Settings → API Keys. Do not create a replacement. | It is in public git history and still works (checked 2026-10-01). The GitHub token from the same file is already dead. |
+| E2 | Add `www.umrahconnect.io` in Vercel domains, redirecting to the apex | `www` fails TLS today |
+| E3 | Provide the Hostinger KVM 8 host, SSH access, and a DNS `A` record for `api.umrahconnect.io` | Production API |
+| E4 | Create Cloudflare R2 buckets (documents, public media, backups) and a scoped token | Storage and off-site backups |
+| E5 | Create an SMTP mailbox with SPF, DKIM and DMARC on `umrahconnect.io` | Email |
+| E6 | Create a Google OAuth Web client with redirect URI `https://umrahconnect.io/proxy-api/auth/google/callback` | "Continue with Google" |
+| E7 | Create Stripe test keys and a webhook endpoint; later, activate live mode | Payments |
+| E8 | Supply the approved Makkah/Kaaba hero image | Landing page |
+| E9 | After the KVM cutover: switch on monitoring, then suspend and delete the Render service | Retire the legacy host |
 
-Exact commands to verify each one: `docs/control-tower/PROVIDER_ACTIVATION_CHECKLIST.md`.
+Verification commands for each one are in `docs/control-tower/PROVIDER_ACTIVATION_CHECKLIST.md`.
+Going live, in order:
+1. Steps E1–E7.
+2. On the server: `infrastructure/kvm/scripts/preflight.sh`, then `deploy.sh <commit>`.
+3. In Vercel: set `API_PROXY_ORIGIN` and `PROXY_SHARED_SECRET`.
+4. Merge `engineering/100-loop` into `main`; this deploys the web.
+5. Verify, then E9.
 
----
+Server runbook: `infrastructure/kvm/README.md`. Render retirement order: `docs/control-tower/RENDER_RETIREMENT.md`.
 
-## 10. One-shot prompt for the new Claude Code
+## F. Rules for every later session
 
-Paste everything inside the box into Claude Code on the new Mac.
-
-```text
-Set up the Umrah Connect project on this Mac from GitHub and get it running on localhost.
-
-1. Clone exactly this repository and branch (do not use main or develop):
-   git clone --branch engineering/100-loop https://github.com/sabilahmad77/umrahconnects.git ~/Projects/umrah-connects
-   Then read ~/Projects/umrah-connects/NEW_MAC_HANDOFF.md completely before doing anything else.
-   It is the source of truth for the architecture, libraries, APIs, environment variables and
-   rules. Also skim docs/control-tower/ENGINEERING_100_FINAL_REPORT.md.
-
-2. Check and install the prerequisites listed in section 6 of the handoff (Xcode command-line
-   tools, Homebrew node@22, postgresql@15 started as a service, pnpm 9.12.0 via corepack,
-   gh). Ask me before installing anything that needs my password or a paid account. If
-   GitHub CLI is not signed in, tell me to run `gh auth login` myself.
-
-3. Create the databases umrah_connects_dev and umrah_connects_test, and the three local env
-   files exactly as section 6 shows. Generate every secret fresh with `openssl rand -hex 32`
-   (JWT secrets, the runtime-role password). Never print secrets in your replies and never
-   commit any .env file — the repository is public.
-
-4. Run `pnpm install --frozen-lockfile`, `prisma generate`, the migrations as the owner,
-   the runtime-role script, and all the seeds in the order given (as the owner). Confirm the
-   runtime role prints f|f|f for superuser/bypass/owner.
-
-5. Start the API (port 4000) and the web app (port 3000). Verify:
-   - http://localhost:4000/api/v1/health returns ok,
-   - http://localhost:3000/login loads,
-   - signing in through the real form as admin@alharamain.sa / Admin@1234 lands on /dashboard,
-   - the API process is connected to PostgreSQL as uc_app (not the superuser).
-
-6. Run the quality gate from section 6 (API typecheck, lint, unit, the full e2e suite; web
-   typecheck, lint, tests; the production web build with API_PROXY_ORIGIN set). Expected
-   numbers are in the handoff. Report any difference with the exact output.
-
-7. Rules for this and every later session: work on engineering/100-loop or feature branches;
-   do NOT push to main (it auto-deploys umrahconnect.io on Vercel) unless I explicitly decide
-   to deploy; do not deploy anywhere, change DNS, or touch Render; native mobile is out of
-   scope. The owner-only actions are listed in section 9 — remind me about item 1 (revoking
-   the exposed Render key) if it is still open.
-
-When finished, give me: the local URLs, the commands to start and stop the stack, the test
-results, and anything that needed my action.
-```
+- Work on `engineering/100-loop` or feature branches. Merge to `main` through a pull request, and only when a deployment is intended.
+- The repository is public: never commit `.env*`, database dumps, credentials or `.project/local/`.
+- Migrations and seeds run as the owner; the API runs as the runtime role.
+- Every new table must be classified in `platform/api/src/prisma/rls-tables.ts`, or a test fails.
+- Any flow that crosses organizations uses `withSystemScope(reason)` with a reason from the closed list.
+- Gate UI with `useCapabilities()` and `lib/workspace-access.ts`, never with role names.
+- Keep the approved visual system: deep green, gold and ivory, built from `components/ui/system.tsx`.
+- Native mobile is out of scope until the owner says otherwise.
