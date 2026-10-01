@@ -5,7 +5,7 @@ hotels, transport companies, visa agencies, finance teams, pilgrims, and a
 central Super Admin.
 
 - **Live web:** https://umrahconnect.io (Vercel, auto-deploys from `main`)
-- **API hosting:** legacy Render service (unresponsive since 2026-08-22); target is Hostinger KVM 8 —
+- **API hosting:** Hostinger KVM 8 (Docker Compose + Caddy + PostgreSQL 16) — see **[infrastructure/kvm/README.md](infrastructure/kvm/README.md)**. Render is retired from the target architecture; the legacy service is decommissioned only after an authorized cutover (docs/control-tower/RENDER_RETIREMENT.md).
   see **[infrastructure/kvm/README.md](infrastructure/kvm/README.md)**
 - **Engineering control tower (security model, decisions, evidence):** **[docs/control-tower/](docs/control-tower/CONTROL_TOWER.md)**
 - **Full project picture, state of work, credentials map, and roadmap:**

@@ -31,3 +31,21 @@ Commits on `claude/core-finalization` (local only): `15caaa8`, `ffb9671`, `6926c
 11. **Documentation:** integration execution matrix, release evidence, gates, scorecard, blockers, findings, red team and verification all reconciled. Historical records are marked superseded, not deleted.
 
 Commits on `integration/web-final` (local only): `001553a` (merge), `a99f948` (remediation), plus this documentation commit. Nothing pushed, nothing deployed.
+
+## Engineering 100 loop — 2026-09-18 → 2026-10-01
+
+Candidate `engineering/100-loop` @ `15130aa`. 16 workers (coordinator + 15 background
+subagents), isolated worktrees and databases, three usage-limit interruptions resumed
+with context intact.
+
+- Codex's uncommitted post-merge work ported in; every open web item and every deferred
+  core item closed, including row-level security (R05) and the traveler↔pilgrim link (P06).
+- 40 defects fixed, including a credential leak in `/admin/users`, eight money defects and
+  the owner-reported comments defect. Three P3 items remain, recorded.
+- Gates: 522 e2e with nothing skipped (as a non-superuser role, RLS enforced), provider suite
+  12/12, web 255, runtime acceptance QA 211/211, 3,329 independent browser checks over 87/87
+  routes, axe 0 violations, a real Orca screen-reader session, both builds and a container image.
+- Engineering 155/155 = 100.0 · launch 155/169 = 91.7 · historical 117/131.
+- Verdict: ENGINEERING COMPLETE — LAUNCH BLOCKED (exposed Render key still live; provider and
+  production verification outstanding).
+

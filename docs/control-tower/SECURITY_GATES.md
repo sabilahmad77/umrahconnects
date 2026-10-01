@@ -15,7 +15,26 @@ Re-verified on `integration/web-final` (the merged backend + frontend), not inhe
 | No known privilege escalation | **PASS** | none open. Tested: platform-capability role creation, SUPER_ADMIN assignment, signup role/organization injection, JWT claim tampering, `alg:none`, cross-tenant confirm/refund |
 | No known critical data-loss path | **PASS** | server-owned counters and totals refuse client values; payment state is provider-owned; removal is a soft delete that stays visible to its owner and hidden from everyone else |
 
-Result: **all mandatory gates PASS** on the integrated branch.
+Result on the web-integration branch (2026-09-18): all nine gates PASS.
+
+## Engineering 100 loop result (2026-10-01, candidate `15130aa`)
+
+Re-verified on the integrated candidate, with an independent reviewer (A12) and an
+independent browser QA worker (A10) — neither wrote the code they checked.
+
+| Gate | Result | Evidence |
+|---|---|---|
+| G1 no unresolved P0 exposure | **FAIL** | The Render API key in pushed history is still active (200 on 2026-10-01). The GitHub token is invalid (401). Owner action: PROVIDER_ACTIVATION_CHECKLIST.md step 1. |
+| G2 no unresolved P0/P1 defect | **PASS** | 40 defects fixed with regression tests; A12's 31 adversarial API probes and 9 browser probes found none; A10 found none in 3,329 checks. Three P3 items remain, recorded. |
+| G3 authentication and authorization | **PASS** | auth/Google-stub/account e2e; capability guards from `/auth/me`; 1,437/1,437 denied-state checks; capability minting refused in 13 spellings; same-second revocation for logout-all, password change, admin force-logout and lock. |
+| G4 tenant and Super Admin isolation | **PASS** | Service layer plus FORCE RLS as a non-superuser role; A12's read sweep (every GET route × 5 attackers × 30 hostile query shapes) and blind write sweep: 0 leaks, victim fingerprint identical; 47/47 cross-tenant browser probes refused. |
+| G5 data and money integrity | **PASS** | Payments suites plus A12 probes: client money fields refused, IDOR refused, concurrent captures and replayed webhooks settle once, refunds bounded, a capture after cancellation is held for refund. |
+| G6 critical browser journeys | **PASS** | 87/87 routes, 45/47 complete journeys in actual Chrome; runtime acceptance QA 211/211 on the final build. |
+| G7 builds and cold boot | **PASS** | 522 e2e with nothing skipped, provider suite 12/12, both builds and a container image, cold boot from the built artifacts, migrations with zero drift. |
+| G8 provider and operational verification for launch | **BLOCKED** | No Google, SMTP, Stripe or R2 credentials and no KVM target exist here; nothing was deployed by instruction. |
+
+A failed or blocked gate is not averaged away: the launch verdict is **BLOCKED**
+regardless of the 91.7 score, and engineering acceptance stands on G2–G7.
 
 These gates are about the code. They do not cover the one open security item that
 is not a code defect: two credential-shaped tokens are present in pushed git

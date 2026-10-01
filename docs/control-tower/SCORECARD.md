@@ -1,4 +1,9 @@
-# Scorecard — web integration closure loop (2026-09-18)
+# Scorecard
+
+> **Superseded by the Engineering 100 loop (2026-10-01).** Current scores are in
+> `ENGINEERING_100_SCORECARD.md` and `LAUNCH_READINESS_SCORECARD.md`, derived from
+> `ENGINEERING_100_REGISTER.json`. This file remains the record of the 2026-09-18 state.
+ — web integration closure loop (2026-09-18)
 
 Supersedes the core-track scorecard of 2026-09-17, which scored the backend
 alone. This one scores the merged system.

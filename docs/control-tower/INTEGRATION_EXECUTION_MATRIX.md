@@ -1,4 +1,9 @@
-# Integration Execution Matrix — web closure loop
+# Integration Execution Matrix
+
+> **Superseded by the Engineering 100 loop (2026-10-01).** Current scores are in
+> `ENGINEERING_100_SCORECARD.md` and `LAUNCH_READINESS_SCORECARD.md`, derived from
+> `ENGINEERING_100_REGISTER.json`. This file remains the record of the 2026-09-18 state.
+ — web closure loop
 
 Scored requirements for the loop that merged the Claude core track (`platform/api`)
 and the Codex web track (`apps/web`) into `integration/web-final`.

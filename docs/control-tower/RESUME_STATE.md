@@ -89,3 +89,22 @@ session resumes from here — nothing below is inferred.
 - Still open before the final report: A11 (accessibility/responsive, running), FX3 merge + re-gate,
   container-image secret scan (build running), register fill + scorecards + final report, and the
   doc reconciliation (DECISIONS D-009/D-019/D-022, BLOCKERS, SECURITY_GATES, PROGRESS, README).
+
+## Final state — 2026-10-01
+
+- Candidate `engineering/100-loop` @ `15130aa` (code) / records on top. Loop complete.
+- Engineering 155/155 = 100.0 · launch 155/169 = 91.7 · historical 117/131 · new 30/34.
+- Gates: G2–G7 PASS; G1 FAIL (the exposed Render key is still active — owner action);
+  G8 BLOCKED (no provider credentials or server on this machine; nothing deployed).
+- Running for review: API http://localhost:4300/api/v1 and web http://localhost:3300,
+  both from the built artifacts of this worktree, the API connected as the non-superuser
+  runtime role. Start them again with the Claude desktop preview configurations
+  "Candidate API (engineering/100-loop, built :4300)" and "Candidate Web (… :3300)",
+  or `pnpm --dir platform/api start` and `pnpm --dir apps/web exec next start -p 3300`.
+- Local QA credentials (15 identities, mode 0600, gitignored): `.project/local/qa-credentials.json`.
+- Reports: ENGINEERING_100_FINAL_REPORT.md, ENGINEERING_100_SCORECARD.md,
+  LAUNCH_READINESS_SCORECARD.md, FUNCTIONAL_BROWSER_MATRIX.md, ENGINEERING_100_DEFECTS.md,
+  PROVIDER_ACTIVATION_CHECKLIST.md, CREDENTIAL_REMEDIATION.md, RENDER_RETIREMENT.md,
+  RLS.md, AGENT_RUN_LEDGER.md.
+- If a new session resumes: nothing is pending engineering-side. The next step is the
+  owner's list in PROVIDER_ACTIVATION_CHECKLIST.md, then an authorized deployment loop.

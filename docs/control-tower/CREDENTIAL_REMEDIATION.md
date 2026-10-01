@@ -17,12 +17,12 @@ The file has been untracked and ignored since a99f948. That stops new exposure;
 it does not un-publish the values already in public history, and an ignored file
 is not revocation.
 
-## Status — verified 2026-09-18 17:0x +0500 against each provider's own API
+## Status — re-verified 2026-10-01 against each provider's own API
 
 | Credential | Check (value read from the local file, never printed) | Result | State |
 |---|---|---|---|
 | GitHub PAT `a8381db2fa51` | `GET https://api.github.com/user` with the token | **401 "Bad credentials"** | **Revoked / invalid.** Consistent with GitHub's automatic revocation of personal access tokens found in public repositories; the account security log was not consulted. Nothing further to revoke. |
-| Render API key `0d647eced966` | `GET https://api.render.com/v1/owners` with the key | **200** | **ACTIVE — P0 exposure remains open.** |
+| Render API key `0d647eced966` | `GET https://api.render.com/v1/owners` with the key | **200** (re-checked 2026-10-01) | **ACTIVE — P0 exposure remains open.** This is the single reason mandatory gate G1 fails. |
 
 Blast radius of the active Render key (read-only enumeration, names only): one
 workspace ("My Workspace"), one service — `umrah-connect-api`

@@ -3,27 +3,32 @@
 Only real external blockers are listed. Engineering that did not depend on them
 is finished and verified. Updated for the web integration closure loop.
 
-| ID | Blocks | Owner | What is needed | Exact configuration (names only) | Verification once unblocked |
-|---|---|---|---|---|---|
-| BLK-09 | **Credential exposure — act first** | Repository owner | Revoke the GitHub personal access token and the Render API key that are present in pushed git history in `.claude/settings.local.json` (commit `5074b81`, reachable from `origin/main` and `origin/develop`). The file is now untracked and ignored, which stops it getting worse but does not un-publish the tokens. After revoking, decide whether to rewrite history or accept the revoked values remaining. | — | provider shows both tokens revoked; `git log --all -- .claude/settings.local.json` reviewed |
-| BLK-01 | Production API (AUD-001), launch | Platform owner | Hostinger KVM 8 access (SSH key), DNS A record `api.umrahconnect.io`, authorization for a deployment loop | `infrastructure/kvm/.env.production` (names in `.env.production.example`) | `curl https://api.umrahconnect.io/api/v1/health/ready`; runtime QA against staging |
-| BLK-02 | Durable document/media storage (AUD-011, O03) | Platform owner | Cloudflare R2: private documents bucket, public media bucket with a custom domain, API token scoped to both | `STORAGE_DRIVER`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_PUBLIC_BUCKET`, `S3_PUBLIC_BASE_URL`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | `storage-s3.int-spec.ts` pointed at R2; upload + signed download in staging. The web side already admits the media host via `S3_PUBLIC_MEDIA_HOST`/`S3_PUBLIC_BASE_URL`. |
-| BLK-03 | Password reset & verification email (AUD-010, A13) | Platform owner | SMTP mailbox; SPF/DKIM/DMARC on `umrahconnect.io` | `MAIL_DRIVER`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | forgot-password round trip to a real inbox |
-| BLK-04 | Card payments (AUD-022, T04) | Platform owner | Stripe account; test keys first, live keys at launch; webhook endpoint | `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | test-mode checkout with `4242 4242 4242 4242`; webhook delivery shows `captured`. Note the traveler-facing Stripe UI (XT-R09) is still to be built. |
-| BLK-05 | Google Sign-In verification (A11) | Platform owner | Google Cloud OAuth client (Web) with redirect URIs | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | sign-in with a real Google account in staging. Note the sign-in button and callback page (XT-R06) are still to be built. |
-| BLK-06 | Off-site backups (D06) | Platform owner | A separate R2 bucket and an `rclone` remote on the server | `OFFSITE_REMOTE` | nightly timer log shows the copy; restore drill from the remote copy |
-| BLK-07 | `www.umrahconnect.io` certificate (AUD-020) | Platform owner | Add `www` in Vercel domains (redirect to apex) | — | `curl -I https://www.umrahconnect.io` → 308 |
-| BLK-08 | Traveler visa status (XT-003) | Product | Decide how a traveler account links to organization pilgrim records (consent, matching) | — | design + endpoint in a later loop |
+> **Updated by the Engineering 100 loop (2026-10-01).** Everything that was only
+> missing code, a screen, a field or a test is done. What remains is external, and
+> the ordered steps with their verification commands are in
+> `PROVIDER_ACTIVATION_CHECKLIST.md`.
 
-## Resolved this loop
+| ID | Blocks | Owner | What is needed | Register row |
+|---|---|---|---|---|
+| BLK-09 | **Credential exposure — act first** | Repository owner | Revoke the Render API key exposed in pushed history (still active, 200 on 2026-10-01). The GitHub token from the same file is already invalid (401). | W40.L (and S23) |
+| BLK-01 | Production API, launch | Platform owner | Hostinger KVM 8 host + SSH, DNS `api.umrahconnect.io`, authorization for a deployment loop | I06, N-DEP-1 |
+| BLK-02 | Durable document/media storage | Platform owner | Cloudflare R2 buckets + scoped token (verified locally against MinIO only) | O03 |
+| BLK-03 | Verification and reset email | Platform owner | SMTP mailbox + SPF/DKIM/DMARC (verified locally through the log driver and Mailpit only) | A13 |
+| BLK-04 | Card payments | Platform owner | Stripe test keys and webhook endpoint, then live activation (verified locally against stripe-mock and the sandbox only) | T04, N-PRV-1 |
+| BLK-05 | Google Sign-In | Platform owner | Google OAuth Web client; redirect URI = web origin + `/proxy-api/auth/google/callback` (verified locally against a stub only) | A11 |
+| BLK-06 | Off-site backups | Platform owner | Off-site R2 bucket + rclone remote (the contract, validation and a local rehearsal are done) | D06.L |
+| BLK-07 | `www` certificate | Platform owner | Add `www` in Vercel domains (still failing TLS) | I07 |
+| BLK-10 | Monitoring activation | Platform owner | Set `UPTIME_MONITOR=on`, the alert webhook and the external monitor after cutover | I08.L |
+| BLK-11 | Baseline vs live schema | Platform owner | Compare the baseline against the live production database at cutover | D01.L |
+| BLK-12 | Approved hero asset | Owner | Supply `apps/web/public/images/hero/makkah-approved.webp` | N-BRD-1 |
+| BLK-13 | Render decommission | Platform owner | Suspend then delete the legacy service after an authorized cutover and a backup | N-OPS-5 |
+
+## Closed by this loop
 
 | Was | Now |
 |---|---|
-| XT-R05 — no proxy secret or client-IP forwarding, so every user shared one rate-limit bucket | Resolved. `apps/web/middleware.ts`; independent buckets verified. |
-| XT-R01 — refresh token in `localStorage` | Resolved. httpOnly cookie only; `AUTH_REFRESH_TOKEN_IN_BODY=false`. |
-| XT-R03 — private documents unopenable from the UI | Resolved. Signed-URL flow for visa and KYC documents. |
-| Production fallback to a dead `onrender.com` origin | Resolved. Missing `API_PROXY_ORIGIN` now fails the production build. |
-
-Not blockers: native mobile (out of scope); the five unbuilt frontend surfaces
-(XT-R06, R07, R08, R09, R13) — those are engineering work with finished server
-contracts, tracked in INTEGRATION_EXECUTION_MATRIX.md, not blocked on anyone.
+| BLK-08 — traveler↔pilgrim link was "a product decision" | Implemented as an invitation accepted by the verified invited account (D-022); XT-003 closed. |
+| XT-R06, R07, R08, R09, R13 — five unbuilt frontend surfaces | Built and verified in the browser (Google sign-in against a stub, verification, onboarding + KYC, Stripe Payment Element, account settings). |
+| XT-R02 — capability-driven guards | One route→capability table; no role-name authorization remains in the web app. |
+| W31 — "no automated audit or screen-reader session" | axe WCAG 2.2 AA sweep (0 violations) and a real Orca screen-reader session. |
+| R05, P06, P07, P08, D08, O04, I08 (engineering half) | All implemented and verified. |
