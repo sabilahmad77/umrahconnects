@@ -26,8 +26,8 @@ export const INVOICE_STATUS_META: Record<string, { label: string; color: string;
   PARTIALLY_PAID: { label: 'Partial',  color: 'bg-yellow-100 text-yellow-700',  dot: 'bg-yellow-500' },
   PAID:           { label: 'Paid',     color: 'bg-green-100 text-green-700',     dot: 'bg-green-500' },
   OVERDUE:        { label: 'Overdue',  color: 'bg-red-100 text-red-600',         dot: 'bg-red-500' },
-  CANCELLED:      { label: 'Cancelled',color: 'bg-gray-100 text-gray-500',       dot: 'bg-gray-300' },
-  VOID:           { label: 'Void',     color: 'bg-gray-100 text-gray-500',       dot: 'bg-gray-300' },
+  CANCELLED:      { label: 'Cancelled',color: 'bg-gray-100 text-gray-600',       dot: 'bg-gray-300' },
+  VOID:           { label: 'Void',     color: 'bg-gray-100 text-gray-600',       dot: 'bg-gray-300' },
 };
 
 // Human label for any status token (Title Case from SNAKE_CASE)
